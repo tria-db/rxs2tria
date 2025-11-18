@@ -1,0 +1,26 @@
+{
+  "$id": "https://example.com/schemas/extended_woodpiece.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "allOf": [
+    { "$ref": "base_schema/20251007_tria_woodpiece_data_schema.json"},
+    { 
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "woodpiece_label": { "htType": "character", "unique": true },
+          "tree_label": { "htType": "character", "otherChecks": ["valid_label"] },
+          "n_slides": { "htType": "numeric", "otherChecks": ["check_counts"] },
+          "sampling_year": { "htType": "numeric" },
+          "organ": { "htType": "dropdown" },
+          "sampling_height": { "htType": "numeric" },
+          "sample_apex_distance": { "htType": "numeric" },
+          "sample_type": { "htType": "dropdown" },
+          "sample_embedding": { "htType": "dropdown" },
+          "pith_year": { "htType": "numeric" },
+          "sample_archived": { "htType": "checkbox" }
+        }
+      } 
+    }
+  ]
+}

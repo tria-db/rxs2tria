@@ -1,0 +1,176 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "TODO:addurltoTRIAschema",
+  "title": "roxas_data",
+  "description": "Schema for ...",
+  "type": "array",
+  "minItems": 1,
+  "items": {
+    "type": "object",
+    "properties": {
+      "image_label": {
+        "type": "string",
+        "minLength": 1,
+        "dtColGroup": "cols_structure"
+      },
+      "slide_label": {
+        "type": "string",
+        "minLength": 1,
+        "dtColGroup": "cols_structure"
+      },
+      "woodpiece_label": {
+        "type": "string",
+        "minLength": 1,
+        "dtColGroup": "cols_structure"
+      },
+      "tree_label": {
+        "type": "string",
+        "minLength": 1,
+        "dtColGroup": "cols_structure"
+      },
+      "species_code": {
+        "type": ["string", "null"],
+        "dtColGroup": "cols_structure"
+      },
+      "site_label": {
+        "type": "string",
+        "minLength": 1,
+        "title": "Site",
+        "description": "Site identifier",
+        "dtColGroup": "cols_structure"
+      },
+      "band_width": {
+        "type": ["number", "null"],
+        "dtColGroup": "cols_userinput"
+      },
+      "only_ew": {
+        "type": ["boolean", "null"],
+        "dtColGroup": "cols_userinput"
+      },
+      "org_img_name": {
+        "type": "string",
+        "minLength": 1,
+        "dtColGroup": "cols_images"
+      },
+      "img_filetype": {
+        "type": ["string", "null"],
+        "dtColGroup": "cols_images"
+      },
+      "img_size": {
+        "type": ["number", "null"],
+        "dtColGroup": "cols_images"
+      },
+      "img_width": {
+        "type": ["number", "null"],
+        "dtColGroup": "cols_images"
+      },
+      "img_height": {
+        "type": ["number", "null"],
+        "dtColGroup": "cols_images"
+      },
+      "software": {
+        "type": "string",
+        "minLength": 1,
+        "enum": ["ROXAS", "ROXAS AI"],
+        "dtColGroup": "cols_settings"
+      },
+      "sw_version": {
+        "type": ["string", "null"],
+        "dtColGroup": "cols_settings"
+      },
+      "configuration_file": {
+        "type": ["string", "null"],
+        "dtColGroup": "cols_settings"
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time",
+        "dtColGroup": "cols_settings"
+      },
+      "spatial_resolution": {
+        "type": ["number", "null"],
+        "dtColGroup": "cols_settings"
+      },
+      "origin_calibrated_x": {
+        "type": ["number", "null"],
+        "dtColGroup": "cols_settings"
+      },
+      "origin_calibrated_y": {
+        "type": ["number", "null"],
+        "dtColGroup": "cols_settings"
+      },
+      "meas_geometry": {
+        "type": ["string", "null"],
+        "enum": ["", "linear", "circular"],
+        "dtColGroup": "cols_settings"
+      },
+      "circ_lower_limit": {
+        "type": "number",
+        "dtColGroup": "cols_settings"
+      },
+      "circ_upper_limit": {
+        "type": ["number", "null"],
+        "dtColGroup": "cols_settings"
+      },
+      "outmost_year": {
+        "type": ["number", "null"],
+        "dtColGroup": "cols_settings"
+      },
+      "min_cell_area": {
+        "type": ["number", "null"],
+        "dtColGroup": "cols_settings"
+      },
+      "max_cell_area": {
+        "type": ["number", "null"],
+        "dtColGroup": "cols_settings"
+      },
+      "dbl_cwt_threshold": {
+        "type": ["number", "null"],
+        "dtColGroup": "cols_settings"
+      },
+      "max_cwtrad_s": {
+        "type": ["number", "null"],
+        "dtColGroup": "cols_settings"
+      },
+      "max_cwtrad_l": {
+        "type": ["number", "null"],
+        "dtColGroup": "cols_settings"
+      },
+      "relwidth_cwt_window": {
+        "type": ["number", "null"],
+        "dtColGroup": "cols_settings"
+      },
+      "maxrel_opp_cwt": {
+        "type": ["number", "null"],
+        "dtColGroup": "cols_settings"
+      },
+      "max_cwttan_s": {
+        "type": ["number", "null"],
+        "dtColGroup": "cols_settings"
+      },
+      "max_cwttan_l": {
+        "type": ["number", "null"],
+        "dtColGroup": "cols_settings"
+      },
+      "fname_image": {
+        "type": ["string", "null"],
+        "dtColGroup": "cols_paths"
+      },
+      "fname_cells": {
+        "type": ["string", "null"],
+        "dtColGroup": "cols_paths"
+      },
+      "fname_rings": {
+        "type": ["string", "null"],
+        "dtColGroup": "cols_paths"
+      },
+      "fname_settings": {
+        "type": ["string", "null"],
+        "dtColGroup": "cols_paths"
+      }
+    },
+    "required": ["image_label", "slide_label", "woodpiece_label", "tree_label", 
+      "site_label", "org_img_name", "software","created_at"],
+    "additionalProperties": false
+  }
+}

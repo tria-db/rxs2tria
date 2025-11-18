@@ -1,0 +1,32 @@
+{
+  "$id": "https://example.com/schemas/extended_author.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "allOf": [
+    { "$ref": "base_schema/20251007_tria_author_data_schema.json"},
+    { 
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "author_nr": { "htType": "numeric", "otherChecks": ["valid_seq"] },
+          "last_name": { "htType": "character" },
+          "first_name": { "htType": "character" },
+          "email": { 
+            "htType": "character", 
+            "pattern" : "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", 
+            "unique" : true
+          },
+          "orcid": { "htType": "character" },
+          "org_name": { "htType": "text" },
+          "rorid": { "htType": "character" },
+          "aff_department": { "htType": "text" },
+          "aff_street": { "htType": "text" },
+          "aff_plz": { "htType": "character" },
+          "aff_city": { "htType": "character" },
+          "org_country": { "htType": "autocomplete", "options" : "country_codes_names" },
+          "contact_person": { "htType": "checkbox" , "min_checks": 1, "max_checks": 1 }
+        }
+      } 
+    }
+  ]
+}

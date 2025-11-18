@@ -1,5 +1,17 @@
+---
+output: github_document
+---
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+```
 
 # rxs2tria
 
@@ -7,20 +19,15 @@
 
 <!-- badges: end -->
 
-The goal of `rxs2tria` is to prepare, quality check and harmonize a
-collection of QWA images, corresponding ROXAS output files and
-accompanying metadata for submission as a dataset to the QWA database.
+The goal of `rxs2tria` is to prepare, quality check and harmonize a collection of QWA images, corresponding ROXAS output files and accompanying metadata for submission as a dataset to the QWA database.
 
-**Note:** This package is currently under development and not yet stable
-nor officially released. Version 1.0.0 will be made available under the
-organizational github.
+**Note:** This package is currently under development and not yet stable nor officially released. Version 1.0.0 will be made available under the organizational github.
 
 ## Installation
 
-You can install the development version of `rxs2tria` from
-[GitHub](https://github.com/) with:
+You can install the development version of `rxs2tria` from [GitHub](https://github.com/) with:
 
-``` r
+```{r, eval = FALSE}
 # install.packages("pak")
 pak::pak("mnaegelin/rxs2tria")
 
@@ -30,10 +37,9 @@ remotes::install_github('mnaegelin/rxs2tria')
 
 ## Usage
 
-Use the package to extract all available metadata from the ROXAS output
-files under a given path.
+Use the package to extract all available metadata from the ROXAS output files under a given path.
 
-``` r
+```{r prep, eval = FALSE}
 library(rxs2tria)
 
 # set input and output paths and dataset name
@@ -42,13 +48,13 @@ path_out <- './out'
 dataset_name <- 'QWA_ex_dataset'
 ```
 
-``` r
+```{r files, eval = FALSE}
 # get overview of data to be read and extract data structure from filenames
 files <- get_roxas_files(path_in)
 str(files)
 ```
 
-``` r
+```{r strc, eval = FALSE}
 # define the naming convention used for your files as a regex pattern
 # e.g. the following means that your filenames are structured as follows:
 # `{site}_{species}_{tree}_{slide}_{image}`
@@ -59,7 +65,7 @@ pattern <- "^(?<site>[:alnum:]+)_(?<species>[:alnum:]+)_(?<tree>[:alnum:].+)_(?<
 df_structure <- extract_data_structure(files, pattern)
 ```
 
-``` r
+```{r rawmeta, eval = FALSE}
 # read available metadata
 df_meta <- collect_metadata_from_files(df_structure,
                                        roxas_version='classic')
@@ -69,22 +75,19 @@ write.csv(df_meta, file.path(path_out, paste0(dataset_name, '_meta_extracted.csv
           row.names = FALSE)
 ```
 
-To provide the additional metadata required (e.g. site and tree
-information, author details, …) for the submission of a dataset, you can
-use the interactive Shiny app which is part of this package.
+To provide the additional metadata required (e.g. site and tree information, author details, ...) for the submission of a dataset, you can use the interactive Shiny app which is part of this package.
 
-The app is hosted on a WSL server and accessible via
-[webapps.wsl.ch/QWAmeta](https://webapps.wsl.ch/QWAmeta/).
+The app is hosted on a WSL server and accessible via [webapps.wsl.ch/QWAmeta](https://webapps.wsl.ch/QWAmeta/).
 
 Or, if you want to run it locally, you can use the following command:
 
-``` r
+```{r metaapp, eval = FALSE}
 launch_metadata_app()
 ```
 
 To load and preprocess the cell and ring measurements:
 
-``` r
+```{r rawdata, eval = FALSE}
 # read raw cells/rings data
 QWA_data <- collect_raw_data(df_structure)
 
@@ -107,12 +110,12 @@ write.csv(QWA_data$cells,
 write.csv(QWA_data$rings,
           file.path(path_out, paste0(dataset_name, '_rings.csv')),
           row.names = FALSE)
+
 ```
 
-To check the coverage and add ring quality flags and setting years to
-exclude:
+To check the coverage and add ring quality flags and setting years to exclude:
 
-``` r
+```{r, eval = FALSE}
 launch_coverage_app()
 
 # TODO: add export functionality to coverage app

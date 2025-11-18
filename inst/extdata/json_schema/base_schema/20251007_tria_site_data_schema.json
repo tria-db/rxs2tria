@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "TODO:addurltoTRIAschema",
+  "title": "TRIA site metadata schema",
+  "description": "Schema for ...",
+  "type": "array",
+  "minItems": 1,
+  "items": {
+    "type": "object",
+    "properties": {
+      "site_label": {
+        "type": "string",
+        "minLength": 1,
+        "readOnly": true,
+        "title": "Site code",
+        "description": "Identifier for the site, unique within dataset"
+      },
+      "n_trees": {
+        "type": ["integer", "null"],
+        "minimum": 1,
+        "readOnly": true,
+        "title": "Nr of trees",
+        "description": "Nr. of sampled trees at each site"
+      },
+      "site_name": {
+        "type": "string",
+        "minLength": 1,
+        "title": "Site name",
+        "description": ""
+      },
+      "site_desc": {
+        "type": ["string", "null"],
+        "title": "Site description",
+        "description": ""
+      },
+      "latitude": {
+        "type": "number",
+        "minimum": -90,
+        "maximum": 90,
+        "title": "Latitude",
+        "description": "Latitude of the site in decimal degrees (WGS84)"
+      },
+      "longitude": {
+        "type": "number",
+        "minimum": -180,
+        "maximum": 180,
+        "title": "Longitude",
+        "description": "Longitude of the site in decimal degrees (WGS84)"
+      },
+      "country_code": {
+        "type": "string",
+        "pattern": "^[A-Z]{2}$", 
+        "title": "Country",
+        "description": "Country code and name (ISO 3166-1 alpha-2)"
+      },
+      "elevation": {
+        "type": "integer",
+        "minimum": -420,
+        "maximum": 8848,
+        "title": "Elevation",
+        "description": "Elevation of the site above sea level (in m)"
+      },
+      "aspect": {
+        "type": ["number","null"],
+        "minimum": 0,
+        "maximum": 360,
+        "title": "Aspect",
+        "description": "Orientation of the slope at the site (degrees from north)"
+      },
+      "slope": {
+        "type": ["number","null"],
+        "minimum": 0,
+        "maximum": 90,
+        "title": "Slope",
+        "description": "Slope of the terrain at the site (in degrees)"
+      },
+      "topography": {
+        "type": ["string","null"],
+        "enum": ["", "summit", "plateau", "upper slope", "middle slope", "lower slope", "valley bottom", "flat"],
+        "title": "Site topography",
+        "description": "Small-scale terrain features"
+      },
+      "soil_depth": {
+        "type": ["string","null"],
+        "enum": ["", "0-20 cm", "20-50 cm", "50-100 cm", ">100 cm"],
+        "title": "Soil depth",
+        "description": "Depth of the soil at the site"
+      },
+      "soil_water_capacity": {
+        "type": ["string","null"],
+        "enum": ["", "low", "medium", "high"],
+        "title": "Soil water holding cap.",
+        "description": "Water holding capacity of the soil at the site" 
+      },
+      "soil_moisture": {
+        "type": ["string","null"],
+        "enum": ["", "low", "medium", "high"],
+        "title": "Soil moisture",
+        "description": "Moisture level of soil at the site" 
+      },
+      "stand_composition": {
+        "type": ["string","null"],
+        "enum": ["", "mono gymnosperm", "mixed gymnosperm", "mixed forest", "mixed angiosperm", "mono angiosperm"],
+        "title": "Stand composition",
+        "description": "Composition of forest stand"          
+      },
+      "stand_structure": {
+        "type": ["string","null"],
+        "enum": ["", "regular", "irregular"],
+        "title": "Stand structure",
+        "description": "Structural description of the forest stand"
+      },
+      "stand_age_str": {
+        "type": ["string","null"],
+        "enum": ["", "evenaged", "unevenaged"],
+        "title": "Age structure",
+        "description": "Structure of the forest stand age"
+      },
+      "stand_age_class": {
+        "type": ["string","null"],
+        "enum": ["", "<5 years", "5-30 years", "30-100 years", "100-200 years", "200-300 years", ">300 years"],
+        "title": "Stand age",
+        "description": "Age class of the forest stand"
+      },
+      "stand_main_species_code": {
+        "type": ["string", "null"], 
+        "pattern": "^(|[A-Z]{4})$",
+        "title": "Main species",
+        "description": "Dominant tree species in the forest stand (ITRDB species code)"
+      },
+      "stand_management": {
+        "type": ["string","null"],
+        "enum": ["", "primary", "unmanaged", "extensive", "moderate", "intensive"],
+        "title": "Management",
+        "description": "Level of management applied at the site"
+      }
+    },
+    "required": ["site_label", "site_name", "latitude", "longitude", "country_code", "elevation"],
+    "additionalProperties": false
+  }
+}

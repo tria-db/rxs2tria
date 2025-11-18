@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "TODO:addurltoTRIAschema",
+  "title": "TRIA author metadata schema",
+  "description": "Schema for ...",
+  "type": "array",
+  "minItems": 1,
+  "items": {
+    "type": "object",
+    "properties": {
+      "author_nr": {
+        "type": "integer",
+        "minimum": 1,
+        "title": "Author Nr",
+        "description": "To indicate the order of authorship from first (1) to last (n)" 
+      },
+      "last_name": {
+        "type": "string",
+        "minLength": 1,
+        "title": "Last name",
+        "description": "Family name(s) of the author"
+      },
+      "first_name": {
+        "type": "string",
+        "minLength": 1,
+        "title": "First name",
+        "description": "Given name(s) of the author"
+      },
+      "email": {
+        "type": "string",
+        "format": "email",
+        "title": "Email",
+        "description": "Valid email address"
+      },
+      "orcid": {
+        "type": ["string", "null"],
+        "pattern": "^(|[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X])$",
+        "title": "ORCID",
+        "description": "ORCID, e.g. 0000-0002-7070-3292"
+      },
+      "org_name": {
+        "type": "string",
+        "minLength": 1,
+        "title": "Research institution",
+        "description": "Primary affiliation"
+      },
+      "rorid": {
+        "type": ["string", "null"],
+        "pattern": "^(|[0-9a-zA-Z]{9})$",
+        "title": "RORID",
+        "description": "RORID, e.g. 04bs5yc70"
+      },
+      "aff_department": {
+        "type": ["string", "null"],
+        "title": "Department",
+        "description": "Department at primary affiliation"
+      },
+      "aff_street": {
+        "type": ["string", "null"],
+        "title": "Street",
+        "description": ""
+      },
+      "aff_plz": {
+        "type": ["string", "null"],
+        "title": "Postal code",
+        "description": ""
+      },
+      "aff_city": {
+        "type": ["string", "null"],
+        "title": "City",
+        "description": ""
+      },
+      "org_country": {
+        "type": "string",
+        "pattern": "^[A-Z]{2}$",
+        "title": "Country",
+        "description": "Country code and name (ISO 3166-1 alpha-2)"
+      },
+      "contact_person": {
+        "type": ["boolean", "null", "string"],
+        "maxLength": 0,
+        "title": "Contact person",
+        "description": "Select one author as contact person",
+        "$comment": "missing, null, or empty string values are considered as false"
+      }
+    },
+    "required": ["author_nr", "last_name", "first_name", "email", "org_name", "org_country", "contact_person"],
+    "additionalProperties": false
+  }
+}

@@ -1,0 +1,31 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "extended_shiny_thema",
+    "title": "TRIA metadata schema",
+    "description": "Extended Schema for ...",
+    "type": "object",
+    "properties":
+    {
+        "ds_data": { "$ref": "base_schema/20251007_tria_ds_data_schema.json" },
+        "author_data": { "$ref": "20251007_tria_author_ext_schema.json" },
+        "funding_data": { "$ref": "20251007_tria_funding_ext_schema.json" },
+        "relresource_data": { "$ref": "20251007_tria_relresource_ext_schema.json" },
+        "site_data": { "$ref": "20251007_tria_site_ext_schema.json" },
+        "tree_data": { "$ref": "20251007_tria_tree_ext_schema.json" },
+        "woodpiece_data": { "$ref": "20251007_tria_woodpiece_ext_schema.json" },
+        "slide_data": { "$ref": "20251007_tria_slide_ext_schema.json" },
+        "roxas_data": { "$ref": "base_schema/20251007_tria_roxas_data_schema.json" }
+    },
+    "required":
+    [
+        "ds_data",
+        "author_data",
+        "funding_data",
+        "site_data",
+        "tree_data",
+        "woodpiece_data",
+        "slide_data",
+        "roxas_data"
+    ],
+    "additionalProperties": true
+}

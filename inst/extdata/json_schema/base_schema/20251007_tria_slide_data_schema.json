@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "TODO:addurltoTRIAschema",
+  "title": "TRIA slide metadata schema",
+  "description": "Schema for ...",
+  "type": "array",
+  "minItems": 1,
+  "items": {
+    "type": "object",
+    "properties": {
+      "slide_label": {
+        "type": "string",
+        "minLength": 1,
+        "readOnly": true,
+        "title": "Slide code",
+        "description": "Identifying code"
+      },
+      "woodpiece_label": {
+        "type": "string",
+        "minLength": 1,
+        "readOnly": true,
+        "title": "Woodpiece code",
+        "description": "To which woodpiece the slide belongs"
+      },
+      "n_images": {
+        "type": "integer",
+        "minimum": 1,
+        "readOnly": true,
+        "title": "Nr of images",
+        "description": "Nr. of images taken from each slide"
+      },
+      "sect_thickness": {
+        "type": ["number", "null"],
+        "minimum": 0,
+        "maximum": 100,
+        "unit": "µm",
+        "title": "Section thickness",
+        "description": "in µm"
+      },
+      "cutting_plane": {
+        "type": ["string", "null"],
+        "enum": ["", "cross-section", "tangential section", "radial section"],
+        "title": "Cutting plane",
+        "description": ""
+      },
+      "slide_prep": {
+        "type": ["string", "null"],
+        "enum": ["", "micro-section", "cut surface", "polished surface", "double saw cut"],
+        "title": "Preparation",
+        "description": "Slide preparation method"
+      },
+      "slide_staining": {
+        "type": ["string", "null"],
+        "enum": ["", "Sarafin Astrablue", "FASGA", "Cresyl violet", "Fast green", "other", "none"],
+        "title": "Staining method",
+        "description": ""
+      },
+      "slide_mounting": {
+        "type": ["string", "null"],
+        "enum": ["", "Euparal", "Canada Balsam", "Eukitt", "other", "none"],
+        "title": "Mounting method",
+        "description": "Description of the mounting method used"
+      },
+      "img_cap_system": {
+        "type": ["string", "null"],
+        "enum": ["", "confocal microscope", "light microscope", "slide scanner", "flatbed scanner"],
+        "title": "Image capture",
+        "description": "The image capturing system used to digitize the slide"
+      },
+      "data_structure": {
+        "type": ["string", "null"],
+        "enum": ["", "tracheid-full", "tracheid-row", "vessels", "parenchyma"],
+        "title": "Data structure",
+        "description": ""
+      },
+      "pith_offset": {
+        "type": ["integer", "null"],
+        "minimum": 0,
+        "maximum": 5000,
+        "title": "Pith offset",
+        "description": "Pith offset (in years)"
+      },
+      "slide_archived": {
+        "type": ["boolean", "null", "string"], 
+        "maxLength": 0, 
+        "title": "Slide archived",
+        "description": "Is the slide archived"
+      }
+    },
+    "required": ["slide_label", "woodpiece_label"],
+    "additionalProperties": false
+  }
+}

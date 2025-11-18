@@ -1,0 +1,56 @@
+Package: rxs2tria
+Title: Preprocess ROXAS Data for XCELL
+Version: 0.0.0.9000
+Authors@R: 
+    person("Mara", "Naegelin", , "mara.naegelin@wsl.ch", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0002-0490-7510"))
+Description: This package contains the functionalities to preprocess and prepare
+    the ROXAS output files for upload to the XCELL database.
+License: GPL (>= 3)
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+Imports: 
+    backports,
+    beepr,
+    bslib,
+    checkmate,
+    data.table,
+    data.tree,
+    dplyr,
+    DT,
+    exifr,
+    fs,
+    ggnewscale,
+    ggplot2,
+    ggstance,
+    htmltools,
+    htmlwidgets,
+    httr,
+    janitor,
+    jsonlite,
+    jsonvalidate,
+    leaflet,
+    lubridate,
+    magrittr,
+    plotly,
+    purrr,
+    readr,
+    rhandsontable,
+    sf,
+    shiny,
+    shinyalert,
+    shinyFiles,
+    shinyjs,
+    shinyTree,
+    shinyvalidate,
+    stringdist,
+    stringr,
+    tidyr,
+    vroom,
+    zoo
+Remotes:
+    mnaegelin/shinyvalidate@remove_rules 
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3

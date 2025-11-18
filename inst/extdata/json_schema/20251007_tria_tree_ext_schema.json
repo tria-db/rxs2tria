@@ -1,0 +1,35 @@
+{
+  "$id": "https://example.com/schemas/extended_tree.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "allOf": [
+    { "$ref": "base_schema/20251007_tria_tree_data_schema.json"},
+    { 
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "tree_label": { "htType": "character", "unique": true },
+          "site_label": { "htType": "character", "otherChecks": ["valid_label"] },
+          "n_woodpieces": { "htType": "numeric", "otherChecks": ["check_counts"] },
+          "species_code": { "htType": "autocomplete", "options": "species_codes" },
+          "species_name": { "htType": "autocomplete", "options": "species_names", "otherChecks": ["check_speciescode"] },
+          "phylogenetic_group": { "htType": "dropdown", "otherChecks": ["check_speciescode"] },
+          "leaf_habit": { "htType": "dropdown", "otherChecks": ["check_speciescode"] },
+          "tree_ring_structure": { "htType": "dropdown", "otherChecks": ["check_speciescode"] },
+          "tree_treatment": { "htType": "dropdown" },
+          "tree_dbh": { "htType": "numeric" },
+          "tree_height": { "htType": "numeric" },
+          "tree_age": { "htType": "numeric" },
+          "tree_sex": { "htType": "dropdown" },
+          "tree_social_status": { "htType": "dropdown" },
+          "tree_health_status": { "htType": "dropdown" },
+          "tree_origin": { "htType": "dropdown" },
+          "wood_origin": { "htType": "dropdown" },
+          "tree_latitude": { "htType": "numeric" },
+          "tree_longitude": { "htType": "numeric" },
+          "tree_comment": { "htType": "text" }
+        }
+      } 
+    }
+  ]
+}

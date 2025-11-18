@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "TODO:addurltoTRIAschema",
+  "title": "TRIA dataset metadata schema",
+  "description": "Schema for ...",
+  "$comment": "TODOs: check that format is sufficient to validate and pattern are not required, use htType for ht renderers (add to all? or infer via type?), use otherChecks for extra/complex validations (implement)",
+  "type": "array",
+  "minItems": 1,
+  "maxItems": 1,
+  "items": {
+    "type": "object",
+    "properties": {
+      "ds_name": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "description": {
+        "type": "string",
+        "minLength": 1
+      },
+      "ds_access": {
+        "type": "string",
+        "enum": ["public", "restricted"]
+      },
+      "ds_license": {
+        "type": "string",
+        "enum": ["CC0 1.0", "CC BY 4.0", "CC BY-SA 4.0", "CC BY-NC 4.0", "CC BY-NC-SA 4.0", "CC BY-ND 4.0", "CC BY-NC-ND 4.0", "other"]
+      },
+      "embargoed_until": {
+        "type": ["string", "null"],
+        "description": "Date until which the dataset is embargoed (YYYY-MM-DD), or null if not restricted."
+      },
+      "acknowledgements": {
+        "type": ["string", "null"],
+        "description": "Acknowledgements."
+      }
+    },
+    "required": ["ds_name", "description", "ds_access", "ds_license"],
+    "additionalProperties": false,
+    "if": {
+      "properties": { "ds_access": { "const": "restricted" } }
+    },
+    "then": {
+      "properties": {
+        "embargoed_until": {
+          "type": "string",
+          "format": "date"
+        }
+      },
+      "required": ["embargoed_until"]
+    },
+    "else": {
+      "properties": {
+        "embargoed_until": {"maxLength": 0}
+      }
+    }
+  }
+}

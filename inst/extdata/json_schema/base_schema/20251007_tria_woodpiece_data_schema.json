@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "TODO:addurltoTRIAschema",
+  "title": "TRIA woodpiece metadata schema",
+  "description": "Schema for ...",
+  "type": "array",
+  "minItems": 1,
+  "items": {
+    "type": "object",
+    "properties": {
+      "woodpiece_label": {
+        "type": "string",
+        "minLength": 1,
+        "readOnly": true,
+        "title": "Woodpiece code",
+        "description": ""
+      },
+      "tree_label": {
+        "type": "string",
+        "minLength": 1,
+        "readOnly": true,
+        "title": "Tree code",
+        "description": ""
+      },
+      "n_slides": {
+        "type": "integer",
+        "minimum": 1,
+        "readOnly": true,
+        "title": "Nr of slides",
+        "description": "Nr. of slides created from each woodpiece"
+      },
+      "sampling_year": {
+        "type": ["integer", "null"],
+        "title": "Sampling year",
+        "description": "SH: calendar year in which the tree growth began"
+      },
+      "organ": {
+        "title": "Organ",
+        "type": "string",
+        "enum": ["branch", "root", "stem"],
+        "description": "From which part of the tree was the sample"
+      },
+      "sampling_height": {
+        "type": ["number", "null"],
+        "minimum": 0,
+        "maximum": 150,
+        "unit": "m",
+        "title": "Sampling height",
+        "description": "in m (can be negative for root samples)"
+      },
+      "sample_apex_distance": {
+        "type": ["number", "null"],
+        "minimum": 0,
+        "maximum": 150,
+        "unit": "m",
+        "title": "Distance from apex",
+        "description": "in m"
+      },
+      "sample_type": {
+        "type": ["string", "null"],
+        "enum": ["", "core 5 mm", "core 10 mm", "wood section", "wood disk"],
+        "title": "Sample type",
+        "description": ""
+      },
+      "sample_embedding": {
+        "type": ["string", "null"],
+        "enum": ["", "paraffin", "resin", "none"],
+        "title": "Embedding method",
+        "description": "Description of the method used to prepare the sample"        
+      },
+      "pith_year": {
+        "type": ["integer", "null"],
+        "title": "Pith year",
+        "description": "The year of the pith ring. SH: calendar year in which the tree growth began"
+      },
+      "sample_archived": {
+        "type": ["boolean", "null", "string"], 
+        "maxLength": 0, 
+        "title": "Sample archived",
+        "description": ""
+      }
+    },
+    "required": ["woodpiece_label", "tree_label", "organ"],
+    "additionalProperties": false
+  }
+}

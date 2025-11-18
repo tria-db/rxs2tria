@@ -1,0 +1,20 @@
+{
+  "$id": "https://example.com/schemas/extended_funding.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "allOf": [
+    { "$ref": "base_schema/20251007_tria_funding_data_schema.json"},
+    { 
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "org_name": { "htType": "text" },
+          "rorid": { "htType": "character" },
+          "org_country": { "htType": "autocomplete", "options" : "country_codes_names" },
+          "grant_name": { "htType": "character" },
+          "grant_nr": { "htType": "character" }
+        }
+      } 
+    }
+  ]
+}

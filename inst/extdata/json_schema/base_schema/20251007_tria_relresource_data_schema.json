@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "TODO:addurltoTRIAschema",
+  "title": "TRIA linked resources metadata schema",
+  "description": "Schema for ...",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "citation": {
+        "type": "string",
+        "minLength": 1,
+        "title": "Citation",
+        "description": ""
+      },
+      "doi": {
+        "type": ["string", "null"],
+        "title": "DOI", 
+        "description": "",
+        "$comment": "TODO: add doi validation pattern, and citation check?"
+      },
+      "description": {
+        "type": ["string", "null"],
+        "title": "Description",
+        "description": "Optional description of the resource (e.g. how it relates to the dataset)"
+      },
+      "url": {
+        "type": ["string", "null"], 
+        "title": "URL",
+        "description": "",
+        "$comment": "TODO: add url format check?"
+      },   
+      "rel_ds_label": {
+        "type": ["string", "null"], 
+        "title": "Dataset ID",
+        "description": "",
+        "pattern": "^(|tria.[0-9a-zA-Z]{3}$)"
+      }
+    },
+    "required": ["citation"],
+    "additionalProperties": false
+  }
+}

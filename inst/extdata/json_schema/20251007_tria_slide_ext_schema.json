@@ -1,0 +1,27 @@
+{
+  "$id": "https://example.com/schemas/extended_slide.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "allOf": [
+    { "$ref": "base_schema/20251007_tria_slide_data_schema.json"},
+    { 
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "slide_label": { "htType": "character", "unique": true },
+          "woodpiece_label": { "htType": "character", "otherChecks": ["valid_label"] },
+          "n_images": { "htType": "numeric", "otherChecks": ["check_counts"] },
+          "sect_thickness": { "htType": "numeric" },
+          "cutting_plane": { "htType": "dropdown" },
+          "slide_prep": { "htType": "dropdown" },
+          "slide_staining": { "htType": "dropdown" },
+          "slide_mounting": { "htType": "dropdown" },
+          "img_cap_system": { "htType": "dropdown" },
+          "data_structure": { "htType": "dropdown" },
+          "pith_offset": { "htType": "numeric" },
+          "slide_archived": { "htType": "checkbox" }
+        }
+      } 
+    }
+  ]
+}
