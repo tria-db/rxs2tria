@@ -3,7 +3,7 @@ pkgdown: 2.2.0
 pkgdown_sha: ~
 articles:
   rxs2tria: rxs2tria.html
-last_built: 2025-11-20T15:57Z
+last_built: 2025-11-20T16:16Z
 urls:
   reference: https://tria-db.github.io/rxs2tria/reference
   article: https://tria-db.github.io/rxs2tria/articles
