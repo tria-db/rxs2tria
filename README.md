@@ -22,10 +22,10 @@ You can install the development version of `rxs2tria` from
 
 ``` r
 # install.packages("pak")
-pak::pak("mnaegelin/rxs2tria")
+pak::pak("tria-db/rxs2tria")
 
 # or:
-remotes::install_github('mnaegelin/rxs2tria')
+remotes::install_github('tria-db/rxs2tria')
 ```
 
 ## Usage
