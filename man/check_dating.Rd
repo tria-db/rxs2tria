@@ -17,3 +17,4 @@ This function checks that the data are properly dated, i.e. that the year
 variable is never NA, and does not contain values in the future. If any
 invalid years are detected, the function will issue an error.
 }
+\keyword{internal}

@@ -20,3 +20,4 @@ It also ranks the duplicated rings by the number of cells they contain (in
 decreasing order), since for chronologies, we generally want to keep only the
 ring with the most cells (rank 1).
 }
+\keyword{internal}

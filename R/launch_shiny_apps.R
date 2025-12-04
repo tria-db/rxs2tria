@@ -25,3 +25,14 @@ launch_metadata_app <- function(server_run = FALSE) {
   }
   shiny::runApp(app_dir)
 }
+
+
+#' Launch the yte flags Shiny app
+#' @export
+launch_flags_app <- function() {
+  app_dir <- system.file("shiny_flags", package = "rxs2tria")
+  if (app_dir == "") {
+    stop("Could not find the Shiny app directory. Reinstall the package.")
+  }
+  shiny::runApp(app_dir)
+}

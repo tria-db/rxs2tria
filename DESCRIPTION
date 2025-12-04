@@ -51,12 +51,11 @@ Imports:
     tidyr,
     vroom,
     zoo
-Remotes:
-    mnaegelin/shinyvalidate@remove_rules 
 Suggests: 
     knitr,
     rmarkdown,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 URL: https://tria-db.github.io/rxs2tria/, https://github.com/tria-db/rxs2tria/
+BugReports: https://github.com/tria-db/rxs2tria/issues
 VignetteBuilder: knitr

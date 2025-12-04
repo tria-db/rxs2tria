@@ -9,3 +9,4 @@ max_na_inf(x)
 \description{
 Some additional cell measures are calculated based on the existing data.
 }
+\keyword{internal}

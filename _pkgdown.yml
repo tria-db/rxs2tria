@@ -2,3 +2,35 @@ url: https://tria-db.github.io/rxs2tria/
 template:
   bootstrap: 5
   bootswatch: cerulean
+reference:
+- title: "Read raw ROXAS metadata"
+  desc: >
+    Functions for reading the metadata that can be extracted from the raw ROXAS
+    output files.
+  contents:
+  - get_roxas_files
+  - get_structure_from_filenames
+  - extract_data_structure
+  - collect_image_info
+  - collect_settings_data
+  - convert_settings_dates
+  - combine_rxs_metadata
+- title: "Reading raw ROXAS output data"
+  desc: "Functions for reading and writing ROXAS cells and rings output files."
+  contents:
+  - collect_cells_data
+  - collect_rings_data
+  - collect_raw_data
+- title: "rest"
+  desc: "Other utility functions."
+  contents:
+  - read_QWAdata
+  - launch_coverage_app
+  - launch_metadata_app
+  - resolve_schema
+  - plot_woodpiece_coverage
+  - create_coverage_plots
+  - remove_outliers
+  - validate_QWA_data
+
+

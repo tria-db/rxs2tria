@@ -19,3 +19,4 @@ require CWT estimates in the case of conifer data, but not for angiosperms.
 Thus if any images with all NA cwttan are found, the function will issue a
 warning.
 }
+\keyword{internal}

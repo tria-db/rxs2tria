@@ -4,12 +4,26 @@
 \name{rxs2tria-package}
 \alias{rxs2tria}
 \alias{rxs2tria-package}
-\title{rxs2tria: Preprocess ROXAS Data for XCELL}
+\title{rxs2tria: Preprocess ROXAS data for TRIA}
 \description{
-This package contains the functionalities to preprocess and prepare the ROXAS output files for upload to the XCELL database.
+This package contains the functionalities to preprocess and prepare the ROXAS output files for upload to the TRIA database.
+}
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://tria-db.github.io/rxs2tria/}
+  \item \url{https://github.com/tria-db/rxs2tria/}
+  \item Report bugs at \url{https://github.com/tria-db/rxs2tria/issues}
+}
+
 }
 \author{
 \strong{Maintainer}: Mara Naegelin \email{mara.naegelin@wsl.ch} (\href{https://orcid.org/0000-0002-0490-7510}{ORCID})
+
+Other contributors:
+\itemize{
+  \item Patrick Fonti \email{patrick.fonti@wsl.ch} (\href{https://orcid.org/0000-0002-7070-3292}{ORCID}) [contributor]
+}
 
 }
 \keyword{internal}

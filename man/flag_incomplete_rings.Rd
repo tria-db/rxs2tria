@@ -25,3 +25,4 @@ inner ring border (see helper function \code{check_incomplete_innermost}). For t
 outermost rings, we check the MRW value, since ROXAS only estimates an MRW if
 it can detect an outer ring boundary.
 }
+\keyword{internal}

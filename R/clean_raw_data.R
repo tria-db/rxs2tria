@@ -10,26 +10,151 @@
 #' @export
 # TODO: finalize: sel cols, warn about how many are replaced? sure that these cols cannot have neg values?
 remove_outliers <- function(QWA_data){
+  checkmate::assert_list(QWA_data, types = "data.frame", len = 2)
+  checkmate::check_subset(names(QWA_data), c("cells", "rings"))
+
+  outl_cols_cells <- c("raddistr", "rraddistr", "nbrno", "nbrid", "la", "asp",
+                       "majax", "kh", "cwtpi", "cwtba", "cwtle", "cwtri",
+                       "cwttan", "cwtrad", "cwtall", "rtsr", "ctsr", "dh",
+                       "drad", "dtan", "tb2", "cwa", "rwd")
+  outl_cols_rings <- c("ra", "mrw", "rvgi", "rvsf", "rgsgv", "aoiar",
+                       "dh_w", "dh_m")
+
+  # get outlier counts for reporting
+  cell_outliers <- QWA_data$cells |>
+    dplyr::select(dplyr::all_of(outl_cols_cells)) |>
+    dplyr::summarise(dplyr::across(dplyr::everything(),
+                                   ~sum(.x < 0, na.rm = TRUE))) |>
+    tidyr::pivot_longer(dplyr::everything()) %>%
+    dplyr::filter(value > 0) |>
+    glue::glue_data("{name}: {value}")
+
+  ring_outliers <- QWA_data$rings %>%
+    dplyr::select(dplyr::all_of(outl_cols_rings)) |>
+    dplyr::summarise(dplyr::across(dplyr::everything(),
+                                   ~sum(.x < 0, na.rm = TRUE))) |>
+    tidyr::pivot_longer(dplyr::everything()) %>%
+    dplyr::filter(value > 0) |>
+    glue::glue_data("{name}: {value}")
+
+  if (length(cell_outliers) > 0){
+    cli::cli_inform(c(
+      "i" = 'Outliers (negative values) in cells data:',
+      cell_outliers
+    ))
+  }
+  if (length(ring_outliers) > 0){
+    cli::cli_inform(c(
+      "i" = 'Outliers (negative values) in rings data:',
+      ring_outliers
+    ))
+  }
+
+  QWA_data_rm <- list()
+  QWA_data_rm$cells <- QWA_data$cells %>%
+    dplyr::mutate(dplyr::across(dplyr::all_of(outl_cols_cells),
+                                ~ dplyr::if_else(.x < 0, NA_real_, .x)))
+  QWA_data_rm$rings <- QWA_data$rings %>%
+    dplyr::mutate(dplyr::across(dplyr::all_of(outl_cols_rings),
+                                ~ dplyr::if_else(.x < 0, NA_real_, .x)))
+
+  cli::cli_alert_success(
+    "Outliers (negative values) have been replaced with NA"
+  )
+
+  QWA_data_rm
+}
+
+
+#' Complete cell measures
+#'
+#' Some additional cell measures are calculated based on the existing data.
+#' @keywords internal
+max_na_inf <- function(x){
+  x_na <- is.na(x)
+  if(all(x_na)) -Inf else max(x[!x_na])
+}
+
+# calculate additional measures (see rxs complete)
+# TODO: finalize
+complete_cell_measures <- function(QWA_data){
+
   df_cells <- QWA_data$cells %>%
-    dplyr::mutate(dplyr::across(raddistr:rwd, ~ dplyr::if_else(.x < 0, NA_real_, .x)))
+    # need MRW for some calculations
+    dplyr::left_join(QWA_data$rings %>%
+                       dplyr::select(image_label, year, mrw), by=c('image_label', 'year')) %>%
+    dplyr::mutate(
+      # new:
+      tca = la + cwa,
+      rwd2 = cwtrad/drad,
+      # Add CWT-based density:
+      # assume a circular lumen area with homogenous cell wall thickness around it;
+      # for latewood-like cells, take overall average CWT,
+      # for earlywood-like cells, only consider CWTTAN, which avoids pit artefacts
+      # helper:
+      lr = sqrt(la / pi),
+      wa = ifelse(rtsr < 1, (lr + cwttan)^2 * pi - la, (lr + cwtall)^2 * pi - la),
+      # new:
+      dcwt = wa / (la + wa),
+      # standardized RADDISTR (by MRW): new
+      raddistr.st = rraddistr * mrw / 100,
+      # Add mean CWT: mean of radial and tangential CWT if Mork index latewood-like,
+      # in earlywood-like cells take CWTTAN
+      # new:
+      cwtall.adj = ifelse(rtsr < 1,  cwttan,  cwtall),
+      cdrad = drad + 2*cwttan,
+      cdtan = dtan + 2*cwtrad,
+      cdratio = cdrad/cdtan
+    ) %>%
+    # remove helper parameters
+    dplyr::select(-lr, -wa)
+
+  df_cells <- df_cells %>%
+    dplyr::mutate(
+      sector100 = as.numeric(cut(rraddistr, # no grouping needed
+                                 b = seq(from=0, to=100, by= 1),
+                                 labels = 1:100,
+                                 include.lowest = T))) %>%
+    # round for data with rraddistr just above 100, otherwise leave NA
+    dplyr::mutate(sector100 = dplyr::if_else(rraddistr > 100 & rraddistr <= 101, 100, sector100))
+
+
+
+  # ggplot2::ggplot(df_cells %>% dplyr::filter(image_label == 'POG_PISY_02_B_4_2'),
+  #                 ggplot2::aes(x = xpix, y = ypix, color = TO.EWLW)) +
+  #   ggplot2::geom_point()
+
+  mork <- 1
+  df_ewlw <- df_cells %>%
+    # need MRW for some calculations
+    # dplyr::left_join(QWA_data$rings %>%
+    #                    dplyr::select(woodpiece_label, slide_label, image_label, year, mrw), by=c('image_label', 'year')) %>%
+    dplyr::filter(!is.na(rtsr), !is.na(mrw)) %>%  # remove cells that do not have a measured CWT or MRW
+    # TODO: check grouping
+    #dplyr::group_by(woodpiece_label, year, slide_label, sector100) %>%
+    dplyr::group_by(image_label, year, sector100) %>%
+    dplyr::summarise(RTSR.MEAN = mean(rtsr),
+                     mrw = mean(mrw), .groups = 'drop') %>%
+    dplyr::group_by(image_label, year) %>%
+    dplyr::mutate(ROLLMEAN = zoo::rollmean(RTSR.MEAN, 9, fill = c(NA, NA, 10))) %>% # TODO: 10 so the last 4 are always LW?
+    dplyr::summarise(
+      mrw = mean(mrw),
+      # the boundary is set at the highest sector with a rolling mean below mork
+      # TODO: check edge cases
+      max_EW_sector = max_na_inf(sector100[ROLLMEAN <= mork]),
+      eww = ifelse(max_EW_sector >=0, max_EW_sector*mrw/100, 0),
+      lww = mrw - eww, .groups = 'drop'
+    )
+
+  df_cells <- df_cells %>%
+    dplyr::left_join(df_ewlw[,c('image_label','year','max_EW_sector')],
+                     by = c('image_label', 'year')) %>%
+    dplyr::mutate(ew_lw = ifelse(sector100 <= max_EW_sector, "EW", "LW")) %>%
+    dplyr::select(-mrw,-max_EW_sector)
 
   df_rings <- QWA_data$rings %>%
-    dplyr::mutate(dplyr::across(ra:dh_m, ~ dplyr::if_else(.x < 0, NA_real_, .x)))
-
-  # count and print the number of negative values per column
-  message('Outliers (negative values) in the cell data:')
-  cell_outliers <- QWA_data$cells |>
-          dplyr::summarise(dplyr::across(raddistr:rwd, ~sum(.x < 0, na.rm = TRUE))) |>
-          dplyr::select(where(~any(.x > 0)))
-  message(paste0(capture.output(print(as.data.frame(cell_outliers),
-                                      row.names = FALSE)), collapse='\n'))
-
-  message('Outliers (negative values) in the ring data:')
-  ring_outliers <- QWA_data$rings %>%
-          dplyr::summarise(dplyr::across(ra:dh_m, ~sum(.x < 0, na.rm = TRUE))) |>
-          dplyr::select(where(~any(.x > 0)))
-  message(paste0(capture.output(print(as.data.frame(ring_outliers),
-                                      row.names = FALSE)), collapse='\n'))
+    dplyr::left_join(df_ewlw %>% dplyr::select(-mrw), by = c("image_label", "year")) %>%
+    dplyr::select(-max_EW_sector)
 
   return(
     stats::setNames(
@@ -50,28 +175,28 @@ remove_outliers <- function(QWA_data){
 #' @param QWA_data a list containing the cells and rings dataframes
 #'
 #' @return an extended dataframe of rings data
-#'
+#' @keywords internal
 complete_rings_log <- function(QWA_data){
-  # get a list of all annual rings in cells data (distinct image_label, YEAR),
+  # get a list of all annual rings in cells data (distinct image_label, year),
   # with added cell counts and mean cwttan per ring
-  df_rings_log <- QWA_data$cells %>%
-    dplyr::group_by(image_label, year) %>%
+  df_rings_log <- QWA_data$cells |>
+    dplyr::group_by(image_label, year) |>
     dplyr::summarise(cno = dplyr::n(),
                      mean_cwttan = mean(cwttan, na.rm = TRUE),
                      .groups = 'drop')
 
   # combine with rings data
-  df_rings_log <- df_rings_log %>%
+  df_rings_log <- df_rings_log |>
     dplyr::full_join(QWA_data$rings,
-                     by = c('image_label', 'year')) %>%
-    dplyr::select(tree_label, woodpiece_label, slide_label, dplyr::everything()) %>%
-    dplyr::group_by(image_label) %>% # fill any missing tree/woodpiece codes by image
-    tidyr::fill(tree_label, woodpiece_label, slide_label, .direction = 'downup') %>%
-    dplyr::ungroup() %>%
-    dplyr::arrange(image_label, year) %>% # arrange by year within image bc missing rings can lead to disordered years
+                     by = c('image_label', 'year')) |>
+    dplyr::select(woodpiece_label, slide_label, dplyr::everything()) |>
+    dplyr::group_by(image_label) |>  # fill any missing woodpiece/slide labels by image
+    tidyr::fill(woodpiece_label, slide_label, .direction = 'downup') |>
+    dplyr::ungroup() |>
+    dplyr::arrange(image_label, year) |>  # arrange by year within image bc missing rings can lead to disordered years
     dplyr::mutate(cno = tidyr::replace_na(cno, 0)) # replace NA cno with 0
 
-return(df_rings_log)
+  df_rings_log
 }
 
 
@@ -85,92 +210,102 @@ return(df_rings_log)
 #'
 #' @param df_rings_log the dataframe containing the rings data incl. mean_cwttan
 #'
-#' @return the input dataframe with an additional logical column 'no_cwt'
-# TODO: maybe ask for type of wood before and tailor warning?
+#' @return TRUE if CWT estimates are present for all images, FALSE otherwise
+#' @keywords internal
 check_cwt_estimates <- function(df_rings_log){
   # check that the cell data include cell wall thickness estimates
   # (i.e., at least some cells per image need to have a nonNAN cwt value)
-  df_rings_log <- df_rings_log %>%
-    dplyr::group_by(image_label) %>%
-    dplyr::mutate(no_cwt = all(is.na(mean_cwttan))) %>%
-    dplyr::ungroup()
+  no_cwt <- df_rings_log |>
+    dplyr::group_by(image_label) |>
+    dplyr::summarise(no_cwt = all(is.na(mean_cwttan))) |>
+    dplyr::filter(no_cwt)
 
-  if (sum(df_rings_log$no_cwt) > 0){
-    beepr::beep(sound = 2, expr = NULL)
-    warning('The following woodpieces have images without cell wall thickness estimation: \n',
-            paste0(unique(df_rings_log[df_rings_log$no_cwt, 'woodpiece_label']), collapse=', '),
-            '\nIf the data is from conifers, please ensure that all included images have CWT estimates and restart the process.')
+  if (nrow(no_cwt) > 0){
+    img_labels <- no_cwt$image_label[1:min(9, nrow(no_cwt))]
+    if (nrow(no_cwt) > 9) {img_labels <- c(img_labels, '...')}
+    cli::cli_warn(c(
+      "!" = "Missing cell wall thickness estimates detected",
+      "i" = "For conifer (but not angiosperm) data, performed CWT analysis is expected.",
+      "{nrow(no_cwt)} image{?s} found without cell wall thickness estimation:",
+      img_labels
+    ))
+    return(FALSE)
   }
 
-  return(df_rings_log)
+  TRUE
 }
 
 
 #' Check that the data are properly dated
 #'
 #' This function checks that the data are properly dated, i.e. that the year
-#' variable is never NA, and does not contain values in the future. If any
-#' invalid years are detected, the function will issue an error.
+#' variable is a sequence without gaps or duplicate within each image, is never
+#' NA, and does not contain values in the future nor after the outmost year.
+#' If any invalid years are detected, the function will issue an error.
 #'
 #' @param df_rings_log the dataframe containing the rings data with cell counts
 #'
-#' @return the input dataframe with an additional logical column 'undated'
-#'
-check_dating <- function(df_rings_log){
-  # check that the data are dated (i.e., YEAR is not NA, and not in future)
+#' @return TRUE if all the dating checks are passed, FALSE otherwise
+#' @keywords internal
+check_dating <- function(df_rings_log, df_meta){
   current_year <- as.numeric(format(Sys.Date(), "%Y"))
-  df_rings_log <- df_rings_log %>%
-    dplyr::mutate(undated = is.na(year) | year > current_year)
 
-  if (sum(df_rings_log$undated) > 0){
-    beepr::beep(sound = 2, expr = NULL)
-    stop('The following woodpieces have not been properly dated:\n',
-         paste0(unique(df_rings_log[df_rings_log$undated, 'woodpiece_label']), collapse=', '),
-         '\nPlease ensure that all included images are dated, then restart the process.')
-  }
-
-  return(df_rings_log)
-}
-
-#-------------------------------------------------------------------------------
-# check that YEAR is consecutive sequence within each image
-# TODO: these checks are probably be overkill, since these issues should not arise
-# in ROXAS normally. BUT keep for now and see if we find any in existing datasets
-# TODO: should we arrange by year here? and also generally in QWA_data?
-additional_year_check <- function(df_rings_log){
-  df_rings_log <- df_rings_log %>%
+  # ensure we have complete year sequences per image
+  df_rings_dating <- df_rings_log |>
+    dplyr::select(woodpiece_label,slide_label, image_label, year, cno) |>
+    dplyr::mutate(missing_year = FALSE) |>
     dplyr::arrange(image_label, year) %>%
     dplyr::group_by(image_label) %>%
-    dplyr::mutate(year_diff = year - dplyr::lag(year),
-                  year_diff = tidyr::replace_na(year_diff, 1)) %>%
+    tidyr::complete(year = tidyr::full_seq(year, 1),
+                    fill = list(cno = 0, missing_year = TRUE), explicit = FALSE) %>%
+    tidyr::fill(woodpiece_label, slide_label, .direction = 'downup') |>
     dplyr::ungroup()
 
-  # any duplicated years in the rings files?
-  if (any(df_rings_log$year_diff == 0)) {
-    beepr::beep(sound = 2, expr = NULL)
-    stop('The following images have duplicate years:\n',
-         paste0(unique(df_rings_log[df_rings_log$year_diff == 0, 'image_label']), collapse=', '),
-         '\nPlease ensure that all included samples are properly dated, then restart the process.')
+  # check that there are not duplicate years within an image
+  df_rings_dating <- df_rings_dating |>
+    dplyr::group_by(image_label) |>
+    dplyr::mutate(dupl_year = duplicated(year)) # one instance is enough
+
+  # check dating: year is not NA, not in future, not after outmost_year
+  df_rings_dating <- df_rings_dating |>
+    dplyr::left_join(
+      df_meta %>% dplyr::select(image_label, outmost_year),
+      by = 'image_label'
+    ) |>
+    dplyr::mutate(
+      undated = is.na(year),
+      in_future = year > current_year,
+      after_outmost = year > outmost_year
+    )
+
+  dating_issues <- df_rings_dating |>
+    dplyr::filter(missing_year|dupl_year|undated|in_future|after_outmost) |>
+    dplyr::mutate(
+      missing_year = dplyr::if_else(missing_year, "missing", NA_character_),
+      dupl_year = dplyr::if_else(dupl_year, "duplicate", NA_character_),
+      undated = dplyr::if_else(undated, "undated", NA_character_),
+      in_future = dplyr::if_else(in_future, "in future", NA_character_),
+      after_outmost = dplyr::if_else(after_outmost, "after outmost", NA_character_),
+    ) |>
+    tidyr::unite("issues",
+                 missing_year, dupl_year, undated, in_future, after_outmost,
+                 na.rm = TRUE, sep = ", ") |>
+    glue::glue_data("{image_label}, {year}: {issues}")
+
+  if (length(dating_issues) > 0){
+    img_labels <- dating_issues[1:min(9, length(dating_issues))]
+    if (length(dating_issues) > 9) {img_labels <- c(img_labels, '...')}
+    cli::cli_abort(c(
+      "x" = "Dating issues detected in rings data",
+      "i" = "The following images/years have problems with the dating:",
+      img_labels
+    ))
+    return(FALSE)
   }
 
-  # any gaps in the dating?
-  if (any(df_rings_log$year_diff > 1)) {
-    # fill in missing years
-    df_rings_log <- df_rings_log %>%
-      dplyr::group_by(image_label) %>%
-      tidyr::complete(year = tidyr::full_seq(year, 1),
-                      fill = list(cno = 0, missing_ring = TRUE, incomplete_ring = FALSE), explicit = FALSE) %>%
-      tidyr::fill(tree_label, woodpiece_label, slide_label, .direction = 'downup') |>
-      dplyr::ungroup()
-    beepr::beep(sound = 2, expr = NULL)
-    warning('The following images have gaps in the dating, missing years were added:\n',
-            paste0(unique(df_rings_log[df_rings_log$year_diff > 1, 'image_label']), collapse=', '))
-  }
-
-  df_rings_log <- df_rings_log %>% dplyr::select(-year_diff)
-
-  return(df_rings_log)
+  TRUE
 }
+
 
 
 #' Helper function to check if an innermost ring is incomplete
@@ -186,8 +321,8 @@ additional_year_check <- function(df_rings_log){
 #'
 #' @return a logical indicating whether the true inner ring border lies outside
 #' the image border and the ring is thus incomplete
-#'
-#' TODO: compare my method with GvA's original one, check thresholds
+#' @keywords internal
+# TODO: compare my method with GvA's original one, check thresholds
 check_incomplete_innermost <- function(cells.innermost, res){
   # first check that we do have cell data for the year in question,
   # if not, it means the cells were manually excluded and it is def incomplete
@@ -287,6 +422,7 @@ check_incomplete_innermost <- function(cells.innermost, res){
 #' for the spatial resolution)
 #'
 #' @return the input dataframe with additional logical columns 'incomplete_ring'
+#' @keywords internal
 # TODO: additional columns
 # TODO: what about circular samples?
 flag_incomplete_rings <- function(df_rings_log, df_cells_all, df_meta){
@@ -341,6 +477,7 @@ flag_incomplete_rings <- function(df_rings_log, df_cells_all, df_meta){
 #'
 #' @return the input dataframe with additional logical column 'duplicate_ring'
 #' and integer column 'duplicate_sel' with the selected ring among duplicates
+#' @keywords internal
 # TODO: avoid switching too often?
 flag_duplicate_rings <- function(df_rings_log){
   # flag which rings are overlapping with others
@@ -409,31 +546,43 @@ flag_duplicate_rings <- function(df_rings_log){
 #' @export
 #'
 validate_QWA_data <- function(QWA_data, df_meta, verbose_flags = FALSE){
+  checkmate::assert_list(QWA_data, types = "data.frame", len = 2)
+  checkmate::check_subset(names(QWA_data), c("cells", "rings"))
+  checkmate::assert_subset(
+    c('image_label','year','cwttan'),
+    names(QWA_data$cells)
+  )
+  checkmate::assert_subset(
+    c("woodpiece_label","slide_label", "image_label", "year"),
+    names(QWA_data$rings)
+  )
+
+  checkmate::assert_data_frame(df_meta)
+  checkmate::assert_subset(
+    c('image_label','spatial_resolution','outmost_year'),
+    names(df_meta)
+  )
+  checkmate::assert_logical(verbose_flags, len = 1)
+
   # get a complete list of all the annual rings (years) in rings AND cells data
   # with the ring measurements and additional cell count per ring and mean cwttan
   df_rings_log <- complete_rings_log(QWA_data)
 
   # check that the data have cwt estimates
-  df_rings_log <- check_cwt_estimates(df_rings_log)
+  all_imgs_have_cwt <- check_cwt_estimates(df_rings_log)
+  # can remove mean_cwttan now
+  df_rings_log <- df_rings_log %>% dplyr::select(-mean_cwttan)
 
   # check that the data are dated
-  df_rings_log <- check_dating(df_rings_log)
-
-  # now we know that we have checked dating and cwt, we can drop the columns
-  df_rings_log <- df_rings_log %>% dplyr::select(-undated, -no_cwt, -mean_cwttan)
+  all_imgs_dated <- check_dating(df_rings_log, df_meta)
 
   # flag incomplete rings
   df_rings_log <- flag_incomplete_rings(df_rings_log, QWA_data$cells, df_meta)
 
   # flag missing rings
   df_rings_log <- df_rings_log %>%
-    dplyr::mutate(missing_ring = is.na(cno) | (cno == 0), # TODO: should never have NA cno anymore because we replace with 0
-                  no_MRW_other = is.na(mrw) & !(outermost_ring | innermost_ring), # TODO: check if this ever occurs and for what reason
-                  missing_ringV2 = mrw < 10) # TODO: check if V2 always aligns other def
-
-  # additional year checks
-  # TODO: not really needed?
-  df_rings_log <- additional_year_check(df_rings_log)
+    dplyr::mutate(missing_ring = is.na(cno) | (cno < 5) | dplyr::coalesce(mrw < 10, FALSE), # TODO: (should never have NA cno anymore because we replace with 0), but mrw might be NA for incomplete rings -> coalesce. make thresholds function params?
+                  no_MRW_other = is.na(mrw) & !(outermost_ring | innermost_ring)) # TODO: check if this ever occurs and for what reason
 
   # flag duplicate rings: flag rings which are represented in more than one image per core
   # add duplicate_sel column to indicate which of the duplicates to keep for chronology.
@@ -454,7 +603,7 @@ validate_QWA_data <- function(QWA_data, df_meta, verbose_flags = FALSE){
         'innermost_ring','outermost_ring',
         'mae','medYleft','medYright','mindist',
         'incomplete_inner', 'incomplete_innerv2', 'incomplete_fct_check',
-        'no_MRW_other','missing_ringV2')))
+        'no_MRW_other')))
   }
 
   # output summary
@@ -477,137 +626,42 @@ validate_QWA_data <- function(QWA_data, df_meta, verbose_flags = FALSE){
 
 
 
-# Manual flags
-# TODO: finalize
-add_user_flags <- function(QWA_data, years_to_flag){
-  df_rings_log <- QWA_data$rings %>%
-    dplyr::left_join(years_to_flag %>% dplyr::mutate(manual_flag = TRUE),
-                    by = c('image_label','year')) %>%
-    dplyr::mutate(manual_flag = ifelse(is.na(manual_flag), FALSE, manual_flag))
-
-  return(
-    stats::setNames(
-      list(QWA_data$cells, df_rings_log),
-      c('cells','rings')
-    ))
-}
-
-
-finalize_flags <- function(QWA_data){
-  df_rings <- QWA_data$rings
-  if (!('other_issues' %in% colnames(df_rings))){
-    df_rings$other_issues <- FALSE
-  }
-  # TODO: fix the duplicate flags
-  # TODO: set incomplete rings measures to 0
-  # TODO: check missing ring has no cell data
-
-  return(
-    stats::setNames(
-      list(QWA_data$cells, df_rings_log),
-      c('cells','rings')
-    ))
-}
-
-
-
-
-#' Complete cell measures
-#'
-#' Some additional cell measures are calculated based on the existing data.
-
-max_na_inf <- function(x){
-  x_na <- is.na(x)
-  if(all(x_na)) -Inf else max(x[!x_na])
-}
-
-# calculate additional measures (see rxs complete)
-# TODO: finalize
-complete_cell_measures <- function(QWA_data){
-
-  df_cells <- QWA_data$cells %>%
-    # need MRW for some calculations
-    dplyr::left_join(QWA_data$rings %>%
-                       dplyr::select(image_label, year, mrw), by=c('image_label', 'year')) %>%
-    dplyr::mutate(
-      # new:
-      tca = la + cwa,
-      rwd2 = cwtrad/drad,
-      # Add CWT-based density:
-      # assume a circular lumen area with homogenous cell wall thickness around it;
-      # for latewood-like cells, take overall average CWT,
-      # for earlywood-like cells, only consider CWTTAN, which avoids pit artefacts
-      # helper:
-      lr = sqrt(la / pi),
-      wa = ifelse(rtsr < 1, (lr + cwttan)^2 * pi - la, (lr + cwtall)^2 * pi - la),
-      # new:
-      dcwt = wa / (la + wa),
-      # standardized RADDISTR (by MRW): new
-      raddistr.st = rraddistr * mrw / 100,
-      # Add mean CWT: mean of radial and tangential CWT if Mork index latewood-like,
-      # in earlywood-like cells take CWTTAN
-      # new:
-      cwtall.adj = ifelse(rtsr < 1,  cwttan,  cwtall),
-      cdrad = drad + 2*cwttan,
-      cdtan = dtan + 2*cwtrad,
-      cdratio = cdrad/cdtan
-    ) %>%
-    # remove helper parameters
-    dplyr::select(-lr, -wa)
-
-  df_cells <- df_cells %>%
-    dplyr::mutate(
-      sector100 = as.numeric(cut(rraddistr, # no grouping needed
-                             b = seq(from=0, to=100, by= 1),
-                             labels = 1:100,
-                             include.lowest = T))) %>%
-    # round for data with rraddistr just above 100, otherwise leave NA
-    dplyr::mutate(sector100 = dplyr::if_else(rraddistr > 100 & rraddistr <= 101, 100, sector100))
+# # Manual flags
+# # TODO: finalize
+# add_user_flags <- function(QWA_data, years_to_flag){
+#   df_rings_log <- QWA_data$rings %>%
+#     dplyr::left_join(years_to_flag %>% dplyr::mutate(manual_flag = TRUE),
+#                     by = c('image_label','year')) %>%
+#     dplyr::mutate(manual_flag = ifelse(is.na(manual_flag), FALSE, manual_flag))
+#
+#   return(
+#     stats::setNames(
+#       list(QWA_data$cells, df_rings_log),
+#       c('cells','rings')
+#     ))
+# }
+#
+#
+# finalize_flags <- function(QWA_data){
+#   df_rings <- QWA_data$rings
+#   if (!('other_issues' %in% colnames(df_rings))){
+#     df_rings$other_issues <- FALSE
+#   }
+#   # TODO: fix the duplicate flags
+#   # TODO: set incomplete rings measures to 0
+#   # TODO: check missing ring has no cell data
+#
+#   return(
+#     stats::setNames(
+#       list(QWA_data$cells, df_rings_log),
+#       c('cells','rings')
+#     ))
+# }
 
 
 
-  # ggplot2::ggplot(df_cells %>% dplyr::filter(image_label == 'POG_PISY_02_B_4_2'),
-  #                 ggplot2::aes(x = xpix, y = ypix, color = TO.EWLW)) +
-  #   ggplot2::geom_point()
 
-  mork <- 1
-  df_ewlw <- df_cells %>%
-    # need MRW for some calculations
-    # dplyr::left_join(QWA_data$rings %>%
-    #                    dplyr::select(woodpiece_label, slide_label, image_label, year, mrw), by=c('image_label', 'year')) %>%
-    dplyr::filter(!is.na(rtsr), !is.na(mrw)) %>%  # remove cells that do not have a measured CWT or MRW
-    # TODO: check grouping
-    #dplyr::group_by(woodpiece_label, year, slide_label, sector100) %>%
-    dplyr::group_by(image_label, year, sector100) %>%
-    dplyr::summarise(RTSR.MEAN = mean(rtsr),
-                     mrw = mean(mrw), .groups = 'drop') %>%
-    dplyr::group_by(image_label, year) %>%
-    dplyr::mutate(ROLLMEAN = zoo::rollmean(RTSR.MEAN, 9, fill = c(NA, NA, 10))) %>% # TODO: 10 so the last 4 are always LW?
-    dplyr::summarise(
-      mrw = mean(mrw),
-      # the boundary is set at the highest sector with a rolling mean below mork
-      # TODO: check edge cases
-      max_EW_sector = max_na_inf(sector100[ROLLMEAN <= mork]),
-      eww = ifelse(max_EW_sector >=0, max_EW_sector*mrw/100, 0),
-      lww = mrw - eww, .groups = 'drop'
-    )
 
-  df_cells <- df_cells %>%
-    dplyr::left_join(df_ewlw[,c('image_label','year','max_EW_sector')],
-                     by = c('image_label', 'year')) %>%
-    dplyr::mutate(ew_lw = ifelse(sector100 <= max_EW_sector, "EW", "LW")) %>%
-    dplyr::select(-max_EW_sector)
-
-  df_rings <- QWA_data$rings %>%
-    dplyr::left_join(df_ewlw %>% dplyr::select(-mrw), by = c("image_label", "year")) %>%
-    dplyr::select(-max_EW_sector)
-
-  return(
-    stats::setNames(
-      list(df_cells, df_rings),
-      c('cells','rings')
-    ))
-}
 
 # tbl_rxs_hmgz <- tbl_rxs_v3 %>%
 # dplyr::group_by(image_label, YEAR) %>%
@@ -736,4 +790,46 @@ complete_cell_measures <- function(QWA_data){
 #
 #   return(df_rings_log)
 # }
+
+
+#-------------------------------------------------------------------------------
+# # check that YEAR is consecutive sequence within each image
+# # TODO: these checks are probably be overkill, since these issues should not arise
+# # in ROXAS normally. BUT keep for now and see if we find any in existing datasets
+# # TODO: should we arrange by year here? and also generally in QWA_data?
+# additional_year_check <- function(df_rings_log){
+#   df_rings_log <- df_rings_log %>%
+#     dplyr::arrange(image_label, year) %>%
+#     dplyr::group_by(image_label) %>%
+#     dplyr::mutate(year_diff = year - dplyr::lag(year),
+#                   year_diff = tidyr::replace_na(year_diff, 1)) %>%
+#     dplyr::ungroup()
+#
+#   # any duplicated years in the rings files?
+#   if (any(df_rings_log$year_diff == 0)) {
+#     beepr::beep(sound = 2, expr = NULL)
+#     stop('The following images have duplicate years:\n',
+#          paste0(unique(df_rings_log[df_rings_log$year_diff == 0, 'image_label']), collapse=', '),
+#          '\nPlease ensure that all included samples are properly dated, then restart the process.')
+#   }
+#
+#   # any gaps in the dating?
+#   if (any(df_rings_log$year_diff > 1)) {
+#     # fill in missing years
+#     df_rings_log <- df_rings_log %>%
+#       dplyr::group_by(image_label) %>%
+#       tidyr::complete(year = tidyr::full_seq(year, 1),
+#                       fill = list(cno = 0, missing_ring = TRUE, incomplete_ring = FALSE), explicit = FALSE) %>%
+#       tidyr::fill(tree_label, woodpiece_label, slide_label, .direction = 'downup') |>
+#       dplyr::ungroup()
+#     beepr::beep(sound = 2, expr = NULL)
+#     warning('The following images have gaps in the dating, missing years were added:\n',
+#             paste0(unique(df_rings_log[df_rings_log$year_diff > 1, 'image_label']), collapse=', '))
+#   }
+#
+#   df_rings_log <- df_rings_log %>% dplyr::select(-year_diff)
+#
+#   return(df_rings_log)
+# }
+
 

@@ -39,7 +39,7 @@ theme <- bslib::bs_theme(
 # ui ---------------------------------------------------------------------------
 ui <- bslib::page_fluid(
 
-  shinyjs::useShinyjs(),
+  #shinyjs::useShinyjs(),
   theme = theme,
 
   # additional CSS

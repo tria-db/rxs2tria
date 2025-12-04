@@ -19,3 +19,4 @@ were only present in the cells data, and additional columns for the number
 of cells per ring (cno) and the mean cwttan per ring (mean_cwttan; this is
 later used to check if CWT estimates were made).
 }
+\keyword{internal}

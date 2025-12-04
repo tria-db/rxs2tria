@@ -1,0 +1,240 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "TODO:addurltoTRIAschema",
+  "title": "cell_data",
+  "description": "Schema for ...",
+  "type": "array",
+  "minItems": 1,
+  "items": {
+    "type": "object",
+    "properties": {
+      "image_label": {
+        "type": "string",
+        "minLength": 1,
+        "title": "Image label",
+        "description": "Identifying code",
+        "colType": "key"
+      },
+      "year": {
+        "type": "integer",
+        "title": "Year",
+        "description": "Ring year",
+        "colType": "key"
+      },
+      "xpix": {
+        "type": "integer",
+        "unit": "pixel",
+        "title": "X coordinate (pixel)",
+        "description": "Cell center x coordinate",
+        "colType": "key"
+      },
+      "ypix": {
+        "type": "integer",
+        "unit": "pixel",
+        "title": "Y coordinate (pixel)",
+        "description": "Cell center y coordinate",
+        "colType": "key"
+      },
+      "raddistr": {
+        "type": ["number", "null"],
+        "minimum": 0,
+        "unit": "",
+        "title": "",
+        "description": "",
+        "colType": "measure"
+      },
+      "rraddistr": {
+        "type": ["number", "null"],
+        "minimum": 0,
+        "unit": "",
+        "title": "",
+        "description": "",
+        "colType": "measure"
+      },
+      "nbrno": {
+        "type": ["integer", "null"],
+        "minimum": 0,
+        "unit": "",
+        "title": "",
+        "description": "",
+        "colType": "measure"
+      },
+      "nbrid": {        
+        "type": ["integer", "null"],
+        "minimum": 0,
+        "unit": "",
+        "title": "",
+        "description": "",
+        "colType": "measure"
+      },
+      "la": {        
+        "type": ["number", "null"],
+        "minimum": 0,
+        "unit": "",
+        "title": "",
+        "description": "",
+        "colType": "measure"
+      },
+      "asp": {        
+        "type": ["number", "null"],
+        "minimum": 0,
+        "unit": "",
+        "title": "",
+        "description": "",
+        "colType": "measure"
+      },
+      "majax": {
+        "type": ["number", "null"],
+        "minimum": 0,
+        "unit": "",
+        "title": "",
+        "description": "",
+        "colType": "measure"
+      },
+      "kh": {
+        "type": ["number", "null"],
+        "minimum": 0,
+        "unit": "",
+        "title": "",
+        "description": "",
+        "colType": "measure"
+      },
+      "cwtpi": {
+        "type": ["number", "null"],
+        "minimum": 0,
+        "unit": "",
+        "title": "",
+        "description": "",
+        "colType": "measure"
+      },
+      "cwtba": {
+        "type": ["number", "null"],
+        "minimum": 0,
+        "unit": "",
+        "title": "",
+        "description": "",
+        "colType": "measure"
+      },
+      "cwtle": {
+        "type": ["number", "null"],
+        "minimum": 0,
+        "unit": "",
+        "title": "",
+        "description": "",
+        "colType": "measure"
+      },
+      "cwtri": {
+        "type": ["number", "null"],
+        "minimum": 0,
+        "unit": "",
+        "title": "",
+        "description": "",
+        "colType": "measure"
+      },
+      "cwttan": {
+        "type": ["number", "null"],
+        "minimum": 0,
+        "unit": "",
+        "title": "",
+        "description": "",
+        "colType": "measure"
+      },
+      "cwtrad": {
+        "type": ["number", "null"],
+        "minimum": 0,
+        "unit": "",
+        "title": "",
+        "description": "",
+        "colType": "measure"
+      },
+      "cwtall": {
+        "type": ["number", "null"],
+        "minimum": 0,
+        "unit": "",
+        "title": "",
+        "description": "",
+        "colType": "measure"
+      },
+      "rtsr": {
+        "type": ["number", "null"],
+        "minimum": 0,
+        "unit": "",
+        "title": "",
+        "description": "",
+        "colType": "measure"
+      },
+      "ctsr": {
+        "type": ["number", "null"],
+        "minimum": 0,
+        "unit": "",
+        "title": "",
+        "description": "",
+        "colType": "measure"
+      },
+      "dh": {
+        "type": ["number", "null"],
+        "minimum": 0,
+        "unit": "",
+        "title": "",
+        "description": "",
+        "colType": "measure"
+      },
+      "drad": {
+        "type": ["number", "null"],
+        "minimum": 0,
+        "unit": "",
+        "title": "",
+        "description": "",
+        "colType": "measure"
+      },
+      "dtan": {
+        "type": ["number", "null"],
+        "minimum": 0,
+        "unit": "",
+        "title": "",
+        "description": "",
+        "colType": "measure"
+      },
+      "tb2": {
+        "type": ["number", "null"],
+        "minimum": 0,
+        "unit": "",
+        "title": "",
+        "description": "",
+        "colType": "measure"
+      },  
+      "cwa": {
+        "type": ["number", "null"],
+        "minimum": 0,
+        "unit": "",
+        "title": "",
+        "description": "",
+        "colType": "measure"
+      },
+      "rwd": {
+        "type": ["number", "null"],
+        "minimum": 0,
+        "unit": "",
+        "title": "",
+        "description": "",
+        "colType": "measure"
+      },
+      "sector100": {
+        "type": ["integer", "null"],
+        "minimum": 0,
+        "unit": "",
+        "title": "",
+        "description": "",
+        "colType": "derived"
+      },
+      "ew_lw": {
+        "type": ["boolean", "null"],
+        "title": "",
+        "description": "",
+        "colType": "derived"
+      }
+    },
+     "required": ["image_label", "year", "xpix", "ypix"],
+    "additionalProperties": false
+  }
+}
