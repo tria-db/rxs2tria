@@ -10,17 +10,18 @@
 <url><loc>https://tria-db.github.io/rxs2tria/reference/check_incomplete_innermost.html</loc></url>
 <url><loc>https://tria-db.github.io/rxs2tria/reference/collect_cells_data.html</loc></url>
 <url><loc>https://tria-db.github.io/rxs2tria/reference/collect_image_info.html</loc></url>
-<url><loc>https://tria-db.github.io/rxs2tria/reference/collect_metadata_from_files.html</loc></url>
 <url><loc>https://tria-db.github.io/rxs2tria/reference/collect_raw_data.html</loc></url>
 <url><loc>https://tria-db.github.io/rxs2tria/reference/collect_rings_data.html</loc></url>
 <url><loc>https://tria-db.github.io/rxs2tria/reference/collect_settings_data.html</loc></url>
+<url><loc>https://tria-db.github.io/rxs2tria/reference/combine_rxs_metadata.html</loc></url>
 <url><loc>https://tria-db.github.io/rxs2tria/reference/complete_rings_log.html</loc></url>
+<url><loc>https://tria-db.github.io/rxs2tria/reference/convert_settings_dates.html</loc></url>
 <url><loc>https://tria-db.github.io/rxs2tria/reference/create_coverage_plots.html</loc></url>
-<url><loc>https://tria-db.github.io/rxs2tria/reference/extract_data_structure.html</loc></url>
 <url><loc>https://tria-db.github.io/rxs2tria/reference/extract_roxas_settings.html</loc></url>
 <url><loc>https://tria-db.github.io/rxs2tria/reference/flag_duplicate_rings.html</loc></url>
 <url><loc>https://tria-db.github.io/rxs2tria/reference/flag_incomplete_rings.html</loc></url>
 <url><loc>https://tria-db.github.io/rxs2tria/reference/get_roxas_files.html</loc></url>
+<url><loc>https://tria-db.github.io/rxs2tria/reference/get_structure_from_filenames.html</loc></url>
 <url><loc>https://tria-db.github.io/rxs2tria/reference/index.html</loc></url>
 <url><loc>https://tria-db.github.io/rxs2tria/reference/launch_coverage_app.html</loc></url>
 <url><loc>https://tria-db.github.io/rxs2tria/reference/launch_metadata_app.html</loc></url>
@@ -30,11 +31,9 @@
 <url><loc>https://tria-db.github.io/rxs2tria/reference/read_QWAdata.html</loc></url>
 <url><loc>https://tria-db.github.io/rxs2tria/reference/read_cells_output.html</loc></url>
 <url><loc>https://tria-db.github.io/rxs2tria/reference/read_rings_output.html</loc></url>
-<url><loc>https://tria-db.github.io/rxs2tria/reference/reconstruct_img_names.html</loc></url>
 <url><loc>https://tria-db.github.io/rxs2tria/reference/remove_outliers.html</loc></url>
 <url><loc>https://tria-db.github.io/rxs2tria/reference/resolve_schema.html</loc></url>
 <url><loc>https://tria-db.github.io/rxs2tria/reference/rxs2tria-package.html</loc></url>
-<url><loc>https://tria-db.github.io/rxs2tria/reference/subset_woodpiece_codes.html</loc></url>
 <url><loc>https://tria-db.github.io/rxs2tria/reference/validate_QWA_data.html</loc></url>
 </urlset>
 

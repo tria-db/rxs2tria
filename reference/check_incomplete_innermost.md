@@ -27,5 +27,3 @@ check_incomplete_innermost(cells.innermost, res)
 
 a logical indicating whether the true inner ring border lies outside the
 image border and the ring is thus incomplete
-
-TODO: compare my method with GvA's original one, check thresholds

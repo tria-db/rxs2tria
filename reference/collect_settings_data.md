@@ -5,7 +5,7 @@ Collect the settings data from all ROXAS settings files
 ## Usage
 
 ``` r
-collect_settings_data(files_settings, roxas_version = "classic", tz = NULL)
+collect_settings_data(files_settings, roxas_version = "classic")
 ```
 
 ## Arguments

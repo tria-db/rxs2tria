@@ -32,9 +32,9 @@
     </div>
 
     <div class="section level2">
-      <h2 id="all-functions">All functions<a class="anchor" aria-label="anchor" href="#all-functions"></a></h2>
+      <h2 id="read-raw-roxas-metadata">Read raw ROXAS metadata<a class="anchor" aria-label="anchor" href="#read-raw-roxas-metadata"></a></h2>
 
-
+      <div class="section-desc"><p>Functions for reading the metadata that can be extracted from the raw ROXAS output files.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -43,31 +43,17 @@
 
       <dl><dt>
 
-          <code><a href="check_cwt_estimates.html">check_cwt_estimates()</a></code>
+          <code><a href="get_roxas_files.html">get_roxas_files()</a></code>
 
         </dt>
-        <dd>Check whether the data have CWT estimates</dd>
+        <dd>Identify ROXAS data files</dd>
 
         <dt>
 
-          <code><a href="check_dating.html">check_dating()</a></code>
+          <code><a href="get_structure_from_filenames.html">get_structure_from_filenames()</a></code> <code><a href="get_structure_from_filenames.html">extract_data_structure()</a></code>
 
         </dt>
-        <dd>Check that the data are properly dated</dd>
-
-        <dt>
-
-          <code><a href="check_incomplete_innermost.html">check_incomplete_innermost()</a></code>
-
-        </dt>
-        <dd>Helper function to check if an innermost ring is incomplete</dd>
-
-        <dt>
-
-          <code><a href="collect_cells_data.html">collect_cells_data()</a></code>
-
-        </dt>
-        <dd>Collect raw cells output data</dd>
+        <dd>Extract the data structure from file names</dd>
 
         <dt>
 
@@ -78,17 +64,40 @@
 
         <dt>
 
-          <code><a href="collect_metadata_from_files.html">collect_metadata_from_files()</a></code>
+          <code><a href="collect_settings_data.html">collect_settings_data()</a></code>
 
         </dt>
-        <dd>Read and combine raw metadata</dd>
+        <dd>Read and combine ROXAS settings data</dd>
 
         <dt>
 
-          <code><a href="collect_raw_data.html">collect_raw_data()</a></code>
+          <code><a href="convert_settings_dates.html">convert_settings_dates()</a></code>
 
         </dt>
-        <dd>Collect raw cells and rings output data</dd>
+        <dd>Handle date conversion for ROXAS settings created at dates</dd>
+
+        <dt>
+
+          <code><a href="combine_rxs_metadata.html">combine_rxs_metadata()</a></code>
+
+        </dt>
+        <dd>Combine raw ROXAS metadata</dd>
+      </dl></div><div class="section level2">
+      <h2 id="reading-raw-roxas-output-data">Reading raw ROXAS output data<a class="anchor" aria-label="anchor" href="#reading-raw-roxas-output-data"></a></h2>
+
+      <div class="section-desc"><p>Functions for reading and writing ROXAS cells and rings output files.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="collect_cells_data.html">collect_cells_data()</a></code>
+
+        </dt>
+        <dd>Collect raw cells output data</dd>
 
         <dt>
 
@@ -99,59 +108,26 @@
 
         <dt>
 
-          <code><a href="collect_settings_data.html">collect_settings_data()</a></code>
+          <code><a href="collect_raw_data.html">collect_raw_data()</a></code>
 
         </dt>
-        <dd>Read and combine ROXAS settings data</dd>
+        <dd>Collect raw cells and rings output data</dd>
+      </dl></div><div class="section level2">
+      <h2 id="rest">rest<a class="anchor" aria-label="anchor" href="#rest"></a></h2>
 
-        <dt>
+      <div class="section-desc"><p>Other utility functions.</p></div>
 
-          <code><a href="complete_rings_log.html">complete_rings_log()</a></code>
+      <dl></dl></div><div class="section level2">
 
-        </dt>
-        <dd>Complete the rings df with all years present in the cell data</dd>
 
-        <dt>
 
-          <code><a href="create_coverage_plots.html">create_coverage_plots()</a></code>
 
-        </dt>
-        <dd>Create coverage plots for all trees</dd>
+      <dl><dt>
 
-        <dt>
-
-          <code><a href="extract_data_structure.html">extract_data_structure()</a></code> <code><a href="extract_data_structure.html">get_structure_from_filenames()</a></code>
+          <code><a href="read_QWAdata.html">read_QWAdata()</a></code>
 
         </dt>
-        <dd>Extract the data structure from input files</dd>
-
-        <dt>
-
-          <code><a href="extract_roxas_settings.html">extract_roxas_settings()</a></code>
-
-        </dt>
-        <dd>Extract data from a ROXAS settings file</dd>
-
-        <dt>
-
-          <code><a href="flag_duplicate_rings.html">flag_duplicate_rings()</a></code>
-
-        </dt>
-        <dd>Flag duplicate rings due to overlapping images from the same woodpiece</dd>
-
-        <dt>
-
-          <code><a href="flag_incomplete_rings.html">flag_incomplete_rings()</a></code>
-
-        </dt>
-        <dd>Flag incomplete rings at tangential image borders.</dd>
-
-        <dt>
-
-          <code><a href="get_roxas_files.html">get_roxas_files()</a></code>
-
-        </dt>
-        <dd>Get list of input files</dd>
+        <dd>Read already processed QWA data from CSV files</dd>
 
         <dt>
 
@@ -169,10 +145,10 @@
 
         <dt>
 
-          <code><a href="max_na_inf.html">max_na_inf()</a></code>
+          <code><a href="resolve_schema.html">resolve_schema()</a></code>
 
         </dt>
-        <dd>Complete cell measures</dd>
+        <dd>Read and resolve JSON Schema from file</dd>
 
         <dt>
 
@@ -183,31 +159,10 @@
 
         <dt>
 
-          <code><a href="read_QWAdata.html">read_QWAdata()</a></code>
+          <code><a href="create_coverage_plots.html">create_coverage_plots()</a></code>
 
         </dt>
-        <dd>Read already processed QWA data from CSV files</dd>
-
-        <dt>
-
-          <code><a href="read_cells_output.html">read_cells_output()</a></code>
-
-        </dt>
-        <dd>Read single cell output file</dd>
-
-        <dt>
-
-          <code><a href="read_rings_output.html">read_rings_output()</a></code>
-
-        </dt>
-        <dd>Read single rings output file</dd>
-
-        <dt>
-
-          <code><a href="reconstruct_img_names.html">reconstruct_img_names()</a></code>
-
-        </dt>
-        <dd>Recover original labels from data structure</dd>
+        <dd>Create coverage plots for all trees</dd>
 
         <dt>
 
@@ -218,26 +173,13 @@
 
         <dt>
 
-          <code><a href="resolve_schema.html">resolve_schema()</a></code>
-
-        </dt>
-        <dd>Read and resolve JSON Schema from file</dd>
-
-        <dt>
-
-          <code><a href="subset_woodpiece_codes.html">subset_woodpiece_codes()</a></code>
-
-        </dt>
-        <dd>Include or exclude woodpiece codes from data collection</dd>
-
-        <dt>
-
           <code><a href="validate_QWA_data.html">validate_QWA_data()</a></code>
 
         </dt>
         <dd>Validate the raw QWA data</dd>
       </dl></div>
-  </main></div>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside></div>
 
 
     <footer><div class="pkgdown-footer-left">

@@ -1,7 +1,8 @@
-# Get list of input files
+# Identify ROXAS data files
 
-Given a path_in, get the paths and filenames of the ROXAS files to be
-processed.
+Given a path to a directory, returns a nested list with the full
+filepaths of all required ROXAS files (images, cell outputs, ring
+outputs, settings) found within (including subdirectories).
 
 ## Usage
 

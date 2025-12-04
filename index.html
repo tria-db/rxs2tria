@@ -87,10 +87,10 @@
 <span><span class="va">pattern</span> <span class="op">&lt;-</span> <span class="st">"^(?&lt;site&gt;[:alnum:]+)_(?&lt;species&gt;[:alnum:]+)_(?&lt;tree&gt;[:alnum:].+)_(?&lt;slide&gt;[:alnum:]+)_(?&lt;image&gt;[:alnum:]+)$"</span></span>
 <span></span>
 <span><span class="co"># extract the data structure from the file names using the specified pattern</span></span>
-<span><span class="va">df_structure</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/extract_data_structure.html">extract_data_structure</a></span><span class="op">(</span><span class="va">files</span>, <span class="va">pattern</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">df_structure</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/get_structure_from_filenames.html">extract_data_structure</a></span><span class="op">(</span><span class="va">files</span>, <span class="va">pattern</span><span class="op">)</span></span></code></pre></div>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># read available metadata</span></span>
-<span><span class="va">df_meta</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/collect_metadata_from_files.html">collect_metadata_from_files</a></span><span class="op">(</span><span class="va">df_structure</span>,</span>
+<span><span class="va">df_meta</span> <span class="op">&lt;-</span> <span class="fu">collect_metadata_from_files</span><span class="op">(</span><span class="va">df_structure</span>,</span>
 <span>                                       roxas_version<span class="op">=</span><span class="st">'classic'</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># write extracted metadata to file</span></span>
@@ -136,6 +136,7 @@
 <h2 data-toc-skip>Links</h2>
 <ul class="list-unstyled">
 <li><a href="https://github.com/tria-db/rxs2tria/" class="external-link">Browse source code</a></li>
+<li><a href="https://github.com/tria-db/rxs2tria/issues" class="external-link">Report a bug</a></li>
 </ul>
 </div>
 
