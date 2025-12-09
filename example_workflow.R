@@ -176,6 +176,14 @@ readr::write_csv(prf_data,
                  paste0(fname_out, '_profiles.csv'))
 
 
+# df_rings <- QWA_data$rings |>
+#   dplyr::mutate(include_ring = dplyr::case_when(exclude_dupl | exclude_issues ~ 2,
+#                                                 TRUE ~ 1)) |>
+#   dplyr::select(-exclude_dupl, -exclude_issues)
+
+
+
+
 launch_flags_app()
 
 

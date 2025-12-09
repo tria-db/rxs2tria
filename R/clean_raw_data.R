@@ -401,8 +401,8 @@ check_incomplete_innermost <- function(cells.innermost, res){
     medYright = medYright,
     mindist = mindist,
     #meddist = meddist,
-    incomplete_inner = is_incomplete,
-    incomplete_innerv2 = is_incomplete_v2
+    incomplete_inner = is_incomplete_v2, # USE GEORG'S METHOD
+    incomplete_innerv2 = is_incomplete
   ))
 }
 

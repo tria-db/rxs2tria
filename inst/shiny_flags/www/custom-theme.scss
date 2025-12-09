@@ -83,6 +83,10 @@ primary bg color, white font, white on hover, white active underline */
 .card-tert .card-body{
   background-color: $tert-col-grad-5 !important;
 }
+.card .clean-card .card-body{
+  background-color: $tert-col-grad-4 !important;
+}
+
 .card-tert .card-header{
   background-color: $tert-col-grad-2 !important;
   color: white !important;
