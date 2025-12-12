@@ -624,6 +624,67 @@ validate_QWA_data <- function(QWA_data, df_meta, verbose_flags = FALSE){
 }
 
 
+#' Calculate sector-wise cell parameter profiles
+#'
+#' This function calculates sector-wise profiles of selected cell parameters
+#' (means and quantiles) from the cells data.
+#'
+#' @param df_cells dataframe containing the cells data (e.g. `QWA_data$cells`)
+#' @param n_sectors number of radial sectors to divide the ring into (e.g 5)
+#' @param sel_cell_params character vector with the names of the cell parameters
+#' to include in the profiles (e.g. c("la", "cwttan"))
+#' @param quant_probs numeric vector with the quantile probabilities to
+#' calculate (e.g. c(0.25, 0.5, 0.75)). If NULL or empty, no quantiles are
+#' calculated (i.e. only the mean).
+#' @return a dataframe with the sector-wise profiles of the selected cell
+#' parameters
+#' @export
+#'
+calculate_profiles <- function(df_cells, n_sectors, sel_cell_params, quant_probs){
+  prf_data <- df_cells |>
+    #dplyr::inner_join(complete_rings, by = c("image_label", "year")) |> # only use cells from valid rings
+    dplyr::mutate(
+      sector_n = as.numeric(cut(rraddistr, # no grouping needed
+                                b = seq(from=0, to=100, by = 100/n_sectors),
+                                labels = 1:n_sectors,
+                                include.lowest = T))) %>%
+    # round for data with rraddistr just above 100, otherwise leave NA
+    dplyr::mutate(sector_n = dplyr::if_else(rraddistr > 100 & rraddistr <= 101, n_sectors, sector_n)) |>
+    dplyr::filter(!is.na(sector_n)) |> # only use cells with valid sector as basis for calculation
+    dplyr::select(image_label, year, sector_n, dplyr::all_of(sel_cell_params))
+
+  prf_data_agg <- prf_data |>
+    collapse::fgroup_by(image_label, year, sector_n) |>
+    collapse::fmean() |>
+    dplyr::rename_with(
+      \(x) paste0(x, "_mean"),
+      dplyr::all_of(sel_cell_params)
+    )
+
+  if (!is.null(quant_probs) && length(quant_probs) > 0){
+    prf_data_quant <- prf_data |>
+      collapse::fgroup_by(image_label, year, sector_n) |>
+      collapse::BY(collapse::.quantile,
+                   probs = quant_probs,
+                   expand.wide = TRUE) |>
+      dplyr::rename_with(
+        \(x) {
+          for (i in seq_along(quant_probs)){
+            x <- stringr::str_replace_all(x,
+                                          paste0(".V", i),
+                                          paste0("_q", quant_probs[i]*100))
+          }
+          x
+        }
+      )
+    prf_data_agg <- prf_data_agg |>
+      dplyr::full_join(prf_data_quant,
+                       by = c("image_label", "year", "sector_n"))
+  }
+
+  prf_data_agg
+}
+
 
 
 # # Manual flags

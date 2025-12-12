@@ -117,60 +117,33 @@ n_sectors <- 5
 # i.e. aggregate over all cells per year/sector for selected parameters (this might take a while)
 sel_cell_params <- c("la", "cwttan", "cwtrad", "cwtall", "drad", "dtan",
                      "cwa", "tca", "cdrad", "cdtan", "cdratio")
+quant_probs <- c(0.1, 0.5, 0.9)
 
-prf_data <- QWA_data$cells |>
-  #dplyr::inner_join(complete_rings, by = c("image_label", "year")) |> # only use cells from valid rings
-  dplyr::mutate(
-  sector_n = as.numeric(cut(rraddistr, # no grouping needed
-                            b = seq(from=0, to=100, by = 100/n_sectors),
-                            labels = 1:n_sectors,
-                            include.lowest = T))) %>%
-  # round for data with rraddistr just above 100, otherwise leave NA
-  dplyr::mutate(sector_n = dplyr::if_else(rraddistr > 100 & rraddistr <= 101, n_sectors, sector_n)) |>
-  dplyr::filter(!is.na(sector_n)) |> # only use cells with valid sector as basis for calculation
-  dplyr::select(image_label, year, sector_n, dplyr::all_of(sel_cell_params))
+prf_data <- calculate_profiles(
+  QWA_data$cells, n_sectors, sel_cell_params, quant_probs
+)
 
 
-prf_data_quant <- prf_data |>
-  collapse::fgroup_by(image_label, year, sector_n) |>
-  collapse::BY(collapse::.quantile,
-               probs = c(0.1, 0.25, 0.5, 0.75, 0.9),
-               expand.wide = TRUE) |>
-  dplyr::rename_with(
-    \(x) stringr::str_replace_all(x,
-                                  c(".V1" = "_q10", ".V2" = "_q25", ".V3" = "_median",
-                                    ".V4" = "_q75", ".V5" = "_q90"))
-  )
+sel_prm <- "la_mean"
+sel_sect <- 5
 
-prf_data_mean <- prf_data |>
-  collapse::fgroup_by(image_label, year, sector_n) |>
-  collapse::fmean() |>
-  dplyr::rename_with(
-    \(x) paste0(x, "_mean"),
-    dplyr::all_of(sel_cell_params)
-  )
+df_crn <- QWA_data$rings |>
+  dplyr::select(woodpiece_label, slide_label, image_label, year,
+                exclude_issues, exclude_dupl,
+                dplyr::any_of(sel_prm))
+if (sel_prm %in% names(prf_data)){
+  df_crn  <- prf_data |>
+    dplyr::filter(sector_n == as.numeric(sel_sect)) |>
+    dplyr::select(dplyr::all_of(c("image_label","year", sel_prm))) |>
+    dplyr::right_join(df_crn, by = c("image_label","year"))
+}
 
-prf_data <- prf_data_mean |>
-  dplyr::full_join(prf_data_quant,
-                   by = c("image_label", "year", "sector_n"))
+# make sure we only have one value per year/woodpiece
+df_crn <- df_crn |> dplyr::filter(!exclude_dupl)
 
-rm(prf_data_mean, prf_data_quant)
-# sel_ring_params <- c('mrw','cno','eww','lww')
-# prf_data <- QWA_data$rings |>
-#   dplyr::select(image_label, year, dplyr::all_of(sel_ring_params)) |>
-#   dplyr::mutate(sector_n = NA) |>
-#   dplyr::full_join(
-#     prf_data,
-#     by = c('image_label', 'year', 'sector_n')
-#   )
-#
-# # add woodpiece and slide labels
-# prf_data <- QWA_data$rings |>
-#   dplyr::distinct(woodpiece_label, slide_label, image_label) |>
-#   dplyr::right_join(
-#     prf_data,
-#     by = c('image_label')
-#   )
+
+
+
 
 readr::write_csv(prf_data,
                  paste0(fname_out, '_profiles.csv'))

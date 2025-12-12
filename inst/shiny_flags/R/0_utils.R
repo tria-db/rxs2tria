@@ -54,6 +54,7 @@ discrete_features <- c(
   "Light ring" = "light_ring",
   "Intra-annual density fluctuations" = "iadf",
   "Traumatic resin ducts" = "traum_resin_ducts",
+  "Trabeculae" = "trabeculae",
   "Other" = "other_discrete"
 )
 

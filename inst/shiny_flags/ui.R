@@ -53,7 +53,8 @@ ui <- bslib::page_navbar(
   sidebar = bslib::sidebar(
 
     # load input data ----------------------------------------------------------
-    actionButton("btn_input", "Load input data"),
+    actionButton("btn_input", "Load input data", icon = icon("upload")),
+    hr(),
 
     # TODO: loading climate data? in other tabs?
     #fileInput("file_clim", "Upload the 'climate' data", accept = c(".csv")),
@@ -64,13 +65,21 @@ ui <- bslib::page_navbar(
     selectInput("sel_wp", "Select the woodpieces to display", choices = NULL, multiple = FALSE),
     hr(),
 
-      strong("Plot settings"),
-      selectInput("sel_param", "Choose QWA parameter to display", choices = NULL, multiple = FALSE),
-      selectInput("sel_sector", "Select which ring sector to plot", choices = NULL, multiple = FALSE),
-      checkboxInput("spline_det", "32-years spline detrend", value = FALSE),
-      selectInput("mean_type", "Select the mean applied for crn",
-                  choices = c("mean", "tbrm"), selected = "mean", multiple = FALSE),
-      checkboxInput("show_excl", "show excluded rings", value = FALSE)
+    strong("Plot settings"),
+    selectInput("sel_param", "Choose QWA parameter to display", choices = NULL, multiple = FALSE),
+    selectInput("sel_sector", "Select which ring sector to plot", choices = NULL, multiple = FALSE),
+    checkboxInput("spline_det", "32-years spline detrend", value = FALSE),
+    selectInput("mean_type", "Select the mean applied for crn",
+                choices = c("none", "mean", "tbrm"), selected = "none", multiple = FALSE),
+    checkboxInput("show_excl", "show excluded rings", value = FALSE),
+
+    hr(),
+    actionButton("apply_changes", "Save & update plot", icon = icon("arrows-rotate")),
+    hr(),
+    actionButton("restore_all", "Restore to input", icon = icon("triangle-exclamation")),
+    hr(),
+    downloadButton("save_flags", "Download new ring data")
+
       #checkboxInput("tail_YTE", "show tail YTE", value = TRUE),
 
       #conditionalPanel(
@@ -96,18 +105,111 @@ ui <- bslib::page_navbar(
       "Time series with chrono",
       icon = icon("microscope", lib = "font-awesome"),
 
-      # p("Plotly instructions:",
-      #   tags$ul(
-      #   tags$li("Hover over a point to see its details, click to select."),
-      #   tags$li("Click on a legend item to toggle a curve's visibility."),
-      #   tags$li("Double click on a legend item to isolate a curve."),
-      #   tags$li("Axes can be shifted or zoomed on the plot directly.")
-      # )),
       bslib::card(
         min_height = "450px",
         max_height = "450px",
         bslib::card_body(class = "p-0",
         plotly::plotlyOutput("ts_crn_plot"))
+      ),
+
+      shinyjs::hidden(
+      div(
+        id = "ring_editor_card",
+      #shinyjs::hidden(
+        bslib::navset_card_pill(
+          id = "sel_ring_navset",
+          #style = "display: none;",  # Start hidden
+          selected = "edit_flags",
+          title = uiOutput("sel_ring"),
+          bslib::nav_panel(
+            "Edit ring",
+            value = "edit_flags",
+
+            bslib::layout_column_wrap(
+              fill = FALSE,
+              width = 1/2,
+
+              bslib::layout_column_wrap(
+                width = 1,
+                fill = FALSE,
+                heights_equal = "row",
+                bslib::card(
+                  fill = FALSE,
+                  class = "clean-card",
+                  bslib::layout_column_wrap(
+                    width = 1/2,
+                    radioButtons("sel_exclude", "Exclude ring from analysis?", choices = c("yes", "no"), inline = TRUE, selected = "no"),
+                    uiOutput("warn_disq")
+                  )
+                ),
+                bslib::card(
+                  class = "clean-card",
+                  checkboxGroupInput("sel_disqual", "Disqualifying features: Select all that apply",
+                                     choices = disqual_issues,
+                                     inline = TRUE),
+                  div(
+                    id = "techn_reason_el",
+                    style = "display: flex; align-items: flex-start;",
+                    div(style = "width: 25px; padding-top: 0px;",
+                        icon("arrow-right-from-bracket", lib = "font-awesome")),
+                    div(style = "flex-grow: 1;",
+                      checkboxGroupInput(
+                        "sel_technical_exact",
+                        "Technical issues: Specify (optional)",
+                        choices = technical_issues,
+                        inline = TRUE
+                      )
+                    )
+                  )
+                )
+              ),
+
+              bslib::layout_column_wrap(
+                width = 1,
+                fill = FALSE,
+                heights_equal = "row",
+                bslib::card(
+                  class = "clean-card",
+                  fill = FALSE,
+                  checkboxGroupInput("sel_discrete", "Discrete features: Select all that apply",
+                                     choices = discrete_features,
+                                     inline = TRUE),
+                ),
+                bslib::card(
+                  fill = FALSE,
+                  class = "clean-card",
+                  textAreaInput(
+                    inputId = "sel_comment",
+                    label = "Additional comments",
+                    width = "100%",
+                    placeholder = "Enter any additional notes regarding the selected ring here..."
+                  )
+                )
+              )
+            ),
+
+            bslib::layout_column_wrap(
+              width = "217px", fixed_width = TRUE,
+              actionButton("undo_sel_flags", "Undo current edits", icon = icon("undo")),
+              actionButton("show_image", "Open image", icon = icon("image"))
+            )
+
+          ),
+
+          # bslib::nav_panel(
+          #   "Show image",
+          #   value = "show_image",
+          #   uiOutput("image_ui")
+          # ),
+
+          bslib::nav_panel(
+            "Show coverage",
+            value = "show_coverage",
+            uiOutput("coverage_ui")
+          )
+       # )
+      )
+      )
       ),
 
       # New shift controls
@@ -119,161 +221,7 @@ ui <- bslib::page_navbar(
         #   column(4, actionButton("shift_right", "Shift Right"))
         # ),
       # ),
-      bslib::card(
-        id = "sel_ring_card",
-        class = "card-tert",
-        style = "display: none;",  # Start hidden
-        min_height = "450px",
-        bslib::card_header(
-          tagList(
-            uiOutput("sel_ring"))),
-        bslib::accordion(
-          id = "ring_details",
-          open = FALSE,
-          bslib::accordion_panel(
-            "Show image",
-            uiOutput("image_ui")
-          ),
-          bslib::accordion_panel(
-            "Show woodpiece coverage",
-            uiOutput("coverage_ui")
-          )
-        ),
 
-        #tags$i("A ring may exhibit one or more quality-related issues. These may or may not be grounds for
-        #excluding the corresponding QWA measurements from analysis."),
-
-        bslib::layout_column_wrap(
-          fill = FALSE,
-          width = 1/2,
-
-          bslib::layout_column_wrap(
-            width = 1,
-            fill = FALSE,
-            heights_equal = "row",
-            bslib::card(
-              fill = FALSE,
-              class = "clean-card",
-              radioButtons("sel_exclude", "Exclude ring from analysis?", choices = c("yes", "no"), inline = TRUE, selected = "no")
-            ),
-            bslib::card(
-              class = "clean-card",
-              #min_height = "250px",
-              strong("Disqualifying features"),
-              "A ring may suffer from one or more of the following issues, which may
-             also necessitate the exclusion of the ring's measurements from analyses.",
-              checkboxGroupInput("sel_disqual", "Select all that apply",
-                                 choices = disqual_issues,
-                                 inline = TRUE),
-              shinyjs::hidden(
-                selectizeInput(
-                  inputId = "sel_technical_exact",
-                  label = "Specify the reason(s) for the technical issue",
-                  choices = technical_issues,
-                  multiple = TRUE
-                )
-              ),
-              uiOutput("warn_disq")
-            )
-          ),
-
-          bslib::layout_column_wrap(
-            width = 1,
-            fill = FALSE,
-            heights_equal = "row",
-            bslib::card(
-              class = "clean-card",
-              fill = FALSE,
-              #min_height = "250px",
-              strong("Discrete features"),
-              "A ring may exhibit one or more of the following features, which may carry an additional discrete signal
-               beyond that captured by the QWA measurements.",
-              checkboxGroupInput("sel_discrete", "Select all that apply",
-                                 choices = discrete_features,
-                                 inline = TRUE),
-            ),
-            bslib::card(
-              fill = FALSE,
-              class = "clean-card",
-              textAreaInput(
-                inputId = "sel_notes",
-                label = "Additional comments",
-                placeholder = "Enter any additional notes regarding the selected ring here..."
-              )
-            )
-          )
-        ),
-
-
-
-
-
-        # bslib::layout_column_wrap(
-        #   width = 1/3,
-        #   min_height = "300px",
-        #   bslib::card(
-        #     bslib::card_header("Discrete features"),
-        #     checkboxGroupInput("sel_discrete", "Select any that apply",
-        #                        choices = c("Blue ring", "Frost ring",
-        #                                    "Intra-annual density fluctuations",
-        #                                    "Light ring",
-        #                                    "Traumatic resin ducts", "Other"),
-        #                        inline = TRUE)
-        #   ),
-        #   bslib::card(
-        #     bslib::card_header("Disqualifying features"),
-        #     radioButtons("sel_disqf", "Exclude ring from analysis?", choices = c("yes", "no"), inline = TRUE, selected = "no"),
-        #     checkboxGroupInput("sel_disqual", "Select any that apply",
-        #                        choices = c("Duplicate ring", "Radially incomplete ring",
-        #                                    "Wedging/missing ring",
-        #                                    "Crossdating", "Compression wood",
-        #                                    "Orientation", "Tyloses", "Decay",
-        #                                    "Technical issues", "Other"),
-        #                        inline = TRUE),
-        #     selectizeInput(
-        #       inputId = "sel_disqf_reason",
-        #       label = "Select reason(s) for exclusion",
-        #       choices = c("Out of focus", "Crack(s)", "Paraffin", "Compressed cells",
-        #                   "Overlapping cells", "Broken cells", "Tangentially incomplete ring"),
-        #       multiple = TRUE
-        #     )
-        #   ),
-        #   bslib::card(
-        #     bslib::card_header("Comments"),
-        #     textAreaInput(
-        #       inputId = "sel_notes",
-        #       label = "Additional comments for the selected ring:",
-        #       placeholder = "Enter any additional notes here..."
-        #     )
-        #   )
-        # ),
-
-        # bslib::card(
-        #   bslib::card_body(
-        #     class = "card-input",
-        #     bslib::layout_columns(
-        #       radioButtons("sel_excl", "Should the ring be excluded from analysis", c("include", "exclude"), inline = TRUE),
-        #       radioButtons("sel_aff", "Affected tissue", c("all", "ew", "lw"), inline = TRUE)
-        #     ),
-        #     checkboxGroupInput(
-        #       inputId = "sel_flags",
-        #       label = "Select any issues that apply for the selected ring:",
-        #       choices = c("Incomplete ring", "Wedging/missing ring",
-        #                   "X-dating", "Compression wood", "Orientation",
-        #                   "Artefacts", "Crack(s)", "Out of focus", "Frost ring", "Decay",
-        #                   "Filled cells", "Compressed cells", "Overlapping cells", "Broken cells",
-        #                   "Tyloses", "Paraffin", "Other issues"),
-        #       inline = TRUE
-        #     )
-        #   )
-        # ),
-
-        bslib::layout_column_wrap(
-          width = 1/6,
-          actionButton("save_sel_flags", "Apply selected issues", icon = icon("save")),
-          actionButton("restore_sel_flags", "Restore selected ring", icon = icon("undo"))
-        )
-      ),
 
       verbatimTextOutput("debug"),
 
@@ -285,7 +233,7 @@ ui <- bslib::page_navbar(
       #uiOutput("textAreaInput_ui"),
       #actionButton("save_yte", "Save Selected Info"),
 
-      div(width = "150pt", downloadButton("download_yte_table", "Download new ring data")),
+
       # DT::DTOutput("yte_table"),
       # uiOutput("dynamic_image")
     ),

@@ -19,6 +19,7 @@ Imports:
     checkmate,
     data.table,
     data.tree,
+    dplR,
     dplyr,
     DT,
     exifr,
