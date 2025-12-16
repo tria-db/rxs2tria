@@ -154,8 +154,10 @@ readr::write_csv(prf_data,
 #                                                 TRUE ~ 1)) |>
 #   dplyr::select(-exclude_dupl, -exclude_issues)
 
-
-
+prf_data <- vroom::vroom("/Users/maranaegelin/Documents/QWAdata/LTAL_S22/rxs2tria_out/20251208_TRIA_LTAL_S22_profiles.csv")
+QWA_data <- list()
+QWA_data$rings <- vroom::vroom("/Users/maranaegelin/Documents/QWAdata/LTAL_S22/rxs2tria_out/20251208_TRIA_LTAL_S22_rings.csv")
+df_rxsmeta <- vroom::vroom("/Users/maranaegelin/Documents/QWAdata/LTAL_S22/rxs2tria_out/20251125_TRIA_LTAL_S22_rxsmeta.csv")
 
 launch_flags_app()
 

@@ -7,7 +7,7 @@ server <- function(input, output, session) {
     rxsmeta_data = NULL
   )
 
-  # LOAD INPUT DATA ----------------------------------------------------------
+  # LOAD INPUT DATA ------------------------------------------------------------
   observeEvent(input$btn_input, {
     # warn before overwriting existing data
     all_null <- all(
@@ -213,12 +213,19 @@ server <- function(input, output, session) {
 
   # update filtering / selection UI based on input data
   observe({
-    req(isTruthy(input_data$prf_data), isTruthy(input_data$rings_data))
+    req(isTruthy(input_data$prf_data),
+        isTruthy(input_data$rings_data),
+        isTruthy(input_data$rxsmeta_data))
     prf_data <- input_data$prf_data
     rings_data <- input_data$rings_data
-    # wp_choices <- unique(rings_data()$woodpiece_label)
-    # updateSelectInput(session, "sel_wp", choices = wp_choices, selected = wp_choices)
-    # site, species choices
+    rxsmeta_data <- input_data$rxsmeta_data
+
+    site_choices <- unique(rxsmeta_data$site_label)
+    updateSelectInput(session, "sel_site", choices = site_choices,
+                      selected = site_choices)
+    species_choices <- unique(rxsmeta_data$species_code)
+    updateSelectInput(session, "sel_species", choices = species_choices,
+                      selected = species_choices[1])
 
     param_choices_prf <- setdiff(names(prf_data), c("image_label", "year", "sector_n"))
     param_choices_ring <- setdiff(names(rings_data),
@@ -234,6 +241,18 @@ server <- function(input, output, session) {
     updateSelectInput(session, "sel_sector", choices = sector_choices,
                       selected = sector_choices[1])
   })
+
+  observe({
+    req(isTruthy(input_data$rxsmeta_data))
+    rxsmeta_data <- input_data$rxsmeta_data |> dplyr::filter(
+      site_label %in% input$sel_site,
+      species_code %in% input$sel_species
+    )
+    wp_choices <- unique(rxsmeta_data$woodpiece_label)
+    updateSelectInput(session, "sel_wp", choices = wp_choices,
+                      selected = wp_choices)
+  }) |> bindEvent(list(input$sel_site, input$sel_species),
+                  ignoreNULL = TRUE, ignoreInit = TRUE)
 
   # enable/disable sector selection based on selected parameter
   observe({
@@ -252,7 +271,7 @@ server <- function(input, output, session) {
   rings_data_edited <- reactiveVal(NULL)
 
 
-  # (re-) initialize rings_data_out with input_data$rings_data
+  # initialize rings_data_out with input_data$rings_data
   observe({
     # initialize new flag columns if not present
     new_flag_cols <- setdiff(c(unname(discrete_features),
@@ -268,6 +287,7 @@ server <- function(input, output, session) {
     rings_data_org(df_rings)
   }) |> bindEvent(input_data$rings_data, ignoreNULL = TRUE, ignoreInit = TRUE)
 
+  # initalize copy rings_data_edited of rings_data_out
   observe({
     rings_data_edited(rings_data_org())
   }) |> bindEvent(rings_data_org(), ignoreNULL = TRUE, ignoreInit = TRUE)
@@ -320,6 +340,7 @@ server <- function(input, output, session) {
 
     df_crn
   }) |> bindEvent(list(rings_data_org(),
+                       #input$sel_wp,
                        input$sel_param,
                        input$sel_sector,
                        input$show_excl #, input$spline_det
@@ -333,24 +354,44 @@ server <- function(input, output, session) {
                    length(unique(plot_data()$woodpiece_label)),
                    contrasting = TRUE)
   })
-
+  # // Function to extract trace information
+  # function extractTraceInfo() {
+  #   var out = {};
+  #   el._fullData.forEach(function(trace, traceindex) {
+  #     console.log(trace)
+  #     out[trace.name] = {
+  #       curveNumber: traceindex,
+  #       opacity: trace.opacity !== undefined ? trace.opacity : 1,
+  #       visible: trace.visible !== undefined ? trace.visible : true,
+  #       meta: trace.meta !== undefined ? trace.meta : null
+  #     };
+  #   });
+  #   return out;
+  # }
 
   # PLOTLY ---------------------------------------------------------------------
+  last_restored_render <- reactiveVal(NULL)
+
   # JavaScript to capture trace opacities on restyle events
   js_traces <- "function(el, x, inputName){
+
     // Function to extract trace information
     function extractTraceInfo() {
       var out = {};
-      el._fullData.forEach(function(trace, traceindex) {
-        console.log(trace)
-        out[trace.name] = {
-          curveNumber: traceindex,
-          opacity: trace.opacity !== undefined ? trace.opacity : 1,
-          meta: trace.meta !== undefined ? trace.meta : null
+      // Use both el.data (original) and el._fullData (processed)
+      el.data.forEach(function(trace, traceindex) {
+        var fullTrace = el._fullData[traceindex];
+        // console.log('Trace', traceindex, 'data.meta:', trace.meta, 'fullData.meta:', fullTrace.meta);
+        out[fullTrace.name] = {
+          curveNumber:  traceindex,
+          opacity:  fullTrace.opacity !== undefined ? fullTrace.opacity : 1,
+          visible: fullTrace.visible !== undefined ? fullTrace.visible : true,
+          meta: trace.meta !== undefined ? trace.meta : (fullTrace.meta !== undefined ? fullTrace.meta : null)
         };
       });
       return out;
     }
+
 
     // Helper to update Shiny input
     function updateShinyInput() {
@@ -359,21 +400,27 @@ server <- function(input, output, session) {
 
     // Initial state (after plot is fully rendered)
     el.on('plotly_afterplot', function() {
+      console.log('Plot rendered, updating trace info');
       updateShinyInput();
+      // Signal that plot has been rendered
+      // Shiny. setInputValue(inputName + '_rendered', Math.random());
     });
 
     // When traces are restyled (legend clicks, opacity changes)
     el.on('plotly_restyle', function(evtData) {
+      console.log('Plot restyled');
       updateShinyInput();
     });
   }"
 
+
   output$ts_crn_plot <- plotly::renderPlotly({
+    cat("=== PLOT RENDERING ===\n")
+    cat("Time:", Sys.time(), "\n")
+
     validate(
-      need(isTruthy(input_data$prf_data), "Please upload QWA profile data"),
-      need(isTruthy(input_data$rings_data), "Please upload QWA rings data")
+      need(isTruthy(plot_data()), "Please provide input data")
     )
-    req(plot_data())
 
     sel_param <- input$sel_param
     validate(need(any(!is.na(plot_data()[sel_param])),
@@ -408,7 +455,18 @@ server <- function(input, output, session) {
       ) %>%
       plotly::event_register("plotly_click") %>%
       plotly::event_register("plotly_legendclick") %>%
-      plotly::event_register("plotly_legenddoubleclick")
+      plotly::event_register("plotly_legenddoubleclick") %>%
+      plotly::event_register("plotly_relayout")
+
+    if (!is.null(crn_x_axes())){
+      x_axes <- crn_x_axes()
+      if (!is.null(x_axes$x_min) && !is.null(x_axes$x_max)){
+        p <- p %>%
+          plotly::layout(
+            xaxis = list(range = c(x_axes$x_min, x_axes$x_max))
+          )
+      }
+    }
 
     # plotly interaction settings
     plotly::config(
@@ -418,7 +476,7 @@ server <- function(input, output, session) {
                                     'hoverCompareCartesian')) %>%
       # add custom JS to capture shown traces
       htmlwidgets::onRender(js_traces, data = "traces_crn")
-  })
+  }) |> bindEvent(plot_data())
 
   # Capture click events on plotly
   crn_click_data <- reactive({
@@ -439,12 +497,44 @@ server <- function(input, output, session) {
                        source = "crn_plot", priority = "event")
   })
 
+  crn_change_axes <- reactive({
+    req(plot_data())
+    plotly::event_data("plotly_relayout",
+                       source = "crn_plot")
+  })
+
+  crn_x_axes <- reactiveVal(NULL)
+
+  observe({
+    relayout <- crn_change_axes()
+    x_axes <- crn_x_axes()
+
+    if (!is.null(relayout[["xaxis.range[0]"]])){
+      x_axes$x_min <- relayout[["xaxis.range[0]"]]
+    }
+    if (!is.null(relayout[["xaxis.range[1]"]])){
+      x_axes$x_max <- relayout[["xaxis.range[1]"]]
+    }
+    if (!is.null(relayout[["xaxis.autorange"]])){
+      x_axes$x_min <- NULL
+      x_axes$x_max <- NULL
+    }
+
+    crn_x_axes(x_axes)
+  }) |> bindEvent(crn_change_axes(), ignoreNULL = TRUE, ignoreInit = TRUE)
+
   # Keep track of pending legend single clicks
   pending_single_click <- reactiveVal(FALSE)
+
+  trace_opacity <- reactiveVal(list(
+      on = character(0),
+      off = character(0)
+  ))
 
   # Observe legend single clicks: toggle visibility of that trace
   observe({
     # register pending first click
+    req(!awaiting_restoration()) # avoid running if plot is rerendered
     pending_single_click(TRUE)
 
     # delay briefly to identify single/double clicks
@@ -452,6 +542,7 @@ server <- function(input, output, session) {
     # otherwise, do nothing here, see double click handler
     shinyjs::delay(450, {
       if (pending_single_click()){
+        cat(".   single click\n")
         pending_single_click(FALSE) # reset pending
 
         req(isTruthy(input$traces_crn))
@@ -464,8 +555,16 @@ server <- function(input, output, session) {
         op_off <- 0.15
         new_op <- if (current_op == op_on) op_off else op_on
 
+        wp_traces <- purrr::keep(current_traces, \(x) isTRUE(x$meta$role == "orgline"))
+        wp_ops <- purrr::map_dbl(wp_traces, "opacity")
+        wp_ops[trace_name] <- new_op
+        trace_opacity(list(
+          on = names(wp_ops)[wp_ops == op_on],
+          off = names(wp_ops)[wp_ops == op_off]
+        ))
+
         # check for marker on this trace
-        marker_trace <- purrr::detect(current_traces, \(x) x$meta$role == "selring")
+        marker_trace <- purrr::detect(current_traces, \(x) isTRUE(x$meta$role == "selring"))
         if (!is.null(marker_trace)){
           marker_on_trace <- (marker_trace$meta$orgName == trace_name)
         } else {
@@ -475,6 +574,7 @@ server <- function(input, output, session) {
         p <- plotly::plotlyProxy("ts_crn_plot", session)
         if (new_op == op_off && marker_on_trace){
           # remove marker on selected trace (which will be dimmed)
+          latest_marker(NULL)
           p <- p %>%
             plotly::plotlyProxyInvoke("deleteTraces", marker_trace$curveNumber)
         }
@@ -492,7 +592,9 @@ server <- function(input, output, session) {
   # Observe legend double clicks:
   # toggle isolation of that trace (dimming all others)
   observe({
+    req(!awaiting_restoration()) # avoid running if plot is rerendered
     req(isTruthy(input$traces_crn))
+    cat(".   double click\n")
 
     pending_single_click(FALSE)  # cancel the pending single click from first click
 
@@ -500,13 +602,13 @@ server <- function(input, output, session) {
     current_traces <- input$traces_crn
 
     current_op <- current_traces[[trace_name]]$opacity
-    other_traces <- purrr::keep(current_traces, \(x) x$meta$role == "orgline")
+    other_traces <- purrr::keep(current_traces, \(x) isTRUE(x$meta$role == "orgline"))
     other_traces <- other_traces[names(other_traces) != trace_name]
     other_ops <- purrr::map_dbl(other_traces, "opacity")
     other_ids <- unname(purrr::map_int(other_traces, "curveNumber"))
 
     # check for marker on this trace
-    marker_trace <- purrr::detect(current_traces, \(x) x$meta$role == "selring")
+    marker_trace <- purrr::detect(current_traces, \(x) isTRUE(x$meta$role == "selring"))
     if (!is.null(marker_trace)){
       marker_on_trace <- (marker_trace$meta$orgName == trace_name)
     } else {
@@ -517,9 +619,14 @@ server <- function(input, output, session) {
     op_off <- 0.15
     # isolate trace if it's currently on and not already isolated
     if (current_op == op_on && any(other_ops > op_off)){
+      trace_opacity(list(
+        on = trace_name,
+        off = names(other_traces)
+      ))
       p <- plotly::plotlyProxy("ts_crn_plot", session)
       if (!marker_on_trace) {
         # remove marker on other trace (that will be dimmed)
+        latest_marker(NULL)
         p <- p %>%
           plotly::plotlyProxyInvoke("deleteTraces", marker_trace$curveNumber)
       }
@@ -528,35 +635,62 @@ server <- function(input, output, session) {
         plotly::plotlyProxyInvoke(
           method = "restyle",
           list(
-            opacity = 0.15
+            opacity = op_off
           ),
           other_ids
         )
     } else {
-      # reset all traces to visible, leave marker as is
+      trace_opacity(list(
+        on = names(other_traces),
+        off = character(0)
+      ))
+      # reset all traces to on, leave marker as is
       plotly::plotlyProxy("ts_crn_plot", session) %>%
         plotly::plotlyProxyInvoke(
           method = "restyle",
           list(
-            opacity = 1
+            opacity = op_on
           )
         )
     }
   }) |> bindEvent(crn_lgnd_dblclick(), ignoreNULL = TRUE, ignoreInit = TRUE)
 
+
   # Observe plot clicks: add marker on selected point and highlight the trace
+  latest_marker <- reactiveVal(NULL)
+
   observe({
     req(isTruthy(crn_click_data()), isTruthy(input$traces_crn))
+    req(!awaiting_restoration())
+    cat(".   plot click\n")
 
     click_data <- crn_click_data()
     current_traces <- input$traces_crn
 
     trace_id <- click_data$curveNumber
     trace_name <- names(current_traces)[
-      purrr::detect_index(current_traces, \(x) x$curveNumber == trace_id)]
-    marker_trace <- purrr::detect(current_traces, \(x) x$meta$role == "selring")
+      purrr::detect_index(current_traces, \(x) isTRUE(x$curveNumber == trace_id))]
+    marker_trace <- purrr::detect(current_traces, \(x) isTRUE(x$meta$role == "selring"))
 
     new_marker_name <- paste0(trace_name, ".", click_data$x)
+    latest_marker(
+        list(
+        marker_name = new_marker_name,
+        orgCurveNumber = trace_id,
+        orgName = trace_name,
+        year = click_data$x
+      )
+    )
+
+    op_on <- 1
+    op_off <- 0.15
+    wp_traces <- purrr::keep(current_traces, \(x) isTRUE(x$meta$role == "orgline"))
+    wp_ops <- purrr::map_dbl(wp_traces, "opacity")
+    wp_ops[trace_name] <- op_on
+    trace_opacity(list(
+      on = names(wp_ops)[wp_ops == op_on],
+      off = names(wp_ops)[wp_ops == op_off]
+    ))
 
     # update the plot
     p <- plotly::plotlyProxy("ts_crn_plot", session)
@@ -582,27 +716,244 @@ server <- function(input, output, session) {
           meta = list(role = "selring", orgCurveNumber = trace_id,
                       orgName = trace_name, year = click_data$x)
         )) %>%
-      # ensure that the clicked trace is fully visible
+      # ensure that the clicked trace is on
       plotly::plotlyProxyInvoke(
         method = "restyle",
         list(
-          opacity = 1
+          opacity = op_on
         ),
         trace_id
       )
   }) |> bindEvent(crn_click_data(), ignoreNULL = TRUE, ignoreInit = TRUE)
 
 
+  trace_visibility <- reactiveVal(list(
+    visible = character(0),
+    invisible = character(0)
+  ))
+
+  # make deselected woodpieces invisible
+  observe({
+    req(isTruthy(input$traces_crn), isTruthy(input$sel_wp))
+    cat(".   changed sel wp\n")
+    selected_wps <- input$sel_wp
+    current_traces <- input$traces_crn
+
+    wp_traces <- purrr::keep(current_traces, \(x) isTRUE(x$meta$role == "orgline"))
+
+    vis_traces <- wp_traces[names(wp_traces) %in% selected_wps]
+    vis_ids <- unname(purrr::map_int(vis_traces, "curveNumber"))
+    invis_traces <- setdiff(
+      names(wp_traces),
+      selected_wps
+    )
+    invis_traces <- wp_traces[names(wp_traces) %in% invis_traces]
+    invis_ids <- unname(purrr::map_int(invis_traces, "curveNumber"))
+
+    # Store the visibility state
+    trace_visibility(list(
+      visible = names(vis_traces),
+      invisible = names(invis_traces)
+    ))
+
+    marker_trace <- purrr::detect(current_traces, \(x) isTRUE(x$meta$role == "selring"))
+    if (!is.null(marker_trace)){
+      marker_on_vis <- (marker_trace$meta$orgName %in% selected_wps)
+    } else {
+      marker_on_vis <- FALSE
+    }
+
+    # update the plot
+    p <- plotly::plotlyProxy("ts_crn_plot", session)
+    if (!marker_on_vis){
+      # remove marker on invisible trace
+      latest_marker(NULL)
+      p <- plotly::plotlyProxy("ts_crn_plot", session) %>%
+        plotly::plotlyProxyInvoke("deleteTraces", marker_trace$curveNumber)
+    }
+
+    all_trace_ids <- c(vis_ids, invis_ids)
+    visibility_values <- c(rep(TRUE, length(vis_ids)), rep(FALSE, length(invis_ids)))
+
+    p %>%
+      plotly::plotlyProxyInvoke(
+        method = "restyle",
+        list(
+          visible = visibility_values
+        ),
+        all_trace_ids
+      )
+
+  }) |> bindEvent(input$sel_wp, ignoreNULL = TRUE, ignoreInit = TRUE)
+
+
+  # RESTORE EDITS IF THE PLOT IS RERENDERED ------------------------------------
+  awaiting_restoration <- reactiveVal(FALSE)
+
+  # if plot data changes, set flag to restore state after render
+  observe({
+    awaiting_restoration(TRUE)
+  }) |> bindEvent(plot_data(),
+                  ignoreNULL = TRUE,
+                  ignoreInit = TRUE)
+
+   # Restore after plot renders
+  observe({
+    req(awaiting_restoration())
+    req(input$traces_crn)
+    req(isTruthy(trace_visibility()))
+    req(isTruthy(trace_opacity()))
+    cat("...traces_crn updated, restoring state\n")
+
+    awaiting_restoration(FALSE) # only do it once
+
+    current_traces <- input$traces_crn
+    isolate({
+
+      visibility_state <- trace_visibility()
+      opacity_state <- trace_opacity()
+      op_on <- 1
+      op_off <- 0.15
+
+      wp_traces <- purrr::keep(current_traces, \(x) isTRUE(x$meta$role == "orgline"))
+
+      # Find traces that should be visible / on
+      vis_traces <- wp_traces[names(wp_traces) %in% visibility_state$visible]
+      vis_ids <- unname(purrr::map_int(vis_traces, "curveNumber"))
+      on_traces <- wp_traces[names(wp_traces) %in% opacity_state$on]
+      on_ids <- unname(purrr::map_int(on_traces, "curveNumber"))
+
+      # Find traces that should be invisible / off
+      invis_traces <- wp_traces[names(wp_traces) %in% visibility_state$invisible]
+      invis_ids <- unname(purrr::map_int(invis_traces, "curveNumber"))
+      off_traces <- wp_traces[names(wp_traces) %in% opacity_state$off]
+      off_ids <- unname(purrr::map_int(off_traces, "curveNumber"))
+
+      sel_marker <- latest_marker()
+      marker_y <- NULL
+      if (!is.null(sel_marker)){
+        marker_y <- plot_data() |>
+          dplyr:: filter(woodpiece_label == sel_marker$orgName,
+                         year == sel_marker$year, !exclude_dupl) |>
+          dplyr:: pull(input$sel_param)
+      }
+
+      # Apply changes to plot
+      p <- plotly::plotlyProxy("ts_crn_plot", session)
+
+      # visibility
+      vis_trace_ids <- c(vis_ids, invis_ids)
+      visibility_values <- c(rep(TRUE, length(vis_ids)), rep(FALSE, length(invis_ids)))
+      cat(".   restoring visibility:\n")
+      cat("    on:", paste(vis_ids, collapse = ", "), "\n")
+      cat("    off:", paste(invis_ids, collapse = ", "), "\n")
+
+      p <- p %>%
+        plotly::plotlyProxyInvoke(
+          method = "restyle",
+          list(visible = visibility_values),
+          vis_trace_ids
+        )
+
+      op_trace_ids <- c(on_ids, off_ids)
+      op_values <- c(rep(op_on, length(on_ids)), rep(op_off, length(off_ids)))
+      cat(".   restoring opacity:\n")
+      cat("    on:", paste(on_ids, collapse = ", "), "\n")
+      cat("    off:", paste(off_ids, collapse = ", "), "\n")
+      # opacity
+      p <- p %>%
+        plotly::plotlyProxyInvoke(
+          method = "restyle",
+          list(opacity = op_values),
+          op_trace_ids
+        )
+
+      # re-add marker if applicable
+      if (!is.null(sel_marker) && length(marker_y) > 0){
+        cat(".   restoring marker\n")
+        p <- p %>%
+          plotly::plotlyProxyInvoke(
+            "addTraces",
+            list(
+              x = list(sel_marker$year),
+              y = list(marker_y),
+              name = sel_marker$marker_name,
+              mode = "markers",
+              marker = list(
+                size = 10,
+                color = "red",
+                symbol = "circle"
+              ),
+              showlegend = FALSE,
+              hoverinfo = "skip",
+              meta = list(role = "selring", orgCurveNumber = sel_marker$orgCurveNumber,
+                          orgName = sel_marker$orgName, year = sel_marker$year)
+            ))
+      }
+
+      # re-add crn mean trace if applicable
+      sel_mean <- input$mean_type
+      if (sel_mean %in% c("mean", "tbrm")){
+        df_crn <- plot_data()
+        sel_prm <- input$sel_param
+
+      if (sel_mean == "mean"){
+        df_mean <- df_crn |>
+          dplyr::filter(!exclude_issues) |>
+          dplyr::select(dplyr::all_of(c("year", sel_prm))) |>
+          collapse::fgroup_by(year) |>
+          collapse::fmean()
+      } else if (sel_mean == "tbrm"){
+        df_mean <- df_crn |>
+          dplyr::filter(!exclude_issues) |>
+          dplyr::select(dplyr::all_of(c("year", sel_prm))) |>
+          dplyr::group_by(year) |>
+          dplyr::summarise("{sel_prm}" := dplR::tbrm(.data[[sel_prm]]))
+      }
+
+      cat(".   restoring mean trace\n")
+      p <- p %>%
+        plotly::plotlyProxyInvoke(
+          "addTraces",
+          list(
+            x = df_mean$year,
+            y = df_mean[[sel_prm]],
+            name = paste("crn.", sel_mean, sep = ""),
+            type = 'scatter',
+            mode = 'lines',
+            line = list(width = 2, color = 'black'),
+            showlegend = FALSE,
+            hoverinfo = "skip",
+            meta = list(role = "crnline")
+          ))
+      }
+
+      cat("... rerender complete\n")
+      p
+    })
+
+  }) |> bindEvent(
+    input$traces_crn,
+    ignoreNULL = TRUE,
+    ignoreInit = TRUE
+  )
+
+
+
+
   # adding a mean trace based on input
   observe({
     req(plot_data(), input$traces_crn)
+    cat(".   mean crn update\n")
+    #invalidateLater(50, session)
 
     df_crn <- plot_data()
+    # TODO: filter out invisible traces for the mean??
     sel_prm <- input$sel_param
     sel_mean <- input$mean_type
 
     current_traces <- input$traces_crn
-    crn_trace <- purrr::detect(current_traces, \(x) x$meta$role == "crnline")
+    crn_trace <- purrr::detect(current_traces, \(x) isTRUE(x$meta$role == "crnline"))
 
     p <- plotly::plotlyProxy("ts_crn_plot", session)
     if (!is.null(crn_trace)){
@@ -625,7 +976,8 @@ server <- function(input, output, session) {
         dplyr::group_by(year) |>
         dplyr::summarise("{sel_prm}" := dplR::tbrm(.data[[sel_prm]]))
     }
-    p %>%
+
+    p <- p %>%
       plotly::plotlyProxyInvoke(
         "addTraces",
         list(
@@ -634,23 +986,48 @@ server <- function(input, output, session) {
           name = paste("crn.", sel_mean, sep = ""),
           type = 'scatter',
           mode = 'lines',
-          line = list(dash = 'dash', width = 1, color = 'black'),
+          line = list(width = 2, color = 'black'),
           showlegend = FALSE,
           hoverinfo = "skip",
           meta = list(role = "crnline")
         ))
-  }) |> bindEvent(list(plot_data(), input$mean_type))
+    return(p)
+  }) |> bindEvent(input$mean_type)
 
 
 
 
   # REACTIVE CONTAINER: SELECTED RING ------------------------------------------
+  # clicked_ring <- reactive({
+  #   req(isTruthy(input$traces_crn))
+  #   traces <- input$traces_crn
+  #
+  #   marker_trace <- purrr::detect(input$traces_crn, \(x) isTRUE(x$meta$role == "selring"))
+  #   if (!is.null(marker_trace)) {
+  #     sel_wp_label <- marker_trace$meta$orgName
+  #     sel_year <- marker_trace$meta$year
+  #
+  #     sel_data <- rings_data_edited() |>
+  #       dplyr::filter(woodpiece_label == sel_wp_label, year == sel_year) |>
+  #       dplyr::filter(!exclude_dupl) # TODO: keep all for handling duplicates?
+  #
+  #     return(
+  #       list(
+  #         woodpiece_label = sel_wp_label,
+  #         year = sel_year,
+  #         data = sel_data
+  #       )
+  #     )
+  #   } else {
+  #     NULL
+  #   }
+  # }) %>% bindEvent(input$traces_crn, ignoreNULL = TRUE, ignoreInit = TRUE) # input$sel_wp
+
   clicked_ring <- reactive({
-    traces <- input$traces_crn
-    marker_trace <- purrr::detect(input$traces_crn, \(x) x$meta$role == "selring")
-    if (!is.null(marker_trace)) {
-      sel_wp_label <- marker_trace$meta$orgName
-      sel_year <- marker_trace$meta$year
+    sel_marker <- latest_marker()
+    if (!is.null(sel_marker)) {
+      sel_wp_label <- sel_marker$orgName
+      sel_year <- sel_marker$year
 
       sel_data <- rings_data_edited() |>
         dplyr::filter(woodpiece_label == sel_wp_label, year == sel_year) |>
@@ -666,7 +1043,8 @@ server <- function(input, output, session) {
     } else {
       NULL
     }
-  }) %>% bindEvent(input$traces_crn, ignoreNULL = TRUE, ignoreInit = TRUE)
+  }) %>% bindEvent(latest_marker(), ignoreNULL = FALSE, ignoreInit = TRUE) # input$sel_wp
+
 
   # update ring edit card when a ring is selected
   observe({
@@ -674,6 +1052,7 @@ server <- function(input, output, session) {
 
     # if a ring is selected, update the inputs with saved flags and comment
     req(isTruthy(clicked_ring()))
+
     saved_flags <- clicked_ring()$data
     updateRadioButtons(session, "sel_exclude",
                        selected = ifelse(saved_flags$exclude_issues, "yes", "no"))
@@ -697,18 +1076,18 @@ server <- function(input, output, session) {
       sel_tech_issues <- saved_flags %>%
         dplyr::select(unname(technical_issues))
       sel_tech_issues <- names(sel_tech_issues)[sel_tech_issues[1,] == TRUE]
-      updateSelectizeInput(session, "sel_technical_exact",
+      updateCheckboxGroupInput(session, "sel_technical_exact",
                            selected = sel_tech_issues)
     }
 
     updateTextAreaInput(session, "sel_comment",
                         value = saved_flags$comment)
 
-  }) |> bindEvent(clicked_ring(), ignoreNULL = FALSE, ignoreInit = TRUE)
+  }) |> bindEvent(clicked_ring(), ignoreNULL = FALSE, ignoreInit = FALSE)
 
   # the ring editor card title
   output$sel_ring <- renderUI({
-    req(isTruthy(clicked_ring()))
+    req(clicked_ring())
     df <- clicked_ring()$data
     paste("Selected ring:", df$image_label, "| Year:", df$year)
   })
@@ -756,7 +1135,7 @@ server <- function(input, output, session) {
   # SAVING FLAG EDITS ----------------------------------------------------------
   # Reactive container to hold all the flag edits (slightly debounced to avoid too many updates)
   flag_changes <- reactive({
-    req(isTruthy(clicked_ring()))
+    #req(isTruthy(clicked_ring()))
     list(
       exclude = input$sel_exclude,
       discrete = input$sel_discrete,
@@ -764,11 +1143,12 @@ server <- function(input, output, session) {
       technical = input$sel_technical_exact,
       comment = input$sel_comment
     )
-  }) %>% debounce(250)
+  }) %>% debounce(150)
 
   # update rings_data_edited when flag_changes occur
   observe({
     req(isTruthy(clicked_ring()))
+    # TODO: should not be triggerd if a different ring is clicked!!
 
     excl_flag <- ifelse(flag_changes()$exclude == "yes", TRUE, FALSE)
     disc_flags_on <- flag_changes()$discrete
@@ -792,6 +1172,65 @@ server <- function(input, output, session) {
     rings_data_edited(df_rings)
 
   }) |> bindEvent(flag_changes(), ignoreNULL = FALSE, ignoreInit = TRUE)
+
+
+  new_excl_rings <- reactiveVal(NULL)
+  observe({
+    new_excl <- rings_data_edited() %>%
+      dplyr::filter(woodpiece_label %in% input$sel_wp) %>%
+      dplyr::filter(exclude_issues) %>%
+      dplyr::anti_join(rings_data_org() %>%
+                        dplyr::filter(exclude_issues),
+                      by = c("image_label", "year")) |>
+      dplyr::select(image_label, year)
+
+    new_excl_rings(new_excl)
+  }) |> bindEvent(clicked_ring(), input$sel_wp, ignoreNULL = FALSE, ignoreInit = TRUE)
+
+  # TODO: why only visible after another change?? (maybe the way the visibility done in the restyles?)
+  # TODO: re-rendering markers if plot_data changes does not work properly
+  # TODO: toggle markers when show excluded? when mean added/removed
+  # TODO: why is new_excl_rings not NULL after apply changes?
+  # (maybe also toggle opacity)
+  observe({
+    # if new_excl_rings changes, and if a new ring is clicked or all deselected
+    req(plot_data())
+    req(new_excl_rings())
+
+    cat(".    add new excl markers\n")
+    excl_makers <- plot_data() |>
+      dplyr::inner_join(new_excl_rings(), by = c("image_label", "year"))
+
+    print(excl_makers$year)
+    print(excl_makers[[input$sel_param]])
+    current_traces <- input$traces_crn
+    excl_trace <- purrr::detect(current_traces, \(x) isTRUE(x$meta$role == "exclring"))
+    p <- plotly::plotlyProxy("ts_crn_plot", session)
+
+    if (!is.null(excl_trace)){
+      # remove existing excl markers
+      p <- plotly::plotlyProxy("ts_crn_plot", session) %>%
+        plotly::plotlyProxyInvoke("deleteTraces", excl_trace$curveNumber)
+    }
+
+    p %>% plotly::plotlyProxyInvoke(
+        "addTraces",
+        list(
+          x = excl_makers$year,
+          y = excl_makers[[input$sel_param]],
+          name = "excl_markers",
+          mode = "markers",
+          marker = list(
+            size = 6,
+            color = "hotpink",
+            symbol = "x"
+          ),
+          showlegend = FALSE,
+          hoverinfo = "skip",
+          visible = TRUE,
+          meta = list(role = "exclring")
+        ))
+  }) |> bindEvent(new_excl_rings(), plot_data(), ignoreNULL = FALSE, ignoreInit = FALSE)
 
   # revert to pre-edit data if "Discard changes" is clicked
   # can use clicked_ring()$data which is only updated when (another) ring is clicked
@@ -833,6 +1272,64 @@ server <- function(input, output, session) {
                         value = saved_flags$comment)
 
   }) |> bindEvent(input$undo_sel_flags, ignoreNULL = TRUE, ignoreInit = TRUE)
+
+
+  # revert to raw input data if "reset_to_raw" is clicked
+  observe({
+    req(isTruthy(clicked_ring()))
+
+    sel_img <- clicked_ring()$data$image_label
+    sel_year <- clicked_ring()$data$year
+
+    # initialize new flag columns if not present
+    new_flag_cols <- setdiff(c(unname(discrete_features),
+                               unname(disqual_issues), unname(technical_issues),
+                               "comment"),
+                             names(input_data$rings_data))
+    saved_flags <- input_data$rings_data |> dplyr::filter(
+      image_label == sel_img,
+      year == sel_year
+    )
+    saved_flags[new_flag_cols] <- FALSE
+    if ("comment" %in% new_flag_cols){
+      saved_flags$comment <- NA_character_
+    }
+
+
+    updateRadioButtons(session, "sel_exclude",
+                       selected = ifelse(saved_flags$exclude_issues, "yes", "no"))
+
+    sel_disc_flags <- saved_flags %>%
+      dplyr::select(unname(discrete_features))
+    sel_disc_flags <- names(sel_disc_flags)[sel_disc_flags[1,] == TRUE]
+
+    updateCheckboxGroupInput(session, "sel_discrete",
+                             selected = sel_disc_flags)
+
+    sel_disq_flags <- saved_flags %>%
+      dplyr::select(unname(disqual_issues))
+    sel_disq_flags <- names(sel_disq_flags)[sel_disq_flags[1,] == TRUE]
+
+    updateCheckboxGroupInput(session, "sel_disqual",
+                             selected = sel_disq_flags)
+
+    if ("technical_issues" %in% sel_disq_flags) {
+      shinyjs::enable("sel_technical_exact")
+      sel_tech_issues <- saved_flags %>%
+        dplyr::select(unname(technical_issues))
+      sel_tech_issues <- names(sel_tech_issues)[sel_tech_issues[1,] == TRUE]
+      updateSelectizeInput(session, "sel_technical_exact",
+                           selected = sel_tech_issues)
+    } else {
+      shinyjs::disable("sel_technical_exact")
+      updateSelectizeInput(session, "sel_technical_exact",
+                           selected = character(0))
+    }
+
+    updateTextAreaInput(session, "sel_comment",
+                        value = saved_flags$comment)
+
+  }) |> bindEvent(input$reset_to_raw, ignoreNULL = TRUE, ignoreInit = TRUE)
 
 
   # save edits, update plot
@@ -892,7 +1389,7 @@ server <- function(input, output, session) {
 
 
   output$debug <- renderPrint({
-    input$traces_crn
+    purrr::detect(input$traces_crn, \(x) isTRUE(x$meta$role == "exclring"))
   })
 
 }

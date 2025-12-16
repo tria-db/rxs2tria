@@ -83,18 +83,29 @@ primary bg color, white font, white on hover, white active underline */
 .card-tert .card-body{
   background-color: $tert-col-grad-5 !important;
 }
-.card .clean-card .card-body{
-  background-color: $tert-col-grad-4 !important;
-}
-
 .card-tert .card-header{
   background-color: $tert-col-grad-2 !important;
   color: white !important;
 }
 
+/* custom input cards (nested) */
+.card .clean-card .card-body{
+  background-color: $tert-col-grad-4 !important;
+}
+.card .clean-card-sec .card-body{
+  background-color: $sec-col-grad-4 !important;
+}
+
+
+
 /* shinyTree resp. jstree */
 .jstree-proton .jstree-clicked {
   background: $prim-col-grad-1 !important;
+}
+
+#sel_wp ~ .selectize-control .selectize-input {
+  max-height: 100px;
+  overflow-y: auto;
 }
 
 /* datatable */

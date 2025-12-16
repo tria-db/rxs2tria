@@ -60,23 +60,23 @@ ui <- bslib::page_navbar(
     #fileInput("file_clim", "Upload the 'climate' data", accept = c(".csv")),
 
     strong("Filter data for plot"),
-    selectInput("sel_site", "Filter the sites to display", choices = NULL, multiple = TRUE),
-    selectInput("sel_species", "Select the species to display", choices = NULL, multiple = FALSE),
-    selectInput("sel_wp", "Select the woodpieces to display", choices = NULL, multiple = FALSE),
+    selectInput("sel_site", "Filter the sites to display", choices = NULL, multiple = TRUE, selectize = TRUE),
+    selectInput("sel_species", "Select the species to display", choices = NULL, multiple = FALSE, selectize = TRUE),
+    selectInput("sel_wp", "Select the woodpieces to display", choices = NULL, multiple = TRUE, selectize = TRUE),
     hr(),
 
     strong("Plot settings"),
-    selectInput("sel_param", "Choose QWA parameter to display", choices = NULL, multiple = FALSE),
-    selectInput("sel_sector", "Select which ring sector to plot", choices = NULL, multiple = FALSE),
-    checkboxInput("spline_det", "32-years spline detrend", value = FALSE),
+    selectInput("sel_param", "Choose QWA parameter to display", choices = NULL, multiple = FALSE, selectize = TRUE),
+    selectInput("sel_sector", "Select which ring sector to plot", choices = NULL, multiple = FALSE, selectize = TRUE),
+    shinyjs::disabled(checkboxInput("spline_det", "32-years spline detrend", value = FALSE)),
     selectInput("mean_type", "Select the mean applied for crn",
-                choices = c("none", "mean", "tbrm"), selected = "none", multiple = FALSE),
+                choices = c("none", "mean", "tbrm"), selected = "none", multiple = FALSE, selectize = TRUE),
     checkboxInput("show_excl", "show excluded rings", value = FALSE),
 
     hr(),
     actionButton("apply_changes", "Save & update plot", icon = icon("arrows-rotate")),
-    hr(),
-    actionButton("restore_all", "Restore to input", icon = icon("triangle-exclamation")),
+    # hr(),
+    # actionButton("restore_all", "Restore to input", icon = icon("triangle-exclamation")),
     hr(),
     downloadButton("save_flags", "Download new ring data")
 
@@ -128,6 +128,7 @@ ui <- bslib::page_navbar(
             bslib::layout_column_wrap(
               fill = FALSE,
               width = 1/2,
+              heights_equal = "row",
 
               bslib::layout_column_wrap(
                 width = 1,
@@ -135,7 +136,7 @@ ui <- bslib::page_navbar(
                 heights_equal = "row",
                 bslib::card(
                   fill = FALSE,
-                  class = "clean-card",
+                  class = "clean-card-sec",
                   bslib::layout_column_wrap(
                     width = 1/2,
                     radioButtons("sel_exclude", "Exclude ring from analysis?", choices = c("yes", "no"), inline = TRUE, selected = "no"),
@@ -190,21 +191,17 @@ ui <- bslib::page_navbar(
 
             bslib::layout_column_wrap(
               width = "217px", fixed_width = TRUE,
-              actionButton("undo_sel_flags", "Undo current edits", icon = icon("undo")),
+              actionButton("undo_sel_flags", "Undo current edits", icon = icon("arrow-left")),
+              actionButton("reset_to_raw", "Reset to input", icon = icon("undo")),
               actionButton("show_image", "Open image", icon = icon("image"))
             )
 
           ),
 
-          # bslib::nav_panel(
-          #   "Show image",
-          #   value = "show_image",
-          #   uiOutput("image_ui")
-          # ),
-
           bslib::nav_panel(
             "Show coverage",
             value = "show_coverage",
+            verbatimTextOutput("coverage"),
             uiOutput("coverage_ui")
           )
        # )
