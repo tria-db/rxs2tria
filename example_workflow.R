@@ -10,8 +10,9 @@ load_all()
 # set path to the input and output data
 # where the ROXAS files are (can contain subfolders)
 path_in <- '/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out'
-path_in <- '/Users/maranaegelin/Documents/QWAdata/LTAL_S22/rxs_out'
 path_in <- '/Users/maranaegelin/Documents/QWAdata/YAM_1880/rxs_out'
+path_in <- '/Users/maranaegelin/Documents/QWAdata/LTAL_S22/rxs_out'
+path_in <- '/Volumes/Dendro/Dendrosciences_All/PatrickFonti_LOTanatomy_2021_PF/S22/ROXAS/4_Roxas_final/S22_LADE_L01'
 
 # where output files should be saved to
 path_out <- '/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs2tria_out'
@@ -19,8 +20,9 @@ path_out <- '/Users/maranaegelin/Documents/QWAdata/LTAL_S22/rxs2tria_out'
 path_out <- '/Users/maranaegelin/Documents/QWAdata/YAM_1880/rxs2tria_out'
 
 dataset_name <- 'POGSTO2024' # used to name the resulting output files
-dataset_name <- 'LTAL_S22'
 dataset_name <- 'YAM_1880'
+dataset_name <- 'LTAL_S22'
+dataset_name <- 'LTAL_S22_L01'
 
 
 ################################################################################
@@ -91,25 +93,21 @@ fname_out <- file.path(
   path_out,
   glue::glue("{format(Sys.Date(), '%Y%m%d')}_TRIA_{dataset_name}")
 )
-readr::write_csv(
-  QWA_data$cells,
-  paste0(fname_out, '_cells.csv.gz'))
 
-readr::write_csv(QWA_data$rings,
-                 paste0(fname_out, '_rings.csv'))
+save_files <- FALSE
+if (save_files) {
+  readr::write_csv(
+    QWA_data$cells,
+    paste0(fname_out, '_cells.csv.gz'))
 
-
-# TODO: missing also in case of mrw < 10 and/or cno < 5?
-# TODO: should we calculate additional measures in case of incomplete rings?
-# might still want to decide later on some issues?
-# but what makes sense to calculate?
+  readr::write_csv(QWA_data$rings,
+                   paste0(fname_out, '_rings.csv'))
+}
 
 
 ################################################################################
 # provide user input on ring flags
-# interactively in shiny app (NOT READY YET)
-# TODO: adapt to new flag logic (need to calculate duplicate_rank in app)
-# launch_coverage_app()
+# first, calculate profiles to explore cell measurements data
 
 n_sectors <- 5
 # divide cells into n_sectors based on position in ring (rraddsitr)
@@ -123,49 +121,28 @@ prf_data <- calculate_profiles(
   QWA_data$cells, n_sectors, sel_cell_params, quant_probs
 )
 
-
-sel_prm <- "la_mean"
-sel_sect <- 5
-
-df_crn <- QWA_data$rings |>
-  dplyr::select(woodpiece_label, slide_label, image_label, year,
-                exclude_issues, exclude_dupl,
-                dplyr::any_of(sel_prm))
-if (sel_prm %in% names(prf_data)){
-  df_crn  <- prf_data |>
-    dplyr::filter(sector_n == as.numeric(sel_sect)) |>
-    dplyr::select(dplyr::all_of(c("image_label","year", sel_prm))) |>
-    dplyr::right_join(df_crn, by = c("image_label","year"))
+if (save_files){
+  readr::write_csv(prf_data,
+                   paste0(fname_out, '_profiles.csv'))
 }
 
-# make sure we only have one value per year/woodpiece
-df_crn <- df_crn |> dplyr::filter(!exclude_dupl)
+# read in previously saved data for testing
+# prf_data <- vroom::vroom("/Users/maranaegelin/Documents/QWAdata/LTAL_S22/rxs2tria_out/20251208_TRIA_LTAL_S22_profiles.csv")
+# QWA_data <- list()
+# QWA_data$rings <- vroom::vroom("/Users/maranaegelin/Documents/QWAdata/LTAL_S22/rxs2tria_out/20251208_TRIA_LTAL_S22_rings.csv")
+# df_rxsmeta <- vroom::vroom("/Users/maranaegelin/Documents/QWAdata/LTAL_S22/rxs2tria_out/20251125_TRIA_LTAL_S22_rxsmeta.csv")
 
-
-
-
-
-readr::write_csv(prf_data,
-                 paste0(fname_out, '_profiles.csv'))
-
-
-# df_rings <- QWA_data$rings |>
-#   dplyr::mutate(include_ring = dplyr::case_when(exclude_dupl | exclude_issues ~ 2,
-#                                                 TRUE ~ 1)) |>
-#   dplyr::select(-exclude_dupl, -exclude_issues)
-
-prf_data <- vroom::vroom("/Users/maranaegelin/Documents/QWAdata/LTAL_S22/rxs2tria_out/20251208_TRIA_LTAL_S22_profiles.csv")
-QWA_data <- list()
-QWA_data$rings <- vroom::vroom("/Users/maranaegelin/Documents/QWAdata/LTAL_S22/rxs2tria_out/20251208_TRIA_LTAL_S22_rings.csv")
-df_rxsmeta <- vroom::vroom("/Users/maranaegelin/Documents/QWAdata/LTAL_S22/rxs2tria_out/20251125_TRIA_LTAL_S22_rxsmeta.csv")
-
+# launch the shiny app to explore data and flag rings
 launch_flags_app()
+
+
 
 
 ################################################################################
 # READ QWA data
-file_path <- "../example_data/rxs2tria_out"
-QWA_data <- read_QWAdata(file_path)
-
-file_path <- "../example_data/tria_download"
-QWA_metadata <- read_QWA_metadata(file_path)
+# TODO: add the reading QWA data and metadat functionalities
+# file_path <- "../example_data/rxs2tria_out"
+# QWA_data <- read_QWAdata(file_path)
+#
+# file_path <- "../example_data/tria_download"
+# QWA_metadata <- read_QWA_metadata(file_path)

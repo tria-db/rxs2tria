@@ -89,3 +89,20 @@ flag_cols <- c(
   "abnormal_profile" = "Abnormal Profile",
   "visual_quality" = "Visual Quality"
 )
+
+
+get_new_excluded <- function(rings_org, rings_edit, sel_wp, plt_df, param){
+  new_excl <- rings_edit %>%
+    dplyr::filter(woodpiece_label %in% sel_wp) %>%
+    #dplyr::filter(exclude_issues) %>%
+    dplyr::anti_join(rings_org,
+                     by = c("image_label", "year", "exclude_issues")) |>
+    dplyr::select(image_label, year)
+
+  excl_markers <- plt_df |> # plot data has no duplicate years
+    dplyr::inner_join(new_excl, by = c("image_label", "year")) |>
+    dplyr::mutate(y = .data[[param]]) |>
+    dplyr::select(year, y, woodpiece_label)
+
+  return(excl_markers)
+}
