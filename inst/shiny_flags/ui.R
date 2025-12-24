@@ -140,6 +140,8 @@ ui <- bslib::page_navbar(
                   bslib::layout_column_wrap(
                     width = 1/2,
                     radioButtons("sel_exclude", "Exclude ring from analysis?", choices = c("yes", "no"), inline = TRUE, selected = "no"),
+                    # Placeholder for conditional EW/LW/ALL selection
+                    uiOutput("exclude_scope_ui"),
                     uiOutput("warn_disq")
                   )
                 ),

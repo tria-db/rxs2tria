@@ -276,12 +276,16 @@ server <- function(input, output, session) {
     # initialize new flag columns if not present
     new_flag_cols <- setdiff(c(unname(discrete_features),
                                unname(disqual_issues), unname(technical_issues),
-                               "comment"),
+                               "comment",
+                               "exclude_scope"),
                              names(input_data$rings_data))
     df_rings <- input_data$rings_data
     df_rings[new_flag_cols] <- FALSE
     if ("comment" %in% new_flag_cols){
       df_rings$comment <- NA_character_
+    }
+    if ("exclude_scope" %in% new_flag_cols){
+      df_rings$exclude_scope <- NA_character_
     }
 
     rings_data_org(df_rings)
@@ -1229,6 +1233,21 @@ server <- function(input, output, session) {
     updateRadioButtons(session, "sel_exclude",
                        selected = ifelse(saved_flags$exclude_issues, "yes", "no"))
 
+    # --- NEW: EW/LW/ALL selector based on exclude ---
+    output$exclude_scope_ui <- renderUI({
+      if (saved_flags$exclude_issues) {
+        radioButtons(
+          "sel_exclude_scope",
+          "Exclude which part?",
+          choices = c("EW", "LW", "ALL"),
+          inline = TRUE,
+          selected = saved_flags$exclude_scope %||% "ALL"  # default ALL if NULL
+        )
+      } else {
+        NULL
+      }
+    })
+
     sel_disc_flags <- saved_flags %>%
       dplyr::select(unname(discrete_features))
     sel_disc_flags <- names(sel_disc_flags)[sel_disc_flags[1,] == TRUE]
@@ -1256,6 +1275,11 @@ server <- function(input, output, session) {
     updateTextAreaInput(session, "sel_comment",
                         value = saved_flags$comment)
 
+    # Store saved value for EW/LW/ALL
+    if (!is.null(saved_flags$exclude_scope)) {
+      updateRadioButtons(session, "sel_exclude_scope", selected = saved_flags$exclude_scope)
+    }
+
   }) |> bindEvent(clicked_ring(), ignoreNULL = FALSE, ignoreInit = FALSE)
 
 
@@ -1264,6 +1288,23 @@ server <- function(input, output, session) {
     req(clicked_ring())
     df <- clicked_ring()$data
     paste("Selected ring:", df$image_label, "| Year:", df$year)
+  })
+
+  # Reactively show EW/LW/ALL selector based on sel_exclude
+  observeEvent(input$sel_exclude, {
+    if (input$sel_exclude == "yes") {
+      output$exclude_scope_ui <- renderUI({
+        radioButtons(
+          "sel_exclude_scope",
+          "Exclude which part?",
+          choices = c("EW", "LW", "ALL"),
+          inline = TRUE,
+          selected = "ALL"  # default selection
+        )
+      })
+    } else {
+      output$exclude_scope_ui <- renderUI(NULL)  # hide if "no"
+    }
   })
 
   # toggle the technical issue specification checkboxes
@@ -1312,6 +1353,10 @@ server <- function(input, output, session) {
     #req(isTruthy(clicked_ring()))
     list(
       exclude = input$sel_exclude,
+      exclude_scope = if (!is.null(input$sel_exclude_scope))
+        input$sel_exclude_scope
+      else
+        NA_character_,
       discrete = input$sel_discrete,
       disqual = input$sel_disqual,
       technical = input$sel_technical_exact,
@@ -1343,6 +1388,20 @@ server <- function(input, output, session) {
     df_rings[ring_id, c(disq_flags_off, disc_flags_off, techn_flags_off)] <- FALSE
     df_rings[ring_id, "comment"] <- flag_changes()$comment
 
+    # Add the new flag column for EW/LW/ALL
+    scope_val <- flag_changes()$exclude_scope
+    if (is.null(scope_val) || length(scope_val) == 0) scope_val <- NA_character_
+
+    if (!"exclude_scope" %in% names(df_rings)) {
+      df_rings$exclude_scope <- NA_character_
+    }
+
+    if (excl_flag) {
+      df_rings[ring_id, "exclude_scope"] <- scope_val
+    } else {
+      df_rings[ring_id, "exclude_scope"] <- NA_character_
+    }
+
     rings_data_edited(df_rings)
 
   }) |> bindEvent(flag_changes(), ignoreNULL = FALSE, ignoreInit = TRUE)
@@ -1357,6 +1416,14 @@ server <- function(input, output, session) {
     expected_excl(ifelse(saved_flags$exclude_issues, "yes", "no"))
     updateRadioButtons(session, "sel_exclude",
                        selected = ifelse(saved_flags$exclude_issues, "yes", "no"))
+
+    # NEW: Restore EW/LW/ALL selection
+    if (!is.na(saved_flags$exclude_scope)) {
+      updateRadioButtons(session, "sel_exclude_scope",
+                         selected = saved_flags$exclude_scope)
+    } else {
+      updateRadioButtons(session, "sel_exclude_scope", selected = "ALL")
+    }
 
     sel_disc_flags <- saved_flags %>%
       dplyr::select(unname(discrete_features))
@@ -1402,7 +1469,8 @@ server <- function(input, output, session) {
     # initialize new flag columns if not present
     new_flag_cols <- setdiff(c(unname(discrete_features),
                                unname(disqual_issues), unname(technical_issues),
-                               "comment"),
+                               "comment",
+                               "exclude_scope"),
                              names(input_data$rings_data))
     saved_flags <- input_data$rings_data |> dplyr::filter(
       image_label == sel_img,
@@ -1412,10 +1480,21 @@ server <- function(input, output, session) {
     if ("comment" %in% new_flag_cols){
       saved_flags$comment <- NA_character_
     }
+    if ("exclude_scope" %in% new_flag_cols){
+      saved_flags$exclude_scope <- NA_character_
+    }
 
     expected_excl(ifelse(saved_flags$exclude_issues, "yes", "no"))
     updateRadioButtons(session, "sel_exclude",
                        selected = ifelse(saved_flags$exclude_issues, "yes", "no"))
+
+    # NEW: Restore EW/LW/ALL selection
+    if (!is.na(saved_flags$exclude_scope)) {
+      updateRadioButtons(session, "sel_exclude_scope",
+                         selected = saved_flags$exclude_scope)
+    } else {
+      updateRadioButtons(session, "sel_exclude_scope", selected = "ALL")
+    }
 
     sel_disc_flags <- saved_flags %>%
       dplyr::select(unname(discrete_features))
@@ -1468,7 +1547,7 @@ server <- function(input, output, session) {
     print(image_path)
     base_path <- dirname(image_path)
     print(base_path)
-    annotated_image <- list.files(base_path, pattern = paste0(df$image_label, "_annotated\\."), full.names = TRUE)
+    annotated_image <- list.files(base_path, pattern = paste0(df$image_label, "_annotated_twin\\."), full.names = TRUE)
     print(annotated_image)
     if (length(annotated_image) == 1){
       print("tried to open?")

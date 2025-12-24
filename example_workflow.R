@@ -9,20 +9,23 @@ load_all()
 ################################################################################
 # set path to the input and output data
 # where the ROXAS files are (can contain subfolders)
-path_in <- '/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out'
-path_in <- '/Users/maranaegelin/Documents/QWAdata/YAM_1880/rxs_out'
-path_in <- '/Users/maranaegelin/Documents/QWAdata/LTAL_S22/rxs_out'
-path_in <- '/Volumes/Dendro/Dendrosciences_All/PatrickFonti_LOTanatomy_2021_PF/S22/ROXAS/4_Roxas_final/S22_LADE_L01'
+# path_in <- '/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out'
+# path_in <- '/Users/maranaegelin/Documents/QWAdata/YAM_1880/rxs_out'
+# path_in <- '/Users/maranaegelin/Documents/QWAdata/LTAL_S22/rxs_out'
+# path_in <- '/Volumes/Dendro/Dendrosciences_All/PatrickFonti_LOTanatomy_2021_PF/S22/ROXAS/4_Roxas_final/S22_LADE_L01'
+path_in <- '~/Desktop/Ltal_S22'
+
 
 # where output files should be saved to
-path_out <- '/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs2tria_out'
-path_out <- '/Users/maranaegelin/Documents/QWAdata/LTAL_S22/rxs2tria_out'
-path_out <- '/Users/maranaegelin/Documents/QWAdata/YAM_1880/rxs2tria_out'
+# path_out <- '/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs2tria_out'
+# path_out <- '/Users/maranaegelin/Documents/QWAdata/LTAL_S22/rxs2tria_out'
+# path_out <- '/Users/maranaegelin/Documents/QWAdata/YAM_1880/rxs2tria_out'
+path_out <- '~/Desktop/LtalS22_out'
 
-dataset_name <- 'POGSTO2024' # used to name the resulting output files
-dataset_name <- 'YAM_1880'
+# dataset_name <- 'POGSTO2024' # used to name the resulting output files
+# dataset_name <- 'YAM_1880'
+# dataset_name <- 'LTAL_S22_L01'
 dataset_name <- 'LTAL_S22'
-dataset_name <- 'LTAL_S22_L01'
 
 
 ################################################################################
@@ -94,7 +97,7 @@ fname_out <- file.path(
   glue::glue("{format(Sys.Date(), '%Y%m%d')}_TRIA_{dataset_name}")
 )
 
-save_files <- FALSE
+save_files <- TRUE
 if (save_files) {
   readr::write_csv(
     QWA_data$cells,
