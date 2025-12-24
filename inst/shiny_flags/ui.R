@@ -46,6 +46,20 @@ ui <- bslib::page_navbar(
 
   header = shinyjs::useShinyjs(),
 
+  # --- Add JS for keyboard arrows ---
+  tags$script(HTML("
+    document.addEventListener('keydown', function(e) {
+      // Left arrow -> previous ring
+      if(e.key === 'ArrowLeft') {
+        Shiny.setInputValue('prev_ring_js', Math.random());
+      }
+      // Right arrow -> next ring
+      if(e.key === 'ArrowRight') {
+        Shiny.setInputValue('next_ring_js', Math.random());
+      }
+    });
+  ")),
+
   # TITLE ----------------------------------------------------------------------
   title = "rxs2tria: QWA data quality and climate signal explorer",
 
@@ -142,7 +156,13 @@ ui <- bslib::page_navbar(
                     radioButtons("sel_exclude", "Exclude ring from analysis?", choices = c("yes", "no"), inline = TRUE, selected = "no"),
                     # Placeholder for conditional EW/LW/ALL selection
                     uiOutput("exclude_scope_ui"),
-                    uiOutput("warn_disq")
+                    uiOutput("warn_disq"),
+                    div(
+                      style = "display: flex; gap: 10px;",  # gap controls space between buttons
+                      actionButton("prev_ring", "Previous"),
+                      actionButton("next_ring", "Next"),
+                      checkboxInput("auto_open_image", "Auto-open image", value = FALSE)
+                    )
                   )
                 ),
                 bslib::card(

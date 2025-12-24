@@ -808,6 +808,274 @@ server <- function(input, output, session) {
     p
   }) |> bindEvent(crn_click_data(), ignoreNULL = TRUE, ignoreInit = TRUE)
 
+  # OBSERVE: Previous ring button -----------------------------------------------
+  observeEvent(input$prev_ring, {
+    req(latest_marker())  # ensure a ring is currently selected
+    current_marker <- latest_marker()
+    current_year <- current_marker$year
+    current_trace <- current_marker$orgName
+
+    # Filter plot_data for the same woodpiece_label (trace_name) and previous year
+    df_plot <- plot_data()
+    # Use woodpiece_label or trace identifier
+    wp_rows <- df_plot %>%
+      dplyr::filter(woodpiece_label == current_trace,
+                    year < current_year) %>%
+      dplyr::arrange(dplyr::desc(year))
+
+    if (nrow(wp_rows) == 0){
+      showNotification("No earlier year available for this woodpiece.", type = "warning")
+      return()
+    }
+
+    # Take the previous year
+    prev_row <- wp_rows[1, ]
+    prev_year <- prev_row$year
+
+    # Find corresponding trace (curveNumber)
+    trace_info <- input$traces_crn[[prev_row$woodpiece_label]]
+    req(trace_info)
+    curve_number <- trace_info$curveNumber
+
+    # Update latest_marker
+    latest_marker(list(
+      marker_name = paste0(prev_row$woodpiece_label, ".", prev_year),
+      orgCurveNumber = curve_number,
+      orgName = prev_row$woodpiece_label,
+      year = prev_year
+    ))
+
+    # Optionally, trigger a redraw of the marker on plotly
+    p <- plotly::plotlyProxy("ts_crn_plot", session)
+    # remove existing marker
+    existing_marker <- purrr::detect(input$traces_crn, \(x) isTRUE(x$meta$role == "selring"))
+    if (!is.null(existing_marker)){
+      p <- p %>% plotly::plotlyProxyInvoke("deleteTraces", existing_marker$curveNumber)
+    }
+
+    # add new marker for previous year
+    p %>%
+      plotly::plotlyProxyInvoke(
+        "addTraces",
+        list(
+          x = list(prev_year),
+          y = list(prev_row[[input$sel_param]]),
+          name = paste0(prev_row$woodpiece_label, ".", prev_year),
+          mode = "markers",
+          marker = list(
+            size = 10,
+            color = "red",
+            symbol = "circle"
+          ),
+          showlegend = FALSE,
+          hoverinfo = "skip",
+          meta = list(
+            role = "selring",
+            orgCurveNumber = curve_number,
+            orgName = prev_row$woodpiece_label,
+            year = prev_year
+          )
+        )
+      )
+  })
+  # Reuse the existing handler code for prev_ring
+  observeEvent(input$prev_ring_js, {
+    # Trigger the same action as clicking the Previous button
+    req(latest_marker())  # ensure a ring is currently selected
+    current_marker <- latest_marker()
+    current_year <- current_marker$year
+    current_trace <- current_marker$orgName
+
+    df_plot <- plot_data()
+    wp_rows <- df_plot %>%
+      dplyr::filter(woodpiece_label == current_trace,
+                    year < current_year) %>%
+      dplyr::arrange(dplyr::desc(year))
+
+    if (nrow(wp_rows) == 0){
+      showNotification("No earlier year available for this woodpiece.", type = "warning")
+      return()
+    }
+
+    prev_row <- wp_rows[1, ]
+    prev_year <- prev_row$year
+
+    trace_info <- input$traces_crn[[prev_row$woodpiece_label]]
+    req(trace_info)
+    curve_number <- trace_info$curveNumber
+
+    latest_marker(list(
+      marker_name = paste0(prev_row$woodpiece_label, ".", prev_year),
+      orgCurveNumber = curve_number,
+      orgName = prev_row$woodpiece_label,
+      year = prev_year
+    ))
+
+    p <- plotly::plotlyProxy("ts_crn_plot", session)
+    existing_marker <- purrr::detect(input$traces_crn, \(x) isTRUE(x$meta$role == "selring"))
+    if (!is.null(existing_marker)){
+      p <- p %>% plotly::plotlyProxyInvoke("deleteTraces", existing_marker$curveNumber)
+    }
+
+    p %>%
+      plotly::plotlyProxyInvoke(
+        "addTraces",
+        list(
+          x = list(prev_year),
+          y = list(prev_row[[input$sel_param]]),
+          name = paste0(prev_row$woodpiece_label, ".", prev_year),
+          mode = "markers",
+          marker = list(
+            size = 10,
+            color = "red",
+            symbol = "circle"
+          ),
+          showlegend = FALSE,
+          hoverinfo = "skip",
+          meta = list(
+            role = "selring",
+            orgCurveNumber = curve_number,
+            orgName = prev_row$woodpiece_label,
+            year = prev_year
+          )
+        )
+      )
+  })
+
+  # OBSERVE: Next ring button -----------------------------------------------
+  observeEvent(input$next_ring, {
+    req(latest_marker())  # ensure a ring is currently selected
+    current_marker <- latest_marker()
+    current_year <- current_marker$year
+    current_trace <- current_marker$orgName
+
+    # Filter plot_data for the same woodpiece_label (trace_name) and next year
+    df_plot <- plot_data()
+    wp_rows <- df_plot %>%
+      dplyr::filter(woodpiece_label == current_trace,
+                    year > current_year) %>%
+      dplyr::arrange(year)  # ascending order to get the next year
+
+    if (nrow(wp_rows) == 0){
+      showNotification("No later year available for this woodpiece.", type = "warning")
+      return()
+    }
+
+    # Take the next year
+    next_row <- wp_rows[1, ]
+    next_year <- next_row$year
+
+    # Find corresponding trace (curveNumber)
+    trace_info <- input$traces_crn[[next_row$woodpiece_label]]
+    req(trace_info)
+    curve_number <- trace_info$curveNumber
+
+    # Update latest_marker
+    latest_marker(list(
+      marker_name = paste0(next_row$woodpiece_label, ".", next_year),
+      orgCurveNumber = curve_number,
+      orgName = next_row$woodpiece_label,
+      year = next_year
+    ))
+
+    # Optionally, trigger a redraw of the marker on plotly
+    p <- plotly::plotlyProxy("ts_crn_plot", session)
+    # remove existing marker
+    existing_marker <- purrr::detect(input$traces_crn, \(x) isTRUE(x$meta$role == "selring"))
+    if (!is.null(existing_marker)){
+      p <- p %>% plotly::plotlyProxyInvoke("deleteTraces", existing_marker$curveNumber)
+    }
+
+    # add new marker for next year
+    p %>%
+      plotly::plotlyProxyInvoke(
+        "addTraces",
+        list(
+          x = list(next_year),
+          y = list(next_row[[input$sel_param]]),
+          name = paste0(next_row$woodpiece_label, ".", next_year),
+          mode = "markers",
+          marker = list(
+            size = 10,
+            color = "red",
+            symbol = "circle"
+          ),
+          showlegend = FALSE,
+          hoverinfo = "skip",
+          meta = list(
+            role = "selring",
+            orgCurveNumber = curve_number,
+            orgName = next_row$woodpiece_label,
+            year = next_year
+          )
+        )
+      )
+  })
+  # Reuse the existing handler code for next_ring
+  observeEvent(input$next_ring_js, {
+    req(latest_marker())  # ensure a ring is currently selected
+    current_marker <- latest_marker()
+    current_year <- current_marker$year
+    current_trace <- current_marker$orgName
+
+    df_plot <- plot_data()
+    wp_rows <- df_plot %>%
+      dplyr::filter(woodpiece_label == current_trace,
+                    year > current_year) %>%
+      dplyr::arrange(year)  # ascending order to get the next year
+
+    if (nrow(wp_rows) == 0){
+      showNotification("No later year available for this woodpiece.", type = "warning")
+      return()
+    }
+
+    next_row <- wp_rows[1, ]
+    next_year <- next_row$year
+
+    trace_info <- input$traces_crn[[next_row$woodpiece_label]]
+    req(trace_info)
+    curve_number <- trace_info$curveNumber
+
+    latest_marker(list(
+      marker_name = paste0(next_row$woodpiece_label, ".", next_year),
+      orgCurveNumber = curve_number,
+      orgName = next_row$woodpiece_label,
+      year = next_year
+    ))
+
+    p <- plotly::plotlyProxy("ts_crn_plot", session)
+    existing_marker <- purrr::detect(input$traces_crn, \(x) isTRUE(x$meta$role == "selring"))
+    if (!is.null(existing_marker)){
+      p <- p %>% plotly::plotlyProxyInvoke("deleteTraces", existing_marker$curveNumber)
+    }
+
+    p %>%
+      plotly::plotlyProxyInvoke(
+        "addTraces",
+        list(
+          x = list(next_year),
+          y = list(next_row[[input$sel_param]]),
+          name = paste0(next_row$woodpiece_label, ".", next_year),
+          mode = "markers",
+          marker = list(
+            size = 10,
+            color = "red",
+            symbol = "circle"
+          ),
+          showlegend = FALSE,
+          hoverinfo = "skip",
+          meta = list(
+            role = "selring",
+            orgCurveNumber = curve_number,
+            orgName = next_row$woodpiece_label,
+            year = next_year
+          )
+        )
+      )
+  })
+
+
+
 
   trace_visibility <- reactiveVal(list(
     visible = character(0),
@@ -1538,35 +1806,141 @@ server <- function(input, output, session) {
 
 
   # OPEN IMAGE -----------------------------------------------------------------
+  # -------------------------------------------------------------------------
+  # Track the last opened image to avoid opening duplicate windows
+  last_opened_image <- reactiveVal(NULL)
+
+  # -------------------------------------------------------------------------
+  # Function to determine which image to open and open it
+  open_ring_image <- function(df) {
+    req(df)
+
+    # Get image path from metadata
+    image_path <- input_data$rxsmeta_data %>%
+      dplyr::filter(image_label == df$image_label) %>%
+      dplyr::pull(fname_image)
+
+    base_path <- dirname(image_path)
+
+    # Check for annotated twin image
+    annotated_image <- list.files(
+      base_path,
+      pattern = paste0(df$image_label, "_annotated_twin\\."),
+      full.names = TRUE
+    )
+
+    # Prefer annotated image if exists
+    file_to_open <- if (length(annotated_image) == 1) annotated_image else image_path
+
+    # Only open if different from last opened
+    if (!identical(file_to_open, last_opened_image())) {
+      if (file.exists(file_to_open)) {
+        browseURL(file_to_open)
+        last_opened_image(file_to_open)
+      } else {
+        showNotification(
+          glue::glue("The following image could not be opened: {file_to_open}"),
+          type = "error"
+        )
+      }
+    }
+  }
+
+  # -------------------------------------------------------------------------
+  # Manual "Open Image" button — works regardless of checkbox
+  observeEvent(input$show_image, {
+    req(isTruthy(clicked_ring()), isTruthy(input_data$rxsmeta_data))
+    open_ring_image(clicked_ring()$data)
+  })
+
+  # -------------------------------------------------------------------------
+  # Auto-open when a ring is clicked (only if checkbox is selected)
   observe({
     req(isTruthy(clicked_ring()), isTruthy(input_data$rxsmeta_data))
-    df <- clicked_ring()$data
+    req(input$auto_open_image)  # only if checkbox is checked
+    open_ring_image(clicked_ring()$data)
+  }) |> bindEvent(clicked_ring(), ignoreNULL = TRUE, ignoreInit = TRUE)
 
-    image_path <- input_data$rxsmeta_data |>
-      dplyr::filter(image_label == df$image_label) |> dplyr::pull(fname_image)
-    print(image_path)
-    base_path <- dirname(image_path)
-    print(base_path)
-    annotated_image <- list.files(base_path, pattern = paste0(df$image_label, "_annotated_twin\\."), full.names = TRUE)
-    print(annotated_image)
-    if (length(annotated_image) == 1){
-      print("tried to open?")
-      browseURL(annotated_image)
-    } else if (file.exists(image_path)){
-      showNotification("Annotated image not found, opening original image instead.", type = "warning")
-      browseURL(image_path)
-    } else {
-      showNotification(glue::glue("The following image could not be opened: {image_path}"), type = "error")
-    }
-    #   # Alternative: Open image based on OS
-    #   if (.Platform$OS.type == "windows") {
-    #     system2("cmd", c("/c", "start", shQuote(image_path)), wait = FALSE)
-    #   } else if (Sys.info()["sysname"] == "Darwin") {
-    #     system(paste("open", shQuote(image_path)))
-    #   } else {
-    #     system(paste("xdg-open", shQuote(image_path)))
-    #   }
-  }) |> bindEvent(input$show_image, ignoreNULL = TRUE, ignoreInit = TRUE)
+  # # -------------------------------------------------------------------------
+  # # Track the last opened image to avoid opening duplicate windows
+  # last_opened_image <- reactiveVal(NULL)
+  #
+  # # -------------------------------------------------------------------------
+  # # Cross-platform function to open image in a separate graphics window
+  # open_image_external <- function(image_path, width = 10, height = 8) {
+  #   if (!file.exists(image_path)) {
+  #     showNotification(glue::glue("The following image could not be opened: {image_path}"), type = "error")
+  #     return()
+  #   }
+  #
+  #   # Open OS-specific graphics device
+  #   if (.Platform$OS.type == "windows") {
+  #     windows(width = width, height = height)
+  #   } else if (Sys.info()["sysname"] == "Darwin") {
+  #     quartz(width = width, height = height)
+  #   } else {
+  #     X11(width = width, height = height)
+  #   }
+  #
+  #   # Load image
+  #   ext <- tools::file_ext(image_path)
+  #   if (tolower(ext) %in% c("png")) {
+  #     img <- png::readPNG(image_path)
+  #   } else if (tolower(ext) %in% c("jpg", "jpeg")) {
+  #     img <- jpeg::readJPEG(image_path)
+  #   } else {
+  #     showNotification("Unsupported image format", type = "error")
+  #     dev.off()
+  #     return()
+  #   }
+  #
+  #   # Display image
+  #   grid::grid.raster(img)
+  # }
+  #
+  # # -------------------------------------------------------------------------
+  # # Function to determine which image to open and open it
+  # open_ring_image <- function(df) {
+  #   req(df)
+  #
+  #   # Get image path from metadata
+  #   image_path <- input_data$rxsmeta_data %>%
+  #     dplyr::filter(image_label == df$image_label) %>%
+  #     dplyr::pull(fname_image)
+  #
+  #   base_path <- dirname(image_path)
+  #
+  #   # Check for annotated twin image
+  #   annotated_image <- list.files(
+  #     base_path,
+  #     pattern = paste0(df$image_label, "_annotated_twin\\."),
+  #     full.names = TRUE
+  #   )
+  #
+  #   # Prefer annotated image if exists
+  #   file_to_open <- if (length(annotated_image) == 1) annotated_image else image_path
+  #
+  #   # Only open if different from last opened
+  #   if (!identical(file_to_open, last_opened_image())) {
+  #     open_image_external(file_to_open)
+  #     last_opened_image(file_to_open)
+  #   }
+  # }
+  #
+  # # -------------------------------------------------------------------------
+  # # Manual "Open Image" button — works regardless of checkbox
+  # observeEvent(input$show_image, {
+  #   req(isTruthy(clicked_ring()), isTruthy(input_data$rxsmeta_data))
+  #   open_ring_image(clicked_ring()$data)
+  # })
+  #
+  # # -------------------------------------------------------------------------
+  # # Auto-open when a ring is clicked (only if checkbox is selected)
+  # observe({
+  #   req(isTruthy(clicked_ring()), isTruthy(input_data$rxsmeta_data))
+  #   req(input$auto_open_image)  # only if checkbox is checked
+  #   open_ring_image(clicked_ring()$data)
+  # }) |> bindEvent(clicked_ring(), ignoreNULL = TRUE, ignoreInit = TRUE)
 
 
 
