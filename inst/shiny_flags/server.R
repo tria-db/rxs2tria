@@ -1217,6 +1217,156 @@ server <- function(input, output, session) {
   }) |> bindEvent(input$sel_wp, ignoreNULL = TRUE, ignoreInit = TRUE)
 
 
+  # COMPUTE CORRELATION --------------------------------------------------------
+  correlation_result <- reactive({
+    req(plot_data())
+    req(latest_marker())
+    req(input$sel_param)
+    req(input$sel_wp)
+
+    # Get current axis limits
+    x_axes <- crn_x_axes()
+    # If no axis limits yet, set to NULL (optional, but safe)
+    if (is.null(x_axes)) x_axes <- list(x_min = NULL, x_max = NULL)
+
+    sel_prm <- input$sel_param
+    current_trace <- latest_marker()$orgName
+
+    # ---- single trace ----
+    df_plot <- plot_data() %>%
+      dplyr::filter(
+        woodpiece_label == current_trace,
+        !exclude_issues
+      ) %>%
+      dplyr::select(year, value = all_of(sel_prm))
+
+    # ---- mean chronology ----
+    df_mean <- plot_data() %>%
+      dplyr::filter(
+        woodpiece_label %in% input$sel_wp,
+        !exclude_issues
+      ) %>%
+      dplyr::select(year, mean_value = all_of(sel_prm)) %>%
+      collapse::fgroup_by(year) %>%
+      collapse::fmean()
+
+    # ---- align by year ----
+    df_corr <- dplyr::inner_join(df_plot, df_mean, by = "year")
+
+    # ---- filter by current x-axis range if set ----
+    if (!is.null(x_axes$x_min) && !is.null(x_axes$x_max)) {
+      df_corr <- df_corr %>%
+        dplyr::filter(year >= x_axes$x_min, year <= x_axes$x_max)
+    }
+
+    # ---- safety check ----
+    if (nrow(df_corr) < 5) {
+      return(list(
+        ok = FALSE,
+        msg = "Not enough overlapping years to compute correlation."
+      ))
+    }
+
+    # ---- compute correlation ----
+    r <- cor(
+      df_corr$value,
+      df_corr$mean_value,
+      method = "pearson",
+      use = "complete.obs"
+    )
+
+    list(
+      ok = TRUE,
+      r = r,
+      n = nrow(df_corr),
+      trace = current_trace
+    )
+  })
+  correlation_result <- reactive({
+    req(plot_data())
+    req(latest_marker())
+    req(input$sel_param)
+    req(input$sel_wp)
+
+    sel_prm <- input$sel_param
+    current_trace <- latest_marker()$orgName
+
+    # ---- get current axis limits, if available ----
+    x_axes <- crn_x_axes()
+    # Default to NULL if not set (no zoom/pan yet)
+    if (is.null(x_axes)) x_axes <- list(x_min = NULL, x_max = NULL)
+
+    # ---- single trace ----
+    df_plot <- plot_data() %>%
+      dplyr::filter(
+        woodpiece_label == current_trace,
+        !exclude_issues
+      ) %>%
+      dplyr::select(year, value = all_of(sel_prm))
+
+    # ---- mean chronology ----
+    df_mean <- plot_data() %>%
+      dplyr::filter(
+        woodpiece_label %in% input$sel_wp,
+        !exclude_issues
+      ) %>%
+      dplyr::select(year, mean_value = all_of(sel_prm)) %>%
+      collapse::fgroup_by(year) %>%
+      collapse::fmean()
+
+    # ---- align by year ----
+    df_corr <- dplyr::inner_join(df_plot, df_mean, by = "year")
+
+    # ---- filter by current x-axis range only if set ----
+    if (!is.null(x_axes$x_min) && !is.null(x_axes$x_max)) {
+      df_corr <- df_corr %>%
+        dplyr::filter(year >= x_axes$x_min, year <= x_axes$x_max)
+    }
+
+    # ---- safety check ----
+    if (nrow(df_corr) < 5) {
+      return(list(
+        ok = FALSE,
+        msg = "Not enough overlapping years to compute correlation."
+      ))
+    }
+
+    # ---- compute correlation ----
+    r <- cor(
+      df_corr$value,
+      df_corr$mean_value,
+      method = "pearson",
+      use = "complete.obs"
+    )
+
+    list(
+      ok = TRUE,
+      r = r,
+      n = nrow(df_corr),
+      trace = current_trace
+    )
+  })
+
+  output$correlation <- renderText({
+    res <- correlation_result()
+
+    if (!res$ok) {
+      return(res$msg)
+    }
+
+    paste0(
+      "Correlation between selected trace and mean chronology\n\n",
+      # "Param: ", input$sel_param, "\n",
+      # "Sector: ", input$sel_sector, "\n",
+      "Trace: ", res$trace, "\n",
+      # "Method: Pearson\n",
+      "Overlapping years: ", res$n, "\n\n",
+      "r = ", sprintf("%.3f", res$r)
+    )
+  })
+
+
+
   # RESTORE EDITS IF THE PLOT IS RERENDERED ------------------------------------
   awaiting_restoration <- reactiveVal(FALSE)
 
@@ -1806,11 +1956,9 @@ server <- function(input, output, session) {
 
 
   # OPEN IMAGE -----------------------------------------------------------------
-  # -------------------------------------------------------------------------
   # Track the last opened image to avoid opening duplicate windows
   last_opened_image <- reactiveVal(NULL)
 
-  # -------------------------------------------------------------------------
   # Function to determine which image to open and open it
   open_ring_image <- function(df) {
     req(df)
@@ -1846,14 +1994,12 @@ server <- function(input, output, session) {
     }
   }
 
-  # -------------------------------------------------------------------------
   # Manual "Open Image" button — works regardless of checkbox
   observeEvent(input$show_image, {
     req(isTruthy(clicked_ring()), isTruthy(input_data$rxsmeta_data))
     open_ring_image(clicked_ring()$data)
   })
 
-  # -------------------------------------------------------------------------
   # Auto-open when a ring is clicked (only if checkbox is selected)
   observe({
     req(isTruthy(clicked_ring()), isTruthy(input_data$rxsmeta_data))
@@ -1861,11 +2007,9 @@ server <- function(input, output, session) {
     open_ring_image(clicked_ring()$data)
   }) |> bindEvent(clicked_ring(), ignoreNULL = TRUE, ignoreInit = TRUE)
 
-  # # -------------------------------------------------------------------------
   # # Track the last opened image to avoid opening duplicate windows
   # last_opened_image <- reactiveVal(NULL)
   #
-  # # -------------------------------------------------------------------------
   # # Cross-platform function to open image in a separate graphics window
   # open_image_external <- function(image_path, width = 10, height = 8) {
   #   if (!file.exists(image_path)) {
@@ -1898,7 +2042,6 @@ server <- function(input, output, session) {
   #   grid::grid.raster(img)
   # }
   #
-  # # -------------------------------------------------------------------------
   # # Function to determine which image to open and open it
   # open_ring_image <- function(df) {
   #   req(df)
@@ -1927,14 +2070,12 @@ server <- function(input, output, session) {
   #   }
   # }
   #
-  # # -------------------------------------------------------------------------
   # # Manual "Open Image" button — works regardless of checkbox
   # observeEvent(input$show_image, {
   #   req(isTruthy(clicked_ring()), isTruthy(input_data$rxsmeta_data))
   #   open_ring_image(clicked_ring()$data)
   # })
   #
-  # # -------------------------------------------------------------------------
   # # Auto-open when a ring is clicked (only if checkbox is selected)
   # observe({
   #   req(isTruthy(clicked_ring()), isTruthy(input_data$rxsmeta_data))

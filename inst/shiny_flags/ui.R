@@ -152,18 +152,24 @@ ui <- bslib::page_navbar(
                   fill = FALSE,
                   class = "clean-card-sec",
                   bslib::layout_column_wrap(
-                    width = 1/2,
-                    radioButtons("sel_exclude", "Exclude ring from analysis?", choices = c("yes", "no"), inline = TRUE, selected = "no"),
-                    # Placeholder for conditional EW/LW/ALL selection
-                    uiOutput("exclude_scope_ui"),
-                    uiOutput("warn_disq"),
+                    width = 1/3,  # total wrap is 100%, so two columns of 1/2 each
+                    # FIRST COLUMN
                     div(
-                      style = "display: flex; gap: 10px;",  # gap controls space between buttons
+                      radioButtons("sel_exclude", "Exclude ring from analysis?",
+                                   choices = c("yes", "no"), inline = TRUE, selected = "no")
+                    ),
+                    # SECOND COLUMN
+                    div(uiOutput("exclude_scope_ui"),
+                        uiOutput("warn_disq")),
+                    # THIRD COLUMN
+                    div(
+                      style = "display: flex; gap: 10px; align-items: center;",
                       actionButton("prev_ring", "Previous"),
                       actionButton("next_ring", "Next"),
                       checkboxInput("auto_open_image", "Auto-open image", value = FALSE)
                     )
                   )
+
                 ),
                 bslib::card(
                   class = "clean-card",
@@ -207,6 +213,11 @@ ui <- bslib::page_navbar(
                     width = "100%",
                     placeholder = "Enter any additional notes regarding the selected ring here..."
                   )
+                ),
+                bslib::card(
+                  fill = FALSE,
+                  class = "clean-card",
+                  verbatimTextOutput("correlation")
                 )
               )
             ),
