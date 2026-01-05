@@ -13,7 +13,10 @@ load_all()
 # path_in <- '/Users/maranaegelin/Documents/QWAdata/YAM_1880/rxs_out'
 # path_in <- '/Users/maranaegelin/Documents/QWAdata/LTAL_S22/rxs_out'
 # path_in <- '/Volumes/Dendro/Dendrosciences_All/PatrickFonti_LOTanatomy_2021_PF/S22/ROXAS/4_Roxas_final/S22_LADE_L01'
-path_in <- '~/Desktop/Ltal_S22'
+path_in <- '~/Desktop/Ltal_S22/4_Roxas_final'
+path_in <- '~/Desktop/Ltal_S22/4_Roxas_final_AI'
+path_in <- '~/Desktop/New Yamal 1880'
+path_in <- '~/Desktop/New Yamal AI 1880'
 
 
 # where output files should be saved to
@@ -21,11 +24,16 @@ path_in <- '~/Desktop/Ltal_S22'
 # path_out <- '/Users/maranaegelin/Documents/QWAdata/LTAL_S22/rxs2tria_out'
 # path_out <- '/Users/maranaegelin/Documents/QWAdata/YAM_1880/rxs2tria_out'
 path_out <- '~/Desktop/LtalS22_out'
+path_out <- '~/Desktop/LtalS22_out_AI'
+path_out <- '~/Desktop/New Yamal AI 1880_out'
 
 # dataset_name <- 'POGSTO2024' # used to name the resulting output files
 # dataset_name <- 'YAM_1880'
 # dataset_name <- 'LTAL_S22_L01'
 dataset_name <- 'LTAL_S22'
+dataset_name <- 'LTAL_S22_AI'
+dataset_name <- 'YAM_1880'
+dataset_name <- 'YAM_AI_1880'
 
 
 ################################################################################
@@ -36,7 +44,9 @@ files <- get_roxas_files(path_in)
 #pattern <- "(?<site>[:alnum:]+)_(?<species>[:alnum:]+)_(?<tree>[:alnum:][:alnum:])(?<woodpiece>[:alnum:]*)_(?<slide>[:alnum:]+)_(?<image>[:alnum:]+)"
 
 # example: `{site}_{species}_{tree}_{slide}_{image}`, e.g. S22_LADE_L20_9_3
-pattern <- "(?<site>[:alnum:]+)_(?<species>[:alnum:]+)_(?<tree>[:alnum:]+)_(?<slide>[:alnum:]+)_(?<image>[:alnum:]+)"
+# pattern <- "(?<site>[:alnum:]+)_(?<species>[:alnum:]+)_(?<tree>[:alnum:]+)_(?<slide>[:alnum:]+)_(?<image>[:alnum:]+)"
+pattern <- "(?<site>[[:alnum:]]+)_(?<species>[[:alnum:]]+)_(?<tree>[[:alnum:].]+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)"
+
 
 # example2: `{site}_{species}_{tree}_{slide}_{image}`
 #pattern <- "(?<site>[:alnum:]+)_(?<species>[:alnum:]+)_(?<tree>[:alnum:].+)_(?<slide>[:alnum:]+)_(?<image>[:alnum:]+)"
@@ -64,7 +74,7 @@ df_rxsmeta <- combine_rxs_metadata(df_structure, df_images, df_settings)
 rm(df_images, df_settings)
 ################################################################################
 # complete the required metadata form via the Shiny app
-launch_metadata_app()
+# launch_metadata_app()
 # save the json metadata file from the app output once completed
 
 ################################################################################
@@ -127,6 +137,8 @@ prf_data <- calculate_profiles(
 if (save_files){
   readr::write_csv(prf_data,
                    paste0(fname_out, '_profiles.csv'))
+  readr::write_csv(df_rxsmeta,
+                   paste0(fname_out, '_df_rxsmeta.csv'))
 }
 
 # read in previously saved data for testing
@@ -149,3 +161,24 @@ launch_flags_app()
 #
 # file_path <- "../example_data/tria_download"
 # QWA_metadata <- read_QWA_metadata(file_path)
+
+
+################################################################################
+# WRITE RWL
+# Create an RWL file from mean ring width
+create_rwl(prf_data = prf_data,
+           df_rings = QWA_data$rings,
+           PAR = "mrw",
+           path_out = path_out,
+           remove_excluded = TRUE)
+
+# Create an RWL file from a profile-level parameter
+create_rwl(prf_data = prf_data,
+           PAR = "cwtrad_mean",
+           df_rings = read.csv(paste0(path_out, "/", "20251230_TRIA_YAM_AI_1880_rings_edited.csv")),
+           SECTOR = 5,
+           path_out = path_out,
+           remove_excluded = TRUE)
+
+# 20260103_TRIA_S22_AI_rings_edited.csv
+# 20251230_TRIA_YAM_AI_1880_rings_edited.csv

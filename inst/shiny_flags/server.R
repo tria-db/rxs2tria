@@ -158,7 +158,7 @@ server <- function(input, output, session) {
       # load from csv files
       tryCatch({
         prf_data_in <- vroom::vroom(
-          input$file_prf$datapath,
+          input$file_prf$datapath, #"~/Desktop/LtalS22_out/20251228_TRIA_LTAL_S22_profiles.csv",
           col_types = c(.default = "d",
                         image_label = "c", year = "i", sector_n = "i")
           )
@@ -168,21 +168,69 @@ server <- function(input, output, session) {
         checkmate::assert_character(names(prf_data_in), min.len = 4)
         # check_vals <- checkmate::test_subset(df_prf |> dplyr::select(-dplyr::all_of(c("image_label","year","sector_n"))) |> names(),
         #                                     c("la_mean", ...))
-        rings_data_in <- vroom::vroom(
-          input$file_rings$datapath,
-          col_types = c(.default = "d",
-                        woodpiece_label = "c", slide_label = "c", image_label = "c",
-                        year = "i", incomplete_ring = "l", missing_ring = "l",
-                        duplicate_ring = "l", exclude_dupl = "l", exclude_issues = "l")
+        # rings_data_in <- vroom::vroom(
+        #   input$file_rings$datapath, #"~/Desktop/LtalS22_out/20251228_TRIA_LTAL_S22_rings.csv",
+        #   col_types = c(.default = "d",
+        #                 woodpiece_label = "c", slide_label = "c", image_label = "c",
+        #                 year = "i", incomplete_ring = "l", missing_ring = "l",
+        #                 duplicate_ring = "l", exclude_dupl = "l", exclude_issues = "l", blue_ring = "l"
+        #                 )
+        # )
+        #
+        # Read the first row to get column names
+        cols_csv <- names(vroom::vroom(input$file_rings$datapath, n_max = 0))
+        # cols_csv <- names(vroom::vroom("~/Desktop/LtalS22_out/20251228_TRIA_LTAL_S22_rings.csv", n_max = 0))
+
+        col_types <- c(.default = "d",
+                       woodpiece_label = "c", slide_label = "c", image_label = "c",
+                       year = "i")
+
+        # Logical columns
+        logical_cols <- c(
+          "incomplete_ring", "missing_ring", "duplicate_ring",
+          "exclude_dupl", "exclude_issues",
+          "blue_ring", "frost_ring", "light_ring", "iadf", "traum_resin_ducts",
+          "trabeculae", "other_discrete", "x_dating", "compression_wood", "orientation",
+          "tyloses", "decay", "technical_issues", "other_disqual", "out_of_focus",
+          "cracks", "paraffin", "compressed_cells", "overlapping_cells", "broken_cells",
+          "tang_incomplete"
         )
+
+        # Only include columns that exist in CSV
+        logical_cols <- intersect(logical_cols, cols_csv)
+        for (col in logical_cols) col_types[col] <- "l"
+
+        # Character columns
+        char_cols <- c("comment", "exclude_scope")
+        char_cols <- intersect(char_cols, cols_csv)
+        for (col in char_cols) col_types[col] <- "c"
+
+        rings_data_in <- vroom::vroom(
+          input$file_rings$datapath, #"~/Desktop/LtalS22_out/20251228_TRIA_LTAL_S22_rings.csv",
+          col_types = col_types
+        )
+
+        # Ensure missing logicals are filled
+        for (col in logical_cols) {
+          rings_data_in[[col]] <- as.logical(rings_data_in[[col]])
+          rings_data_in[[col]][is.na(rings_data_in[[col]])] <- FALSE
+        }
+
+        # Ensure character columns are filled
+        for (col in char_cols) {
+          rings_data_in[[col]] <- as.character(rings_data_in[[col]])
+          rings_data_in[[col]][is.na(rings_data_in[[col]])] <- NA_character_
+        }
+
         checkmate::assert_subset(c("woodpiece_label", "slide_label", "image_label","year",
                                    "incomplete_ring", "missing_ring","duplicate_ring",
                                    "exclude_dupl","exclude_issues"), names(rings_data_in))
         checkmate::assert_data_frame(rings_data_in[c("woodpiece_label", "slide_label", "image_label","year")],
                                      min.rows = 1, any.missing = FALSE)
         #checkmate::assert_character(names(df_prf), min.length = 10) # at least on measurements col?
+
         rxsmeta_data_in <- vroom::vroom(
-          input$file_rxsmeta$datapath,
+          input$file_rxsmeta$datapath, #"~/Desktop/LtalS22_out/20251228_TRIA_LTAL_S22_df_rxsmeta.csv",
           col_types = c(.default = "c")
         )
         checkmate::assert_subset(c("image_label", "slide_label", "woodpiece_label",
@@ -272,24 +320,75 @@ server <- function(input, output, session) {
 
 
   # initialize rings_data_out with input_data$rings_data
+  # observe({
+  #   # initialize new flag columns if not present
+  #   new_flag_cols <- setdiff(c(unname(discrete_features),
+  #                              unname(disqual_issues), unname(technical_issues),
+  #                              "comment",
+  #                              "exclude_scope"),
+  #                            names(input_data$rings_data))
+  #   df_rings <- input_data$rings_data
+  #   df_rings[new_flag_cols] <- FALSE
+  #   if ("comment" %in% new_flag_cols){
+  #     df_rings$comment <- NA_character_
+  #   }
+  #   if ("exclude_scope" %in% new_flag_cols){
+  #     df_rings$exclude_scope <- NA_character_
+  #   }
+  #
+  #   rings_data_org(df_rings)
+  # }) |> bindEvent(input_data$rings_data, ignoreNULL = TRUE, ignoreInit = TRUE)
+
   observe({
-    # initialize new flag columns if not present
-    new_flag_cols <- setdiff(c(unname(discrete_features),
-                               unname(disqual_issues), unname(technical_issues),
-                               "comment",
-                               "exclude_scope"),
-                             names(input_data$rings_data))
+    req(isTruthy(input_data$rings_data))  # ensure rings_data is loaded
+
     df_rings <- input_data$rings_data
-    df_rings[new_flag_cols] <- FALSE
-    if ("comment" %in% new_flag_cols){
-      df_rings$comment <- NA_character_
-    }
-    if ("exclude_scope" %in% new_flag_cols){
-      df_rings$exclude_scope <- NA_character_
+
+    # --- 1. Define logical flag columns ---
+    flag_cols <- c(unname(discrete_features),
+                   unname(disqual_issues),
+                   unname(technical_issues))
+
+    # --- 2. Initialize missing logical flags as FALSE ---
+    missing_flags <- setdiff(flag_cols, names(df_rings))
+    if (length(missing_flags) > 0) {
+      df_rings[missing_flags] <- FALSE
     }
 
+    # --- 3. Ensure existing logical columns are logical ---
+    existing_flags <- intersect(flag_cols, names(df_rings))
+    for (col in existing_flags) {
+      if (!is.logical(df_rings[[col]])) {
+        df_rings[[col]] <- as.logical(df_rings[[col]])
+      }
+    }
+
+    # # --- 4. Reset all logical flags to FALSE ---
+    # if (length(flag_cols) > 0) {
+    #   df_rings <- df_rings %>% dplyr::mutate(dplyr::across(all_of(flag_cols), ~ FALSE))
+    # }
+
+    # --- 5. Handle character columns ---
+    if (!"comment" %in% names(df_rings)) {
+      df_rings$comment <- NA_character_
+    } else {
+      df_rings$comment <- as.character(df_rings$comment)
+      #df_rings$comment[] <- NA_character_  # clear old values
+    }
+
+    if (!"exclude_scope" %in% names(df_rings)) {
+      df_rings$exclude_scope <- NA_character_
+    } else {
+      df_rings$exclude_scope <- as.character(df_rings$exclude_scope)
+      #df_rings$exclude_scope[] <- NA_character_  # clear old values
+    }
+
+    # --- 6. Update reactive containers ---
     rings_data_org(df_rings)
+    rings_data_edited(df_rings)  # ensures UI inputs are reset
+
   }) |> bindEvent(input_data$rings_data, ignoreNULL = TRUE, ignoreInit = TRUE)
+
 
   # initalize copy rings_data_edited of rings_data_out
   observe({
