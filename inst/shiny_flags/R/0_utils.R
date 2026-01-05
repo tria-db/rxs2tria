@@ -106,3 +106,57 @@ get_new_excluded <- function(rings_org, rings_edit, sel_wp, plt_df, param){
 
   return(excl_markers)
 }
+
+label_with_pop <- function(label_text, popover_text, icon_name = "info-circle", icon_title = "Info", popover_title = NULL){
+  span(
+    label_text,
+    bslib::popover(
+      bsicons::bs_icon(icon_name, title = icon_title),
+      title = popover_title,
+      popover_text
+    )
+  )
+}
+
+
+show_input_source_modal <- function(){
+  showModal(
+    modalDialog(
+      title = "Select input source",
+      tagList(
+        radioButtons(
+          "load_type",
+          "Choose input option:",
+          choices = c(
+            "Load data from R environment" = "env",
+            "Load data from csv files" = "csv",
+            "Load example data" = "example")
+        ),
+        hr(),
+        uiOutput("load_details_ui")
+      ),
+      footer = tagList(
+        modalButton("Cancel"),
+        actionButton("confirm_input", "Proceed")
+      )
+    )
+  )
+}
+
+get_list_item <- function(var_name, envir = .GlobalEnv) {
+  # Handle obj$element format
+  if (grepl("\\$", var_name)) {
+    parts <- strsplit(var_name, "$", fixed = TRUE)[[1]]
+    obj_name <- parts[1]
+    element_name <- parts[2]
+  # Handle obj[['element']] or obj[["element"]] format
+  } else if (grepl("\\[\\[", rings_name)) {
+    pattern <- "^([^\\[]+)\\[\\[(['\"])(.+?)\\2\\]\\]$"
+    obj_name <- sub(pattern, "\\1", rings_name)
+    element_name <- sub(pattern, "\\3", rings_name)
+  } else {
+    stop("Invalid variable name format.")
+  }
+  get(obj_name, envir = envir)[[element_name]]
+}
+

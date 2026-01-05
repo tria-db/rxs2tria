@@ -1,5 +1,6 @@
 server <- function(input, output, session) {
 
+  # LOAD INPUT DATA ------------------------------------------------------------
   # reactive container for input data
   input_data <- reactiveValues(
     prf_data = NULL,
@@ -7,14 +8,14 @@ server <- function(input, output, session) {
     rxsmeta_data = NULL
   )
 
-  # LOAD INPUT DATA ------------------------------------------------------------
+  # button to open input modal
   observeEvent(input$btn_input, {
     # warn before overwriting existing data
-    all_null <- all(
+    no_inputs <- all(
       is.null(input_data$prf_data),
       is.null(input_data$rings_data),
       is.null(input_data$rxsmeta_data))
-    if (!all_null) {
+    if (!no_inputs) {
       showModal(
         modalDialog(
           title = "Warning",
@@ -28,32 +29,17 @@ server <- function(input, output, session) {
         )
       )
     } else {
-      # input source modal
-      showModal(
-        modalDialog(
-          title = "Select input source",
-          tagList(
-            radioButtons(
-              "load_type",
-              "Choose input option:",
-              choices = c(
-                "Load data from R environment" = "env",
-                "Load data from csv files" = "csv",
-                "Load example data (for demonstration only)" = "example")
-            ),
-            hr(),
-            uiOutput("load_details_ui")
-          ),
-          footer = tagList(
-            modalButton("Cancel"),
-            actionButton("confirm_input", "Proceed")
-          )
-        )
-      )
+      show_input_source_modal()
     }
   })
 
-  # ui to provide input data based on selected option
+  # if overwrite confirmed, also show input source modal
+  observeEvent(input$conf_inp_overwrite, {
+    removeModal()
+    show_input_source_modal()
+  })
+
+  # create ui to provide input data based on selection (within input source modal)
   output$load_details_ui <- renderUI({
     req(input$load_type)
     if (input$load_type == "env") {
@@ -65,80 +51,48 @@ server <- function(input, output, session) {
       )
     } else if (input$load_type == "csv") {
       tagList(
-        "Provide the filepaths for the follwoing:",
+        "Provide the filepaths for the following:",
         fileInput("file_prf", "Upload the QWA profile data", accept = c(".csv")),
         fileInput("file_rings", "Upload the QWA rings data", accept = c(".csv")),
         fileInput("file_rxsmeta", "Upload the ROXAS metadata", accept = c(".csv"))
       )
-    } else { # example
+    } else if (input$load_type == "example") { # example
       "not yet available..."
+    } else {
+      NULL
     }
   })
 
-  # if overwrite confirmed, also show input source modal
-  observeEvent(input$conf_inp_overwrite, {
-    removeModal()
-    # input source modal
-    showModal(
-      modalDialog(
-        title = "Select input source",
-        tagList(
-          radioButtons(
-            "load_type",
-            "Choose input option:",
-            choices = c(
-              "Load data from R environment" = "env",
-              "Load data from csv files" = "csv",
-              "Load example data (for demonstration only)" = "example")
-          ),
-          hr(),
-          uiOutput("load_details_ui")
-        ),
-        footer = tagList(
-          modalButton("Cancel"),
-          actionButton("confirm_input", "Proceed")
-        )
-      )
-    )
-  })
-
-
-  observeEvent(input$confirm_input, {
+  # read data from inputs on input$confirm_input
+  observe({
     if (input$load_type == "env") {
       # load from R environment
       tryCatch({
         prf_data_in <- get(input$prf_name, envir = .GlobalEnv)
         rings_name <- input$rings_name
-        # Handle tmp$a format
-        if (grepl("\\$", rings_name)) {
-          parts <- strsplit(rings_name, "$", fixed = TRUE)[[1]]
-          obj <- get(parts[1], envir = .GlobalEnv)
-          rings_data_in <- obj[[parts[2]]]
-        } else if (grepl("\\[\\[", rings_name)) {
-        # Handle tmp[['a']] or tmp[["a"]] format
-          pattern <- "^([^\\[]+)\\[\\[(['\"])(.+?)\\2\\]\\]$"
-          obj_name <- sub(pattern, "\\1", rings_name)
-          element_name <- sub(pattern, "\\3", rings_name)
-          rings_data_in <- get(obj_name, envir = .GlobalEnv)[[element_name]]
+        # rings data may be element of a list (e.g. QWA_data$rings)
+        if (grepl("\\$", rings_name) ||
+            grepl("\\[\\[", rings_name)) {
+          rings_data_in <- get_list_item(rings_name, envir = .GlobalEnv)
         } else {
           rings_data_in <- get(rings_name, envir = .GlobalEnv)
         }
         rxsmeta_data_in <- get(input$rxsmeta_name, envir = .GlobalEnv)
+
         # TODO: expand to use validate_df and align_to_structure, safe_block from shiny_meta?
+        # TODO: check also consistency btw files
         checkmate::assert_subset(c("image_label","year","sector_n"), names(prf_data_in))
         checkmate::assert_data_frame(prf_data_in[c("image_label","year","sector_n")], min.rows = 1, any.missing = FALSE)
         checkmate::assert_character(names(prf_data_in), min.len = 4)
-        # check_vals <- checkmate::test_subset(df_prf |> dplyr::select(-dplyr::all_of(c("image_label","year","sector_n"))) |> names(),
-        #                                     c("la_mean", ...))
         checkmate::assert_subset(c("woodpiece_label", "slide_label", "image_label","year",
                                    "incomplete_ring", "missing_ring","duplicate_ring",
                                    "exclude_dupl","exclude_issues"), names(rings_data_in))
         checkmate::assert_data_frame(rings_data_in[c("woodpiece_label", "slide_label", "image_label","year")],
                                      min.rows = 1, any.missing = FALSE)
-        #checkmate::assert_character(names(df_prf), min.length = 10) # at least on measurements col?
         checkmate::assert_subset(c("image_label", "slide_label", "woodpiece_label",
                                    "tree_label", "species_code", "site_label", "fname_image"),
                                  names(rxsmeta_data_in))
+
         input_data$prf_data <- prf_data_in
         input_data$rings_data <- rings_data_in
         input_data$rxsmeta_data <- rxsmeta_data_in
@@ -162,12 +116,6 @@ server <- function(input, output, session) {
           col_types = c(.default = "d",
                         image_label = "c", year = "i", sector_n = "i")
           )
-        # TODO: expand to use validate_df and align_to_structure, safe_block from shiny_meta?
-        checkmate::assert_subset(c("image_label","year","sector_n"), names(prf_data_in))
-        checkmate::assert_data_frame(prf_data_in[c("image_label","year","sector_n")], min.rows = 1, any.missing = FALSE)
-        checkmate::assert_character(names(prf_data_in), min.len = 4)
-        # check_vals <- checkmate::test_subset(df_prf |> dplyr::select(-dplyr::all_of(c("image_label","year","sector_n"))) |> names(),
-        #                                     c("la_mean", ...))
         rings_data_in <- vroom::vroom(
           input$file_rings$datapath,
           col_types = c(.default = "d",
@@ -175,19 +123,23 @@ server <- function(input, output, session) {
                         year = "i", incomplete_ring = "l", missing_ring = "l",
                         duplicate_ring = "l", exclude_dupl = "l", exclude_issues = "l")
         )
+        rxsmeta_data_in <- vroom::vroom(
+          input$file_rxsmeta$datapath,
+          col_types = c(.default = "c") # only need structure cols and image filename and paths - all character ok
+        )
+
+        checkmate::assert_subset(c("image_label","year","sector_n"), names(prf_data_in))
+        checkmate::assert_data_frame(prf_data_in[c("image_label","year","sector_n")], min.rows = 1, any.missing = FALSE)
+        checkmate::assert_character(names(prf_data_in), min.len = 4)
         checkmate::assert_subset(c("woodpiece_label", "slide_label", "image_label","year",
                                    "incomplete_ring", "missing_ring","duplicate_ring",
                                    "exclude_dupl","exclude_issues"), names(rings_data_in))
         checkmate::assert_data_frame(rings_data_in[c("woodpiece_label", "slide_label", "image_label","year")],
                                      min.rows = 1, any.missing = FALSE)
-        #checkmate::assert_character(names(df_prf), min.length = 10) # at least on measurements col?
-        rxsmeta_data_in <- vroom::vroom(
-          input$file_rxsmeta$datapath,
-          col_types = c(.default = "c")
-        )
         checkmate::assert_subset(c("image_label", "slide_label", "woodpiece_label",
                                    "tree_label", "species_code", "site_label", "fname_image"),
                                  names(rxsmeta_data_in))
+
         input_data$prf_data <- prf_data_in
         input_data$rings_data <- rings_data_in
         input_data$rxsmeta_data <- rxsmeta_data_in
@@ -203,19 +155,14 @@ server <- function(input, output, session) {
         return(NULL)
       })
     } else {
-      # load example data
+      # TODO: load example data
       NULL
       removeModal()
     }
-    # TODO: check consistency btw files
-  })
+  }) |> bindEvent(input$confirm_input, ignoreNULL = TRUE, ignoreInit = TRUE)
 
-
-  # update filtering / selection UI based on input data
+  # update UI based on loaded input data
   observe({
-    req(isTruthy(input_data$prf_data),
-        isTruthy(input_data$rings_data),
-        isTruthy(input_data$rxsmeta_data))
     prf_data <- input_data$prf_data
     rings_data <- input_data$rings_data
     rxsmeta_data <- input_data$rxsmeta_data
@@ -240,7 +187,10 @@ server <- function(input, output, session) {
     sector_choices <- sort(unique(prf_data$sector_n))
     updateSelectInput(session, "sel_sector", choices = sector_choices,
                       selected = sector_choices[1])
-  })
+  }) |> bindEvent(input_data$prf_data,
+                  input_data$rings_data,
+                  input_data$rxsmeta_data,
+                  ignoreNULL = TRUE, ignoreInit = TRUE)
 
   observe({
     req(isTruthy(input_data$rxsmeta_data))

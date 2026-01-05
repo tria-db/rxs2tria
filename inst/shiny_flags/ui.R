@@ -37,219 +37,247 @@ theme <- bslib::bs_theme(
     )
   )
 
-ui <- bslib::page_navbar(
+ui <- bslib::page_fluid(
   # preliminaries
-  #shinyjs::useShinyjs(),
+  #
+  shinyjs::useShinyjs(),
 
   # theme
   theme = theme,
 
-  header = shinyjs::useShinyjs(),
+  # additional CSS
+  # for where we need highest priority to overwrite existing properties
+  tags$head(
+    tags$style(HTML("
+      /* bslib style overwrites: */
+      /* spacing around sidebar title*/
+      .bslib-sidebar-layout .sidebar-title {
+        margin-bottom: 0px;
+        padding-bottom: 10px;
+      }
 
-  # TITLE ----------------------------------------------------------------------
-  title = "rxs2tria: QWA data quality and climate signal explorer",
+      .bslib-sidebar-layout>.sidebar>.sidebar-content {
+        padding-top: 1rem;
+      }
 
-  # SIDEBAR  -------------------------------------------------------------------
-  sidebar = bslib::sidebar(
+      /* hot style overwrites: */
+      /* bg color for the invalid cells */
+      .handsontable td.htInvalid {
+        background-color: pink !important;
+      }
 
-    # load input data ----------------------------------------------------------
-    actionButton("btn_input", "Load input data", icon = icon("upload")),
-    hr(),
+    ")),
 
-    # TODO: loading climate data? in other tabs?
-    #fileInput("file_clim", "Upload the 'climate' data", accept = c(".csv")),
-
-    strong("Filter data for plot"),
-    selectInput("sel_site", "Filter the sites to display", choices = NULL, multiple = TRUE, selectize = TRUE),
-    selectInput("sel_species", "Select the species to display", choices = NULL, multiple = FALSE, selectize = TRUE),
-    selectInput("sel_wp", "Select the woodpieces to display", choices = NULL, multiple = TRUE, selectize = TRUE),
-    hr(),
-
-    strong("Plot settings"),
-    selectInput("sel_param", "Choose QWA parameter to display", choices = NULL, multiple = FALSE, selectize = TRUE),
-    selectInput("sel_sector", "Select which ring sector to plot", choices = NULL, multiple = FALSE, selectize = TRUE),
-    shinyjs::disabled(checkboxInput("spline_det", "32-years spline detrend", value = FALSE)),
-    selectInput("mean_type", "Select the mean applied for crn",
-                choices = c("none", "mean", "tbrm"), selected = "none", multiple = FALSE, selectize = TRUE),
-    checkboxInput("show_excl", "show excluded rings", value = FALSE),
-
-    hr(),
-    actionButton("apply_changes", "Save & update plot", icon = icon("arrows-rotate")),
-    # hr(),
-    # actionButton("restore_all", "Restore to input", icon = icon("triangle-exclamation")),
-    hr(),
-    downloadButton("save_flags", "Download new ring data")
-
-      #checkboxInput("tail_YTE", "show tail YTE", value = TRUE),
-
-      #conditionalPanel(
-       # condition = "input.tabs != 'Time Series with chrono'",
+    # custom JS
+    # for the tippy tooltip
+    tags$script(src = "https://unpkg.com/@popperjs/core@2"),
+    tags$script(src = "https://unpkg.com/tippy.js@6")
+  ),
 
 
-      #),
+  # MAIN PANEL -----------------------------------------------------------------
+  bslib::navset_card_underline( # navset_card_pill, page_navbar?
+    id = 'tabs',
+    selected = "Time series with chrono",
+
+    # TITLE --------------------------------------------------------------------
+    title = "rxs2tria: QWA data quality and climate signal explorer",
+
+    # TAB: Start (plot of the time series) -------------------------------------
+    bslib::nav_panel(
+      "Time series with chrono",
+      icon = icon("microscope", lib = "font-awesome"),
+
+      bslib::layout_sidebar(
+
+        # SIDEBAR  ---------------------------------------------------------------
+        sidebar = bslib::sidebar(
+
+          # load input data
+          actionButton("btn_input", "Load input data", icon = icon("upload")),
+          hr(),
+
+          # TODO: loading climate data? in other tabs?
+          #fileInput("file_clim", "Upload the 'climate' data", accept = c(".csv")),
+
+          # filters
+          strong("Filter data for plot"),
+          selectInput("sel_site", "Filter the sites to display", choices = NULL, multiple = TRUE, selectize = TRUE),
+          selectInput("sel_species", "Select the species to display", choices = NULL, multiple = FALSE, selectize = TRUE),
+          selectInput("sel_wp", "Select the woodpieces to display", choices = NULL, multiple = TRUE, selectize = TRUE),
+          hr(),
+
+          # plotly
+          strong("Plot settings"),
+          selectInput("sel_param", "Choose QWA parameter to display", choices = NULL, multiple = FALSE, selectize = TRUE),
+          selectInput("sel_sector", "Select which ring sector to plot", choices = NULL, multiple = FALSE, selectize = TRUE),
+          shinyjs::disabled(checkboxInput("spline_det", "32-years spline detrend", value = FALSE)),
+
+          selectInput("mean_type",
+                      label_with_pop("Select mean applied for crn",
+                                     "Calculated over all selected woodpieces, filtering out excluded rings."),
+                      choices = c("none", "mean", "tbrm"), selected = "none", multiple = FALSE, selectize = TRUE),
+
+          checkboxInput("show_excl",
+                        label_with_pop(
+                          "show excluded rings",
+                          "Click update plot to include/exclude newly edited rings (pink markers)"),
+                        value = FALSE),
+          hr(),
+
+          # saving
+          actionButton("apply_changes", "Update plot", icon = icon("arrows-rotate"),
+                       class = "btn-tert"),
+          hr(),
+          downloadButton("save_flags", "Download new ring data",
+                         class = "btn-tert")
+
+          #checkboxInput("tail_YTE", "show tail YTE", value = TRUE),
+
+        ), # end of sidebar
+
+        # MAIN CONTENT -----------------------------------------------------------
+        bslib::card(
+          min_height = "450px",
+          max_height = "450px",
+          bslib::card_body(class = "p-0",
+          plotly::plotlyOutput("ts_crn_plot"))
+        ),
+
+        # SELECTED RING CARD
+        shinyjs::hidden(
+          div(id = "ring_editor_card",
+
+            bslib::navset_card_pill(
+              id = "sel_ring_navset",
+              selected = "edit_flags",
+              title = uiOutput("sel_ring"), # selected ring image_lable and year
+
+              # EDITING THE RING FLAGS
+              bslib::nav_panel(
+                "Edit ring",
+                value = "edit_flags",
+
+                bslib::layout_column_wrap(
+                  fill = FALSE,
+                  width = 1/2,
+                  heights_equal = "row",
+
+                  bslib::layout_column_wrap(
+                    width = 1,
+                    fill = FALSE,
+                    heights_equal = "row",
+                    bslib::card(
+                      fill = FALSE,
+                      class = "clean-card-sec",
+                      bslib::layout_column_wrap(
+                        width = 1/2,
+                        radioButtons("sel_exclude", "Exclude ring from analysis?",
+                                     choices = c("yes", "no"), inline = TRUE,
+                                     selected = "no"),
+                        uiOutput("warn_disq")
+                      )
+                    ),
+                    bslib::card(
+                      class = "clean-card",
+                      checkboxGroupInput("sel_disqual",
+                                         "Disqualifying features: Select all that apply",
+                                         choices = disqual_issues,
+                                         inline = TRUE),
+                      div(
+                        id = "techn_reason_el",
+                        style = "display: flex; align-items: flex-start;",
+                        div(style = "width: 25px; padding-top: 0px;",
+                            icon("arrow-right-from-bracket", lib = "font-awesome")),
+                        div(style = "flex-grow: 1;",
+                          checkboxGroupInput(
+                            "sel_technical_exact",
+                            "Technical issues: Specify (optional)",
+                            choices = technical_issues,
+                            inline = TRUE
+                          )
+                        )
+                      )
+                    )
+                  ),
+
+                  bslib::layout_column_wrap(
+                    width = 1,
+                    fill = FALSE,
+                    heights_equal = "row",
+                    bslib::card(
+                      class = "clean-card",
+                      fill = FALSE,
+                      checkboxGroupInput("sel_discrete",
+                                         "Discrete features: Select all that apply",
+                                         choices = discrete_features,
+                                         inline = TRUE),
+                    ),
+                    bslib::card(
+                      fill = FALSE,
+                      class = "clean-card",
+                      textAreaInput(
+                        inputId = "sel_comment",
+                        label = "Additional comments",
+                        width = "100%",
+                        placeholder = "Enter any additional notes regarding the selected ring here..."
+                      )
+                    )
+                  )
+                ),
+
+                bslib::layout_column_wrap(
+                  width = "217px", fixed_width = TRUE,
+                  actionButton("undo_sel_flags", "Undo current edits", icon = icon("arrow-left")),
+                  actionButton("reset_to_raw", "Reset to input", icon = icon("undo")),
+                  actionButton("show_image", "Open image", icon = icon("image"))
+                )
+
+              ),
+
+              # COVERAGE PANEL
+              bslib::nav_panel(
+                "Show coverage",
+                value = "show_coverage",
+                verbatimTextOutput("coverage"),
+                uiOutput("coverage_ui")
+              )
+            )
+          )
+        ), # end of ring editor card
+
+        verbatimTextOutput("debug")
+      )
+    ), # end of tab 1
+
+
+    # TAB: running RBT ---------------------------------------------------------
+    bslib::nav_panel(
 
       # conditionalPanel(
       #   condition = "input.tabs == 'running RBT'",
       #   uiOutput("dynamic_rbt_slider")
       # ),
 
-      # conditionalPanel(
-      #   condition = "input.tabs == 'Time Series with chrono'",
-      #  sliderInput("range_select", "Select Range of YEAR", min = 0, max = 2025, value = c(1850, 2025)),
-      # ),
 
-      # actionButton("calc_button", "Calculate Plots")
-    ),
-
-    bslib::nav_panel(
-      "Time series with chrono",
-      icon = icon("microscope", lib = "font-awesome"),
-
-      bslib::card(
-        min_height = "450px",
-        max_height = "450px",
-        bslib::card_body(class = "p-0",
-        plotly::plotlyOutput("ts_crn_plot"))
-      ),
-
-      shinyjs::hidden(
-      div(
-        id = "ring_editor_card",
-      #shinyjs::hidden(
-        bslib::navset_card_pill(
-          id = "sel_ring_navset",
-          #style = "display: none;",  # Start hidden
-          selected = "edit_flags",
-          title = uiOutput("sel_ring"),
-          bslib::nav_panel(
-            "Edit ring",
-            value = "edit_flags",
-
-            bslib::layout_column_wrap(
-              fill = FALSE,
-              width = 1/2,
-              heights_equal = "row",
-
-              bslib::layout_column_wrap(
-                width = 1,
-                fill = FALSE,
-                heights_equal = "row",
-                bslib::card(
-                  fill = FALSE,
-                  class = "clean-card-sec",
-                  bslib::layout_column_wrap(
-                    width = 1/2,
-                    radioButtons("sel_exclude", "Exclude ring from analysis?", choices = c("yes", "no"), inline = TRUE, selected = "no"),
-                    uiOutput("warn_disq")
-                  )
-                ),
-                bslib::card(
-                  class = "clean-card",
-                  checkboxGroupInput("sel_disqual", "Disqualifying features: Select all that apply",
-                                     choices = disqual_issues,
-                                     inline = TRUE),
-                  div(
-                    id = "techn_reason_el",
-                    style = "display: flex; align-items: flex-start;",
-                    div(style = "width: 25px; padding-top: 0px;",
-                        icon("arrow-right-from-bracket", lib = "font-awesome")),
-                    div(style = "flex-grow: 1;",
-                      checkboxGroupInput(
-                        "sel_technical_exact",
-                        "Technical issues: Specify (optional)",
-                        choices = technical_issues,
-                        inline = TRUE
-                      )
-                    )
-                  )
-                )
-              ),
-
-              bslib::layout_column_wrap(
-                width = 1,
-                fill = FALSE,
-                heights_equal = "row",
-                bslib::card(
-                  class = "clean-card",
-                  fill = FALSE,
-                  checkboxGroupInput("sel_discrete", "Discrete features: Select all that apply",
-                                     choices = discrete_features,
-                                     inline = TRUE),
-                ),
-                bslib::card(
-                  fill = FALSE,
-                  class = "clean-card",
-                  textAreaInput(
-                    inputId = "sel_comment",
-                    label = "Additional comments",
-                    width = "100%",
-                    placeholder = "Enter any additional notes regarding the selected ring here..."
-                  )
-                )
-              )
-            ),
-
-            bslib::layout_column_wrap(
-              width = "217px", fixed_width = TRUE,
-              actionButton("undo_sel_flags", "Undo current edits", icon = icon("arrow-left")),
-              actionButton("reset_to_raw", "Reset to input", icon = icon("undo")),
-              actionButton("show_image", "Open image", icon = icon("image"))
-            )
-
-          ),
-
-          bslib::nav_panel(
-            "Show coverage",
-            value = "show_coverage",
-            verbatimTextOutput("coverage"),
-            uiOutput("coverage_ui")
-          )
-       # )
-      )
-      )
-      ),
-
-      # New shift controls
-      # conditionalPanel(
-      #   condition = "input.tabs == 'Time Series with chrono'",
-        # fluidRow(
-        #   column(4, numericInput("shift_amount", "Shift (rings):", value = 1, step = 1, min = 1)),
-        #   column(4, actionButton("shift_left", "← Shift Left")),
-        #   column(4, actionButton("shift_right", "Shift Right"))
-        # ),
-      # ),
-
-
-      verbatimTextOutput("debug"),
-
-
-      # fluidRow(
-      #   column(6, uiOutput("radioButtons_ui")),
-      #   column(6, uiOutput("clicked_id"))
-      # ),
-      #uiOutput("textAreaInput_ui"),
-      #actionButton("save_yte", "Save Selected Info"),
-
-
-      # DT::DTOutput("yte_table"),
-      # uiOutput("dynamic_image")
-    ),
-
-    bslib::nav_panel(
       "running RBT",
       icon = icon("cloud-sun", lib = "font-awesome"),
 
       plotOutput("rbt_plot")
     ),
 
+    # TAB: HEATMAP -------------------------------------------------------------
     bslib::nav_panel(
       "Heatmap of climate signal", #icon = icon("heat", lib = "font-awesome"),
       plotOutput("clim_cor_plot")
     ),
 
+    # TAB: climate correlation -------------------------------------------------
     bslib::nav_panel(
       "Clim_cor data", #icon = icon("table", lib = "font-awesome"),
       DT::DTOutput("numeric_table")
     )
 
-)
+  ) # end of navset_card_underline
+
+) # end of ui
