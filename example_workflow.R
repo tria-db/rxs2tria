@@ -141,15 +141,39 @@ if (save_files){
                    paste0(fname_out, '_df_rxsmeta.csv'))
 }
 
+
+################################################################################
 # read in previously saved data for testing
 # prf_data <- vroom::vroom("/Users/maranaegelin/Documents/QWAdata/LTAL_S22/rxs2tria_out/20251208_TRIA_LTAL_S22_profiles.csv")
-# QWA_data <- list()
-# QWA_data$rings <- vroom::vroom("/Users/maranaegelin/Documents/QWAdata/LTAL_S22/rxs2tria_out/20251208_TRIA_LTAL_S22_rings.csv")
+QWA_data <- list()
+QWA_data$rings <- vroom::vroom("/Users/maranaegelin/Documents/QWAdata/LTAL_S22/rxs2tria_out/20251208_TRIA_LTAL_S22_rings.csv")
+QWA_data$cells <- vroom::vroom("/Users/maranaegelin/Documents/QWAdata/LTAL_S22/rxs2tria_out/20251208_TRIA_LTAL_S22_cells.csv.gz")
 # df_rxsmeta <- vroom::vroom("/Users/maranaegelin/Documents/QWAdata/LTAL_S22/rxs2tria_out/20251125_TRIA_LTAL_S22_rxsmeta.csv")
 
 # launch the shiny app to explore data and flag rings
 launch_flags_app()
 
+
+
+################################################################################
+# moving band profiles with fixed bandwidth and stepsize
+bandwidth <- 30
+stepsize <- 10
+sel_cell_params <- c("la", "cwttan", "cwtrad", "cwtall", "drad", "dtan",
+                     "cwa", "tca", "cdrad", "cdtan", "cdratio")
+quant_probs <- c(0.1, 0.25, 0.5, 0.75, 0.9)
+band_rebound <- TRUE
+
+prf_bands <- calculate_band_profiles(
+  QWA_data,
+  bandwidth,
+  stepsize,
+  sel_cell_params,
+  quant_probs,
+  band_rebound
+)
+# TODO: if there are NO cells within a band, then that band is missing from the output df
+# maybe add tidyr::complete step to have all bands present for all rings (with NA vals and 0 n cells)
 
 
 
