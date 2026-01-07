@@ -173,3 +173,101 @@ create_rwl <- function(prf_data, df_rings, PAR = "mrw", SECTOR = NULL, path_out,
   invisible(rwl)
 }
 
+save_rwl_file <- function(param, df_rings,
+                          df_prf = NULL, sel_sect = NULL,
+                          auto_scale = TRUE, scaling = NULL,
+                          shorten_name = FALSE, df_structure = NULL,
+                          exclude_issue_rings = TRUE, file="", path_out = "") {
+  # check:
+  # param in df_rings xor df_prf
+  # df_rings has correct format, cols
+  # df_prf has correct format, cols if provided, incl. sel_sect
+
+  df_data <- df_rings |> dplyr::filter(!exclude_dupl)
+  if (exclude_issue_rings){
+    df_data <- df_data |> dplyr::filter(!exclude_issues)
+  }
+
+  df_data <- df_data |>
+    dplyr::select(woodpiece_label, image_label, year, dplyr::any_of(param))
+  # TODO: check not duplicates / max one value one per year/wp?
+
+  if (param %in% names(df_prf)){
+    df_data <- df_prf |>
+      dplyr::filter(sector_n == sel_sect) |>
+      dplyr::select(image_label, year, dplyr::all_of(param)) |>
+      dplyr::right_join(df_data, by = c("image_label", "year")) |>
+      dplyr::select(-image_label)
+  }
+
+  scale <- 1
+
+  if (auto_scale){
+    # to fit Tucson format requirements of max 5 digits
+    max_digits <- 5
+    vals <- df_data[[param]]
+    vals <- vals[!is.na(vals)]
+
+    if (length(vals[vals>0])>0){
+      max_val_pos <- max(vals[vals>0], na.rm = TRUE)
+    } else {
+      max_val_pos <- 0
+    }
+    if (length(vals[vals<0])>0){
+      max_val_neg <- abs(min(vals[vals<0], na.rm = TRUE))
+    } else {
+      max_val_neg <- 0
+    }
+
+    if (max_val_pos > max_val_neg){
+      max_val <- max_val_pos
+      max_representable <- 10^(max_digits) - 1
+    } else {
+      max_val <- max_val_neg
+      max_representable <- 10^(max_digits-1) - 1 # leave space for negative sign (note: none of the measurements usually have neg values?)
+    }
+
+    # find power of 10 scale that fits
+    optimal_scale <- max_representable / max_val
+    scale <- 10^floor(log10(optimal_scale))
+  }
+
+  if (!is.null(scaling)){
+    scale <- scaling
+  }
+
+  if (scale != 1){
+    cli::cli_warn("Scaling parameter {.var {param}} by factor {.val {scale}}.")
+  }
+  df_data[[param]] <- df_data[[param]] * scale / 1000 # (the /1000 because write.tucson rescales again later)
+
+  df_rwl <- df_data |>
+    tidyr::pivot_wider(names_from = woodpiece_label, values_from = !!param) |>
+    dplyr::arrange(year) |>
+    tidyr::complete(year = seq(min(year), max(year), by = 1)) |>
+    tibble::column_to_rownames("year") |>
+    dplR::as.rwl()
+
+  if (!is.null(file)){
+    fname <- file
+  } else {
+    fname <- paste0(param, ".rwl") # add site, sector, scaling, allow for path_out
+  }
+
+  # TODO: try to shorten names based on df_structure? what if multiple sites?
+  # TODO: add warning about auto renaming of dplR ir required
+
+  f <- dplR::write.tucson(
+    df_rwl,
+    fname = fname,
+    prec = 0.001, # IMPORTANT!
+    header = NULL,
+    append = FALSE,
+    long.names = FALSE,
+    mapping.fname = "id_map.txt"
+  )
+
+  cli::cli_inform("saved file under ..., with .. scaling, ..names mapping")
+}
+
+
