@@ -81,7 +81,6 @@ rm(df_images, df_settings)
 # read raw cells/rings data
 QWA_data <- collect_raw_data(df_structure)
 
-
 ################################################################################
 # remove outliers
 # NOTE: ROXAS does some threshold based outlier checks and assigns these a
@@ -127,7 +126,7 @@ n_sectors <- 5
 # calculate profiles for each sector and year
 # i.e. aggregate over all cells per year/sector for selected parameters (this might take a while)
 sel_cell_params <- c("la", "cwttan", "cwtrad", "cwtall", "drad", "dtan",
-                     "cwa", "tca", "cdrad", "cdtan", "cdratio")
+                     "cwa")
 quant_probs <- c(0.1, 0.5, 0.9)
 
 prf_data <- calculate_profiles(
@@ -141,39 +140,15 @@ if (save_files){
                    paste0(fname_out, '_df_rxsmeta.csv'))
 }
 
-
-################################################################################
 # read in previously saved data for testing
 # prf_data <- vroom::vroom("/Users/maranaegelin/Documents/QWAdata/LTAL_S22/rxs2tria_out/20251208_TRIA_LTAL_S22_profiles.csv")
-QWA_data <- list()
-QWA_data$rings <- vroom::vroom("/Users/maranaegelin/Documents/QWAdata/LTAL_S22/rxs2tria_out/20251208_TRIA_LTAL_S22_rings.csv")
-QWA_data$cells <- vroom::vroom("/Users/maranaegelin/Documents/QWAdata/LTAL_S22/rxs2tria_out/20251208_TRIA_LTAL_S22_cells.csv.gz")
+# QWA_data <- list()
+# QWA_data$rings <- vroom::vroom("/Users/maranaegelin/Documents/QWAdata/LTAL_S22/rxs2tria_out/20251208_TRIA_LTAL_S22_rings.csv")
 # df_rxsmeta <- vroom::vroom("/Users/maranaegelin/Documents/QWAdata/LTAL_S22/rxs2tria_out/20251125_TRIA_LTAL_S22_rxsmeta.csv")
 
 # launch the shiny app to explore data and flag rings
 launch_flags_app()
 
-
-
-################################################################################
-# moving band profiles with fixed bandwidth and stepsize
-bandwidth <- 30
-stepsize <- 10
-sel_cell_params <- c("la", "cwttan", "cwtrad", "cwtall", "drad", "dtan",
-                     "cwa", "tca", "cdrad", "cdtan", "cdratio")
-quant_probs <- c(0.1, 0.25, 0.5, 0.75, 0.9)
-band_rebound <- TRUE
-
-prf_bands <- calculate_band_profiles(
-  QWA_data,
-  bandwidth,
-  stepsize,
-  sel_cell_params,
-  quant_probs,
-  band_rebound
-)
-# TODO: if there are NO cells within a band, then that band is missing from the output df
-# maybe add tidyr::complete step to have all bands present for all rings (with NA vals and 0 n cells)
 
 
 
@@ -199,10 +174,23 @@ create_rwl(prf_data = prf_data,
 # Create an RWL file from a profile-level parameter
 create_rwl(prf_data = prf_data,
            PAR = "cwtrad_mean",
-           df_rings = read.csv(paste0(path_out, "/", "20251230_TRIA_YAM_AI_1880_rings_edited.csv")),
+           df_rings = read.csv(paste0(path_out, "/", "20260108_TRIA_YAM_AI_1880_rings_edited.csv")),
            SECTOR = 5,
            path_out = path_out,
            remove_excluded = TRUE)
 
 # 20260103_TRIA_S22_AI_rings_edited.csv
 # 20251230_TRIA_YAM_AI_1880_rings_edited.csv
+
+################################################################################
+# CALCULATE PROFILES
+band <- calculate_band_profiles_pat(QWA_data,
+                        bandwidth = 30, stepsize = 10, sel_cell_params = c("la", "cwttan", "cwtrad", "cwtall", "drad", "dtan", "cwa"),
+                        quant_probs = c(0.10, 0.25, 0.5, 0.75, 0.90),
+                        band_rebound = TRUE)
+
+band %>% dplyr::arrange(image_label, year, start)
+if (save_files){
+  readr::write_csv(band,
+                   paste0(fname_out, '_band_profiles.csv'))
+}
