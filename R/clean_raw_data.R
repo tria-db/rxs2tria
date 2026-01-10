@@ -264,7 +264,7 @@ check_dating <- function(df_rings_log, df_meta){
   # check that there are not duplicate years within an image
   df_rings_dating <- df_rings_dating |>
     dplyr::group_by(image_label) |>
-    dplyr::mutate(dupl_year = duplicated(year)) # one instance is enough
+    dplyr::mutate(dupl_year = duplicated(year))
 
   # check dating: year is not NA, not in future, not after outmost_year
   df_rings_dating <- df_rings_dating |>
