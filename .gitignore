@@ -10,3 +10,4 @@ out/*
 main.R
 docs
 inst/doc
+.RDataTmp

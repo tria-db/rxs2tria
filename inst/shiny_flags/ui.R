@@ -71,7 +71,20 @@ ui <- bslib::page_fluid(
     # custom JS
     # for the tippy tooltip
     tags$script(src = "https://unpkg.com/@popperjs/core@2"),
-    tags$script(src = "https://unpkg.com/tippy.js@6")
+    tags$script(src = "https://unpkg.com/tippy.js@6"),
+    # --- Add JS for keyboard arrows ---
+    tags$script(HTML("
+      document.addEventListener('keydown', function(e) {
+        // Left arrow -> previous ring
+        if(e.key === 'ArrowLeft') {
+          Shiny.setInputValue('prev_ring_js', Math.random());
+        }
+        // Right arrow -> next ring
+        if(e.key === 'ArrowRight') {
+          Shiny.setInputValue('next_ring_js', Math.random());
+        }
+      });
+    ")),
   ),
 
 
@@ -171,11 +184,20 @@ ui <- bslib::page_fluid(
                       fill = FALSE,
                       class = "clean-card-sec",
                       bslib::layout_column_wrap(
-                        width = 1/2,
+                        width = 1/3,
                         radioButtons("sel_exclude", "Exclude ring from analysis?",
                                      choices = c("yes", "no"), inline = TRUE,
                                      selected = "no"),
-                        uiOutput("warn_disq")
+                        # SECOND COLUMN
+                        div(uiOutput("exclude_scope_ui"),
+                            uiOutput("warn_disq")),
+                        # THIRD COLUMN
+                        div(
+                          style = "display: flex; gap: 10px; align-items: center;",
+                          actionButton("prev_ring", "Previous"),
+                          actionButton("next_ring", "Next"),
+                          checkboxInput("auto_open_image", "Auto-open image", value = FALSE)
+                        )
                       )
                     ),
                     bslib::card(
@@ -222,6 +244,11 @@ ui <- bslib::page_fluid(
                         width = "100%",
                         placeholder = "Enter any additional notes regarding the selected ring here..."
                       )
+                    ),
+                    bslib::card(
+                      fill = FALSE,
+                      class = "clean-card",
+                      verbatimTextOutput("correlation")
                     )
                   )
                 ),
@@ -241,6 +268,7 @@ ui <- bslib::page_fluid(
                 value = "show_coverage",
                 verbatimTextOutput("coverage"),
                 uiOutput("coverage_ui")
+
               )
             )
           )
