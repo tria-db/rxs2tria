@@ -60,6 +60,71 @@ calculate_profiles <- function(df_cells, n_sectors, sel_cell_params, quant_probs
   prf_data_agg
 }
 
+
+calculate_sector_profiles <- function(QWA_data, n_sectors, sel_cell_params, quant_probs){
+  # use data.table for speed on large dataframes
+  cells_dt <- data.table::as.data.table(QWA_data$cells)
+  # filter out cells without valid rraddistr, subset to relevant columns only
+  cells_dt <- cells_dt[!is.na(rraddistr),
+                       c("image_label", "year", "rraddistr", sel_cell_params),
+                       with = FALSE]
+  # cut cells into n sectors based on there relative radial position
+  cells_dt[,
+           sector_n := as.numeric(
+             cut(rraddistr, breaks = seq(from = 0, to = 100, by = 100/n_sectors),
+                 labels = 1:n_sectors, include.lowest = TRUE))]
+  cells_dt[rraddistr > 100 & rraddistr <= 101,
+           sector_n := n_sectors] # allow for rounding errors
+  cells_dt <- cells_dt[!is.na(sector_n)] # if we still have some cells outside -> remove
+  cells_dt[, rraddistr := NULL] # remove superfluous columns
+
+  # get the ew widths
+  ring_widths <- data.table::as.data.table(QWA_data$rings)[
+    , c("image_label", "year", "mrw", "eww")]
+  ring_widths[, max_ew_sector := floor((eww / mrw) * n_sectors)] # max sector that is in ew
+
+
+  # now we can aggregate over each sector
+  cli::cli_inform(c("i"= "Calculating sector counts and means..."))
+  prf_data_agg <- cells_dt |>
+    collapse::fgroup_by(image_label, year, sector_n) |>
+    collapse::fsummarise(across(sel_cell_params,
+                                list(N = collapse::fnobs,
+                                     mean = collapse::fmean)))
+
+  if (!is.null(quant_probs) && length(quant_probs) > 0){
+    cli::cli_inform(c("i"= "Calculating sector quantiles..."))
+    prf_data_quant <- cells_dt |>
+      collapse::fgroup_by(image_label, year, sector_n) |>
+      collapse::BY(collapse::.quantile,
+                   probs = quant_probs,
+                   expand.wide = TRUE)
+
+    old_col_names <- unlist(lapply(sel_cell_params, function(param) {
+      paste0(param, ".V", seq(length(quant_probs)))
+    }))
+    new_col_names <- unlist(lapply(sel_cell_params, function(param) {
+      paste0(param, "_q", sprintf("%02d", round(quant_probs*100)))
+    }))
+    data.table::setnames(prf_data_quant, old = old_col_names, new = new_col_names)
+
+    prf_data_agg <- prf_data_agg[prf_data_quant,
+                                 on = c("image_label", "year", "sector_n")]
+    rm(prf_data_quant)
+  }
+
+  cli::cli_inform(c("i"= "Adding EW indicator..."))
+  # add a ew_band column to indicate if band is in EW or LW
+  prf_data_agg <- ring_widths[prf_data_agg, on = c("image_label", "year")]
+  prf_data_agg[, ew_sector := ifelse(sector_n <= max_ew_sector, TRUE, FALSE)]
+  prf_data_agg[, max_ew_sector := NULL] # remove temp column
+  data.table::setcolorder(prf_data_agg, "ew_sector", after="eww")
+
+  cli::cli_inform(c("v"= "All done!"))
+  tibble::as_tibble(prf_data_agg)
+}
+
+
 #' Helper function to create the moving band definitions for given a mrw,
 #' andwidth and stepsize
 #'
@@ -126,6 +191,7 @@ calculate_band_profiles <- function(QWA_data,
   cells_dt <- cells_dt[!is.na(raddistr.st),
                        c("image_label", "year", "raddistr.st", sel_cell_params),
                        with = FALSE]
+
 
   cli::cli_inform(c("i"= "Creating band definitions..."))
   # get the ring widths and ew widths

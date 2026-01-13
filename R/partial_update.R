@@ -22,6 +22,8 @@ update_rxsmeta <- function(df_rxsmeta, imgs_to_update, settings_date_orders,
   df_updated
 }
 
+#' Function to update QWA data with new raw data for selected images
+#' @export
 update_QWAdata <- function(QWA_data, imgs_to_update, df_rxsmeta){
 
   files_to_update <- df_rxsmeta |>
@@ -65,10 +67,10 @@ update_QWAdata <- function(QWA_data, imgs_to_update, df_rxsmeta){
   # flag duplicate rings: HERE WE NEED TO CONSIDER OTHER IMAGES FROM SAME WOODPIECE
   # default behavior is to select the year with the highest cell count (that isn't incomplete or missing)
   affected_wps <- unique(files_to_update$woodpiece_label)
-  df_rings_log <- QWA_data$rings |> # add old data for aaffected wps
-    dplyr::filter(!image_label %in% imgs_to_update) |> # filter out old data for updated images
+  df_rings_log <- QWA_data$rings |> # add old data for affected wps
     dplyr::filter(woodpiece_label %in% affected_wps) |>
-    dplyr::bind_rows(df_rings_log)
+    dplyr::filter(!image_label %in% imgs_to_update) |> # filter out old data for updated images
+    dplyr::bind_rows(df_rings_log) # add new data
 
   df_rings_log <- flag_duplicate_rings(df_rings_log) # this affects only the duplicate_ring and exclude_dupl cols
 

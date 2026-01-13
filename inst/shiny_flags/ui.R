@@ -74,16 +74,22 @@ ui <- bslib::page_fluid(
     tags$script(src = "https://unpkg.com/tippy.js@6"),
     # --- Add JS for keyboard arrows ---
     tags$script(HTML("
-      document.addEventListener('keydown', function(e) {
-        // Left arrow -> previous ring
-        if(e.key === 'ArrowLeft') {
-          Shiny.setInputValue('prev_ring_js', Math.random());
-        }
-        // Right arrow -> next ring
-        if(e.key === 'ArrowRight') {
-          Shiny.setInputValue('next_ring_js', Math.random());
+      $(document).ready(function() {
+      var editingMode = true; // TODO: limit editing mode to when card is open/in focus/clicked?
+
+      // Listen for arrow key presses
+      $(document).on('keydown', function(e) {
+        if (editingMode) {
+          if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            Shiny.setInputValue('prev_ring_js', Math.random()); // TODO: use action btn id directly
+          } else if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            Shiny.setInputValue('next_ring_js', Math.random());
+          }
         }
       });
+    });
     ")),
   ),
 

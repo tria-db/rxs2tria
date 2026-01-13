@@ -99,6 +99,10 @@ QWA_data <- complete_cell_measures(QWA_data)
 QWA_data <- validate_QWA_data(QWA_data, df_rxsmeta)
 # this creates some initial flags based on the data only, namely missing, incomplete and duplicate flags
 
+# add automatic exclude_year flags: default behavior is to exclude any incomplete or missing years from analysis
+QWA_data$rings <- QWA_data$rings %>%
+  dplyr::mutate(exclude_issues = incomplete_ring)
+  #dplyr::mutate(exclude_issues = incomplete_ring | missing_ring)
 
 ################################################################################
 # save preprocessed data to files
@@ -132,6 +136,10 @@ quant_probs <- c(0.1, 0.5, 0.9)
 
 prf_data <- calculate_profiles(
   QWA_data$cells, n_sectors, sel_cell_params, quant_probs
+)
+
+prf_data2 <- calculate_sector_profiles(
+  QWA_data, n_sectors, sel_cell_params, quant_probs
 )
 
 if (save_files){

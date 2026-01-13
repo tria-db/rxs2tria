@@ -58,9 +58,9 @@ remove_outliers <- function(QWA_data){
     dplyr::mutate(dplyr::across(dplyr::all_of(outl_cols_rings),
                                 ~ dplyr::if_else(.x < 0, NA_real_, .x)))
 
-  cli::cli_alert_success(
-    "Outliers (negative values) have been replaced with NA"
-  )
+  cli::cli_inform(c(
+    "v" = "Outliers (negative values) have been replaced with NA"
+  ))
 
   QWA_data_rm
 }
@@ -589,12 +589,6 @@ validate_QWA_data <- function(QWA_data, df_meta, verbose_flags = FALSE){
   # default behavior is to select the year with the highest cell count (that isn't incomplete or missing)
   df_rings_log <- flag_duplicate_rings(df_rings_log) # replace with duplciate_sel?
 
-  # add automatic exclude_year flags: default behavior is to exclude any incomplete or missing years from analysis
-  df_rings_log <- df_rings_log %>%
-    dplyr::mutate(exclude_issues = incomplete_ring | missing_ring)
-
-  # TODO: affected_tissue: do we need to add a default? or we just leave it (-> leading to nulls in DB) unless user specifies manually?
-
   # TODO: finalize after checking, can already remove unnecessary cols in functions
   # remove unwanted columns
   if (!verbose_flags){
@@ -607,14 +601,28 @@ validate_QWA_data <- function(QWA_data, df_meta, verbose_flags = FALSE){
   }
 
   # output summary
-  issue_counts <-  df_rings_log %>%
-    dplyr::summarise(dplyr::across(c(incomplete_ring:duplicate_ring),
-                                   ~sum(.x,na.rm=TRUE))) %>%
-    dplyr::select(incomplete_ring, missing_ring, duplicate_ring)
-  message('QWA data have been validated successfully!\n',
-          'The following issues were found:')
-  message(paste0(capture.output(print(as.data.frame(issue_counts),
-                                row.names = FALSE)), collapse='\n'))
+  n_incomplete <- sum(df_rings_log$incomplete_ring)
+  n_missing <- sum(df_rings_log$missing_ring)
+  n_duplicate <- sum(df_rings_log$duplicate_ring)
+  n_dupli_years <- df_rings_log[df_rings_log$duplicate_ring,] |>
+    dplyr::distinct(woodpiece_label, year) |> nrow()
+
+  cli::cli_inform(c(
+    "i" = "The following issues were automatically detected:",
+    "" = "Rings flagged as incomplete: {n_incomplete}",
+    "" = "Rings flagged as missing: {n_missing}",
+    "" = "Rings flagged as missing: {n_duplicate} ({n_dupl_years} unique years)",
+    "v" = "QWA data have been validated!"
+  ))
+
+  # issue_counts <-  df_rings_log %>%
+  #   dplyr::summarise(dplyr::across(c(incomplete_ring:duplicate_ring),
+  #                                  ~sum(.x,na.rm=TRUE))) %>%
+  #   dplyr::select(incomplete_ring, missing_ring, duplicate_ring)
+  # message('QWA data have been validated successfully!\n',
+  #         'The following issues were found:')
+  # message(paste0(capture.output(print(as.data.frame(issue_counts),
+  #                               row.names = FALSE)), collapse='\n'))
 
   return(
     stats::setNames(
