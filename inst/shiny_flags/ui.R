@@ -75,21 +75,21 @@ ui <- bslib::page_fluid(
     # --- Add JS for keyboard arrows ---
     tags$script(HTML("
       $(document).ready(function() {
-      var editingMode = true; // TODO: limit editing mode to when card is open/in focus/clicked?
+        var editingMode = true; // TODO: limit editing mode to when card is open/in focus/clicked?
 
-      // Listen for arrow key presses
-      $(document).on('keydown', function(e) {
-        if (editingMode) {
-          if (e.key === 'ArrowLeft') {
-            e.preventDefault();
-            Shiny.setInputValue('prev_ring_js', Math.random()); // TODO: use action btn id directly
-          } else if (e.key === 'ArrowRight') {
-            e.preventDefault();
-            Shiny.setInputValue('next_ring_js', Math.random());
+        // Listen for arrow key presses
+        $(document).on('keydown', function(e) {
+          if (editingMode) {
+            if (e.key === 'ArrowLeft') {
+              e.preventDefault();
+              Shiny.setInputValue('prev_ring_js', Math.random()); // TODO: use action btn id directly
+            } else if (e.key === 'ArrowRight') {
+              e.preventDefault();
+              Shiny.setInputValue('next_ring_js', Math.random());
+            }
           }
-        }
+        });
       });
-    });
     ")),
   ),
 
@@ -114,40 +114,35 @@ ui <- bslib::page_fluid(
 
           # load input data
           actionButton("btn_input", "Load input data", icon = icon("upload")),
-          hr(),
+          hr(class = "hr-slim"),
 
-          # TODO: loading climate data? in other tabs?
-          #fileInput("file_clim", "Upload the 'climate' data", accept = c(".csv")),
-
+          strong("Plot settings"),
           # filters
-          strong("Filter data for plot"),
           selectInput("sel_site", "Filter the sites to display", choices = NULL, multiple = TRUE, selectize = TRUE),
           selectInput("sel_species", "Select the species to display", choices = NULL, multiple = FALSE, selectize = TRUE),
           selectInput("sel_wp", "Select the woodpieces to display", choices = NULL, multiple = TRUE, selectize = TRUE),
-          hr(),
-
-          # plotly
-          strong("Plot settings"),
+          # measurements
           selectInput("sel_param", "Choose QWA parameter to display", choices = NULL, multiple = FALSE, selectize = TRUE),
           selectInput("sel_sector", "Select which ring sector to plot", choices = NULL, multiple = FALSE, selectize = TRUE),
-          shinyjs::disabled(checkboxInput("spline_det", "32-years spline detrend", value = FALSE)),
-
+          shinyjs::disabled(checkboxInput("spline_det", "Apply 32-years spline detrend", value = FALSE)),
           selectInput("mean_type",
                       label_with_pop("Select mean applied for crn",
                                      "Calculated over all selected woodpieces, filtering out excluded rings."),
                       choices = c("none", "mean", "tbrm"), selected = "none", multiple = FALSE, selectize = TRUE),
+          checkboxInput("auto_open_image", "try to auto-open images", value = FALSE),
 
+          hr(class = "hr-slim"),
           checkboxInput("show_excl",
                         label_with_pop(
                           "show excluded rings",
                           "Click update plot to include/exclude newly edited rings (pink markers)"),
                         value = FALSE),
-          hr(),
-
-          # saving
+          # TODO: change to radio buttons to highlight better?
+          # TODO: have a ring edit mode and an overview mode? in overview, can highlight all points with issues / features?
           actionButton("apply_changes", "Update plot", icon = icon("arrows-rotate"),
                        class = "btn-tert"),
-          hr(),
+
+          hr(class = "hr-slim"),
           downloadButton("save_flags", "Download new ring data",
                          class = "btn-tert")
 
@@ -177,6 +172,12 @@ ui <- bslib::page_fluid(
                 "Edit ring",
                 value = "edit_flags",
 
+                bslib::card(
+                  fill = FALSE,
+                  class = "clean-card",
+                  verbatimTextOutput("correlation")
+                ),
+
                 bslib::layout_column_wrap(
                   fill = FALSE,
                   width = 1/2,
@@ -190,41 +191,46 @@ ui <- bslib::page_fluid(
                       fill = FALSE,
                       class = "clean-card-sec",
                       bslib::layout_column_wrap(
-                        width = 1/3,
+                        width = 1/2,
                         radioButtons("sel_exclude", "Exclude ring from analysis?",
                                      choices = c("yes", "no"), inline = TRUE,
                                      selected = "no"),
-                        # SECOND COLUMN
-                        div(uiOutput("exclude_scope_ui"),
-                            uiOutput("warn_disq")),
-                        # THIRD COLUMN
                         div(
-                          style = "display: flex; gap: 10px; align-items: center;",
-                          actionButton("prev_ring", "Previous"),
-                          actionButton("next_ring", "Next"),
-                          checkboxInput("auto_open_image", "Auto-open image", value = FALSE)
+                          radioButtons("sel_affected",
+                                       label_with_pop("Select affected tissue",
+                                                      "For excluded rings, you can indicate if the issue affects primarily one part of the ring, i.e. measurements for the other may still be salvageable."),
+                                       choices = c("N/A" = "NA", "Earlywood" = "ew", "Latewood" = "lw", "All" = "all"),
+                                       inline = TRUE, selected = "N/A"),
+                          uiOutput("warn_disq")
                         )
                       )
                     ),
                     bslib::card(
                       class = "clean-card",
+                      strong("Compromising issues:"),
                       checkboxGroupInput("sel_disqual",
-                                         "Disqualifying features: Select all that apply",
+                                         "Disqualifying features",
                                          choices = disqual_issues,
                                          inline = TRUE),
-                      div(
-                        id = "techn_reason_el",
-                        style = "display: flex; align-items: flex-start;",
-                        div(style = "width: 25px; padding-top: 0px;",
-                            icon("arrow-right-from-bracket", lib = "font-awesome")),
-                        div(style = "flex-grow: 1;",
+                      # div(
+                      #   id = "techn_reason_el",
+                      #   style = "display: flex; align-items: flex-start;",
+                      #   div(style = "width: 25px; padding-top: 0px;",
+                      #       icon("arrow-right-from-bracket", lib = "font-awesome")),
+                      #   div(style = "flex-grow: 1;",
                           checkboxGroupInput(
                             "sel_technical_exact",
-                            "Technical issues: Specify (optional)",
+                            "Technical issues",
                             choices = technical_issues,
                             inline = TRUE
-                          )
-                        )
+                          ),
+                      #  )
+                      # )
+                      checkboxGroupInput(
+                        "sel_otther_iss",
+                        "Other issues",
+                        choices = c("Tyloses", "Decay", "Other"),
+                        inline = TRUE
                       )
                     )
                   ),
@@ -237,7 +243,7 @@ ui <- bslib::page_fluid(
                       class = "clean-card",
                       fill = FALSE,
                       checkboxGroupInput("sel_discrete",
-                                         "Discrete features: Select all that apply",
+                                         "Discrete features",
                                          choices = discrete_features,
                                          inline = TRUE),
                     ),
@@ -250,20 +256,17 @@ ui <- bslib::page_fluid(
                         width = "100%",
                         placeholder = "Enter any additional notes regarding the selected ring here..."
                       )
-                    ),
-                    bslib::card(
-                      fill = FALSE,
-                      class = "clean-card",
-                      verbatimTextOutput("correlation")
                     )
                   )
                 ),
 
                 bslib::layout_column_wrap(
                   width = "217px", fixed_width = TRUE,
-                  actionButton("undo_sel_flags", "Undo current edits", icon = icon("arrow-left")),
+                  #actionButton("undo_sel_flags", "Undo current edits", icon = icon("arrow-left")),
                   actionButton("reset_to_raw", "Reset to input", icon = icon("undo")),
-                  actionButton("show_image", "Open image", icon = icon("image"))
+                  actionButton("show_image", "Open image", icon = icon("image")),
+                  actionButton("prev_ring", "Previous", icon = icon("arrow-left")),
+                  actionButton("next_ring", "Next", icon = icon("arrow-right"))
                 )
 
               ),

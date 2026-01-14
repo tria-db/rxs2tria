@@ -67,7 +67,7 @@ disqual_issues <- c(
   "Orientation" = "orientation",
   "Tyloses" = "tyloses",
   "Decay" = "decay",
-  "Technical issues" = "technical_issues",
+  #"Technical issues" = "technical_issues",
   "Other" = "other_disqual"
 )
 
@@ -81,14 +81,6 @@ technical_issues <- c(
   "Tangentially incomplete" = "tang_incomplete"
 )
 
-flag_cols <- c(
-  "duplicate_rank" = "Duplicate Rank",
-  "incomplete_ring" = "Incomplete Ring",
-  "missing_cells" = "Missing Cells",
-  "abnormal_cells" = "Abnormal Cells",
-  "abnormal_profile" = "Abnormal Profile",
-  "visual_quality" = "Visual Quality"
-)
 
 
 get_new_excluded <- function(rings_org, rings_edit, sel_wp, plt_df, param){
@@ -142,6 +134,83 @@ show_input_source_modal <- function(){
     )
   )
 }
+
+# ERRORS and WARNINGS ------------------------------
+# wrapper for an error message
+show_error_modal <- function(title, message) {
+  if (shiny::isRunning()) {
+    showModal(modalDialog(
+      title = title,
+      message,
+      easyClose = TRUE,
+      footer = NULL
+    ))
+  } else {
+    message(sprintf("[ERROR] %s: %s", title, message))
+  }
+}
+
+# wrapper for a warning notification
+show_warning_notification <- function(message) {
+  if (shiny::isRunning()) {
+    shiny::showNotification(message, type = "warning")
+  } else {
+    message(sprintf("[WARNING] %s", message))
+  }
+}
+
+# Safely try to run a given expression without crashing the app
+# run the expr in the given block
+# and catch errors and warnings, showing them in a modal dialog or notification
+# in case of a warning, the rest of the block is still executed
+# in case of an error, the block is exited, returning NULL, and the error is shown in a modal dialog
+# if propagate_err = FALSE, the parent context will not receive an error and execution continues with the NULL return from the current block
+# modal dialog is shown only if the error is not already a modal_shown class, so only for the lowest level
+safe_block <- function(expr,
+                       err_title = "Error", err_message = "An error occurred:",
+                       propagate_err = TRUE,
+                       warn_message = "A warning occurred:") {
+  tryCatch(
+    withCallingHandlers(
+      expr,
+      warning = function(w) {
+        show_warning_notification(paste(warn_message, w$message))
+        rlang::cnd_muffle(w) # muffle warnings so they don't propagate up
+      }
+    ),
+    error = function(e) {
+      if (!inherits(e, "modal_shown")) {
+        show_error_modal(err_title, paste(err_message, e$message))
+        e <- structure(e, class = c("modal_shown", class(e)))
+      }
+      if (propagate_err) {
+        stop(e)  # re-throw error in parent context
+      }
+      return(NULL)
+    }
+  )
+}
+
+# helper throws error if not all checks passed
+validate_input_dfs <- function(prf_data_in, rings_data_in, rxsmeta_data_in){
+  checkmate::assert_data_frame(prf_data_in[c("image_label","year","sector_n")],
+                               min.rows = 1, any.missing = FALSE)
+  # ensure we have at least one measurement column with data
+
+  checkmate::assert_data_frame(
+    prf_data_in |> dplyr::select(-image_label, -year, -sector_n,
+                                 dplyr::where(is.numeric)),
+    min.cols = 1, all.missing = FALSE)
+
+  # ensure we have data and there are no missing values in structure cols
+  checkmate::assert_data_frame(rings_data_in[c("woodpiece_label", "slide_label", "image_label","year")],
+                               min.rows = 1, any.missing = FALSE)
+
+  checkmate::assert_data_frame(rxsmeta_data_in[c("image_label","species_code", "site_label")],
+                               min.rows = 1, any.missing = FALSE)
+  TRUE
+}
+
 
 get_list_item <- function(var_name, envir = .GlobalEnv) {
   # Handle obj$element format

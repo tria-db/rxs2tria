@@ -609,9 +609,9 @@ validate_QWA_data <- function(QWA_data, df_meta, verbose_flags = FALSE){
 
   cli::cli_inform(c(
     "i" = "The following issues were automatically detected:",
-    "" = "Rings flagged as incomplete: {n_incomplete}",
-    "" = "Rings flagged as missing: {n_missing}",
-    "" = "Rings flagged as missing: {n_duplicate} ({n_dupl_years} unique years)",
+    " " = "Rings flagged as incomplete: {n_incomplete}",
+    " " = "Rings flagged as missing: {n_missing}",
+    " " = "Rings flagged as missing: {n_duplicate} ({n_dupl_years} unique years)",
     "v" = "QWA data have been validated!"
   ))
 

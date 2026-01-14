@@ -141,6 +141,8 @@ prf_data <- calculate_profiles(
 prf_data2 <- calculate_sector_profiles(
   QWA_data, n_sectors, sel_cell_params, quant_probs
 )
+# TODO: handling missing rings: currently, if ring has few cells, they seem to fall in sector 5
+# what if there are no cells? what about the other sectors?
 
 if (save_files){
   readr::write_csv(prf_data,
@@ -152,7 +154,8 @@ if (save_files){
 
 ################################################################################
 # read in previously saved data for testing
-prf_data <- vroom::vroom("/Users/maranaegelin/Documents/QWAdata/LTAL_S22/rxs2tria_out/20251208_TRIA_LTAL_S22_profiles.csv")
+prf_data <- vroom::vroom("/Users/maranaegelin/Documents/QWAdata/LTAL_S22/rxs2tria_out/20251208_TRIA_LTAL_S22_profiles.csv",
+                         col_types = c(image_label = "c", year = "i", sector_n = "i"))
 QWA_data <- list()
 QWA_data$rings <- vroom::vroom("/Users/maranaegelin/Documents/QWAdata/LTAL_S22/rxs2tria_out/20251208_TRIA_LTAL_S22_rings.csv")
 QWA_data$cells <- vroom::vroom("/Users/maranaegelin/Documents/QWAdata/LTAL_S22/rxs2tria_out/20251208_TRIA_LTAL_S22_cells.csv.gz")

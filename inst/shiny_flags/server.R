@@ -8,14 +8,14 @@ server <- function(input, output, session) {
     rxsmeta_data = NULL
   )
 
-  # button to open input modal
-  observeEvent(input$btn_input, {
+  # open input modal when btn_input is clicked
+  observe({
     # warn before overwriting existing data
-    no_inputs <- all(
+    no_existing_inputs <- all(
       is.null(input_data$prf_data),
       is.null(input_data$rings_data),
       is.null(input_data$rxsmeta_data))
-    if (!no_inputs) {
+    if (!no_existing_inputs) {
       showModal(
         modalDialog(
           title = "Warning",
@@ -24,22 +24,22 @@ server <- function(input, output, session) {
            Are you sure you want to proceed?",
           footer = tagList(
             modalButton("Cancel"),
-            actionButton("conf_inp_overwrite", "Proceed")
+            actionButton("confirm_overwrite", "Proceed")
           )
         )
       )
     } else {
       show_input_source_modal()
     }
-  })
+  }) |> bindEvent(input$btn_input)
 
   # if overwrite confirmed, also show input source modal
-  observeEvent(input$conf_inp_overwrite, {
+  observe({
     removeModal()
     show_input_source_modal()
-  })
+  }) |> bindEvent(input$confirm_overwrite)
 
-  # create ui to provide input data based on selection (within input source modal)
+  # ui to provide input data based on selection (within input source modal)
   output$load_details_ui <- renderUI({
     req(input$load_type)
     if (input$load_type == "env") {
@@ -63,12 +63,19 @@ server <- function(input, output, session) {
     }
   })
 
-  # read data from inputs on input$confirm_input
+  # when input is confirmed, load data
   observe({
     if (input$load_type == "env") {
-      # load from R environment
-      tryCatch({
-        prf_data_in <- get(input$prf_name, envir = .GlobalEnv)
+      safe_block({
+        prf_data_in <- get(input$prf_name, envir = .GlobalEnv) |>
+          tibble::as_tibble() |>
+          # NOTE: enforce existence and correct type or required cols
+          dplyr::mutate(
+            image_label = as.character(image_label),
+            year = as.integer(year),
+            sector_n = as.integer(sector_n)
+          )
+
         rings_name <- input$rings_name
         # rings data may be element of a list (e.g. QWA_data$rings)
         if (grepl("\\$", rings_name) ||
@@ -77,120 +84,128 @@ server <- function(input, output, session) {
         } else {
           rings_data_in <- get(rings_name, envir = .GlobalEnv)
         }
-        rxsmeta_data_in <- get(input$rxsmeta_name, envir = .GlobalEnv)
+        logi_cols <- c("exclude_dupl", "exclude_issues", # maybe duplicate to here?
+                       unname(discrete_features),
+                       unname(disqual_issues),
+                       unname(technical_issues))
+        rings_data_in <- rings_data_in |>
+          tibble::as_tibble() |>
+          dplyr::mutate(
+            dplyr::across(c(woodpiece_label, slide_label, image_label), as.character),
+            year = as.integer(year),
+            dplyr::across(dplyr::any_of(logi_cols),
+                          \(x) tidyr::replace_na(as.logical(x), FALSE)) # TODO: OK? or require no missing?
+          )
 
-        # TODO: expand to use validate_df and align_to_structure, safe_block from shiny_meta?
-        # TODO: check also consistency btw files
-        checkmate::assert_subset(c("image_label","year","sector_n"), names(prf_data_in))
-        checkmate::assert_data_frame(prf_data_in[c("image_label","year","sector_n")], min.rows = 1, any.missing = FALSE)
-        checkmate::assert_character(names(prf_data_in), min.len = 4)
-        checkmate::assert_subset(c("woodpiece_label", "slide_label", "image_label","year",
-                                   "incomplete_ring", "missing_ring","duplicate_ring",
-                                   "exclude_dupl","exclude_issues"), names(rings_data_in))
-        checkmate::assert_data_frame(rings_data_in[c("woodpiece_label", "slide_label", "image_label","year")],
-                                     min.rows = 1, any.missing = FALSE)
-        checkmate::assert_subset(c("image_label", "slide_label", "woodpiece_label",
-                                   "tree_label", "species_code", "site_label", "fname_image"),
-                                 names(rxsmeta_data_in))
+        rxsmeta_data_in <- get(input$rxsmeta_name, envir = .GlobalEnv) |>
+          tibble::as_tibble() |>
+        # TODO: maybe not (all) required (if we don't want to open images, if only one site/species -> might not need filter)
+          dplyr::mutate(
+            dplyr::across(
+              c(image_label, woodpiece_label, species_code, site_label, fname_image),
+              as.character
+            )
+          )
+
+        # TODO: what if we don't want to provide prf, only rings?
+        # TODO: validate that the different dataframes mach each other (prf in rings in rxsmeta)
+        # TODO: check that duplicate ring flags are correct, and exclude_dupl is ok
+        # TODO: check missing rings -> 0 mrw and prf measurements where applicaple, rather than missing rows or NA?
+        # TODO: check that if we have technical_issue cols with TRUE vals, the corresponding technical_issue is TRUE ALSO
+        # TODO: check that if affected_tissue, then at least something flagged?
+
+        valid_inputs <- validate_input_dfs(prf_data_in, rings_data_in, rxsmeta_data_in)
 
         input_data$prf_data <- prf_data_in
         input_data$rings_data <- rings_data_in
         input_data$rxsmeta_data <- rxsmeta_data_in
         removeModal()
       },
-      error = function(e) {
-        showModal(modalDialog(
-          title = "Error loading data from environment",
-          paste("There was an error reading the provided input data.frames:", e$message),
-          easyClose = TRUE,
-          footer = NULL
-        ))
-        return(NULL)
-      })
+        err_title = "Error loading data from environment",
+        err_message = "There was an error reading the provided input data.frames:",
+        propagate_err = FALSE
+      )
 
     } else if (input$load_type == "csv") {
       # load from csv files
-      tryCatch({
+      safe_block({
         prf_data_in <- vroom::vroom(
-          input$file_prf$datapath, #"~/Desktop/LtalS22_out/20251228_TRIA_LTAL_S22_profiles.csv",
-          col_types = c(.default = "d",
-                        image_label = "c", year = "i", sector_n = "i")
-          )
+          input$file_prf$datapath,
+          # NOTE: col_types enforces existence and correct type or required cols
+          col_types = c(image_label = "c", year = "i", sector_n = "i")
+        )
         rings_data_in <- vroom::vroom(
-          input$file_rings$datapath, #"~/Desktop/LtalS22_out/20251228_TRIA_LTAL_S22_rings.csv",
-          col_types = col_types
+          input$file_rings$datapath,
+          col_types = c(woodpiece_label = "c", slide_label = "c", image_label = "c",
+                        year = "i", incomplete_ring = "l", missing_ring = "l",
+                        duplicate_ring = "l", exclude_dupl = "l", exclude_issues = "l")
         )
         rxsmeta_data_in <- vroom::vroom(
           input$file_rxsmeta$datapath,
-          col_types = c(.default = "c") # only need structure cols and image filename and paths - all character ok
+          col_types = c(image_label = "c", woodpiece_label = "c",
+                        species_code = "c", site_label = "c",
+                        fname_image =  "c")
         )
 
-        checkmate::assert_subset(c("image_label","year","sector_n"), names(prf_data_in))
-        checkmate::assert_data_frame(prf_data_in[c("image_label","year","sector_n")], min.rows = 1, any.missing = FALSE)
-        checkmate::assert_character(names(prf_data_in), min.len = 4)
-        checkmate::assert_subset(c("woodpiece_label", "slide_label", "image_label","year",
-                                   "incomplete_ring", "missing_ring","duplicate_ring",
-                                   "exclude_dupl","exclude_issues"), names(rings_data_in))
-        checkmate::assert_data_frame(rings_data_in[c("woodpiece_label", "slide_label", "image_label","year")],
-                                     min.rows = 1, any.missing = FALSE)
-        checkmate::assert_subset(c("image_label", "slide_label", "woodpiece_label",
-                                   "tree_label", "species_code", "site_label", "fname_image"),
-                                 names(rxsmeta_data_in))
+        valid_inputs <- validate_input_dfs(prf_data_in, rings_data_in, rxsmeta_data_in)
 
         input_data$prf_data <- prf_data_in
         input_data$rings_data <- rings_data_in
         input_data$rxsmeta_data <- rxsmeta_data_in
         removeModal()
       },
-      error = function(e) {
-        showModal(modalDialog(
-          title = "Error loading data from csv files",
-          paste("There was an error reading the provided input files:", e$message),
-          easyClose = TRUE,
-          footer = NULL
-        ))
-        return(NULL)
-      })
+        err_title = "Error loading data from environment",
+        err_message = "There was an error reading the provided input data.frames:",
+        propagate_err = FALSE
+      )
     } else {
       # TODO: load example data
       NULL
       removeModal()
     }
-  }) |> bindEvent(input$confirm_input, ignoreNULL = TRUE, ignoreInit = TRUE)
+  }) |> bindEvent(input$confirm_input)
 
-  # update UI based on loaded input data
+  # update sidebar UI based on loaded input data
   observe({
+    # TODO: what if we have no rxsmeta_data or no prf_data?
+    req(input_data$prf_data, input_data$rings_data, input_data$rxsmeta_data)
     prf_data <- input_data$prf_data
     rings_data <- input_data$rings_data
     rxsmeta_data <- input_data$rxsmeta_data
 
-    site_choices <- unique(rxsmeta_data$site_label)
-    updateSelectInput(session, "sel_site", choices = site_choices,
-                      selected = site_choices)
+    # site and species select inputs
     species_choices <- unique(rxsmeta_data$species_code)
     updateSelectInput(session, "sel_species", choices = species_choices,
                       selected = species_choices[1])
+    site_choices <- unique(rxsmeta_data$site_label)
+    sel_sites <- rxsmeta_data |>
+      dplyr::filter(species_code == species_choices[1]) |>
+      dplyr::pull(site_label) |> unique()
+    updateSelectInput(session, "sel_site", choices = site_choices,
+                      selected = sel_sites)
 
-    param_choices_prf <- setdiff(names(prf_data), c("image_label", "year", "sector_n"))
-    param_choices_ring <- setdiff(names(rings_data),
-                                      c("woodpiece_label", "slide_label", "image_label",
-                                        "year", "incomplete_ring", "missing_ring",
-                                        "duplicate_ring", "exclude_dupl", "exclude_issues"))
+    # parameter select input
+    param_choices_prf <-  prf_data |>
+      dplyr::select(dplyr::where(is.numeric), -year, -sector_n) |> names()
+    param_choices_ring <- rings_data |>
+      dplyr::select(dplyr::where(is.numeric), -year) |> names()
     updateSelectInput(session, "sel_param", choices = list(
       "Ring level" = param_choices_ring,
       "Agg. cell level" = param_choices_prf
     ), selected = param_choices_prf[1])
 
+    # sector select input
     sector_choices <- sort(unique(prf_data$sector_n))
     updateSelectInput(session, "sel_sector", choices = sector_choices,
                       selected = sector_choices[1])
   }) |> bindEvent(input_data$prf_data,
                   input_data$rings_data,
                   input_data$rxsmeta_data,
-                  ignoreNULL = TRUE, ignoreInit = TRUE)
+                  ignoreInit = TRUE)
 
+  # update select wp input based on sel site and species
   observe({
-    req(isTruthy(input_data$rxsmeta_data))
+    req(input$sel_site, input$sel_site)
     rxsmeta_data <- input_data$rxsmeta_data |> dplyr::filter(
       site_label %in% input$sel_site,
       species_code %in% input$sel_species
@@ -198,109 +213,60 @@ server <- function(input, output, session) {
     wp_choices <- unique(rxsmeta_data$woodpiece_label)
     updateSelectInput(session, "sel_wp", choices = wp_choices,
                       selected = wp_choices)
-  }) |> bindEvent(list(input$sel_site, input$sel_species),
-                  ignoreNULL = TRUE, ignoreInit = TRUE)
+  }) |> bindEvent(input$sel_site, input$sel_species, ignoreInit = TRUE)
 
   # enable/disable sector selection based on selected parameter
   observe({
-    req(isTruthy(input_data$prf_data))
     sel_param <- input$sel_param
     if (sel_param %in% names(input_data$prf_data)){
       shinyjs::enable("sel_sector")
     } else {
       shinyjs::disable("sel_sector")
     }
-  })
+  }) |> bindEvent(input$sel_param, ignoreInit = TRUE)
 
 
   # REACTIVE CONTAINER: EDITED FLAGS DATA --------------------------------------
+  # NOTE: rings_data_org is the basis for the plot, rings_data_edited tracks
+  #e dits of the flag inputs for selected rings. edits are then propagated back
+  # to rings_data_org when the save / update btn is clicked
   rings_data_org <- reactiveVal(NULL)
   rings_data_edited <- reactiveVal(NULL)
 
-
-  # initialize rings_data_out with input_data$rings_data
-  # observe({
-  #   # initialize new flag columns if not present
-  #   new_flag_cols <- setdiff(c(unname(discrete_features),
-  #                              unname(disqual_issues), unname(technical_issues),
-  #                              "comment",
-  #                              "exclude_scope"),
-  #                            names(input_data$rings_data))
-  #   df_rings <- input_data$rings_data
-  #   df_rings[new_flag_cols] <- FALSE
-  #   if ("comment" %in% new_flag_cols){
-  #     df_rings$comment <- NA_character_
-  #   }
-  #   if ("exclude_scope" %in% new_flag_cols){
-  #     df_rings$exclude_scope <- NA_character_
-  #   }
-  #
-  #   rings_data_org(df_rings)
-  # }) |> bindEvent(input_data$rings_data, ignoreNULL = TRUE, ignoreInit = TRUE)
-
+  # initialize rings_data_out with input data
   observe({
-    req(isTruthy(input_data$rings_data))  # ensure rings_data is loaded
-
     df_rings <- input_data$rings_data
-
-    # --- 1. Define logical flag columns ---
-    flag_cols <- c(unname(discrete_features),
-                   unname(disqual_issues),
-                   unname(technical_issues))
-
-    # --- 2. Initialize missing logical flags as FALSE ---
-    missing_flags <- setdiff(flag_cols, names(df_rings))
-    if (length(missing_flags) > 0) {
-      df_rings[missing_flags] <- FALSE
-    }
-
-    # --- 3. Ensure existing logical columns are logical ---
-    existing_flags <- intersect(flag_cols, names(df_rings))
-    for (col in existing_flags) {
-      if (!is.logical(df_rings[[col]])) {
-        df_rings[[col]] <- as.logical(df_rings[[col]])
-      }
-    }
-
-    # # --- 4. Reset all logical flags to FALSE ---
-    # if (length(flag_cols) > 0) {
-    #   df_rings <- df_rings %>% dplyr::mutate(dplyr::across(all_of(flag_cols), ~ FALSE))
-    # }
-
-    # --- 5. Handle character columns ---
-    if (!"comment" %in% names(df_rings)) {
-      df_rings$comment <- NA_character_
-    } else {
+    # initialize new flag columns if not present
+    new_flag_cols <- setdiff(c(unname(discrete_features),
+                               unname(disqual_issues), unname(technical_issues)),
+                              # "exclude_scope", "comment"), #affected_tissue
+                             names(df_rings))
+    df_rings[new_flag_cols] <- FALSE
+    # initialize comment and exclude_scope columns if not present
+    if ("comment" %in% names(df_rings)){
       df_rings$comment <- as.character(df_rings$comment)
-      #df_rings$comment[] <- NA_character_  # clear old values
-    }
-
-    if (!"exclude_scope" %in% names(df_rings)) {
-      df_rings$exclude_scope <- NA_character_
     } else {
-      df_rings$exclude_scope <- as.character(df_rings$exclude_scope)
-      #df_rings$exclude_scope[] <- NA_character_  # clear old values
+      df_rings["comment"] <- NA_character_
+    }
+    if ("affected_tissue" %in% names(df_rings)){
+      df_rings$affected_tissue <- as.character(df_rings$affected_tissue)
+      # TODO: check for valid entries? NA, "ew", "lw", "all"
+    } else {
+      df_rings["affected_tissue"] <- NA_character_
     }
 
-    # --- 6. Update reactive containers ---
     rings_data_org(df_rings)
-    rings_data_edited(df_rings)  # ensures UI inputs are reset
+  }) |> bindEvent(input_data$rings_data)
 
-  }) |> bindEvent(input_data$rings_data, ignoreNULL = TRUE, ignoreInit = TRUE)
-
-
-  # initalize copy rings_data_edited of rings_data_out
+  # initialize editable copy of rings_data_out
   observe({
     rings_data_edited(rings_data_org())
-  }) |> bindEvent(rings_data_org(), ignoreNULL = TRUE, ignoreInit = TRUE)
-
-
+  }) |> bindEvent(rings_data_org())
 
 
   # REACTIVE CONTAINER: PLOT DATA ----------------------------------------------
   plot_data <- reactive({
-    req(isTruthy(rings_data_org()),
-        isTruthy(input$sel_param))
+    req(rings_data_org(), input$sel_param)
 
     # start from rings df for structure, exclusions and (if applicable) sel_param
     df_crn <- rings_data_org() |>
@@ -322,11 +288,9 @@ server <- function(input, output, session) {
     if (!input$show_excl){
       # 'remove' excluded years by setting param to NA
       df_crn[df_crn$exclude_issues, input$sel_param] <- NA
-      #df_crn <- df_crn |> dplyr::filter(!exclude_issues)
     }
 
     # if (input$spline_det){
-
       # TODO
       # transform the plot data to df where
       # pivot wider to have (woodpiece_label, sel_param) as columns
@@ -336,18 +300,14 @@ server <- function(input, output, session) {
       # pivot longer back to original format
     # }
 
-    # sort to make sure color palette stays consistent (?)
+    # sort to make sure color palette stays consistent (not needed?)
     df_crn <- df_crn |>
       dplyr::arrange(woodpiece_label, year)
 
     df_crn
-  }) |> bindEvent(list(rings_data_org(),
-                       #input$sel_wp,
-                       input$sel_param,
-                       input$sel_sector,
-                       input$show_excl #, input$spline_det
-                       )
-                  )
+  }) |> bindEvent(rings_data_org(),
+                  input$sel_param, input$sel_sector, input$show_excl, # TODO: , input$spline_det
+                  ignoreInit = TRUE)
 
   # create color palette based on how many traces (wp) we plot
   color_palette <- reactive({
@@ -356,25 +316,10 @@ server <- function(input, output, session) {
                    length(unique(plot_data()$woodpiece_label)),
                    contrasting = TRUE)
   })
-  # // Function to extract trace information
-  # function extractTraceInfo() {
-  #   var out = {};
-  #   el._fullData.forEach(function(trace, traceindex) {
-  #     console.log(trace)
-  #     out[trace.name] = {
-  #       curveNumber: traceindex,
-  #       opacity: trace.opacity !== undefined ? trace.opacity : 1,
-  #       visible: trace.visible !== undefined ? trace.visible : true,
-  #       meta: trace.meta !== undefined ? trace.meta : null
-  #     };
-  #   });
-  #   return out;
-  # }
+
 
   # PLOTLY ---------------------------------------------------------------------
-  last_restored_render <- reactiveVal(NULL)
-
-  # JavaScript to capture trace opacities on restyle events
+  # JavaScript to capture trace info and send to Shiny
   js_traces <- "function(el, x, inputName){
 
     // Function to extract trace information
@@ -383,7 +328,6 @@ server <- function(input, output, session) {
       // Use both el.data (original) and el._fullData (processed)
       el.data.forEach(function(trace, traceindex) {
         var fullTrace = el._fullData[traceindex];
-        console.log('Trace', traceindex, 'name:', (fullTrace.name !== undefined ? fullTrace.name : 'na'), 'data.visible:', trace.visible, 'fullData.visible:', fullTrace.visible);
         out[fullTrace.name] = {
           curveNumber:  traceindex,
           opacity:  fullTrace.opacity !== undefined ? fullTrace.opacity : 1,
@@ -394,7 +338,6 @@ server <- function(input, output, session) {
       return out;
     }
 
-
     // Helper to update Shiny input
     function updateShinyInput() {
       Shiny.setInputValue(inputName, extractTraceInfo());
@@ -404,8 +347,6 @@ server <- function(input, output, session) {
     el.on('plotly_afterplot', function() {
       console.log('Plot rendered, updating trace info');
       updateShinyInput();
-      // Signal that plot has been rendered
-      // Shiny. setInputValue(inputName + '_rendered', Math.random());
     });
 
     // When traces are restyled (legend clicks, opacity changes)
@@ -415,18 +356,17 @@ server <- function(input, output, session) {
     });
   }"
 
-
+  # render the plot given the ring data and selected inputs
   output$ts_crn_plot <- plotly::renderPlotly({
-    cat("=== PLOT RENDERING ===\n")
-    cat("Time:", Sys.time(), "\n")
-
     validate(
       need(isTruthy(plot_data()), "Please provide input data")
     )
-
     sel_param <- input$sel_param
     validate(need(any(!is.na(plot_data()[sel_param])),
                   "No data to display for the selected parameter and filters."))
+
+    cat("=== PLOT RENDERING ===\n")
+    cat("Time:", Sys.time(), "\n")
 
     p <- plotly::plot_ly(
       data = plot_data(),
@@ -437,43 +377,9 @@ server <- function(input, output, session) {
       type = 'scatter',
       mode = 'lines',
       name = ~woodpiece_label,
-      source = "crn_plot",  # Set source ID here,
-      meta = list(role = "orgline")
+      source = "crn_plot",  # set source ID
+      meta = list(role = "orgline") # trace info for wp lines
     )
-      # # Add empty red markers trace
-      # plotly::add_trace(
-      #   x = numeric(0),
-      #   y = numeric(0),
-      #   name = "sel_ring",
-      #   type = 'scatter',
-      #   mode = "markers",
-      #   marker = list(
-      #     size = 10,
-      #     color = "red",
-      #     symbol = "circle"
-      #   ),
-      #   showlegend = FALSE,
-      #   hoverinfo = "skip",
-      #   meta = list(role = "selring"),
-      #   inherit = FALSE  # Don't inherit data from plot_ly()
-      # ) |>
-      # Add empty pink markers trace
-      # plotly::add_trace(
-      #   x = numeric(0),
-      #   y = numeric(0),
-      #   name = "excl_rings",
-      #   type = 'scatter',
-      #   mode = "markers",
-      #   marker = list(
-      #     size = 6,
-      #     color = "hotpink",
-      #     symbol = "x"
-      #   ),
-      #   showlegend = FALSE,
-      #   hoverinfo = "skip",
-      #   meta = list(role = "exclring"),
-      #   inherit = FALSE
-      # )
 
     p <- p %>%
       plotly::layout(
@@ -482,10 +388,10 @@ server <- function(input, output, session) {
         yaxis = list(title = sel_param),
         showlegend = TRUE,
         legend = list(
-          orientation = 'h',     # Horizontal orientation
-          yanchor = 'bottom',    # Anchor the legend at the bottom
-          y = 1.1,               # Place it slightly above the plot area
-          xanchor = 'center',    # Center the legend horizontally
+          orientation = 'h',      # Horizontal orientation
+          yanchor = 'bottom',     # Anchor the legend at the bottom
+          y = 1.1,                # Place it slightly above the plot area
+          xanchor = 'center',     # Center the legend horizontally
           x = 0.5,                # Position the legend at the center horizontally,
           itemclick = FALSE,      # Disable single click on legend (custom handling)
           itemdoubleclick = FALSE # Disable double click on legend (custom handling)
@@ -498,7 +404,9 @@ server <- function(input, output, session) {
 
     # TODO: if show_excl, add a marker trace to highlight excluded points?
     # input$show_excl -> plot_data() -> plot render
+    # what about highlighting other flagged years based on some input?
 
+    # if we have axes limits from previous render, reset them
     if (!is.null(crn_x_axes())){
       x_axes <- crn_x_axes()
       if (!is.null(x_axes$x_min) && !is.null(x_axes$x_max)){
@@ -517,27 +425,11 @@ server <- function(input, output, session) {
                                     'hoverCompareCartesian')) %>%
       # add custom JS to capture shown traces
       htmlwidgets::onRender(js_traces, data = "traces_crn")
-  }) |> bindEvent(plot_data())
+  }) |> bindEvent(plot_data(), ignoreNULL = FALSE)
 
-  # Capture click events on plotly
-  crn_click_data <- reactive({
-    req(plot_data())
-    plotly::event_data("plotly_click",
-                       source = "crn_plot", priority = "event") # event: reevaluate on each click, even if same item
-  })
 
-  crn_lgnd_click <- reactive({
-    req(plot_data())
-    plotly::event_data("plotly_legendclick",
-                       source = "crn_plot", priority = "event")
-  })
-
-  crn_lgnd_dblclick <- reactive({
-    req(plot_data())
-    plotly::event_data("plotly_legenddoubleclick",
-                       source = "crn_plot", priority = "event")
-  })
-
+  # PLOTLY REACTIVITY: AXES CHANGES --------------------------------------------
+  # capture axes limit changes and keep track of them
   crn_change_axes <- reactive({
     req(plot_data())
     plotly::event_data("plotly_relayout",
@@ -562,17 +454,32 @@ server <- function(input, output, session) {
     }
 
     crn_x_axes(x_axes)
-  }) |> bindEvent(crn_change_axes(), ignoreNULL = TRUE, ignoreInit = TRUE)
+  }) |> bindEvent(crn_change_axes())
 
-  # Keep track of pending legend single clicks
-  pending_single_click <- reactiveVal(FALSE)
 
+  # PLOTLY REACTIVITY: LEGEND (DOUBLE) CLICKS ----------------------------------
+  # legend clicks can highlight / dim traces
   trace_opacity <- reactiveVal(list(
-      on = character(0),
-      off = character(0)
+    on = character(0),
+    off = character(0)
   ))
 
-  # Observe legend single clicks: toggle visibility of that trace
+  crn_lgnd_click <- reactive({
+    req(plot_data())
+    plotly::event_data("plotly_legendclick",
+                       source = "crn_plot", priority = "event")
+  })
+
+  crn_lgnd_dblclick <- reactive({
+    req(plot_data())
+    plotly::event_data("plotly_legenddoubleclick",
+                       source = "crn_plot", priority = "event")
+  })
+
+  # keep track of pending legend single clicks
+  pending_single_click <- reactiveVal(FALSE)
+
+  # observe legend single clicks: toggle visibility of that trace
   observe({
     # register pending first click
     req(!awaiting_restoration()) # avoid running if plot is rerendered
@@ -630,7 +537,7 @@ server <- function(input, output, session) {
     })
   }) |> bindEvent(crn_lgnd_click(), ignoreNULL = TRUE, ignoreInit = TRUE)
 
-  # Observe legend double clicks:
+  # observe legend double clicks:
   # toggle isolation of that trace (dimming all others)
   observe({
     req(!awaiting_restoration()) # avoid running if plot is rerendered
@@ -696,8 +603,16 @@ server <- function(input, output, session) {
     }
   }) |> bindEvent(crn_lgnd_dblclick(), ignoreNULL = TRUE, ignoreInit = TRUE)
 
+  # PLOTLY REACTIVITY: CLICK TRACE EVENTS --------------------------------------
+  # capture (single) click events on plotly (select ring)
+  crn_click_data <- reactive({
+    req(plot_data())
+    # priority event: reevaluate on each click, even if same item
+    plotly::event_data("plotly_click",
+                       source = "crn_plot", priority = "event")
+  })
 
-  # Observe plot clicks: add marker on selected point and highlight the trace
+  # observe plot clicks: add marker on selected point and highlight the trace
   latest_marker <- reactiveVal(NULL)
 
   observe({
@@ -769,7 +684,6 @@ server <- function(input, output, session) {
         trace_id # in first n_wp traces, so does not shift
       )
 
-
     # adding pink trace
     excl_markers <- get_new_excluded(
       rings_org = rings_data_org(),
@@ -778,7 +692,6 @@ server <- function(input, output, session) {
       plt_df = plot_data(),
       param = input$sel_param
     )
-
 
     if (nrow(excl_markers) > 0){
       p <- p %>%
@@ -805,6 +718,7 @@ server <- function(input, output, session) {
 
     p
   }) |> bindEvent(crn_click_data(), ignoreNULL = TRUE, ignoreInit = TRUE)
+
 
   # OBSERVE: Previous ring button -----------------------------------------------
   observeEvent(input$prev_ring, {
@@ -1074,12 +988,11 @@ server <- function(input, output, session) {
 
 
 
-
+  # PLOTLY REACTIVITY: SELECTED WOODPIECES -------------------------------------
   trace_visibility <- reactiveVal(list(
     visible = character(0),
     invisible = character(0)
   ))
-
 
   # make deselected woodpieces invisible
   observe({
@@ -1633,36 +1546,36 @@ server <- function(input, output, session) {
     }
   }) %>% bindEvent(latest_marker(), ignoreNULL = FALSE, ignoreInit = TRUE) # input$sel_wp
 
+  # the ring editor card title
+  output$sel_ring <- renderUI({
+    req(clicked_ring())
+    df <- clicked_ring()$data
+    paste("Selected ring:", df$image_label, "| Year:", df$year)
+  })
 
   expected_excl <- reactiveVal(NULL)
 
-  # update ring edit card when a ring is selected
+  # update ring edit card when a ring is selected with existing data
   observe({
     shinyjs::toggle(id = "ring_editor_card", condition = !is.null(clicked_ring()))
 
     # if a ring is selected, update the inputs with saved flags and comment
-    req(isTruthy(clicked_ring()))
-
+    req(clicked_ring())
 
     saved_flags <- clicked_ring()$data
     expected_excl(ifelse(saved_flags$exclude_issues, "yes", "no"))
     updateRadioButtons(session, "sel_exclude",
                        selected = ifelse(saved_flags$exclude_issues, "yes", "no"))
 
-    # --- NEW: EW/LW/ALL selector based on exclude ---
-    output$exclude_scope_ui <- renderUI({
-      if (saved_flags$exclude_issues) {
-        radioButtons(
-          "sel_exclude_scope",
-          "Exclude which part?",
-          choices = c("EW", "LW", "ALL"),
-          inline = TRUE,
-          selected = saved_flags$exclude_scope %||% "ALL"  # default ALL if NULL
-        )
-      } else {
-        NULL
-      }
-    })
+    shinyjs::toggle(id = "sel_affected", condition = saved_flags$exclude_issues)
+    if (saved_flags$exclude_issues) {
+      updateRadioButtons(session, "sel_affected",
+                         selected = ifelse(is.na(saved_flags$affected_tissue), "NA", saved_flags$affected_tissue))
+    }
+    # TODO: needed? } else {
+    #   updateRadioButtons(session, "sel_affected",
+    #                      selected = "NA")
+    # }
 
     sel_disc_flags <- saved_flags %>%
       dplyr::select(unname(discrete_features))
@@ -1679,59 +1592,26 @@ server <- function(input, output, session) {
                              selected = sel_disq_flags)
     shinyjs::runjs('$("#sel_disqual input[type=checkbox]").first().prop("disabled", true);')
 
-    if ("technical_issues" %in% sel_disq_flags) {
-      shinyjs::enable("sel_technical_exact")
-      sel_tech_issues <- saved_flags %>%
-        dplyr::select(unname(technical_issues))
-      sel_tech_issues <- names(sel_tech_issues)[sel_tech_issues[1,] == TRUE]
-      updateCheckboxGroupInput(session, "sel_technical_exact",
-                           selected = sel_tech_issues)
-    }
+    sel_tech_issues <- saved_flags %>%
+      dplyr::select(unname(technical_issues))
+    sel_tech_issues <- names(sel_tech_issues)[sel_tech_issues[1,] == TRUE]
+    updateCheckboxGroupInput(session, "sel_technical_exact",
+                         selected = sel_tech_issues)
+
+    # TODO: add other issues for disq card?
 
     updateTextAreaInput(session, "sel_comment",
                         value = saved_flags$comment)
 
-    # Store saved value for EW/LW/ALL
-    if (!is.null(saved_flags$exclude_scope)) {
-      updateRadioButtons(session, "sel_exclude_scope", selected = saved_flags$exclude_scope)
-    }
-
   }) |> bindEvent(clicked_ring(), ignoreNULL = FALSE, ignoreInit = FALSE)
 
 
-  # the ring editor card title
-  output$sel_ring <- renderUI({
-    req(clicked_ring())
-    df <- clicked_ring()$data
-    paste("Selected ring:", df$image_label, "| Year:", df$year)
-  })
+  # toggle the affected part selector based on exclude yes/no
+  observe({
+    shinyjs::toggle(id = "sel_affected", condition = input$sel_exclude == "yes")
+    # TODO: should also reset the value if hidden? read from where if shown?
+  }) |> bindEvent(input$sel_exclude)
 
-  # Reactively show EW/LW/ALL selector based on sel_exclude
-  observeEvent(input$sel_exclude, {
-    if (input$sel_exclude == "yes") {
-      output$exclude_scope_ui <- renderUI({
-        radioButtons(
-          "sel_exclude_scope",
-          "Exclude which part?",
-          choices = c("EW", "LW", "ALL"),
-          inline = TRUE,
-          selected = "ALL"  # default selection
-        )
-      })
-    } else {
-      output$exclude_scope_ui <- renderUI(NULL)  # hide if "no"
-    }
-  })
-
-  # toggle the technical issue specification checkboxes
-  observeEvent(input$sel_disqual, {
-    if (isTruthy(input$sel_disqual) && "technical_issues" %in% input$sel_disqual) {
-      shinyjs::enable("sel_technical_exact")
-    } else {
-      shinyjs::disable("sel_technical_exact") #techn_reason_el
-      updateSelectizeInput(session, "sel_technical_exact", selected = character(0))
-    }
-  }, ignoreNULL = FALSE)
 
   # toggle warning message on certain disqualifying issues
   # if at least one of "incomplete_ring", "missing_ring", "compression_wood" is in input$sel_disqual,
@@ -1804,19 +1684,20 @@ server <- function(input, output, session) {
     df_rings[ring_id, c(disq_flags_off, disc_flags_off, techn_flags_off)] <- FALSE
     df_rings[ring_id, "comment"] <- flag_changes()$comment
 
+    # TODO: change to affected_tissue
     # Add the new flag column for EW/LW/ALL
-    scope_val <- flag_changes()$exclude_scope
-    if (is.null(scope_val) || length(scope_val) == 0) scope_val <- NA_character_
-
-    if (!"exclude_scope" %in% names(df_rings)) {
-      df_rings$exclude_scope <- NA_character_
-    }
-
-    if (excl_flag) {
-      df_rings[ring_id, "exclude_scope"] <- scope_val
-    } else {
-      df_rings[ring_id, "exclude_scope"] <- NA_character_
-    }
+    # scope_val <- flag_changes()$exclude_scope
+    # if (is.null(scope_val) || length(scope_val) == 0) scope_val <- NA_character_
+    #
+    # if (!"exclude_scope" %in% names(df_rings)) {
+    #   df_rings$exclude_scope <- NA_character_
+    # }
+    #
+    # if (excl_flag) {
+    #   df_rings[ring_id, "exclude_scope"] <- scope_val
+    # } else {
+    #   df_rings[ring_id, "exclude_scope"] <- NA_character_
+    # }
 
     rings_data_edited(df_rings)
 
@@ -1856,18 +1737,18 @@ server <- function(input, output, session) {
                              selected = sel_disq_flags)
     shinyjs::runjs('$("#sel_disqual input[type=checkbox]").first().prop("disabled", true);')
 
-    if ("technical_issues" %in% sel_disq_flags) {
-      shinyjs::enable("sel_technical_exact")
+    # if ("technical_issues" %in% sel_disq_flags) {
+    #   shinyjs::enable("sel_technical_exact")
       sel_tech_issues <- saved_flags %>%
         dplyr::select(unname(technical_issues))
       sel_tech_issues <- names(sel_tech_issues)[sel_tech_issues[1,] == TRUE]
       updateSelectizeInput(session, "sel_technical_exact",
                            selected = sel_tech_issues)
-    } else {
-      shinyjs::disable("sel_technical_exact")
-      updateSelectizeInput(session, "sel_technical_exact",
-                           selected = character(0))
-    }
+    # } else {
+    #   shinyjs::disable("sel_technical_exact")
+    #   updateSelectizeInput(session, "sel_technical_exact",
+    #                        selected = character(0))
+    # }
 
     updateTextAreaInput(session, "sel_comment",
                         value = saved_flags$comment)
@@ -1927,18 +1808,18 @@ server <- function(input, output, session) {
                              selected = sel_disq_flags)
     shinyjs::runjs('$("#sel_disqual input[type=checkbox]").first().prop("disabled", true);')
 
-    if ("technical_issues" %in% sel_disq_flags) {
-      shinyjs::enable("sel_technical_exact")
+    # if ("technical_issues" %in% sel_disq_flags) {
+    #   shinyjs::enable("sel_technical_exact")
       sel_tech_issues <- saved_flags %>%
         dplyr::select(unname(technical_issues))
       sel_tech_issues <- names(sel_tech_issues)[sel_tech_issues[1,] == TRUE]
       updateSelectizeInput(session, "sel_technical_exact",
                            selected = sel_tech_issues)
-    } else {
-      shinyjs::disable("sel_technical_exact")
-      updateSelectizeInput(session, "sel_technical_exact",
-                           selected = character(0))
-    }
+    # } else {
+    #   shinyjs::disable("sel_technical_exact")
+    #   updateSelectizeInput(session, "sel_technical_exact",
+    #                        selected = character(0))
+    # }
 
     updateTextAreaInput(session, "sel_comment",
                         value = saved_flags$comment)
@@ -2114,33 +1995,34 @@ server <- function(input, output, session) {
 
 
   output$debug <- renderPrint({
-
+   crn_click_data()
+    # # For debugging: show traces_crn structure
   #   #purrr::detect(input$traces_crn, \(x) isTRUE(x$meta$role == "exclring"))
-    req(input$traces_crn)
-    traces_df <- purrr::map_dfr(names(input$traces_crn), function(name) {
-      item <- input$traces_crn[[name]]
-
-      # Start with basic columns
-      result <- list(
-        name = name,
-        curveNumber = item$curveNumber,
-        opacity = item$opacity,
-        visible = item$visible
-      )
-
-      # Add all meta elements if they exist
-      if (!is.null(item$meta)) {
-        meta_flat <- unlist(item$meta)
-        # Add meta_ prefix to distinguish from main columns
-        names(meta_flat) <- paste0("meta_", names(meta_flat))
-        result <- c(result, as.list(meta_flat))
-      }
-
-      # Convert to tibble
-      tibble::as_tibble(result)
-    })
-
-    tail(traces_df)
+    # req(input$traces_crn)
+    # traces_df <- purrr::map_dfr(names(input$traces_crn), function(name) {
+    #   item <- input$traces_crn[[name]]
+    #
+    #   # Start with basic columns
+    #   result <- list(
+    #     name = name,
+    #     curveNumber = item$curveNumber,
+    #     opacity = item$opacity,
+    #     visible = item$visible
+    #   )
+    #
+    #   # Add all meta elements if they exist
+    #   if (!is.null(item$meta)) {
+    #     meta_flat <- unlist(item$meta)
+    #     # Add meta_ prefix to distinguish from main columns
+    #     names(meta_flat) <- paste0("meta_", names(meta_flat))
+    #     result <- c(result, as.list(meta_flat))
+    #   }
+    #
+    #   # Convert to tibble
+    #   tibble::as_tibble(result)
+    # })
+    #
+    # tail(traces_df)
 
   })
 
