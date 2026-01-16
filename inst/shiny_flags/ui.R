@@ -82,10 +82,10 @@ ui <- bslib::page_fluid(
           if (editingMode) {
             if (e.key === 'ArrowLeft') {
               e.preventDefault();
-              Shiny.setInputValue('prev_ring_js', Math.random()); // TODO: use action btn id directly
+              Shiny.setInputValue('prev_ring', Math.random()); // TODO: use action btn id directly
             } else if (e.key === 'ArrowRight') {
               e.preventDefault();
-              Shiny.setInputValue('next_ring_js', Math.random());
+              Shiny.setInputValue('next_ring', Math.random());
             }
           }
         });
@@ -175,7 +175,23 @@ ui <- bslib::page_fluid(
                 bslib::card(
                   fill = FALSE,
                   class = "clean-card",
-                  verbatimTextOutput("correlation")
+                  uiOutput("ring_info"),
+                  # bslib::layout_column_wrap(
+                  #   width = 1/2,
+                  #   fill = FALSE,
+                    #style = bslib::css(grid_template_columns = "1fr 3fr"),
+                    #uiOutput("ring_info"),
+                    reactable::reactableOutput("tree_overview"),
+
+
+                    # bslib::card(max_height = "200px",
+                    #   bslib::card_body(class = "p-0", plotOutput("cov_info"))
+                    # )
+                  # ),
+                  verbatimTextOutput("correlation"),
+                  actionButton("show_coverage", "Show coverage plot", icon = icon("chart-line"), width = "217px"),
+                  actionButton("switch_dupl", "Switch chosen image", icon = icon("danger"), width = "217px")
+
                 ),
 
                 bslib::layout_column_wrap(
@@ -227,9 +243,9 @@ ui <- bslib::page_fluid(
                       #  )
                       # )
                       checkboxGroupInput(
-                        "sel_otther_iss",
+                        "sel_other_iss",
                         "Other issues",
-                        choices = c("Tyloses", "Decay", "Other"),
+                        choices = other_issues,
                         inline = TRUE
                       )
                     )

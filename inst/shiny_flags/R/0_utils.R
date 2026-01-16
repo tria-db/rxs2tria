@@ -64,11 +64,11 @@ disqual_issues <- c(
   "Wedging/missing ring" = "missing_ring",
   "Crossdating" = "x_dating",
   "Compression wood" = "compression_wood",
-  "Orientation" = "orientation",
-  "Tyloses" = "tyloses",
-  "Decay" = "decay",
-  #"Technical issues" = "technical_issues",
-  "Other" = "other_disqual"
+  "Orientation" = "orientation"
+  # "Tyloses" = "tyloses",
+  # "Decay" = "decay",
+  # #"Technical issues" = "technical_issues",
+  # "Other" = "other_disqual"
 )
 
 technical_issues <- c(
@@ -79,6 +79,12 @@ technical_issues <- c(
   "Overlapping cells" = "overlapping_cells",
   "Broken cells" = "broken_cells",
   "Tangentially incomplete" = "tang_incomplete"
+)
+
+other_issues <- c(
+  "Tyloses" = "tyloses",
+  "Decay" = "decay",
+  "Other" = "other_disqual"
 )
 
 
@@ -228,4 +234,76 @@ get_list_item <- function(var_name, envir = .GlobalEnv) {
   }
   get(obj_name, envir = envir)[[element_name]]
 }
+
+
+draw_selected_marker <- function(plot_obj, x_val, y_val, marker_name, meta_info){
+  plot_obj %>%
+    # add new marker trace
+    plotly::plotlyProxyInvoke(
+      "addTraces",
+      list(
+        x = list(x_val),
+        y = list(y_val),
+        name = marker_name,
+        mode = "markers",
+        marker = list(
+          size = 10,
+          color = "red",
+          symbol = "circle"
+        ),
+        showlegend = FALSE,
+        hoverinfo = "skip",
+        meta = meta_info
+      )
+    )
+}
+
+get_adjacent_year <- function(df, woodpiece, current_year, param, direction){
+  adj_years <- df |>
+    dplyr::filter(
+      woodpiece_label == woodpiece,
+      if (direction == "prev") year < current_year else year > current_year #,
+      # !is.na(.data[[param]])
+    ) |>
+    dplyr::select(year, param) |>
+    dplyr::arrange(if (direction == "prev") dplyr::desc(year) else year)
+
+  if (nrow(adj_years) == 0){
+    showNotification(sprintf(
+      "No %s year available for this woodpiece in current plot.",
+      if (direction == "prev") "earlier" else "later"),
+      type = "warning")
+    return(NULL)
+  }
+
+  return(setNames(
+    list(adj_years$year[1], adj_years[[param]][1]),
+    c("year", "val")
+  ))
+}
+
+get_overlapping_images <- function(df_rings, target_image) {
+  # Get year range for target image
+  target_range <- df_rings |>
+    dplyr::filter(image_label == target_image) |>
+    dplyr:: summarise(start = min(year), end = max(year))
+
+  # Find images that overlap or are within 2 years
+  valid_images <- df_rings |>
+    dplyr::group_by(image_label) |>
+    dplyr::summarise(start = min(year), end = max(year)) |>
+    dplyr::filter(
+      # overlaps with target
+      (start <= target_range$end & end >= target_range$start) |
+        # ends within 2 years before target starts
+        (end >= target_range$start - 2 & end < target_range$start) |
+        # starts within 2 years after target ends
+        (start <= target_range$end + 2 & start > target_range$end)
+    ) |>
+    dplyr:: pull(image_label)
+
+  df_rings |>
+    dplyr::filter(image_label %in% valid_images)
+}
+
 
