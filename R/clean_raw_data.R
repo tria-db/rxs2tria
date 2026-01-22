@@ -156,6 +156,10 @@ complete_cell_measures <- function(QWA_data){
     dplyr::left_join(df_ewlw %>% dplyr::select(-mrw), by = c("image_label", "year")) %>%
     dplyr::select(-max_EW_sector)
 
+  cli::cli_inform(c(
+    "v" = "Added additional cell measures and EW / LW estimation."
+  ))
+
   return(
     stats::setNames(
       list(df_cells, df_rings),
@@ -545,7 +549,7 @@ flag_duplicate_rings <- function(df_rings_log){
 #' @returns validated QWA_data (no changes to cells df, but added minimum required ring flag columns to rings df).
 #' @export
 #'
-validate_QWA_data <- function(QWA_data, df_meta, verbose_flags = FALSE){
+validate_QWA_data <- function(QWA_data, df_meta, verbose_flags = FALSE, exclude_mode = c("incomplete_only", "missing_only", "either", "both")){
   checkmate::assert_list(QWA_data, types = "data.frame", len = 2)
   checkmate::check_subset(names(QWA_data), c("cells", "rings"))
   checkmate::assert_subset(
@@ -589,6 +593,26 @@ validate_QWA_data <- function(QWA_data, df_meta, verbose_flags = FALSE){
   # default behavior is to select the year with the highest cell count (that isn't incomplete or missing)
   df_rings_log <- flag_duplicate_rings(df_rings_log) # replace with duplciate_sel?
 
+  mode <- match.arg(exclude_mode)
+
+  df_rings_log <- df_rings_log |> dplyr::mutate(
+    mrw = dplyr::if_else(missing_ring & is.na(mrw) & cno < 5, 0, mrw),
+    ra = dplyr::if_else(missing_ring & is.na(ra) & cno < 5, 0, ra),
+    eww = dplyr::if_else(missing_ring & is.na(eww) & cno < 5, 0, eww),
+    lww = dplyr::if_else(missing_ring & is.na(lww) & cno < 5, 0, lww),
+  )
+
+  df_rings_log <- df_rings_log %>%
+    dplyr::mutate(
+      exclude_issues = switch(
+        mode,
+        "both" = incomplete_ring & missing_ring,
+        "either" = incomplete_ring | missing_ring,
+        "incomplete_only" = incomplete_ring,
+        "missing_only" = missing_ring
+      )
+    )
+
   # TODO: finalize after checking, can already remove unnecessary cols in functions
   # remove unwanted columns
   if (!verbose_flags){
@@ -604,14 +628,14 @@ validate_QWA_data <- function(QWA_data, df_meta, verbose_flags = FALSE){
   n_incomplete <- sum(df_rings_log$incomplete_ring)
   n_missing <- sum(df_rings_log$missing_ring)
   n_duplicate <- sum(df_rings_log$duplicate_ring)
-  n_dupli_years <- df_rings_log[df_rings_log$duplicate_ring,] |>
+  n_dupl_years <- df_rings_log[df_rings_log$duplicate_ring,] |>
     dplyr::distinct(woodpiece_label, year) |> nrow()
 
   cli::cli_inform(c(
     "i" = "The following issues were automatically detected:",
     " " = "Rings flagged as incomplete: {n_incomplete}",
     " " = "Rings flagged as missing: {n_missing}",
-    " " = "Rings flagged as missing: {n_duplicate} ({n_dupl_years} unique years)",
+    " " = "Rings flagged as duplicate: {n_duplicate} ({n_dupl_years} unique years)",
     "v" = "QWA data have been validated!"
   ))
 

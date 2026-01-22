@@ -97,6 +97,7 @@ QWA_data <- complete_cell_measures(QWA_data)
 ################################################################################
 # clean raw data
 QWA_data <- validate_QWA_data(QWA_data, df_rxsmeta)
+# TODO: missing rings with 0 cells -> set mrw, cwt, la etc to 0
 # this creates some initial flags based on the data only, namely missing, incomplete and duplicate flags
 
 # add automatic exclude_year flags: default behavior is to exclude any incomplete or missing years from analysis

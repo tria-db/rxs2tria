@@ -1,3 +1,4 @@
+# COLORS ------------------
 # define color range
 prim_col <- "#006268"
 sec_col <- "#69004F"
@@ -30,6 +31,45 @@ extend_palette <- function(palette, n, contrasting = TRUE) {
   full_palette
 }
 
+# GLOBAL VARS ------------
+discrete_features <- c(
+  "Blue ring" = "blue_ring",
+  "Frost ring" = "frost_ring",
+  "Light ring" = "light_ring",
+  "Intra-annual density fluctuations" = "iadf",
+  "Traumatic resin ducts" = "traum_resin_ducts",
+  "Trabeculae" = "trabeculae",
+  "Other features" = "other_discrete"
+)
+
+disqual_issues <- c(
+  "Radially incomplete ring" = "incomplete_ring",
+  "Wedging/missing ring" = "missing_ring",
+  "Crossdating" = "x_dating",
+  "Compression wood" = "compression_wood",
+  "Orientation" = "orientation"
+)
+
+technical_issues <- c(
+  "Out of focus" = "out_of_focus",
+  "Crack(s)" = "cracks",
+  "Paraffin" = "paraffin",
+  "Compressed cells" = "compressed_cells",
+  "Overlapping cells" = "overlapping_cells",
+  "Broken cells" = "broken_cells",
+  "Tangentially incomplete" = "tang_incomplete"
+)
+
+other_issues <- c(
+  "Tyloses" = "tyloses",
+  "Decay" = "decay",
+  "Other issues" = "other_disqual"
+)
+
+
+
+
+
 shinyInput_CB_DT <- function(id, num, values, disabled = FALSE){
   inputs <- character(num)
   for (i in seq_len(num)) {
@@ -48,47 +88,6 @@ shinyInput_CB_DT <- function(id, num, values, disabled = FALSE){
   inputs
 }
 
-discrete_features <- c(
-  "Blue ring" = "blue_ring",
-  "Frost ring" = "frost_ring",
-  "Light ring" = "light_ring",
-  "Intra-annual density fluctuations" = "iadf",
-  "Traumatic resin ducts" = "traum_resin_ducts",
-  "Trabeculae" = "trabeculae",
-  "Other" = "other_discrete"
-)
-
-disqual_issues <- c(
-  "Duplicate ring" = "duplicate_ring",
-  "Radially incomplete ring" = "incomplete_ring",
-  "Wedging/missing ring" = "missing_ring",
-  "Crossdating" = "x_dating",
-  "Compression wood" = "compression_wood",
-  "Orientation" = "orientation"
-  # "Tyloses" = "tyloses",
-  # "Decay" = "decay",
-  # #"Technical issues" = "technical_issues",
-  # "Other" = "other_disqual"
-)
-
-technical_issues <- c(
-  "Out of focus" = "out_of_focus",
-  "Crack(s)" = "cracks",
-  "Paraffin" = "paraffin",
-  "Compressed cells" = "compressed_cells",
-  "Overlapping cells" = "overlapping_cells",
-  "Broken cells" = "broken_cells",
-  "Tangentially incomplete" = "tang_incomplete"
-)
-
-other_issues <- c(
-  "Tyloses" = "tyloses",
-  "Decay" = "decay",
-  "Other" = "other_disqual"
-)
-
-
-
 get_new_excluded <- function(rings_org, rings_edit, sel_wp, plt_df, param){
   new_excl <- rings_edit %>%
     dplyr::filter(woodpiece_label %in% sel_wp) %>%
@@ -100,6 +99,23 @@ get_new_excluded <- function(rings_org, rings_edit, sel_wp, plt_df, param){
   excl_markers <- plt_df |> # plot data has no duplicate years
     dplyr::inner_join(new_excl, by = c("image_label", "year")) |>
     dplyr::mutate(y = .data[[param]]) |>
+    dplyr::select(year, y, woodpiece_label)
+
+  return(excl_markers)
+}
+
+get_excluded <- function(rings_edit, sel_wp, plt_df){
+  new_excl <- rings_edit %>%
+    dplyr::filter(woodpiece_label %in% sel_wp) %>%
+    dplyr::filter(exclude_issues) %>%
+    # dplyr::anti_join(rings_org,
+    #                  by = c("image_label", "year", "exclude_issues")) |>
+    dplyr::select(image_label, year)
+
+  excl_markers <- plt_df |> # plot data has no duplicate years
+    dplyr::inner_join(new_excl, by = c("image_label", "year")) |>
+    #dplyr::mutate(y = .data[[param]]) |>
+    dplyr::mutate(y = vals) |>
     dplyr::select(year, y, woodpiece_label)
 
   return(excl_markers)
@@ -117,29 +133,8 @@ label_with_pop <- function(label_text, popover_text, icon_name = "info-circle", 
 }
 
 
-show_input_source_modal <- function(){
-  showModal(
-    modalDialog(
-      title = "Select input source",
-      tagList(
-        radioButtons(
-          "load_type",
-          "Choose input option:",
-          choices = c(
-            "Load data from R environment" = "env",
-            "Load data from csv files" = "csv",
-            "Load example data" = "example")
-        ),
-        hr(),
-        uiOutput("load_details_ui")
-      ),
-      footer = tagList(
-        modalButton("Cancel"),
-        actionButton("confirm_input", "Proceed")
-      )
-    )
-  )
-}
+
+
 
 # ERRORS and WARNINGS ------------------------------
 # wrapper for an error message
@@ -197,43 +192,9 @@ safe_block <- function(expr,
   )
 }
 
-# helper throws error if not all checks passed
-validate_input_dfs <- function(prf_data_in, rings_data_in, rxsmeta_data_in){
-  checkmate::assert_data_frame(prf_data_in[c("image_label","year","sector_n")],
-                               min.rows = 1, any.missing = FALSE)
-  # ensure we have at least one measurement column with data
-
-  checkmate::assert_data_frame(
-    prf_data_in |> dplyr::select(-image_label, -year, -sector_n,
-                                 dplyr::where(is.numeric)),
-    min.cols = 1, all.missing = FALSE)
-
-  # ensure we have data and there are no missing values in structure cols
-  checkmate::assert_data_frame(rings_data_in[c("woodpiece_label", "slide_label", "image_label","year")],
-                               min.rows = 1, any.missing = FALSE)
-
-  checkmate::assert_data_frame(rxsmeta_data_in[c("image_label","species_code", "site_label")],
-                               min.rows = 1, any.missing = FALSE)
-  TRUE
-}
 
 
-get_list_item <- function(var_name, envir = .GlobalEnv) {
-  # Handle obj$element format
-  if (grepl("\\$", var_name)) {
-    parts <- strsplit(var_name, "$", fixed = TRUE)[[1]]
-    obj_name <- parts[1]
-    element_name <- parts[2]
-  # Handle obj[['element']] or obj[["element"]] format
-  } else if (grepl("\\[\\[", rings_name)) {
-    pattern <- "^([^\\[]+)\\[\\[(['\"])(.+?)\\2\\]\\]$"
-    obj_name <- sub(pattern, "\\1", rings_name)
-    element_name <- sub(pattern, "\\3", rings_name)
-  } else {
-    stop("Invalid variable name format.")
-  }
-  get(obj_name, envir = envir)[[element_name]]
-}
+
 
 
 draw_selected_marker <- function(plot_obj, x_val, y_val, marker_name, meta_info){

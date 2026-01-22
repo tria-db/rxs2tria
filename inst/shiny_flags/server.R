@@ -45,9 +45,9 @@ server <- function(input, output, session) {
     if (input$load_type == "env") {
       tagList(
         "Provide the names of the data.frames in the current R environment:",
-        textInput("prf_name", "Profile data", value = "prf_data"),
-        textInput("rings_name", "QWA rings data", value = "QWA_data$rings"),
-        textInput("rxsmeta_name", "ROXAS (image) metadata", value = "df_rxsmeta")
+        textInput("name_prf", "Profile data", value = "prf_data"),
+        textInput("name_rings", "QWA rings data", value = "QWA_data$rings"),
+        textInput("name_rxsmeta", "ROXAS (image) metadata", value = "df_rxsmeta")
       )
     } else if (input$load_type == "csv") {
       tagList(
@@ -65,104 +65,41 @@ server <- function(input, output, session) {
 
   # when input is confirmed, load data
   observe({
-    if (input$load_type == "env") {
-      safe_block({
-        prf_data_in <- get(input$prf_name, envir = .GlobalEnv) |>
-          tibble::as_tibble() |>
-          # NOTE: enforce existence and correct type or required cols
-          dplyr::mutate(
-            image_label = as.character(image_label),
-            year = as.integer(year),
-            sector_n = as.integer(sector_n)
-          )
-
-        rings_name <- input$rings_name
-        # rings data may be element of a list (e.g. QWA_data$rings)
-        if (grepl("\\$", rings_name) ||
-            grepl("\\[\\[", rings_name)) {
-          rings_data_in <- get_list_item(rings_name, envir = .GlobalEnv)
-        } else {
-          rings_data_in <- get(rings_name, envir = .GlobalEnv)
-        }
-        logi_cols <- c("exclude_dupl", "exclude_issues", # maybe duplicate to here?
-                       unname(discrete_features),
-                       unname(disqual_issues),
-                       unname(technical_issues))
-        rings_data_in <- rings_data_in |>
-          tibble::as_tibble() |>
-          dplyr::mutate(
-            dplyr::across(c(woodpiece_label, slide_label, image_label), as.character),
-            year = as.integer(year),
-            dplyr::across(dplyr::any_of(logi_cols),
-                          \(x) tidyr::replace_na(as.logical(x), FALSE)) # TODO: OK? or require no missing?
-          )
-
-        rxsmeta_data_in <- get(input$rxsmeta_name, envir = .GlobalEnv) |>
-          tibble::as_tibble() |>
-        # TODO: maybe not (all) required (if we don't want to open images, if only one site/species -> might not need filter)
-          dplyr::mutate(
-            dplyr::across(
-              c(image_label, woodpiece_label, species_code, site_label, fname_image),
-              as.character
-            )
-          )
-
-        # TODO: what if we don't want to provide prf, only rings?
-        # TODO: validate that the different dataframes mach each other (prf in rings in rxsmeta)
-        # TODO: check that duplicate ring flags are correct, and exclude_dupl is ok
-        # TODO: check missing rings -> 0 mrw and prf measurements where applicaple, rather than missing rows or NA?
-        # TODO: check that if we have technical_issue cols with TRUE vals, the corresponding technical_issue is TRUE ALSO
-        # TODO: check that if affected_tissue, then at least something flagged?
-
-        valid_inputs <- validate_input_dfs(prf_data_in, rings_data_in, rxsmeta_data_in)
-
-        input_data$prf_data <- prf_data_in
-        input_data$rings_data <- rings_data_in
-        input_data$rxsmeta_data <- rxsmeta_data_in
+    safe_block({
+      if (input$load_type == "env") {
+        res <- load_data_env(
+          name_prf = input$name_prf,
+          name_rings = input$name_rings,
+          name_rxsmeta = input$name_rxsmeta
+        )
+      } else if (input$load_type == "csv"){
+        res <- load_data_csv(
+          path_prf = input$file_prf$datapath,
+          path_rings = input$file_rings$datapath,
+          path_rxsmeta = input$file_rxsmeta$datapath
+        )
+      } else { # example
+        # TODO: res <- load_example_data()
         removeModal()
-      },
-        err_title = "Error loading data from environment",
-        err_message = "There was an error reading the provided input data.frames:",
-        propagate_err = FALSE
-      )
+        return(NULL)
+      }
 
-    } else if (input$load_type == "csv") {
-      # load from csv files
-      safe_block({
-        prf_data_in <- vroom::vroom(
-          input$file_prf$datapath,
-          # NOTE: col_types enforces existence and correct type or required cols
-          col_types = c(image_label = "c", year = "i", sector_n = "i")
-        )
-        rings_data_in <- vroom::vroom(
-          input$file_rings$datapath,
-          col_types = c(woodpiece_label = "c", slide_label = "c", image_label = "c",
-                        year = "i", incomplete_ring = "l", missing_ring = "l",
-                        duplicate_ring = "l", exclude_dupl = "l", exclude_issues = "l")
-        )
-        rxsmeta_data_in <- vroom::vroom(
-          input$file_rxsmeta$datapath,
-          col_types = c(image_label = "c", woodpiece_label = "c",
-                        species_code = "c", site_label = "c",
-                        fname_image =  "c")
-        )
+      valid_inputs <- validate_input_dfs(res$prf_data, res$rings_data, res$rxsmeta_data)
+      # TODO: added flag cols as NA or FALSE?
+      # TODO: what if we don't want to provide prf, only rings?
+      # TODO: validate that the different dataframes match each other (prf in rings in rxsmeta)
+      # TODO: check that duplicate ring flags are correct, and exclude_dupl is ok
+      # TODO: check missing rings -> 0 mrw and prf measurements where applicable, rather than missing rows or NA?
 
-        valid_inputs <- validate_input_dfs(prf_data_in, rings_data_in, rxsmeta_data_in)
-
-        input_data$prf_data <- prf_data_in
-        input_data$rings_data <- rings_data_in
-        input_data$rxsmeta_data <- rxsmeta_data_in
-        removeModal()
-      },
-        err_title = "Error loading data from environment",
-        err_message = "There was an error reading the provided input data.frames:",
-        propagate_err = FALSE
-      )
-    } else {
-      # TODO: load example data
-      NULL
+      input_data$prf_data <- res$prf_data
+      input_data$rings_data <- res$rings_data
+      input_data$rxsmeta_data <- res$rxsmeta_data
       removeModal()
-    }
+    },
+      err_title = glue::glue("Error loading data from {input$load_type}"),
+      err_message = "There was an error reading the provided input data.frames:\n",
+      propagate_err = FALSE
+    )
   }) |> bindEvent(input$confirm_input)
 
   # update sidebar UI based on loaded input data
@@ -205,7 +142,7 @@ server <- function(input, output, session) {
 
   # update select wp input based on sel site and species
   observe({
-    req(input$sel_site, input$sel_site)
+    req(input$sel_site, input$sel_species)
     rxsmeta_data <- input_data$rxsmeta_data |> dplyr::filter(
       site_label %in% input$sel_site,
       species_code %in% input$sel_species
@@ -228,7 +165,7 @@ server <- function(input, output, session) {
 
   # REACTIVE CONTAINER: EDITED FLAGS DATA --------------------------------------
   # NOTE: rings_data_org is the basis for the plot, rings_data_edited tracks
-  #e dits of the flag inputs for selected rings. edits are then propagated back
+  # edits of the flag inputs for selected rings. edits are then propagated back
   # to rings_data_org when the save / update btn is clicked
   rings_data_org <- reactiveVal(NULL)
   rings_data_edited <- reactiveVal(NULL)
@@ -311,12 +248,12 @@ server <- function(input, output, session) {
       # pivot longer back to original format
     # }
 
-    # sort to make sure color palette stays consistent (not needed?)
+    # sort to get chronological timelines
     df_crn <- df_crn |>
       dplyr::arrange(woodpiece_label, year)
 
     df_crn
-  }) |> bindEvent(rings_data_org(),
+  }) |> bindEvent(rings_data_org(), # update of input_data$prf_data -> update of rings_data_org()
                   input$sel_param, input$sel_sector, input$show_excl, # TODO: , input$spline_det
                   ignoreInit = TRUE)
 
@@ -427,6 +364,14 @@ server <- function(input, output, session) {
           )
       }
     }
+
+    # if (!is.null(trace_visiblity())){
+    #   wp_traces <- sort(unique(plot_data()$woodpiece_label)) # get order of traces
+    #   vis_ids <- match(trace_visiblity()$visible, wp_traces) - 1 # zero based
+    #   invis_ids <- match(trace_visiblity()$invisible, wp_traces) - 1
+    #
+    #
+    # }
 
     # plotly interaction settings
     plotly::config(
@@ -682,12 +627,17 @@ server <- function(input, output, session) {
       )
 
     # adding pink trace
-    excl_markers <- get_new_excluded(
-      rings_org = rings_data_org(),
+    # excl_markers <- get_new_excluded(
+    #   rings_org = rings_data_org(),
+    #   rings_edit = rings_data_edited(),
+    #   sel_wp = input$sel_wp,
+    #   plt_df = plot_data(),
+    #   param = input$sel_param
+    # )
+    excl_markers <- get_excluded(
       rings_edit = rings_data_edited(),
       sel_wp = input$sel_wp,
-      plt_df = plot_data(),
-      param = input$sel_param
+      plt_df = plot_data()
     )
 
     if (nrow(excl_markers) > 0){
@@ -746,16 +696,50 @@ server <- function(input, output, session) {
       p <- plotly::plotlyProxy("ts_crn_plot", session)
       # remove existing marker
       marker_trace <- purrr::detect(input$traces_crn, \(x) isTRUE(x$meta$role == "selring"))
-      if (!is.null(marker_trace)){ # should always have it?
-        p <- p %>% plotly::plotlyProxyInvoke("deleteTraces", marker_trace$curveNumber)
+      excl_marker_trace <- purrr::detect(input$traces_crn, \(x) isTRUE(x$meta$role == "exclring"))
+      existing_ids <- c(marker_trace$curveNumber,
+                        excl_marker_trace$curveNumber)
+      if (!is.null(existing_ids)){ # should always have it?
+        p <- p %>% plotly::plotlyProxyInvoke("deleteTraces", existing_ids)
       }
 
       # add new marker
       meta_info <- list(role = "selring", orgCurveNumber = new_marker$orgCurveNumber,
                         orgName = new_marker$orgName, year = adj_year$year)
-      p %>%
+      p <- p %>%
         draw_selected_marker(adj_year$year, adj_year$val,
                              new_marker$marker_name, meta_info)
+
+      excl_markers <- get_excluded(
+        rings_edit = rings_data_edited(),
+        sel_wp = input$sel_wp,
+        plt_df = plot_data()
+      )
+
+      if (nrow(excl_markers) > 0){
+        p <- p %>%
+          plotly::plotlyProxyInvoke(
+            "addTraces",
+            list(
+              x = as.list(excl_markers$year),
+              y = as.list(excl_markers$y),
+              name = "excl_rings",
+              mode = "markers",
+              marker = list(
+                size = 6,
+                color = "hotpink",
+                symbol = "circle-open"
+              ),
+              showlegend = FALSE,
+              hoverinfo = "skip",
+              meta = list(role = "exclring",
+                          exclmarkers = paste(excl_markers$woodpiece_label,
+                                              excl_markers$year,
+                                              sep = ".", collapse = "; "))
+            ))
+      }
+
+      p
     }
   }) |> bindEvent(input$prev_ring)
 
@@ -787,16 +771,50 @@ server <- function(input, output, session) {
       p <- plotly::plotlyProxy("ts_crn_plot", session)
       # remove existing marker
       marker_trace <- purrr::detect(input$traces_crn, \(x) isTRUE(x$meta$role == "selring"))
-      if (!is.null(marker_trace)){ # should always have it?
-        p <- p %>% plotly::plotlyProxyInvoke("deleteTraces", marker_trace$curveNumber)
+      excl_marker_trace <- purrr::detect(input$traces_crn, \(x) isTRUE(x$meta$role == "exclring"))
+      existing_ids <- c(marker_trace$curveNumber,
+                        excl_marker_trace$curveNumber)
+      if (!is.null(existing_ids)){ # should always have it?
+        p <- p %>% plotly::plotlyProxyInvoke("deleteTraces", existing_ids)
       }
 
       # add new marker
       meta_info <- list(role = "selring", orgCurveNumber = new_marker$orgCurveNumber,
                         orgName = new_marker$orgName, year = adj_year$year)
-      p %>%
+      p <- p %>%
         draw_selected_marker(adj_year$year, adj_year$val,
                              new_marker$marker_name, meta_info)
+
+      excl_markers <- get_excluded(
+        rings_edit = rings_data_edited(),
+        sel_wp = input$sel_wp,
+        plt_df = plot_data()
+      )
+
+      if (nrow(excl_markers) > 0){
+        p <- p %>%
+          plotly::plotlyProxyInvoke(
+            "addTraces",
+            list(
+              x = as.list(excl_markers$year),
+              y = as.list(excl_markers$y),
+              name = "excl_rings",
+              mode = "markers",
+              marker = list(
+                size = 6,
+                color = "hotpink",
+                symbol = "circle-open"
+              ),
+              showlegend = FALSE,
+              hoverinfo = "skip",
+              meta = list(role = "exclring",
+                          exclmarkers = paste(excl_markers$woodpiece_label,
+                                              excl_markers$year,
+                                              sep = ".", collapse = "; "))
+            ))
+      }
+
+      p
     }
 
   }) |> bindEvent(input$next_ring)
@@ -850,7 +868,7 @@ server <- function(input, output, session) {
 
     p <- plotly::plotlyProxy("ts_crn_plot", session)
     if (!is.null(existing_ids)){
-      p <- plotly::plotlyProxy("ts_crn_plot", session) %>%
+      p <- p %>%
         plotly::plotlyProxyInvoke("deleteTraces", existing_ids)
     }
 
@@ -868,12 +886,17 @@ server <- function(input, output, session) {
       )
 
     # re-add the excl markers if applicable
-    excl_markers <- get_new_excluded(
-      rings_org = rings_data_org(),
+    # excl_markers <- get_new_excluded(
+    #   rings_org = rings_data_org(),
+    #   rings_edit = rings_data_edited(),
+    #   sel_wp = input$sel_wp,
+    #   plt_df = plot_data(),
+    #   param = input$sel_param
+    # )
+    excl_markers <- get_excluded(
       rings_edit = rings_data_edited(),
-      sel_wp = selected_wps,
-      plt_df = plot_data(),
-      param = input$sel_param
+      sel_wp = input$sel_wp,
+      plt_df = plot_data()
     )
 
     if (nrow(excl_markers)>0){
@@ -963,7 +986,7 @@ server <- function(input, output, session) {
         woodpiece_label == current_trace,
         !exclude_issues
       ) %>%
-      dplyr::select(year, value = all_of(sel_prm))
+      dplyr::select(year, value = dplyr::all_of(sel_prm))
 
     # ---- mean chronology ----
     df_mean <- plot_data() %>%
@@ -971,9 +994,17 @@ server <- function(input, output, session) {
         woodpiece_label %in% input$sel_wp,
         !exclude_issues
       ) %>%
-      dplyr::select(year, mean_value = all_of(sel_prm)) %>%
-      collapse::fgroup_by(year) %>%
-      collapse::fmean()
+      dplyr::select(year, mean_value = dplyr::all_of(sel_prm))
+
+    if (input$mean_type %in% c("mean", "none")){
+      df_mean <- df_mean %>%
+        collapse::fgroup_by(year) %>%
+        collapse::fmean()
+    } else { #if (input$mean_type == "tbrm")
+      df_mean <- df_mean %>%
+        dplyr::group_by(year) %>%
+        dplyr::summarise(mean_value = dplR::tbrm(.data$mean_value))
+    }
 
     # ---- align by year ----
     df_corr <- dplyr::inner_join(df_plot, df_mean, by = "year")
@@ -988,6 +1019,7 @@ server <- function(input, output, session) {
     if (nrow(df_corr) < 5) {
       return(list(
         ok = FALSE,
+        mean_type = ifelse(input$mean_type == "tbrm", "tbrm", "mean"),
         msg = "Not enough overlapping years to compute correlation."
       ))
     }
@@ -1002,91 +1034,10 @@ server <- function(input, output, session) {
 
     list(
       ok = TRUE,
+      mean_type = ifelse(input$mean_type == "tbrm", "tbrm", "mean"),
       r = r,
       n = nrow(df_corr),
       trace = current_trace
-    )
-  })
-  correlation_result <- reactive({
-    req(plot_data())
-    req(latest_marker())
-    req(input$sel_param)
-    req(input$sel_wp)
-
-    sel_prm <- input$sel_param
-    current_trace <- latest_marker()$orgName
-
-    # ---- get current axis limits, if available ----
-    x_axes <- crn_x_axes()
-    # Default to NULL if not set (no zoom/pan yet)
-    if (is.null(x_axes)) x_axes <- list(x_min = NULL, x_max = NULL)
-
-    # ---- single trace ----
-    df_plot <- plot_data() %>%
-      dplyr::filter(
-        woodpiece_label == current_trace,
-        !exclude_issues
-      ) %>%
-      dplyr::select(year, value = all_of(sel_prm))
-
-    # ---- mean chronology ----
-    df_mean <- plot_data() %>%
-      dplyr::filter(
-        woodpiece_label %in% input$sel_wp,
-        !exclude_issues
-      ) %>%
-      dplyr::select(year, mean_value = all_of(sel_prm)) %>%
-      collapse::fgroup_by(year) %>%
-      collapse::fmean()
-
-    # ---- align by year ----
-    df_corr <- dplyr::inner_join(df_plot, df_mean, by = "year")
-
-    # ---- filter by current x-axis range only if set ----
-    if (!is.null(x_axes$x_min) && !is.null(x_axes$x_max)) {
-      df_corr <- df_corr %>%
-        dplyr::filter(year >= x_axes$x_min, year <= x_axes$x_max)
-    }
-
-    # ---- safety check ----
-    if (nrow(df_corr) < 5) {
-      return(list(
-        ok = FALSE,
-        msg = "Not enough overlapping years to compute correlation."
-      ))
-    }
-
-    # ---- compute correlation ----
-    r <- cor(
-      df_corr$value,
-      df_corr$mean_value,
-      method = "pearson",
-      use = "complete.obs"
-    )
-
-    list(
-      ok = TRUE,
-      r = r,
-      n = nrow(df_corr),
-      trace = current_trace
-    )
-  })
-
-  output$correlation <- renderText({
-    res <- correlation_result()
-
-    if (!res$ok) {
-      return(res$msg)
-    }
-
-    paste0(
-      "Correlation between selected trace and mean chronology\n\n",
-      # "Param: ", input$sel_param, "\n",
-      # "Sector: ", input$sel_sector, "\n",
-      "Trace: ", res$trace, "\n",
-      # "Method: Pearson\n",
-      "Overlapping years: ", res$n, "\n\n",
-      "r = ", sprintf("%.3f", res$r)
     )
   })
 
@@ -1197,12 +1148,17 @@ server <- function(input, output, session) {
       }
 
       # re-add excl if applicable
-      excl_markers <- get_new_excluded(
-        rings_org = rings_data_org(),
+      # excl_markers <- get_new_excluded(
+      #   rings_org = rings_data_org(),
+      #   rings_edit = rings_data_edited(),
+      #   sel_wp = input$sel_wp,
+      #   plt_df = plot_data(),
+      #   param = input$sel_param
+      # )
+      excl_markers <- get_excluded(
         rings_edit = rings_data_edited(),
         sel_wp = input$sel_wp,
-        plt_df = plot_data(),
-        param = input$sel_param
+        plt_df = plot_data()
       )
 
       if (nrow(excl_markers)>0){
@@ -1335,7 +1291,7 @@ server <- function(input, output, session) {
   }) |> bindEvent(input$mean_type)
 
 
-  shinyjs::disable(selector = paste0("#sel_desquial .checkbox:nth-child(1) label"))
+  #shinyjs::disable(selector = paste0("#sel_desquial .checkbox:nth-child(1) label"))
 
   # REACTIVE CONTAINER: SELECTED RING ------------------------------------------
   clicked_ring <- reactive({
@@ -1375,7 +1331,7 @@ server <- function(input, output, session) {
     } else {
       NULL
     }
-  }) %>% bindEvent(latest_marker(), ignoreNULL = FALSE, ignoreInit = TRUE) # input$sel_wp
+  }) %>% bindEvent(latest_marker(), input$sel_param, ignoreNULL = FALSE, ignoreInit = TRUE) # input$sel_wp
 
   # the ring editor card title
   output$sel_ring <- renderUI({
@@ -1384,49 +1340,120 @@ server <- function(input, output, session) {
     paste("Selected ring:", clicked_ring()$woodpiece_label, "| Year:", df$year)
   })
 
-  # output$ring_info <- renderUI({
-  #   req(clicked_ring())
-  #   if (clicked_ring()$data$duplicate_ring){
-  #     other_data <- clicked_ring()$coverage |>
-  #       dplyr::filter(year == clicked_ring()$year, image_label != clicked_ring()$data$image_label) |>
-  #       dplyr::select(slide_label, image_label, cno, dplyr::any_of(input$sel_param))
-  #   } else { other_data <- NULL}
-  #   tags$div(
-  #     tags$strong("Woodpiece:  "), clicked_ring()$woodpiece_label, tags$br(),
-  #     tags$strong("Slide: "), clicked_ring()$data$slide_label, tags$br(),
-  #     tags$strong("Image: "), clicked_ring()$data$image_label, tags$br(),
-  #     tags$strong("Year: "), clicked_ring()$year, tags$br(),
-  #     tags$strong("Value: "), clicked_ring()$val,
-  #     tags$pre(paste(capture.output(print(other_data)), collapse = "\n"))
-  #   )
-  #   # TODO: sample depth
-  #   # TODO: correlation
-  #   #latest_marker()
-  #   # ggplot2::ggplot(df_rings, ggplot2::aes(x = year, y = image_label, fill = cno)) +
-  #   #   ggplot2::geom_tile() +
-  #   #   ggplot2::geom_point(
-  #   #      data = df_rings[1,],
-  #   #      #shape = 21,
-  #   #      color = "red", fill = NA,   size = 5
-  #   #      #, stroke = 2
-  #   #   ) +
-  #   #   ggplot2::coord_fixed()
-  # })
+  output$ring_info <- renderUI({
+    req(clicked_ring())
 
-  observe({
-    showModal(modalDialog(
-      plotOutput("cov_info"),
-      size = "xl",
-      footer = NULL,
-      easyClose = TRUE
-    ))
-  }) |> bindEvent(input$show_coverage)
+    valid_samples <- rings_data_edited() |>
+        dplyr::filter(woodpiece_label %in% input$sel_wp,
+                      year == clicked_ring()$year,
+                      !exclude_dupl, !exclude_issues) |> dplyr::pull(image_label)
+    sample_depth <- plot_data() |> dplyr::filter(
+      image_label %in% valid_samples,
+      year == clicked_ring()$year,
+      !is.na(.data[[input$sel_param]])
+    ) |> nrow()
+
+    corr_res <- correlation_result()
+
+    tags$div(
+      # tags$strong("Woodpiece:  "), clicked_ring()$woodpiece_label, tags$br(),
+      # tags$strong("Slide: "), clicked_ring()$data$slide_label, tags$br(),
+      # tags$strong("Image: "), clicked_ring()$data$image_label, tags$br(),
+      # tags$strong("Year: "), clicked_ring()$year, tags$br(),
+      # tags$strong("Value: "), sprintf("%.3f", clicked_ring()$val), tags$br(),
+      tags$strong("Sample depth: "), sample_depth,"  |  ",
+      tags$strong("Correlation of trace with", corr_res$mean_type, ": "),
+      if (corr_res$ok) {
+        tags$span(paste0(sprintf("%.3f", corr_res$r),
+          " (", corr_res$n, " overlapping years)"))
+      } else {
+        tags$i(corr_res$msg)
+      }, "  |  ",
+      tags$strong("Image overlap: "),
+      if (clicked_ring()$data$duplicate_ring){
+        tags$strong(style="color: red;", "Multiple images from the woodpiece cover this year, see coverage.")
+      } else {
+        tags$i("None")
+      }
+    )
+  })
+
+  output$sample_depth <- renderUI({
+    req(clicked_ring())
+
+    valid_samples <- rings_data_edited() |>
+      dplyr::filter(woodpiece_label %in% input$sel_wp,
+                    year == clicked_ring()$year,
+                    !exclude_dupl, !exclude_issues) |> dplyr::pull(image_label)
+    sample_depth <- plot_data() |> dplyr::filter(
+      image_label %in% valid_samples,
+      year == clicked_ring()$year,
+      !is.na(.data[[input$sel_param]])
+    ) |> nrow()
+
+    tags$span(paste(sample_depth, "samples with current selections"))
+  })
+
+  output$corr_res <- renderUI({
+    corr_res <- correlation_result()
+    if (corr_res$ok) {
+      tags$span(paste0(sprintf("%.3f", corr_res$r),
+                       " (", corr_res$n, " overlapping years)"))
+    } else {
+      tags$span(corr_res$msg)
+    }
+  })
+
+  output$ring_overview <- reactable::renderReactable({
+    req(clicked_ring())
+    df_rings <- clicked_ring()$coverage
+    df_rings <- df_rings |>
+      dplyr::filter(year == clicked_ring()$year) |>
+      dplyr::select(dplyr::any_of(
+        c("woodpiece_label", "slide_label", "image_label",
+          "year", "cno", input$sel_param, "exclude_dupl")))
+
+    if (nrow(df_rings) > 1) {
+      df_rings <- df_rings |> dplyr::filter(!exclude_dupl)
+    }
+    df_rings$selected <- "X"
+    df_rings <- df_rings |> dplyr::select(-exclude_dupl)
+
+    reactable::reactable(
+      df_rings,
+      columns = c(
+        setNames(
+          list(reactable::colDef(format = reactable::colFormat(digits = 3))),
+          input$sel_param
+        ),
+        list(
+          selected = reactable::colDef(
+            name = "",
+            cell = function(value, row_index) {
+              if (value == "X") {
+                ""
+              } else {
+                value
+              }
+            }
+          )
+        )
+      ),
+      rowStyle = function(index) {
+        list(fontWeight = "bold", background = "#e6f3ff")
+      },
+      compact = TRUE,
+      borderless = FALSE
+    )
+  })
+
 
   output$cov_info <- renderPlot({
     req(clicked_ring())
     df_rings <- clicked_ring()$coverage
     ggplot2::ggplot(df_rings, ggplot2::aes(x = year, y = image_label, fill = cno)) +
       ggplot2::geom_tile() +
+      ggplot2::scale_fill_viridis_c(direction = -1) +
       ggplot2::geom_point(
          data = df_rings |> dplyr::filter(image_label == clicked_ring()$data$image_label,
                                           year == clicked_ring()$year),
@@ -1434,9 +1461,8 @@ server <- function(input, output, session) {
       ) +
       ggplot2::theme_minimal() +
       ggplot2::theme(axis.text=ggplot2::element_text(size=12),
-                     axis.title=ggplot2::element_blank())
-    # +
-    #   ggplot2::coord_fixed()
+                     axis.title=ggplot2::element_blank()) +
+      ggplot2::coord_fixed()
 
   })
 
@@ -1450,7 +1476,7 @@ server <- function(input, output, session) {
           "year", "cno", input$sel_param, "exclude_dupl")))
 
     if (nrow(df_rings) > 1) {
-      df_rings$selected <- ifelse(df_rings$exclude_dupl, "", "X")
+      df_rings$selected <- ifelse(df_rings$exclude_dupl, "", "selected")
       df_rings <- df_rings |> dplyr::arrange(desc(selected), image_label)
     } else {
       df_rings$selected <- "X"
@@ -1459,28 +1485,36 @@ server <- function(input, output, session) {
 
     reactable::reactable(
       df_rings,
-      columns = list(
-        selected = reactable::colDef(
-          name = "",
-          cell = function(value, row_index) {
-            if (value == "X") {
-              "✓"
-            } else {
-              row <- df_rings[row_index, ]
-              htmltools::tags$button(
-                class = "btn btn-sm btn-outline-primary",
-                onclick = sprintf(
-                  "Shiny.setInputValue('select_dupl', {image:  '%s', year:  %s, nonce: Math.random()})",
-                  row$image_label, row$year
-                ),
-                "Select"
-              )
+      columns = c(
+        setNames(
+          list(reactable::colDef(format = reactable::colFormat(digits = 3))),
+          input$sel_param
+        ),
+        list(
+          selected = reactable::colDef(
+            name = "",
+            cell = function(value, row_index) {
+              if (value == "X") {
+                ""
+              } else if (value == "selected") {
+                value
+              } else {
+                row <- df_rings[row_index, ]
+                htmltools::tags$button(
+                  class = "btn btn-sm btn-outline-primary",
+                  onclick = sprintf(
+                    "Shiny.setInputValue('select_dupl', {image:  '%s', year:  %s, nonce: Math.random()})",
+                    row$image_label, row$year
+                  ),
+                  "Select instead"
+                )
+              }
             }
-          }
+          )
         )
       ),
       rowStyle = function(index) {
-        if (df_rings$selected[index] != "X") {
+        if (!df_rings$selected[index] %in% c("X","selected")) {
           list(color = "#999", background = "#f5f5f5")
         } else {
           list(fontWeight = "bold", background = "#e6f3ff")
@@ -1489,32 +1523,6 @@ server <- function(input, output, session) {
       compact = TRUE,
       borderless = FALSE
     )
-
-
-    #  df_rings <- df_rings |> dplyr::filter(year == clicked_ring()$year) |>
-    #   dplyr::mutate(pathString = paste(woodpiece_label, slide_label, image_label, sep = "/"),
-    #                 value = sprintf("%.2f", .data[[input$sel_param]]),
-    #                 selected = dplyr::if_else(exclude_dupl, "","X"))
-    # tree <- data.tree::as.Node(df_rings[,])
-    # data.tree::SetFormat(tree, "year", function(x) ifelse(is.na(x),"",x))
-    # data.tree::SetFormat(tree, "cno", function(x) ifelse(is.na(x),"",x))
-    # data.tree::SetFormat(tree, "value", function(x) ifelse(is.na(x),"",x))
-    # data.tree::SetFormat(tree, "selected", function(x) ifelse(is.na(x),"",x))
-    # data.tree::Sort(tree, "selected", decreasing = TRUE, recursive = TRUE)
-    # tree_lines <- capture.output(print(tree, "year","cno","value","selected", row.names = FALSE))
-    # tree_lines[1] <- gsub("levelName", "         ", tree_lines[1])
-    #
-    # tags$pre(
-    #   style = "font-family: monospace; margin: 0;",
-    #   tagList(
-    #     lapply(seq_along(tree_lines), function(i) {
-    #       tags$span(
-    #         style = if (i > 4) "color: #999;" else NULL,
-    #         tree_lines[i]
-    #       )
-    #     })
-    #   )
-    # )
   })
 
   expected_excl <- reactiveVal(NULL)
@@ -1555,7 +1563,7 @@ server <- function(input, output, session) {
 
     updateCheckboxGroupInput(session, "sel_disqual",
                              selected = sel_disq_flags)
-    shinyjs::runjs('$("#sel_disqual input[type=checkbox]").first().prop("disabled", true);')
+    #shinyjs::runjs('$("#sel_disqual input[type=checkbox]").first().prop("disabled", true);')
 
     sel_tech_issues <- saved_flags %>%
       dplyr::select(unname(technical_issues))
@@ -1646,10 +1654,7 @@ server <- function(input, output, session) {
     techn_flags_on <- flag_changes()$technical
     techn_flags_off <- setdiff(unname(technical_issues), techn_flags_on)
     other_flags_on <- flag_changes()$other
-    print(other_flags_on)
     other_flags_off <- setdiff(unname(other_issues), other_flags_on)
-    print(other_flags_off)
-
 
     df_rings <- rings_data_edited()
     clicked_data <- clicked_ring()$data
@@ -1681,57 +1686,57 @@ server <- function(input, output, session) {
   }) |> bindEvent(flag_changes(), ignoreNULL = FALSE, ignoreInit = TRUE)
 
 
-  # revert to pre-edit data if "Discard changes" is clicked
-  # can use clicked_ring()$data which is only updated when (another) ring is clicked
-  observe({
-    req(isTruthy(clicked_ring()))
-
-    saved_flags <- clicked_ring()$data
-    expected_excl(ifelse(saved_flags$exclude_issues, "yes", "no"))
-    updateRadioButtons(session, "sel_exclude",
-                       selected = ifelse(saved_flags$exclude_issues, "yes", "no"))
-
-    # NEW: Restore EW/LW/ALL selection
-    # TODO: change to affected tissue
-    # if (!is.na(saved_flags$exclude_scope)) {
-    #   updateRadioButtons(session, "sel_exclude_scope",
-    #                      selected = saved_flags$exclude_scope)
-    # } else {
-    #   updateRadioButtons(session, "sel_exclude_scope", selected = "ALL")
-    # }
-
-    sel_disc_flags <- saved_flags %>%
-      dplyr::select(unname(discrete_features))
-    sel_disc_flags <- names(sel_disc_flags)[sel_disc_flags[1,] == TRUE]
-
-    updateCheckboxGroupInput(session, "sel_discrete",
-                             selected = sel_disc_flags)
-
-    sel_disq_flags <- saved_flags %>%
-      dplyr::select(unname(disqual_issues))
-    sel_disq_flags <- names(sel_disq_flags)[sel_disq_flags[1,] == TRUE]
-
-    updateCheckboxGroupInput(session, "sel_disqual",
-                             selected = sel_disq_flags)
-    shinyjs::runjs('$("#sel_disqual input[type=checkbox]").first().prop("disabled", true);')
-
-    # if ("technical_issues" %in% sel_disq_flags) {
-    #   shinyjs::enable("sel_technical_exact")
-      sel_tech_issues <- saved_flags %>%
-        dplyr::select(unname(technical_issues))
-      sel_tech_issues <- names(sel_tech_issues)[sel_tech_issues[1,] == TRUE]
-      updateSelectizeInput(session, "sel_technical_exact",
-                           selected = sel_tech_issues)
-    # } else {
-    #   shinyjs::disable("sel_technical_exact")
-    #   updateSelectizeInput(session, "sel_technical_exact",
-    #                        selected = character(0))
-    # }
-
-    updateTextAreaInput(session, "sel_comment",
-                        value = saved_flags$comment)
-
-  }) |> bindEvent(input$undo_sel_flags, ignoreNULL = TRUE, ignoreInit = TRUE)
+  # # revert to pre-edit data if "Discard changes" is clicked
+  # # can use clicked_ring()$data which is only updated when (another) ring is clicked
+  # observe({
+  #   req(isTruthy(clicked_ring()))
+  #
+  #   saved_flags <- clicked_ring()$data
+  #   expected_excl(ifelse(saved_flags$exclude_issues, "yes", "no"))
+  #   updateRadioButtons(session, "sel_exclude",
+  #                      selected = ifelse(saved_flags$exclude_issues, "yes", "no"))
+  #
+  #   # NEW: Restore EW/LW/ALL selection
+  #   # TODO: change to affected tissue
+  #   # if (!is.na(saved_flags$exclude_scope)) {
+  #   #   updateRadioButtons(session, "sel_exclude_scope",
+  #   #                      selected = saved_flags$exclude_scope)
+  #   # } else {
+  #   #   updateRadioButtons(session, "sel_exclude_scope", selected = "ALL")
+  #   # }
+  #
+  #   sel_disc_flags <- saved_flags %>%
+  #     dplyr::select(unname(discrete_features))
+  #   sel_disc_flags <- names(sel_disc_flags)[sel_disc_flags[1,] == TRUE]
+  #
+  #   updateCheckboxGroupInput(session, "sel_discrete",
+  #                            selected = sel_disc_flags)
+  #
+  #   sel_disq_flags <- saved_flags %>%
+  #     dplyr::select(unname(disqual_issues))
+  #   sel_disq_flags <- names(sel_disq_flags)[sel_disq_flags[1,] == TRUE]
+  #
+  #   updateCheckboxGroupInput(session, "sel_disqual",
+  #                            selected = sel_disq_flags)
+  #   shinyjs::runjs('$("#sel_disqual input[type=checkbox]").first().prop("disabled", true);')
+  #
+  #   # if ("technical_issues" %in% sel_disq_flags) {
+  #   #   shinyjs::enable("sel_technical_exact")
+  #     sel_tech_issues <- saved_flags %>%
+  #       dplyr::select(unname(technical_issues))
+  #     sel_tech_issues <- names(sel_tech_issues)[sel_tech_issues[1,] == TRUE]
+  #     updateSelectizeInput(session, "sel_technical_exact",
+  #                          selected = sel_tech_issues)
+  #   # } else {
+  #   #   shinyjs::disable("sel_technical_exact")
+  #   #   updateSelectizeInput(session, "sel_technical_exact",
+  #   #                        selected = character(0))
+  #   # }
+  #
+  #   updateTextAreaInput(session, "sel_comment",
+  #                       value = saved_flags$comment)
+  #
+  # }) |> bindEvent(input$undo_sel_flags, ignoreNULL = TRUE, ignoreInit = TRUE)
 
 
   # revert to raw input data if "reset_to_raw" is clicked
@@ -1785,7 +1790,7 @@ server <- function(input, output, session) {
 
     updateCheckboxGroupInput(session, "sel_disqual",
                              selected = sel_disq_flags)
-    shinyjs::runjs('$("#sel_disqual input[type=checkbox]").first().prop("disabled", true);')
+    #shinyjs::runjs('$("#sel_disqual input[type=checkbox]").first().prop("disabled", true);')
 
     # if ("technical_issues" %in% sel_disq_flags) {
     #   shinyjs::enable("sel_technical_exact")
@@ -1837,7 +1842,7 @@ server <- function(input, output, session) {
     # Check for annotated twin image
     annotated_image <- list.files(
       base_path,
-      pattern = paste0(df$image_label, "_annotated_twin\\."),
+      pattern = paste0(df$image_label, "_annotated\\."), # paste0(df$image_label, "_annotated_twin\\."),
       full.names = TRUE
     )
 
@@ -1980,10 +1985,12 @@ server <- function(input, output, session) {
 
 
   output$debug <- renderPrint({
-   flag_changes()
+    trace_visibility()
+    #input$select_dupl
     # # For debugging: show traces_crn structure
   #   #purrr::detect(input$traces_crn, \(x) isTRUE(x$meta$role == "exclring"))
-    # req(input$traces_crn)
+    # print(sample.int(1e6, 1))
+    # if (isTruthy(input$traces_crn)){
     # traces_df <- purrr::map_dfr(names(input$traces_crn), function(name) {
     #   item <- input$traces_crn[[name]]
     #
@@ -2006,8 +2013,12 @@ server <- function(input, output, session) {
     #   # Convert to tibble
     #   tibble::as_tibble(result)
     # })
-    #
     # tail(traces_df)
+    # } else{
+    #   NULL
+    # }
+
+
 
   })
 

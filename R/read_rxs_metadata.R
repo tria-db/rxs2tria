@@ -21,26 +21,26 @@ get_roxas_files <- function(path_in) {
   imgfiles_exclude_keywords = c("annotated", "ReferenceSeries", "Preview")
   pattern_excl_keywords <- paste(imgfiles_exclude_keywords, collapse="|")
 
-  files_cells <- list.files(
+  files_cells <- normalizePath(list.files(
     path_in,
     pattern = pattern_cell_files,
     full.names = TRUE, recursive = TRUE, ignore.case = TRUE
-  )
-  files_rings <- list.files(
+  ))
+  files_rings <- normalizePath(list.files(
     path_in,
     pattern = pattern_ring_files,
     full.names = TRUE, recursive = TRUE, ignore.case = TRUE
-  )
-  files_settings <- list.files(
+  ))
+  files_settings <- normalizePath(list.files(
     path_in,
     pattern = pattern_settings_files,
     full.names = TRUE, recursive = TRUE, ignore.case = TRUE
-  )
-  files_images <- list.files(
+  ))
+  files_images <- normalizePath(list.files(
     path_in,
     pattern = pattern_orgimg_files,
     full.names = TRUE, recursive = TRUE, ignore.case = TRUE
-  ) |> stringr::str_subset(pattern = pattern_excl_keywords, negate = TRUE)
+  )) |> stringr::str_subset(pattern = pattern_excl_keywords, negate = TRUE)
 
   # check: if the patterns are removed, the four file lists should match
   l_files <- list(
@@ -159,7 +159,7 @@ get_roxas_files <- function(path_in) {
 #'    site_label = "SITEA", species_code = "PISY")
 get_structure_from_filenames <- function(
     filenames,
-    pattern = "(?<site>[:alnum:]+)_(?<species>[:alnum:]+)_(?<tree>[:alnum:][:alnum:])(?<woodpiece>[:alnum:]*)_(?<slide>[:alnum:]+)_(?<image>[:alnum:]+)",
+    pattern = "(?<site>[[:alnum:]]+)_(?<species>[[:alnum:]]+)_(?<tree>[[:alnum:].]+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)", #"(?<site>[:alnum:]+)_(?<species>[:alnum:]+)_(?<tree>[:alnum:][:alnum:])(?<woodpiece>[:alnum:]*)_(?<slide>[:alnum:]+)_(?<image>[:alnum:]+)",
     site_label = NULL, species_code = NULL){
   checkmate::assert_character(filenames, any.missing = FALSE, min.len = 1)
   checkmate::assert_string(pattern)
@@ -247,7 +247,7 @@ get_structure_from_filenames <- function(
 #' @export
 extract_data_structure <- function(
     files,
-    pattern = "(?<site>[:alnum:]+)_(?<species>[:alnum:]+)_(?<tree>[:alnum:][:alnum:])(?<woodpiece>[:alnum:]*)_(?<slide>[:alnum:]+)_(?<image>[:alnum:]+)",
+    pattern =  "(?<site>[[:alnum:]]+)_(?<species>[[:alnum:]]+)_(?<tree>[[:alnum:].]+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)", # "(?<site>[:alnum:]+)_(?<species>[:alnum:]+)_(?<tree>[:alnum:][:alnum:])(?<woodpiece>[:alnum:]*)_(?<slide>[:alnum:]+)_(?<image>[:alnum:]+)",
     site_label = NULL, species_code = NULL) {
   checkmate::assert_list(
     files, types = 'character', any.missing = FALSE, len = 4)

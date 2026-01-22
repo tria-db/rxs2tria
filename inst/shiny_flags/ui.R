@@ -1,6 +1,6 @@
 library(shiny)
-library(magrittr)
-library(bslib)
+#library(magrittr)
+#library(bslib)
 
 # define the theme
 theme <- bslib::bs_theme(
@@ -58,6 +58,20 @@ ui <- bslib::page_fluid(
 
       .bslib-sidebar-layout>.sidebar>.sidebar-content {
         padding-top: 1rem;
+      }
+
+      .bslib-card .value-card {
+        --bs-card-bg: #324a85;
+        --bs-card-color:  white;
+      }
+      .bslib-card.value-card > .card-header {
+        background-color: #324a85 !important;
+        border-bottom: none;
+        color: white !important;
+      }
+      .bslib-card.value-card > .card-body {
+        background-color: #324a85 !important;
+        color:  white !important;
       }
 
       /* hot style overwrites: */
@@ -129,17 +143,23 @@ ui <- bslib::page_fluid(
                       label_with_pop("Select mean applied for crn",
                                      "Calculated over all selected woodpieces, filtering out excluded rings."),
                       choices = c("none", "mean", "tbrm"), selected = "none", multiple = FALSE, selectize = TRUE),
-          checkboxInput("auto_open_image", "try to auto-open images", value = FALSE),
+          checkboxInput("auto_open_image", "Try to auto-open images", value = FALSE),
 
           hr(class = "hr-slim"),
           checkboxInput("show_excl",
                         label_with_pop(
-                          "show excluded rings",
+                          "Show all excluded rings",
                           "Click update plot to include/exclude newly edited rings (pink markers)"),
                         value = FALSE),
+          selectInput("sel_highlight", "Highlight rings with these features",
+                      choices = list(
+                        "Overlaps" = c("Duplicate ring" = "duplicate_ring"),
+                        "Issues" = c(disqual_issues, technical_issues, other_issues),
+                        "Features" = discrete_features),
+                      multiple = TRUE, selectize = TRUE),
           # TODO: change to radio buttons to highlight better?
           # TODO: have a ring edit mode and an overview mode? in overview, can highlight all points with issues / features?
-          actionButton("apply_changes", "Update plot", icon = icon("arrows-rotate"),
+          actionButton("apply_changes", "Apply edits to plot", icon = icon("arrows-rotate"),
                        class = "btn-tert"),
 
           hr(class = "hr-slim"),
@@ -156,6 +176,7 @@ ui <- bslib::page_fluid(
           max_height = "450px",
           bslib::card_body(class = "p-0",
           plotly::plotlyOutput("ts_crn_plot"))
+          #TODO: ADD sample depth plot
         ),
 
         # SELECTED RING CARD
@@ -171,28 +192,50 @@ ui <- bslib::page_fluid(
               bslib::nav_panel(
                 "Edit ring",
                 value = "edit_flags",
+                reactable::reactableOutput("ring_overview"),
+                # bslib::layout_column_wrap(
+                #   width = "250px", fixed_width = TRUE,
+                #   fill = FALSE,
+                #   bslib::card(
+                #     fill = FALSE,
+                #     class = "value-card",
+                #     uiOutput("sample_depth")
+                #   ),
+                #   bslib::card(
+                #     fill = FALSE,
+                #     class = "p-0",
+                #     uiOutput("corr_res")
+                #   ),
+                #   bslib::card(
+                #     fill = FALSE,
+                #     class = "p-0",
+                #     uiOutput("img_overlap")
+                #   ),
+                # ),
+                uiOutput("ring_info"),
+                hr(),
 
-                bslib::card(
-                  fill = FALSE,
-                  class = "clean-card",
-                  uiOutput("ring_info"),
-                  # bslib::layout_column_wrap(
-                  #   width = 1/2,
-                  #   fill = FALSE,
-                    #style = bslib::css(grid_template_columns = "1fr 3fr"),
-                    #uiOutput("ring_info"),
-                    reactable::reactableOutput("tree_overview"),
-
-
-                    # bslib::card(max_height = "200px",
-                    #   bslib::card_body(class = "p-0", plotOutput("cov_info"))
-                    # )
-                  # ),
-                  verbatimTextOutput("correlation"),
-                  actionButton("show_coverage", "Show coverage plot", icon = icon("chart-line"), width = "217px"),
-                  actionButton("switch_dupl", "Switch chosen image", icon = icon("danger"), width = "217px")
-
-                ),
+                # bslib::card(
+                #   fill = FALSE,
+                #   class = "clean-card",
+                #
+                #   # bslib::layout_column_wrap(
+                #   #   width = 1/2,
+                #   #   fill = FALSE,
+                #     #style = bslib::css(grid_template_columns = "1fr 3fr"),
+                #     #uiOutput("ring_info"),
+                #
+                #
+                #
+                #     # bslib::card(max_height = "200px",
+                #     #   bslib::card_body(class = "p-0", plotOutput("cov_info"))
+                #     # )
+                #   # ),
+                #   #verbatimTextOutput("correlation"),
+                #   # actionButton("show_coverage", "Show coverage plot", icon = icon("chart-line"), width = "217px"),
+                #   # actionButton("switch_dupl", "Switch chosen image", icon = icon("danger"), width = "217px")
+                #
+                # ),
 
                 bslib::layout_column_wrap(
                   fill = FALSE,
@@ -219,42 +262,8 @@ ui <- bslib::page_fluid(
                                        inline = TRUE, selected = "N/A"),
                           uiOutput("warn_disq")
                         )
-                      )
+                      ),
                     ),
-                    bslib::card(
-                      class = "clean-card",
-                      strong("Compromising issues:"),
-                      checkboxGroupInput("sel_disqual",
-                                         "Disqualifying features",
-                                         choices = disqual_issues,
-                                         inline = TRUE),
-                      # div(
-                      #   id = "techn_reason_el",
-                      #   style = "display: flex; align-items: flex-start;",
-                      #   div(style = "width: 25px; padding-top: 0px;",
-                      #       icon("arrow-right-from-bracket", lib = "font-awesome")),
-                      #   div(style = "flex-grow: 1;",
-                          checkboxGroupInput(
-                            "sel_technical_exact",
-                            "Technical issues",
-                            choices = technical_issues,
-                            inline = TRUE
-                          ),
-                      #  )
-                      # )
-                      checkboxGroupInput(
-                        "sel_other_iss",
-                        "Other issues",
-                        choices = other_issues,
-                        inline = TRUE
-                      )
-                    )
-                  ),
-
-                  bslib::layout_column_wrap(
-                    width = 1,
-                    fill = FALSE,
-                    heights_equal = "row",
                     bslib::card(
                       class = "clean-card",
                       fill = FALSE,
@@ -273,7 +282,43 @@ ui <- bslib::page_fluid(
                         placeholder = "Enter any additional notes regarding the selected ring here..."
                       )
                     )
-                  )
+
+                  ),
+                  bslib::card(
+                    class = "clean-card",
+                    strong("Compromising issues:"),
+                    checkboxGroupInput("sel_disqual",
+                                       "Disqualifying features",
+                                       choices = disqual_issues,
+                                       inline = TRUE),
+                    # div(
+                    #   id = "techn_reason_el",
+                    #   style = "display: flex; align-items: flex-start;",
+                    #   div(style = "width: 25px; padding-top: 0px;",
+                    #       icon("arrow-right-from-bracket", lib = "font-awesome")),
+                    #   div(style = "flex-grow: 1;",
+                    checkboxGroupInput(
+                      "sel_technical_exact",
+                      "Technical issues",
+                      choices = technical_issues,
+                      inline = TRUE
+                    ),
+                    #  )
+                    # )
+                    checkboxGroupInput(
+                      "sel_other_iss",
+                      "Other issues",
+                      choices = other_issues,
+                      inline = TRUE
+                    )
+                  ),
+
+                  # bslib::layout_column_wrap(
+                  #   width = 1,
+                  #   fill = FALSE,
+                  #   heights_equal = "row",
+                  #
+                  # )
                 ),
 
                 bslib::layout_column_wrap(
@@ -291,8 +336,10 @@ ui <- bslib::page_fluid(
               bslib::nav_panel(
                 "Show coverage",
                 value = "show_coverage",
-                verbatimTextOutput("coverage"),
-                uiOutput("coverage_ui")
+                reactable::reactableOutput("tree_overview"),
+                plotOutput("cov_info")
+                # verbatimTextOutput("coverage"),
+                # uiOutput("coverage_ui")
 
               )
             )
@@ -304,32 +351,32 @@ ui <- bslib::page_fluid(
     ), # end of tab 1
 
 
-    # TAB: running RBT ---------------------------------------------------------
-    bslib::nav_panel(
-
-      # conditionalPanel(
-      #   condition = "input.tabs == 'running RBT'",
-      #   uiOutput("dynamic_rbt_slider")
-      # ),
-
-
-      "running RBT",
-      icon = icon("cloud-sun", lib = "font-awesome"),
-
-      plotOutput("rbt_plot")
-    ),
-
-    # TAB: HEATMAP -------------------------------------------------------------
-    bslib::nav_panel(
-      "Heatmap of climate signal", #icon = icon("heat", lib = "font-awesome"),
-      plotOutput("clim_cor_plot")
-    ),
-
-    # TAB: climate correlation -------------------------------------------------
-    bslib::nav_panel(
-      "Clim_cor data", #icon = icon("table", lib = "font-awesome"),
-      DT::DTOutput("numeric_table")
-    )
+    # # TAB: running RBT ---------------------------------------------------------
+    # bslib::nav_panel(
+    #
+    #   # conditionalPanel(
+    #   #   condition = "input.tabs == 'running RBT'",
+    #   #   uiOutput("dynamic_rbt_slider")
+    #   # ),
+    #
+    #
+    #   "running RBT",
+    #   icon = icon("cloud-sun", lib = "font-awesome"),
+    #
+    #   plotOutput("rbt_plot")
+    # ),
+    #
+    # # TAB: HEATMAP -------------------------------------------------------------
+    # bslib::nav_panel(
+    #   "Heatmap of climate signal", #icon = icon("heat", lib = "font-awesome"),
+    #   plotOutput("clim_cor_plot")
+    # ),
+    #
+    # # TAB: climate correlation -------------------------------------------------
+    # bslib::nav_panel(
+    #   "Clim_cor data", #icon = icon("table", lib = "font-awesome"),
+    #   DT::DTOutput("numeric_table")
+    # )
 
   ) # end of navset_card_underline
 

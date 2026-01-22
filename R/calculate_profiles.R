@@ -61,9 +61,16 @@ calculate_profiles <- function(df_cells, n_sectors, sel_cell_params, quant_probs
 }
 
 
-calculate_sector_profiles <- function(QWA_data, n_sectors, sel_cell_params, quant_probs){
+calculate_sector_profiles <- function(df_cells, n_sectors, sel_cell_params, quant_probs){
+  # TODO: allow to select all params?
+  # if (length(sel_cell_params) == 1 && sel_cell_params == "all"){
+  #   sel_cell_params <- setdiff(
+  #     colnames(QWA_data$cells),
+  #     c("image_label", "year", "rraddistr", "raddistr.st")
+  #   )
+  # }
   # use data.table for speed on large dataframes
-  cells_dt <- data.table::as.data.table(QWA_data$cells)
+  cells_dt <- data.table::as.data.table(df_cells)
   # filter out cells without valid rraddistr, subset to relevant columns only
   cells_dt <- cells_dt[!is.na(rraddistr),
                        c("image_label", "year", "rraddistr", sel_cell_params),
@@ -78,10 +85,10 @@ calculate_sector_profiles <- function(QWA_data, n_sectors, sel_cell_params, quan
   cells_dt <- cells_dt[!is.na(sector_n)] # if we still have some cells outside -> remove
   cells_dt[, rraddistr := NULL] # remove superfluous columns
 
-  # get the ew widths
-  ring_widths <- data.table::as.data.table(QWA_data$rings)[
-    , c("image_label", "year", "mrw", "eww")]
-  ring_widths[, max_ew_sector := floor((eww / mrw) * n_sectors)] # max sector that is in ew
+  # # get the ew widths
+  # ring_widths <- data.table::as.data.table(QWA_data$rings)[
+  #   , c("image_label", "year", "mrw", "eww")]
+  # ring_widths[, max_ew_sector := floor((eww / mrw) * n_sectors)] # max sector that is in ew
 
 
   # now we can aggregate over each sector
@@ -113,12 +120,12 @@ calculate_sector_profiles <- function(QWA_data, n_sectors, sel_cell_params, quan
     rm(prf_data_quant)
   }
 
-  cli::cli_inform(c("i"= "Adding EW indicator..."))
-  # add a ew_band column to indicate if band is in EW or LW
-  prf_data_agg <- ring_widths[prf_data_agg, on = c("image_label", "year")]
-  prf_data_agg[, ew_sector := ifelse(sector_n <= max_ew_sector, TRUE, FALSE)]
-  prf_data_agg[, max_ew_sector := NULL] # remove temp column
-  data.table::setcolorder(prf_data_agg, "ew_sector", after="eww")
+  # cli::cli_inform(c("i"= "Adding EW indicator..."))
+  # # add a ew_band column to indicate if band is in EW or LW
+  # prf_data_agg <- ring_widths[prf_data_agg, on = c("image_label", "year")]
+  # prf_data_agg[, ew_sector := ifelse(sector_n <= max_ew_sector, TRUE, FALSE)]
+  # prf_data_agg[, max_ew_sector := NULL] # remove temp column
+  # data.table::setcolorder(prf_data_agg, "ew_sector", after="eww")
 
   cli::cli_inform(c("v"= "All done!"))
   tibble::as_tibble(prf_data_agg)
