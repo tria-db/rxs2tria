@@ -210,35 +210,46 @@ server <- function(input, output, session) {
 
 
   # REACTIVE CONTAINER: PLOT DATA ----------------------------------------------
+  # create color palette based on how many traces (wp) we plot
+  color_palette <- reactive({
+    req(input_data$rings_data)
+    wp_labels_all <- sort(unique(input_data$rings_data$woodpiece_label))
+    pal <- extend_palette(base_palette, length(wp_labels_all),
+                          contrasting = TRUE)
+    pal <- setNames(pal, wp_labels_all)
+  })
+
+  # prepare df as base for plotting
   plot_data <- reactive({
-    req(rings_data_org(), input$sel_param)
-    sel_param <- input$sel_param
+    if (isTruthy(rings_data_org()) &&
+        isTruthy(input$sel_wp) &&
+        isTruthy(input$sel_param)){
+      sel_param <- input$sel_param
 
-    # start from rings df for structure, exclusions and (if applicable) sel_param
-    df_crn <- rings_data_org() |>
-      dplyr::select(woodpiece_label, slide_label, image_label, year,
-                    exclude_issues, exclude_dupl,
-                    dplyr::any_of(sel_param))
+      # start from rings df for structure, exclusions and (if applicable) sel_param
+      df_crn <- rings_data_org() |>
+        dplyr::filter(woodpiece_label %in% input$sel_wp) |>
+        dplyr::filter(!exclude_dupl) |> # always exclude duplicate rings from plot
+        dplyr::select(woodpiece_label, slide_label, image_label, year,
+                      exclude_issues, dplyr::any_of(sel_param))
 
-    # if sel_param is in prf df, then join (selected sector only)
-    if (sel_param %in% names(input_data$prf_data)){
-      df_crn  <- input_data$prf_data |>
-        dplyr::filter(sector_n == as.numeric(input$sel_sector)) |>
-        dplyr::select(dplyr::all_of(c("image_label","year",sel_param))) |>
-        dplyr::right_join(df_crn, by = c("image_label","year"))
-    }
+      # if sel_param is from prf data, then join (selected sector only)
+      if (sel_param %in% names(input_data$prf_data)){
+        df_crn  <- input_data$prf_data |>
+          dplyr::filter(sector_n == as.numeric(input$sel_sector)) |>
+          dplyr::select(dplyr::all_of(c("image_label", "year", sel_param))) |>
+          dplyr::right_join(df_crn, by = c("image_label", "year"))
+      }
 
-    # make sure we only have one value per year/woodpiece
-    df_crn <- df_crn |> dplyr::filter(!exclude_dupl)
-    df_crn$vals <- df_crn[[sel_param]]
+      # new column with clean values only
+      df_crn$vals <- df_crn[[sel_param]]
+      if (!input$show_excl){
+        # 'remove' excluded years by setting vals to NA
+        df_crn$vals[df_crn$exclude_issues] <- NA
+      }
+      # TODO: df_crn <- df_crn |> dplyr::select(-exclude_issues, -slide_label)
 
-    if (!input$show_excl){
-      # 'remove' excluded years by setting param to NA
-      #df_crn[df_crn$exclude_issues, input$sel_param] <- NA
-      df_crn$vals[df_crn$exclude_issues] <- NA
-    }
-
-    # if (input$spline_det){
+      # if (input$spline_det){
       # TODO
       # transform the plot data to df where
       # pivot wider to have (woodpiece_label, sel_param) as columns
@@ -246,25 +257,17 @@ server <- function(input, output, session) {
       # apply dplr::detrend(df, method = "Spline", nyrs = 32), check output
       # potentially reapply NAS
       # pivot longer back to original format
-    # }
+      # }
 
-    # sort to get chronological timelines
-    df_crn <- df_crn |>
-      dplyr::arrange(woodpiece_label, year)
+      # sort to get chronological timelines
+      df_crn <- df_crn |>
+        dplyr::arrange(woodpiece_label, year)
 
-    df_crn
-  }) |> bindEvent(rings_data_org(), # update of input_data$prf_data -> update of rings_data_org()
-                  input$sel_param, input$sel_sector, input$show_excl, # TODO: , input$spline_det
-                  ignoreInit = TRUE)
-
-  # create color palette based on how many traces (wp) we plot
-  color_palette <- reactive({
-    req(plot_data())
-    extend_palette(base_palette,
-                   length(unique(plot_data()$woodpiece_label)),
-                   contrasting = TRUE)
+      df_crn
+    } else {
+      NULL
+    }
   })
-
 
   # PLOTLY ---------------------------------------------------------------------
   # JavaScript to capture trace info and send to Shiny
@@ -304,7 +307,7 @@ server <- function(input, output, session) {
     });
   }"
 
-  # render the plot given the ring data and selected inputs
+  # RENDER the plot given the ring/prf data and selected inputs ----------------
   output$ts_crn_plot <- plotly::renderPlotly({
     validate(
       need(isTruthy(plot_data()), "Please provide input data")
@@ -350,29 +353,6 @@ server <- function(input, output, session) {
       plotly::event_register("plotly_legenddoubleclick") %>%
       plotly::event_register("plotly_relayout")
 
-    # TODO: if show_excl, add a marker trace to highlight excluded points?
-    # input$show_excl -> plot_data() -> plot render
-    # what about highlighting other flagged years based on some input?
-
-    # if we have axes limits from previous render, reset them
-    if (!is.null(crn_x_axes())){
-      x_axes <- crn_x_axes()
-      if (!is.null(x_axes$x_min) && !is.null(x_axes$x_max)){
-        p <- p %>%
-          plotly::layout(
-            xaxis = list(range = c(x_axes$x_min, x_axes$x_max))
-          )
-      }
-    }
-
-    # if (!is.null(trace_visiblity())){
-    #   wp_traces <- sort(unique(plot_data()$woodpiece_label)) # get order of traces
-    #   vis_ids <- match(trace_visiblity()$visible, wp_traces) - 1 # zero based
-    #   invis_ids <- match(trace_visiblity()$invisible, wp_traces) - 1
-    #
-    #
-    # }
-
     # plotly interaction settings
     plotly::config(
       p,
@@ -382,6 +362,119 @@ server <- function(input, output, session) {
       # add custom JS to capture shown traces
       htmlwidgets::onRender(js_traces, data = "traces_crn")
   }) |> bindEvent(plot_data(), ignoreNULL = FALSE)
+
+
+  # restore plot state after re-render -----------------------------------------
+  awaiting_restoration <- reactiveVal(FALSE)
+
+  # if plot data changes, set flag to restore state after render
+  observe({
+    awaiting_restoration(TRUE)
+  }) |> bindEvent(plot_data(),
+                  ignoreNULL = TRUE,
+                  ignoreInit = TRUE)
+
+  # restore state of plot
+  observe({
+    req(awaiting_restoration())
+    req(input$traces_crn)
+
+    cat("...restoring state\n")
+
+    awaiting_restoration(FALSE) # only do it once
+
+    current_traces <- input$traces_crn
+    isolate({
+
+      p <- plotly::plotlyProxy("ts_crn_plot", session)
+
+      # if we have axes limits from previous render, reset them
+      # TODO: maybe also y if param not changed?
+      if (!is.null(crn_x_axes())){
+        x_axes <- crn_x_axes()
+        if (!is.null(x_axes$x_min) && !is.null(x_axes$x_max)){
+          cat(".   restoring x axes limits\n")
+          p <- p %>%
+            plotly::plotlyProxyInvoke(
+              method = "relayout",
+              list(
+                "xaxis.range[0]" = x_axes$x_min,
+                "xaxis.range[1]" = x_axes$x_max
+              )
+            )
+        }
+      }
+
+      if (!is.null(trace_opacity())){
+        wp_traces <- purrr::keep(current_traces, \(x) isTRUE(x$meta$role == "orgline"))
+        opacity_state <- trace_opacity()
+        op_on <- 1
+        op_off <- 0.15
+        on_traces <- wp_traces[names(wp_traces) %in% opacity_state$on]
+        on_ids <- unname(purrr::map_int(on_traces, "curveNumber"))
+        off_traces <- wp_traces[names(wp_traces) %in% opacity_state$off]
+        off_ids <- unname(purrr::map_int(off_traces, "curveNumber"))
+        op_trace_ids <- c(on_ids, off_ids)
+        op_values <- c(rep(op_on, length(on_ids)), rep(op_off, length(off_ids)))
+        cat(".   restoring opacity:\n")
+        cat("    on:", paste(on_ids, collapse = ", "), "\n")
+        cat("    off:", paste(off_ids, collapse = ", "), "\n")
+        trace_opacity(list(
+          on = names(on_traces),
+          off = names(off_traces)
+        ))
+
+        p <- p %>%
+          plotly::plotlyProxyInvoke(
+            method = "restyle",
+            list(opacity = op_values),
+            op_trace_ids
+          )
+      }
+
+      # re-add marker if applicable
+      sel_marker <- latest_marker()
+      if (!is.null(sel_marker)){
+        cat(".   restoring sel ring marker\n")
+        marker_y <- plot_data() |>
+          dplyr::filter(woodpiece_label == sel_marker$orgName,
+                        year == sel_marker$year) |>
+          dplyr::pull(vals)
+        meta_info <- list(role = "selring", orgCurveNumber = sel_marker$orgCurveNumber,
+                          orgName = sel_marker$orgName, orgYear = sel_marker$year)
+        p <- draw_selected_marker(
+          plot_obj = p,
+          x_val = sel_marker$year,
+          y_val = marker_y,
+          marker_name = sel_marker$marker_name,
+          meta_info = meta_info
+        )
+      }
+
+      # re-add excl markers if applicable
+      excl_markers <- get_excluded(
+        rings_edit = rings_data_edited(),
+        sel_wp = input$sel_wp,
+        plt_df = plot_data()
+      )
+      if (nrow(excl_markers)>0){
+        cat(".   restoring excl markers\n")
+        p <- p |> draw_excl_markers(excl_markers$year, excl_markers$vals)
+      }
+
+      # re-add crn mean trace if applicable
+      sel_mean <- input$mean_type
+      if (sel_mean %in% c("mean", "tbrm")){
+        df_mean <- calc_mean_vals(plot_data(), sel_mean)
+        cat(".   restoring mean trace\n")
+        p <- p |> draw_mean_trace(df_mean$year, df_mean$vals, sel_mean)
+      }
+
+      cat("... rerender complete\n")
+      p
+    })
+
+  }) |> bindEvent(input$traces_crn, ignoreNULL = TRUE, ignoreInit = TRUE)
 
 
   # PLOTLY REACTIVITY: AXES CHANGES --------------------------------------------
@@ -415,10 +508,7 @@ server <- function(input, output, session) {
 
   # PLOTLY REACTIVITY: LEGEND (DOUBLE) CLICKS ----------------------------------
   # legend clicks can highlight / dim traces
-  trace_opacity <- reactiveVal(list(
-    on = character(0),
-    off = character(0)
-  ))
+  trace_opacity <- reactiveVal(NULL)
 
   crn_lgnd_click <- reactive({
     req(plot_data())
@@ -435,7 +525,7 @@ server <- function(input, output, session) {
   # keep track of pending legend single clicks
   pending_single_click <- reactiveVal(FALSE)
 
-  # observe legend single clicks: toggle visibility of that trace
+  # observe legend single clicks: toggle opacity of that trace
   observe({
     # register pending first click
     req(!awaiting_restoration()) # avoid running if plot is rerendered
@@ -446,10 +536,10 @@ server <- function(input, output, session) {
     # otherwise, do nothing here, see double click handler
     shinyjs::delay(450, {
       if (pending_single_click()){
-        cat(".   single click\n")
+        cat(".   single lgnd click\n")
         pending_single_click(FALSE) # reset pending
 
-        req(isTruthy(input$traces_crn))
+        req(input$traces_crn)
         trace_name <- crn_lgnd_click()$name
         current_traces <- input$traces_crn
         trace_id <- current_traces[[trace_name]]$curveNumber
@@ -484,9 +574,7 @@ server <- function(input, output, session) {
         }
         p %>% plotly::plotlyProxyInvoke(
           method = "restyle",
-          list(
-            opacity = new_op
-          ),
+          list(opacity = new_op),
           trace_id
         )
       }
@@ -497,8 +585,8 @@ server <- function(input, output, session) {
   # toggle isolation of that trace (dimming all others)
   observe({
     req(!awaiting_restoration()) # avoid running if plot is rerendered
-    req(isTruthy(input$traces_crn))
-    cat(".   double click\n")
+    req(input$traces_crn)
+    cat(".   double legend click\n")
 
     pending_single_click(FALSE)  # cancel the pending single click from first click
 
@@ -538,9 +626,7 @@ server <- function(input, output, session) {
       p %>%
         plotly::plotlyProxyInvoke(
           method = "restyle",
-          list(
-            opacity = op_off
-          ),
+          list(opacity = op_off),
           other_ids
         )
     } else {
@@ -552,9 +638,7 @@ server <- function(input, output, session) {
       plotly::plotlyProxy("ts_crn_plot", session) %>%
         plotly::plotlyProxyInvoke(
           method = "restyle",
-          list(
-            opacity = op_on
-          )
+          list(opacity = op_on)
         )
     }
   }) |> bindEvent(crn_lgnd_dblclick(), ignoreNULL = TRUE, ignoreInit = TRUE)
@@ -627,13 +711,6 @@ server <- function(input, output, session) {
       )
 
     # adding pink trace
-    # excl_markers <- get_new_excluded(
-    #   rings_org = rings_data_org(),
-    #   rings_edit = rings_data_edited(),
-    #   sel_wp = input$sel_wp,
-    #   plt_df = plot_data(),
-    #   param = input$sel_param
-    # )
     excl_markers <- get_excluded(
       rings_edit = rings_data_edited(),
       sel_wp = input$sel_wp,
@@ -641,26 +718,7 @@ server <- function(input, output, session) {
     )
 
     if (nrow(excl_markers) > 0){
-      p <- p %>%
-        plotly::plotlyProxyInvoke(
-          "addTraces",
-          list(
-            x = as.list(excl_markers$year),
-            y = as.list(excl_markers$y),
-            name = "excl_rings",
-            mode = "markers",
-            marker = list(
-              size = 6,
-              color = "hotpink",
-              symbol = "circle-open"
-            ),
-            showlegend = FALSE,
-            hoverinfo = "skip",
-            meta = list(role = "exclring",
-                        exclmarkers = paste(excl_markers$woodpiece_label,
-                                            excl_markers$year,
-                                            sep = ".", collapse = "; "))
-          ))
+      p <- p |> draw_excl_markers(excl_markers$year, excl_markers$vals)
     }
 
     p
@@ -717,26 +775,7 @@ server <- function(input, output, session) {
       )
 
       if (nrow(excl_markers) > 0){
-        p <- p %>%
-          plotly::plotlyProxyInvoke(
-            "addTraces",
-            list(
-              x = as.list(excl_markers$year),
-              y = as.list(excl_markers$y),
-              name = "excl_rings",
-              mode = "markers",
-              marker = list(
-                size = 6,
-                color = "hotpink",
-                symbol = "circle-open"
-              ),
-              showlegend = FALSE,
-              hoverinfo = "skip",
-              meta = list(role = "exclring",
-                          exclmarkers = paste(excl_markers$woodpiece_label,
-                                              excl_markers$year,
-                                              sep = ".", collapse = "; "))
-            ))
+        p <- p |> draw_excl_markers(excl_markers$year, excl_markers$vals)
       }
 
       p
@@ -792,26 +831,7 @@ server <- function(input, output, session) {
       )
 
       if (nrow(excl_markers) > 0){
-        p <- p %>%
-          plotly::plotlyProxyInvoke(
-            "addTraces",
-            list(
-              x = as.list(excl_markers$year),
-              y = as.list(excl_markers$y),
-              name = "excl_rings",
-              mode = "markers",
-              marker = list(
-                size = 6,
-                color = "hotpink",
-                symbol = "circle-open"
-              ),
-              showlegend = FALSE,
-              hoverinfo = "skip",
-              meta = list(role = "exclring",
-                          exclmarkers = paste(excl_markers$woodpiece_label,
-                                              excl_markers$year,
-                                              sep = ".", collapse = "; "))
-            ))
+        p <- p |> draw_excl_markers(excl_markers$year, excl_markers$vals)
       }
 
       p
@@ -819,424 +839,32 @@ server <- function(input, output, session) {
 
   }) |> bindEvent(input$next_ring)
 
-
-  # PLOTLY REACTIVITY: SELECTED WOODPIECES -------------------------------------
-  trace_visibility <- reactiveVal(list(
-    visible = character(0),
-    invisible = character(0)
-  ))
-
-  # make deselected woodpieces invisible
-  observe({
-    req(isTruthy(input$traces_crn), isTruthy(input$sel_wp))
-    cat(".   changed sel wp\n")
-    selected_wps <- input$sel_wp
-    current_traces <- input$traces_crn
-
-    wp_traces <- purrr::keep(current_traces, \(x) isTRUE(x$meta$role == "orgline"))
-
-    vis_traces <- wp_traces[names(wp_traces) %in% selected_wps]
-    vis_ids <- unname(purrr::map_int(vis_traces, "curveNumber"))
-    invis_traces <- setdiff(
-      names(wp_traces),
-      selected_wps
-    )
-    invis_traces <- wp_traces[names(wp_traces) %in% invis_traces]
-    invis_ids <- unname(purrr::map_int(invis_traces, "curveNumber"))
-
-    # Store the visibility state
-    trace_visibility(list(
-      visible = names(vis_traces),
-      invisible = names(invis_traces)
-    ))
-
-    # remove existing any additional traces before updating them
-    marker_trace <- purrr::detect(current_traces, \(x) isTRUE(x$meta$role == "selring"))
-    excl_marker_trace <- purrr::detect(current_traces, \(x) isTRUE(x$meta$role == "exclring"))
-    crn_trace <- purrr::detect(current_traces, \(x) isTRUE(x$meta$role == "crnline"))
-
-    if (!is.null(marker_trace) &&
-        (marker_trace$meta$orgName %in% names(invis_traces))) {
-      # remove the sel marker trace only if its org trace is now invisible
-      rm_selring_id <- marker_trace$curveNumber
-      latest_marker(NULL)
-    } else {
-      rm_selring_id <- NULL
-    }
-
-    existing_ids <- c(rm_selring_id, excl_marker_trace$curveNumber, crn_trace$curveNumber)
-
-    p <- plotly::plotlyProxy("ts_crn_plot", session)
-    if (!is.null(existing_ids)){
-      p <- p %>%
-        plotly::plotlyProxyInvoke("deleteTraces", existing_ids)
-    }
-
-    # apply visibility changes
-    all_trace_ids <- c(vis_ids, invis_ids)
-    visibility_values <- c(rep(TRUE, length(vis_ids)), rep(FALSE, length(invis_ids)))
-
-    p <- p %>%
-      plotly::plotlyProxyInvoke(
-        method = "restyle",
-        list(
-          visible = visibility_values
-        ),
-        all_trace_ids
-      )
-
-    # re-add the excl markers if applicable
-    # excl_markers <- get_new_excluded(
-    #   rings_org = rings_data_org(),
-    #   rings_edit = rings_data_edited(),
-    #   sel_wp = input$sel_wp,
-    #   plt_df = plot_data(),
-    #   param = input$sel_param
-    # )
-    excl_markers <- get_excluded(
-      rings_edit = rings_data_edited(),
-      sel_wp = input$sel_wp,
-      plt_df = plot_data()
-    )
-
-    if (nrow(excl_markers)>0){
-      cat(".   restoring excl markers after sel_wp change\n")
-      p <- p %>%
-        plotly::plotlyProxyInvoke(
-          "addTraces",
-          list(
-            x = as.list(excl_markers$year),
-            y = as.list(excl_markers$y),
-            name = "excl_rings",
-            mode = "markers",
-            marker = list(
-              size = 6,
-              color = "hotpink",
-              symbol = "circle-open"
-            ),
-            showlegend = FALSE,
-            hoverinfo = "skip",
-            meta = list(role = "exclring",
-                        exclmarkers = paste(excl_markers$woodpiece_label,
-                                            excl_markers$year,
-                                            sep = ".", collapse = "; "))
-          ))
-    }
-
-    # re-add the crn mean trace if applicable
-    sel_mean <- input$mean_type
-    if (sel_mean %in% c("mean", "tbrm")){
-      cat(".   restoring crn mean after sel_wp change\n")
-      df_crn <- plot_data()
-      sel_prm <- input$sel_param
-      if (sel_mean == "mean"){
-        df_mean <- df_crn |>
-          dplyr::filter(!exclude_issues) |>
-          dplyr::filter(woodpiece_label %in% input$sel_wp) |>
-          dplyr::select(dplyr::all_of(c("year", sel_prm))) |>
-          collapse::fgroup_by(year) |>
-          collapse::fmean()
-      } else if (sel_mean == "tbrm"){
-        df_mean <- df_crn |>
-          dplyr::filter(woodpiece_label %in% input$sel_wp) |>
-          dplyr::filter(!exclude_issues) |>
-          dplyr::select(dplyr::all_of(c("year", sel_prm))) |>
-          dplyr::group_by(year) |>
-          dplyr::summarise("{sel_prm}" := dplR::tbrm(.data[[sel_prm]]))
-      }
-
-      p <- p %>%
-        plotly::plotlyProxyInvoke(
-          "addTraces",
-          list(
-            x = df_mean$year,
-            y = df_mean[[sel_prm]],
-            name = paste("crn.", sel_mean, sep = ""),
-            type = 'scatter',
-            mode = 'lines',
-            line = list(width = 2, color = 'black'),
-            showlegend = FALSE,
-            hoverinfo = "skip",
-            meta = list(role = "crnline")
-          ))
-    }
-
-    p
-  }) |> bindEvent(input$sel_wp, ignoreNULL = TRUE, ignoreInit = TRUE)
-
-
-  # COMPUTE CORRELATION --------------------------------------------------------
-  correlation_result <- reactive({
+  # SAMPLE DEPTH ---------------------------------------------------------------
+# given axis limits and plot data, compute sample depth
+  sample_depth_data <- reactive({
     req(plot_data())
-    req(latest_marker())
-    req(input$sel_param)
-    req(input$sel_wp)
-
-    # Get current axis limits
+    df <- plot_data()
     x_axes <- crn_x_axes()
-    # If no axis limits yet, set to NULL (optional, but safe)
-    if (is.null(x_axes)) x_axes <- list(x_min = NULL, x_max = NULL)
-
-    sel_prm <- input$sel_param
-    current_trace <- latest_marker()$orgName
-
-    # ---- single trace ----
-    df_plot <- plot_data() %>%
-      dplyr::filter(
-        woodpiece_label == current_trace,
-        !exclude_issues
-      ) %>%
-      dplyr::select(year, value = dplyr::all_of(sel_prm))
-
-    # ---- mean chronology ----
-    df_mean <- plot_data() %>%
-      dplyr::filter(
-        woodpiece_label %in% input$sel_wp,
-        !exclude_issues
-      ) %>%
-      dplyr::select(year, mean_value = dplyr::all_of(sel_prm))
-
-    if (input$mean_type %in% c("mean", "none")){
-      df_mean <- df_mean %>%
-        collapse::fgroup_by(year) %>%
-        collapse::fmean()
-    } else { #if (input$mean_type == "tbrm")
-      df_mean <- df_mean %>%
-        dplyr::group_by(year) %>%
-        dplyr::summarise(mean_value = dplR::tbrm(.data$mean_value))
+    if (is.null(x_axes)) {
+      x_min <- min(df$year, na.rm = TRUE)
+      x_max <- max(df$year, na.rm = TRUE)
     }
-
-    # ---- align by year ----
-    df_corr <- dplyr::inner_join(df_plot, df_mean, by = "year")
-
-    # ---- filter by current x-axis range if set ----
-    if (!is.null(x_axes$x_min) && !is.null(x_axes$x_max)) {
-      df_corr <- df_corr %>%
-        dplyr::filter(year >= x_axes$x_min, year <= x_axes$x_max)
+    else {
+      x_min <- ifelse(is.null(x_axes$x_min), min(df$year, na.rm = TRUE), x_axes$x_min)
+      x_max <- ifelse(is.null(x_axes$x_max), max(df$year, na.rm = TRUE), x_axes$x_max)
     }
-
-    # ---- safety check ----
-    if (nrow(df_corr) < 5) {
-      return(list(
-        ok = FALSE,
-        mean_type = ifelse(input$mean_type == "tbrm", "tbrm", "mean"),
-        msg = "Not enough overlapping years to compute correlation."
-      ))
-    }
-
-    # ---- compute correlation ----
-    r <- cor(
-      df_corr$value,
-      df_corr$mean_value,
-      method = "pearson",
-      use = "complete.obs"
-    )
-
-    list(
-      ok = TRUE,
-      mean_type = ifelse(input$mean_type == "tbrm", "tbrm", "mean"),
-      r = r,
-      n = nrow(df_corr),
-      trace = current_trace
-    )
+    df_sd <- df |>
+      dplyr::filter(year >= x_min, year <= x_max) |>
+      dplyr::group_by(year) |>
+      dplyr::summarise(sample_depth = sum(!is.na(vals)), .groups = "drop") |>
+      dplyr::arrange(year)
+    df_sd
   })
 
 
 
-  # RESTORE EDITS IF THE PLOT IS RERENDERED ------------------------------------
-  awaiting_restoration <- reactiveVal(FALSE)
 
-  # if plot data changes, set flag to restore state after render
-  observe({
-    awaiting_restoration(TRUE)
-  }) |> bindEvent(plot_data(),
-                  ignoreNULL = TRUE,
-                  ignoreInit = TRUE)
-
-   # Restore after plot renders
-  observe({
-    req(awaiting_restoration())
-    req(input$traces_crn)
-    req(isTruthy(trace_visibility()))
-    req(isTruthy(trace_opacity()))
-    cat("...traces_crn updated, restoring state\n")
-
-    awaiting_restoration(FALSE) # only do it once
-
-    current_traces <- input$traces_crn
-    isolate({
-
-      visibility_state <- trace_visibility()
-      opacity_state <- trace_opacity()
-      op_on <- 1
-      op_off <- 0.15
-
-      wp_traces <- purrr::keep(current_traces, \(x) isTRUE(x$meta$role == "orgline"))
-
-      # Find traces that should be visible / on
-      vis_traces <- wp_traces[names(wp_traces) %in% visibility_state$visible]
-      vis_ids <- unname(purrr::map_int(vis_traces, "curveNumber"))
-      on_traces <- wp_traces[names(wp_traces) %in% opacity_state$on]
-      on_ids <- unname(purrr::map_int(on_traces, "curveNumber"))
-
-      # Find traces that should be invisible / off
-      invis_traces <- wp_traces[names(wp_traces) %in% visibility_state$invisible]
-      invis_ids <- unname(purrr::map_int(invis_traces, "curveNumber"))
-      off_traces <- wp_traces[names(wp_traces) %in% opacity_state$off]
-      off_ids <- unname(purrr::map_int(off_traces, "curveNumber"))
-
-      sel_marker <- latest_marker()
-      marker_y <- NULL
-      if (!is.null(sel_marker)){
-        marker_y <- plot_data() |>
-          dplyr:: filter(woodpiece_label == sel_marker$orgName,
-                         year == sel_marker$year, !exclude_dupl) |>
-          dplyr:: pull(input$sel_param)
-      }
-
-      # Apply changes to plot
-      p <- plotly::plotlyProxy("ts_crn_plot", session)
-
-      # visibility
-      vis_trace_ids <- c(vis_ids, invis_ids)
-      visibility_values <- c(rep(TRUE, length(vis_ids)), rep(FALSE, length(invis_ids)))
-      cat(".   restoring visibility:\n")
-      cat("    on:", paste(vis_ids, collapse = ", "), "\n")
-      cat("    off:", paste(invis_ids, collapse = ", "), "\n")
-
-      p <- p %>%
-        plotly::plotlyProxyInvoke(
-          method = "restyle",
-          list(visible = visibility_values),
-          vis_trace_ids
-        )
-
-      op_trace_ids <- c(on_ids, off_ids)
-      op_values <- c(rep(op_on, length(on_ids)), rep(op_off, length(off_ids)))
-      cat(".   restoring opacity:\n")
-      cat("    on:", paste(on_ids, collapse = ", "), "\n")
-      cat("    off:", paste(off_ids, collapse = ", "), "\n")
-      # opacity
-      p <- p %>%
-        plotly::plotlyProxyInvoke(
-          method = "restyle",
-          list(opacity = op_values),
-          op_trace_ids
-        )
-
-      # re-add marker if applicable
-      if (!is.null(sel_marker) && length(marker_y) > 0){
-        cat(".   restoring sel ring marker\n")
-        p <- p %>%
-          plotly::plotlyProxyInvoke(
-            "addTraces",
-            list(
-              x = list(sel_marker$year),
-              y = list(marker_y),
-              name = sel_marker$marker_name,
-              mode = "markers",
-              marker = list(
-                size = 10,
-                color = "red",
-                symbol = "circle"
-              ),
-              showlegend = FALSE,
-              hoverinfo = "skip",
-              meta = list(role = "selring", orgCurveNumber = sel_marker$orgCurveNumber,
-                          orgName = sel_marker$orgName, year = sel_marker$year)
-            ))
-      }
-
-      # re-add excl if applicable
-      # excl_markers <- get_new_excluded(
-      #   rings_org = rings_data_org(),
-      #   rings_edit = rings_data_edited(),
-      #   sel_wp = input$sel_wp,
-      #   plt_df = plot_data(),
-      #   param = input$sel_param
-      # )
-      excl_markers <- get_excluded(
-        rings_edit = rings_data_edited(),
-        sel_wp = input$sel_wp,
-        plt_df = plot_data()
-      )
-
-      if (nrow(excl_markers)>0){
-        cat(".   restoring excl markers\n")
-        p <- p %>%
-          plotly::plotlyProxyInvoke(
-            "addTraces",
-            list(
-              x = as.list(excl_markers$year),
-              y = as.list(excl_markers$y),
-              name = "excl_rings",
-              mode = "markers",
-              marker = list(
-                size = 6,
-                color = "hotpink",
-                symbol = "circle-open"
-              ),
-              showlegend = FALSE,
-              hoverinfo = "skip",
-              meta = list(role = "exclring",
-                          exclmarkers = paste(excl_markers$woodpiece_label,
-                                              excl_markers$year,
-                                              sep = ".", collapse = "; "))
-            ))
-      }
-
-      # re-add crn mean trace if applicable
-      sel_mean <- input$mean_type
-      if (sel_mean %in% c("mean", "tbrm")){
-        df_crn <- plot_data()
-        sel_prm <- input$sel_param
-
-      if (sel_mean == "mean"){
-        df_mean <- df_crn |>
-          dplyr::filter(!exclude_issues) |>
-          dplyr::filter(woodpiece_label %in% input$sel_wp) |>
-          dplyr::select(dplyr::all_of(c("year", sel_prm))) |>
-          collapse::fgroup_by(year) |>
-          collapse::fmean()
-      } else if (sel_mean == "tbrm"){
-        df_mean <- df_crn |>
-          dplyr::filter(woodpiece_label %in% input$sel_wp) |>
-          dplyr::filter(!exclude_issues) |>
-          dplyr::select(dplyr::all_of(c("year", sel_prm))) |>
-          dplyr::group_by(year) |>
-          dplyr::summarise("{sel_prm}" := dplR::tbrm(.data[[sel_prm]]))
-      }
-
-      cat(".   restoring mean trace\n")
-      p <- p %>%
-        plotly::plotlyProxyInvoke(
-          "addTraces",
-          list(
-            x = df_mean$year,
-            y = df_mean[[sel_prm]],
-            name = paste("crn.", sel_mean, sep = ""),
-            type = 'scatter',
-            mode = 'lines',
-            line = list(width = 2, color = 'black'),
-            showlegend = FALSE,
-            hoverinfo = "skip",
-            meta = list(role = "crnline")
-          ))
-      }
-
-      cat("... rerender complete\n")
-      p
-    })
-
-  }) |> bindEvent(
-    input$traces_crn,
-    ignoreNULL = TRUE,
-    ignoreInit = TRUE
-  )
-
-
-
-
+  # PLOTLY REACTIVITY: MEAN TRACE ----------------------------------------------
   # adding a mean trace based on input
   observe({
     req(plot_data(), input$traces_crn)
@@ -1255,43 +883,16 @@ server <- function(input, output, session) {
       p <- p %>% plotly::plotlyProxyInvoke("deleteTraces", crn_trace$curveNumber)
     }
 
-    if (sel_mean == "none"){
-      return(p)
-    } else if (sel_mean == "mean"){
-      df_mean <- df_crn |>
-        dplyr::filter(!exclude_issues) |>
-        dplyr::filter(woodpiece_label %in% input$sel_wp) |>
-        dplyr::select(dplyr::all_of(c("year", sel_prm))) |>
-        collapse::fgroup_by(year) |>
-        collapse::fmean()
-    } else if (sel_mean == "tbrm"){
-      df_mean <- df_crn |>
-        dplyr::filter(!exclude_issues) |>
-        dplyr::filter(woodpiece_label %in% input$sel_wp) |>
-        dplyr::select(dplyr::all_of(c("year", sel_prm))) |>
-        dplyr::group_by(year) |>
-        dplyr::summarise("{sel_prm}" := dplR::tbrm(.data[[sel_prm]]))
+    if (sel_mean %in% c("mean", "tbrm")){
+      df_mean <- calc_mean_vals(df_crn, sel_mean)
+      p <- p |> draw_mean_trace(df_mean$year, df_mean$vals, sel_mean)
     }
-
-    p <- p %>%
-      plotly::plotlyProxyInvoke(
-        "addTraces",
-        list(
-          x = df_mean$year,
-          y = df_mean[[sel_prm]],
-          name = paste("crn.", sel_mean, sep = ""),
-          type = 'scatter',
-          mode = 'lines',
-          line = list(width = 2, color = 'black'),
-          showlegend = FALSE,
-          hoverinfo = "skip",
-          meta = list(role = "crnline")
-        ))
-    return(p)
+    p
   }) |> bindEvent(input$mean_type)
 
 
   #shinyjs::disable(selector = paste0("#sel_desquial .checkbox:nth-child(1) label"))
+
 
   # REACTIVE CONTAINER: SELECTED RING ------------------------------------------
   clicked_ring <- reactive({
@@ -1339,6 +940,56 @@ server <- function(input, output, session) {
     df <- clicked_ring()$data
     paste("Selected ring:", clicked_ring()$woodpiece_label, "| Year:", df$year)
   })
+
+  # COMPUTE CORRELATION --------------------------------------------------------
+  correlation_result <- reactive({
+    req(plot_data())
+    req(clicked_ring())
+
+    # Get current axis limits
+    x_axes <- crn_x_axes()
+    # If no axis limits yet, set to NULL (optional, but safe)
+    if (is.null(x_axes)) x_axes <- list(x_min = min(plot_data()$year),
+                                        x_max = max(plot_data()$year))
+
+    df_sel <- plot_data() |>
+      dplyr::filter(woodpiece_label == clicked_ring()$woodpiece_label) |>
+      dplyr::filter(year >= x_axes$x_min, year <= x_axes$x_max) |>
+      dplyr::select(year, vals)
+
+    sel_mean <- input$mean_type
+    if (sel_mean == "none") sel_mean <- "mean"
+    df_mean <- calc_mean_vals(plot_data(), sel_mean) |>
+      dplyr::filter(year >= x_axes$x_min, year <= x_axes$x_max)
+
+    df_corr <- dplyr::inner_join(df_sel, df_mean, by = "year")
+
+    # ---- safety check ----
+    if (nrow(df_corr) < 5) {
+      return(list(
+        ok = FALSE,
+        mean_type = ifelse(input$mean_type == "tbrm", "tbrm", "mean"),
+        msg = "Not enough overlapping years to compute correlation."
+      ))
+    }
+
+    # ---- compute correlation ----
+    r <- cor(
+      df_corr$vals.x,
+      df_corr$vals.y,
+      method = "pearson",
+      use = "complete.obs"
+    )
+
+    list(
+      ok = TRUE,
+      mean_type = sel_mean,
+      r = r,
+      n = nrow(df_corr),
+      trace = clicked_ring()$woodpiece_label
+    )
+  })
+
 
   output$ring_info <- renderUI({
     req(clicked_ring())
@@ -1686,59 +1337,6 @@ server <- function(input, output, session) {
   }) |> bindEvent(flag_changes(), ignoreNULL = FALSE, ignoreInit = TRUE)
 
 
-  # # revert to pre-edit data if "Discard changes" is clicked
-  # # can use clicked_ring()$data which is only updated when (another) ring is clicked
-  # observe({
-  #   req(isTruthy(clicked_ring()))
-  #
-  #   saved_flags <- clicked_ring()$data
-  #   expected_excl(ifelse(saved_flags$exclude_issues, "yes", "no"))
-  #   updateRadioButtons(session, "sel_exclude",
-  #                      selected = ifelse(saved_flags$exclude_issues, "yes", "no"))
-  #
-  #   # NEW: Restore EW/LW/ALL selection
-  #   # TODO: change to affected tissue
-  #   # if (!is.na(saved_flags$exclude_scope)) {
-  #   #   updateRadioButtons(session, "sel_exclude_scope",
-  #   #                      selected = saved_flags$exclude_scope)
-  #   # } else {
-  #   #   updateRadioButtons(session, "sel_exclude_scope", selected = "ALL")
-  #   # }
-  #
-  #   sel_disc_flags <- saved_flags %>%
-  #     dplyr::select(unname(discrete_features))
-  #   sel_disc_flags <- names(sel_disc_flags)[sel_disc_flags[1,] == TRUE]
-  #
-  #   updateCheckboxGroupInput(session, "sel_discrete",
-  #                            selected = sel_disc_flags)
-  #
-  #   sel_disq_flags <- saved_flags %>%
-  #     dplyr::select(unname(disqual_issues))
-  #   sel_disq_flags <- names(sel_disq_flags)[sel_disq_flags[1,] == TRUE]
-  #
-  #   updateCheckboxGroupInput(session, "sel_disqual",
-  #                            selected = sel_disq_flags)
-  #   shinyjs::runjs('$("#sel_disqual input[type=checkbox]").first().prop("disabled", true);')
-  #
-  #   # if ("technical_issues" %in% sel_disq_flags) {
-  #   #   shinyjs::enable("sel_technical_exact")
-  #     sel_tech_issues <- saved_flags %>%
-  #       dplyr::select(unname(technical_issues))
-  #     sel_tech_issues <- names(sel_tech_issues)[sel_tech_issues[1,] == TRUE]
-  #     updateSelectizeInput(session, "sel_technical_exact",
-  #                          selected = sel_tech_issues)
-  #   # } else {
-  #   #   shinyjs::disable("sel_technical_exact")
-  #   #   updateSelectizeInput(session, "sel_technical_exact",
-  #   #                        selected = character(0))
-  #   # }
-  #
-  #   updateTextAreaInput(session, "sel_comment",
-  #                       value = saved_flags$comment)
-  #
-  # }) |> bindEvent(input$undo_sel_flags, ignoreNULL = TRUE, ignoreInit = TRUE)
-
-
   # revert to raw input data if "reset_to_raw" is clicked
   observe({
     req(isTruthy(clicked_ring()))
@@ -1815,7 +1413,6 @@ server <- function(input, output, session) {
                         value = saved_flags$comment)
 
   }) |> bindEvent(input$reset_to_raw, ignoreNULL = TRUE, ignoreInit = TRUE)
-
 
   # save edits, update plot
   observe({
@@ -1985,11 +1582,14 @@ server <- function(input, output, session) {
 
 
   output$debug <- renderPrint({
-    trace_visibility()
+
+    #crn_lgnd_click()
     #input$select_dupl
     # # For debugging: show traces_crn structure
   #   #purrr::detect(input$traces_crn, \(x) isTRUE(x$meta$role == "exclring"))
-    # print(sample.int(1e6, 1))
+    print(sample.int(1e6, 1))
+    sample_depth_data()
+
     # if (isTruthy(input$traces_crn)){
     # traces_df <- purrr::map_dfr(names(input$traces_crn), function(name) {
     #   item <- input$traces_crn[[name]]

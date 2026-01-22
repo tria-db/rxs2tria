@@ -108,17 +108,76 @@ get_excluded <- function(rings_edit, sel_wp, plt_df){
   new_excl <- rings_edit %>%
     dplyr::filter(woodpiece_label %in% sel_wp) %>%
     dplyr::filter(exclude_issues) %>%
-    # dplyr::anti_join(rings_org,
-    #                  by = c("image_label", "year", "exclude_issues")) |>
     dplyr::select(image_label, year)
 
   excl_markers <- plt_df |> # plot data has no duplicate years
     dplyr::inner_join(new_excl, by = c("image_label", "year")) |>
     #dplyr::mutate(y = .data[[param]]) |>
     dplyr::mutate(y = vals) |>
-    dplyr::select(year, y, woodpiece_label)
+    dplyr::filter(!is.na(vals)) |>
+    dplyr::select(year, y, vals, woodpiece_label)
 
   return(excl_markers)
+}
+
+draw_excl_markers <- function(plot_obj, x_years, y_vals){
+  plot_obj %>%
+    plotly::plotlyProxyInvoke(
+      "addTraces",
+      list(
+        x = as.list(x_years),
+        y = as.list(y_vals),
+        name = "excl_rings",
+        mode = "markers",
+        marker = list(
+          size = 6,
+          color = "hotpink",
+          symbol = "circle-open"
+        ),
+        showlegend = FALSE,
+        hoverinfo = "skip",
+        meta = list(role = "exclring")
+      )
+    )
+}
+
+calc_mean_vals <- function(df, sel_mean){
+  if (sel_mean == "mean"){
+    df_mean <- df |>
+      dplyr::select(year, vals) |>
+      collapse::fgroup_by(year) |>
+      collapse::fsummarise(N = collapse::fnobs(vals),
+                           vals = collapse::fmean(vals)) |>
+      collapse::fsubset(N > 1) |>
+      dplyr::select(year, vals)
+  } else if (sel_mean == "tbrm"){
+    df_mean <- df |>
+      dplyr::select(year, vals) |>
+      dplyr::group_by(year) |>
+      dplyr::filter(dplyr::n()>1) |>
+      dplyr::summarise(vals = dplR::tbrm(vals))
+
+  } else {
+    return(NULL)
+  }
+  df_mean
+}
+
+draw_mean_trace <- function(plot_obj, x_years, y_vals, sel_mean){
+  plot_obj %>%
+    plotly::plotlyProxyInvoke(
+      "addTraces",
+      list(
+        x = as.list(x_years),
+        y = as.list(y_vals),
+        name = paste("crn.", sel_mean, sep = ""),
+        type = 'scatter',
+        mode = 'lines',
+        line = list(width = 2, color = 'black'),
+        showlegend = FALSE,
+        hoverinfo = "skip",
+        meta = list(role = "crnline")
+      ))
 }
 
 label_with_pop <- function(label_text, popover_text, icon_name = "info-circle", icon_title = "Info", popover_title = NULL){
