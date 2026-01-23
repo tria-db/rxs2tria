@@ -269,43 +269,10 @@ server <- function(input, output, session) {
     }
   })
 
+
   # PLOTLY ---------------------------------------------------------------------
-  # JavaScript to capture trace info and send to Shiny
-  js_traces <- "function(el, x, inputName){
-
-    // Function to extract trace information
-    function extractTraceInfo() {
-      var out = {};
-      // Use both el.data (original) and el._fullData (processed)
-      el.data.forEach(function(trace, traceindex) {
-        var fullTrace = el._fullData[traceindex];
-        out[fullTrace.name] = {
-          curveNumber:  traceindex,
-          opacity:  fullTrace.opacity !== undefined ? fullTrace.opacity : 1,
-          visible: fullTrace.visible !== undefined ? fullTrace.visible : true,
-          meta: trace.meta !== undefined ? trace.meta : (fullTrace.meta !== undefined ? fullTrace.meta : null)
-        };
-      });
-      return out;
-    }
-
-    // Helper to update Shiny input
-    function updateShinyInput() {
-      Shiny.setInputValue(inputName, extractTraceInfo());
-    }
-
-    // Initial state (after plot is fully rendered)
-    el.on('plotly_afterplot', function() {
-      console.log('Plot rendered, updating trace info');
-      updateShinyInput();
-    });
-
-    // When traces are restyled (legend clicks, opacity changes)
-    el.on('plotly_restyle', function(evtData) {
-      console.log('Plot restyled');
-      updateShinyInput();
-    });
-  }"
+  # load JavaScript function capturing trace info and sending to Shiny input
+  js_traces <- readLines("www/traces_to_input.js") |> paste(collapse = "\n")
 
   # RENDER the plot given the ring/prf data and selected inputs ----------------
   output$ts_crn_plot <- plotly::renderPlotly({
@@ -328,16 +295,16 @@ server <- function(input, output, session) {
       type = 'scatter',
       mode = 'lines',
       name = ~woodpiece_label,
-      source = "crn_plot",  # set source ID
-      meta = list(role = "orgline") # trace info for wp lines
+      source = "crn_plot", # set source ID
+      showlegend = TRUE,
+      meta = list(role = "orgline") # trace info for wp lines,
     )
 
     p <- p %>%
       plotly::layout(
         title = "",
-        xaxis = list(title = "Year"),
+        xaxis = list(title = "Year"), # TODO: FIX
         yaxis = list(title = sel_param),
-        showlegend = TRUE,
         legend = list(
           orientation = 'h',      # Horizontal orientation
           yanchor = 'bottom',     # Anchor the legend at the bottom
@@ -347,17 +314,39 @@ server <- function(input, output, session) {
           itemclick = FALSE,      # Disable single click on legend (custom handling)
           itemdoubleclick = FALSE # Disable double click on legend (custom handling)
         )
-      ) %>%
-      plotly::event_register("plotly_click") %>%
-      plotly::event_register("plotly_legendclick") %>%
-      plotly::event_register("plotly_legenddoubleclick") %>%
-      plotly::event_register("plotly_relayout")
+      )
 
-    # plotly interaction settings
+    # create sample depth subplot
+    df_sd <- plot_data() |>
+      dplyr::select(year,vals) |>
+      dplyr::group_by(year) |>
+      dplyr::summarise(n_obs = sum(!is.na(vals))) |>
+      dplyr::arrange(year)
+    p2 <- plotly::plot_ly(data = df_sd,
+                          x = ~year,
+                          y = ~n_obs,
+                          type = "scatter",
+                          mode = "lines+markers",
+                          line = list(shape = "hvh", color = "darkgrey"),
+                          marker = list(size = 2, color = "#00206E"),
+                          name = "depth",
+                          showlegend = FALSE,
+                          source = "crn_plot",
+                          meta = list(role = "samledepth"))
+
+    fig <- plotly::subplot(p, p2,
+                           nrows = 2,
+                           shareX = TRUE,
+                           heights = c(0.7, 0.3)) %>%
+      plotly::event_register("plotly_click") %>%
+      plotly::event_register("plotly_relayout") %>%
+      plotly::event_register("plotly_legendclick") %>%
+      plotly::event_register("plotly_legenddoubleclick")
+
     plotly::config(
-      p,
+      fig,
       doubleClickDelay=400,
-      modeBarButtonsToRemove = list('hoverClosestCartesian',
+      modeBarButtonsToRemove = list('hoverClosestCartesian', # TODO: FIX
                                     'hoverCompareCartesian')) %>%
       # add custom JS to capture shown traces
       htmlwidgets::onRender(js_traces, data = "traces_crn")
@@ -648,8 +637,18 @@ server <- function(input, output, session) {
   crn_click_data <- reactive({
     req(plot_data())
     # priority event: reevaluate on each click, even if same item
-    plotly::event_data("plotly_click",
+    event <- plotly::event_data("plotly_click",
                        source = "crn_plot", priority = "event")
+    current_traces <- isolate(input$traces_crn)
+    n_wp_traces <- length(
+      purrr::keep(current_traces, \(x) isTRUE(x$meta$role == "orgline"))
+    )
+    # TODO: get wpline curve numbers from traces_crn
+    if (isTruthy(event) && event$curveNumber < n_wp_traces) {
+      event
+    } else {
+      NULL
+    }
   })
 
   # observe plot clicks: add marker on selected point and highlight the trace
@@ -839,29 +838,6 @@ server <- function(input, output, session) {
 
   }) |> bindEvent(input$next_ring)
 
-  # SAMPLE DEPTH ---------------------------------------------------------------
-# given axis limits and plot data, compute sample depth
-  sample_depth_data <- reactive({
-    req(plot_data())
-    df <- plot_data()
-    x_axes <- crn_x_axes()
-    if (is.null(x_axes)) {
-      x_min <- min(df$year, na.rm = TRUE)
-      x_max <- max(df$year, na.rm = TRUE)
-    }
-    else {
-      x_min <- ifelse(is.null(x_axes$x_min), min(df$year, na.rm = TRUE), x_axes$x_min)
-      x_max <- ifelse(is.null(x_axes$x_max), max(df$year, na.rm = TRUE), x_axes$x_max)
-    }
-    df_sd <- df |>
-      dplyr::filter(year >= x_min, year <= x_max) |>
-      dplyr::group_by(year) |>
-      dplyr::summarise(sample_depth = sum(!is.na(vals)), .groups = "drop") |>
-      dplyr::arrange(year)
-    df_sd
-  })
-
-
 
 
   # PLOTLY REACTIVITY: MEAN TRACE ----------------------------------------------
@@ -998,11 +974,11 @@ server <- function(input, output, session) {
         dplyr::filter(woodpiece_label %in% input$sel_wp,
                       year == clicked_ring()$year,
                       !exclude_dupl, !exclude_issues) |> dplyr::pull(image_label)
-    sample_depth <- plot_data() |> dplyr::filter(
-      image_label %in% valid_samples,
-      year == clicked_ring()$year,
-      !is.na(.data[[input$sel_param]])
-    ) |> nrow()
+    # sample_depth <- plot_data() |> dplyr::filter(
+    #   image_label %in% valid_samples,
+    #   year == clicked_ring()$year,
+    #   !is.na(.data[[input$sel_param]])
+    # ) |> nrow()
 
     corr_res <- correlation_result()
 
@@ -1012,7 +988,7 @@ server <- function(input, output, session) {
       # tags$strong("Image: "), clicked_ring()$data$image_label, tags$br(),
       # tags$strong("Year: "), clicked_ring()$year, tags$br(),
       # tags$strong("Value: "), sprintf("%.3f", clicked_ring()$val), tags$br(),
-      tags$strong("Sample depth: "), sample_depth,"  |  ",
+      #tags$strong("Sample depth: "), sample_depth,"  |  ",
       tags$strong("Correlation of trace with", corr_res$mean_type, ": "),
       if (corr_res$ok) {
         tags$span(paste0(sprintf("%.3f", corr_res$r),
@@ -1029,31 +1005,6 @@ server <- function(input, output, session) {
     )
   })
 
-  output$sample_depth <- renderUI({
-    req(clicked_ring())
-
-    valid_samples <- rings_data_edited() |>
-      dplyr::filter(woodpiece_label %in% input$sel_wp,
-                    year == clicked_ring()$year,
-                    !exclude_dupl, !exclude_issues) |> dplyr::pull(image_label)
-    sample_depth <- plot_data() |> dplyr::filter(
-      image_label %in% valid_samples,
-      year == clicked_ring()$year,
-      !is.na(.data[[input$sel_param]])
-    ) |> nrow()
-
-    tags$span(paste(sample_depth, "samples with current selections"))
-  })
-
-  output$corr_res <- renderUI({
-    corr_res <- correlation_result()
-    if (corr_res$ok) {
-      tags$span(paste0(sprintf("%.3f", corr_res$r),
-                       " (", corr_res$n, " overlapping years)"))
-    } else {
-      tags$span(corr_res$msg)
-    }
-  })
 
   output$ring_overview <- reactable::renderReactable({
     req(clicked_ring())
@@ -1582,17 +1533,20 @@ server <- function(input, output, session) {
 
 
   output$debug <- renderPrint({
+    # plotly::event_data("plotly_click",
+    #                    source = "crn_plot2", priority = "event")
 
-    #crn_lgnd_click()
-    #input$select_dupl
-    # # For debugging: show traces_crn structure
-  #   #purrr::detect(input$traces_crn, \(x) isTRUE(x$meta$role == "exclring"))
     print(sample.int(1e6, 1))
-    sample_depth_data()
+    crn_click_data()
+    #crn_lgnd_click()
 
-    # if (isTruthy(input$traces_crn)){
-    # traces_df <- purrr::map_dfr(names(input$traces_crn), function(name) {
-    #   item <- input$traces_crn[[name]]
+
+    #sample_depth_data()
+    #input$sel_exclude
+
+    # if (isTruthy(input$traces_crn2)){
+    # traces_df <- purrr::map_dfr(names(input$traces_crn2), function(name) {
+    #   item <- input$traces_crn2[[name]]
     #
     #   # Start with basic columns
     #   result <- list(
@@ -1617,7 +1571,7 @@ server <- function(input, output, session) {
     # } else{
     #   NULL
     # }
-
+    #
 
 
   })

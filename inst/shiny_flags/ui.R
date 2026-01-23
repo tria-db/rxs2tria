@@ -38,8 +38,6 @@ theme <- bslib::bs_theme(
   )
 
 ui <- bslib::page_fluid(
-  # preliminaries
-  #
   shinyjs::useShinyjs(),
 
   # theme
@@ -104,8 +102,9 @@ ui <- bslib::page_fluid(
           }
         });
       });
-    ")),
+    "))
   ),
+
 
 
   # MAIN PANEL -----------------------------------------------------------------
@@ -176,7 +175,6 @@ ui <- bslib::page_fluid(
           max_height = "450px",
           bslib::card_body(class = "p-0",
           plotly::plotlyOutput("ts_crn_plot"))
-          #TODO: ADD sample depth plot
         ),
 
         # SELECTED RING CARD
@@ -193,49 +191,8 @@ ui <- bslib::page_fluid(
                 "Edit ring",
                 value = "edit_flags",
                 reactable::reactableOutput("ring_overview"),
-                # bslib::layout_column_wrap(
-                #   width = "250px", fixed_width = TRUE,
-                #   fill = FALSE,
-                #   bslib::card(
-                #     fill = FALSE,
-                #     class = "value-card",
-                #     uiOutput("sample_depth")
-                #   ),
-                #   bslib::card(
-                #     fill = FALSE,
-                #     class = "p-0",
-                #     uiOutput("corr_res")
-                #   ),
-                #   bslib::card(
-                #     fill = FALSE,
-                #     class = "p-0",
-                #     uiOutput("img_overlap")
-                #   ),
-                # ),
                 uiOutput("ring_info"),
                 hr(),
-
-                # bslib::card(
-                #   fill = FALSE,
-                #   class = "clean-card",
-                #
-                #   # bslib::layout_column_wrap(
-                #   #   width = 1/2,
-                #   #   fill = FALSE,
-                #     #style = bslib::css(grid_template_columns = "1fr 3fr"),
-                #     #uiOutput("ring_info"),
-                #
-                #
-                #
-                #     # bslib::card(max_height = "200px",
-                #     #   bslib::card_body(class = "p-0", plotOutput("cov_info"))
-                #     # )
-                #   # ),
-                #   #verbatimTextOutput("correlation"),
-                #   # actionButton("show_coverage", "Show coverage plot", icon = icon("chart-line"), width = "217px"),
-                #   # actionButton("switch_dupl", "Switch chosen image", icon = icon("danger"), width = "217px")
-                #
-                # ),
 
                 bslib::layout_column_wrap(
                   fill = FALSE,
