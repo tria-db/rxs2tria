@@ -33,4 +33,3 @@ function(el, x, inputName){
       updateShinyInput();
     });
   }
-  

@@ -178,7 +178,6 @@ server <- function(input, output, session) {
                                unname(disqual_issues),
                                unname(technical_issues),
                                unname(other_issues)),
-                              # "exclude_scope", "comment"), #affected_tissue
                              names(df_rings))
     df_rings[new_flag_cols] <- FALSE
     # initialize comment and exclude_scope columns if not present
@@ -302,9 +301,6 @@ server <- function(input, output, session) {
 
     p <- p %>%
       plotly::layout(
-        title = "",
-        xaxis = list(title = "Year"), # TODO: FIX
-        yaxis = list(title = sel_param),
         legend = list(
           orientation = 'h',      # Horizontal orientation
           yanchor = 'bottom',     # Anchor the legend at the bottom
@@ -332,25 +328,54 @@ server <- function(input, output, session) {
                           name = "depth",
                           showlegend = FALSE,
                           source = "crn_plot",
-                          meta = list(role = "samledepth"))
+                          meta = list(role = "sampledepth"))
+
 
     fig <- plotly::subplot(p, p2,
                            nrows = 2,
                            shareX = TRUE,
-                           heights = c(0.7, 0.3)) %>%
+                           heights = c(0.8, 0.2)) %>%
+      plotly::layout(
+        xaxis = list(title = "Year"),
+        yaxis = list(title = sel_param),      # First subplot y-axis
+        yaxis2 = list(title = "N samples")) %>% # Second subplot y-axis)
       plotly::event_register("plotly_click") %>%
       plotly::event_register("plotly_relayout") %>%
       plotly::event_register("plotly_legendclick") %>%
       plotly::event_register("plotly_legenddoubleclick")
 
-    plotly::config(
-      fig,
+    fig %>% plotly::config(
       doubleClickDelay=400,
-      modeBarButtonsToRemove = list('hoverClosestCartesian', # TODO: FIX
+      modeBarButtonsToRemove = list('select2d', 'lasso2d',
+                                    'hoverClosestCartesian',
                                     'hoverCompareCartesian')) %>%
-      # add custom JS to capture shown traces
+      # first onRender: add synchronized hover on sample depth plot
+      htmlwidgets::onRender("
+        function(el, x) {
+          el.on('plotly_hover', function(d) {
+            var point = d.points[0];
+            // check if the hovered trace is wp 'orgline'
+            var traceData = el.data[point.curveNumber];
+            if (traceData.meta && traceData.meta.role === 'orgline') {
+              // find the corresponding point on the sample depth trace
+              var sdCurveNumber = el.data.findIndex(trace => trace.meta && trace.meta.role === 'sampledepth');
+              var xValue = point.x;
+              var xData = el.data[sdCurveNumber].x;
+              var dsPtNum = xData.indexOf(xValue);
+              if (dsPtNum !== -1) {
+                // re-do the hover on both subplots with the identified points
+                Plotly.Fx.hover(el.id, [
+                  { curveNumber:point.curveNumber, pointNumber:point.pointNumber },
+                  { curveNumber:sdCurveNumber, pointNumber:dsPtNum }
+                ], ['xy','xy2']);
+              }
+            }
+          });
+        }
+    ") %>%
+      # second onRender: capture shown traces as Shiny input
       htmlwidgets::onRender(js_traces, data = "traces_crn")
-  }) |> bindEvent(plot_data(), ignoreNULL = FALSE)
+    }) |> bindEvent(plot_data(), ignoreNULL = FALSE)
 
 
   # restore plot state after re-render -----------------------------------------
@@ -368,7 +393,7 @@ server <- function(input, output, session) {
     req(awaiting_restoration())
     req(input$traces_crn)
 
-    cat("...restoring state\n")
+    cat("... restoring state\n")
 
     awaiting_restoration(FALSE) # only do it once
 
@@ -428,7 +453,7 @@ server <- function(input, output, session) {
         marker_y <- plot_data() |>
           dplyr::filter(woodpiece_label == sel_marker$orgName,
                         year == sel_marker$year) |>
-          dplyr::pull(vals)
+          dplyr::pull(dplyr::all_of(input$sel_param)) # also draw marker if excluded
         meta_info <- list(role = "selring", orgCurveNumber = sel_marker$orgCurveNumber,
                           orgName = sel_marker$orgName, orgYear = sel_marker$year)
         p <- draw_selected_marker(
@@ -643,7 +668,6 @@ server <- function(input, output, session) {
     n_wp_traces <- length(
       purrr::keep(current_traces, \(x) isTRUE(x$meta$role == "orgline"))
     )
-    # TODO: get wpline curve numbers from traces_crn
     if (isTruthy(event) && event$curveNumber < n_wp_traces) {
       event
     } else {
@@ -922,17 +946,18 @@ server <- function(input, output, session) {
     req(plot_data())
     req(clicked_ring())
 
-    # Get current axis limits
     x_axes <- crn_x_axes()
-    # If no axis limits yet, set to NULL (optional, but safe)
-    if (is.null(x_axes)) x_axes <- list(x_min = min(plot_data()$year),
-                                        x_max = max(plot_data()$year))
+    # If no axis limits set, use plot min and max
+    x_axes$x_min <- x_axes$x_min %||% min(plot_data()$year)
+    x_axes$x_max <- x_axes$x_max %||% max(plot_data()$year)
 
+    # get selected trace data for axis limits
     df_sel <- plot_data() |>
       dplyr::filter(woodpiece_label == clicked_ring()$woodpiece_label) |>
       dplyr::filter(year >= x_axes$x_min, year <= x_axes$x_max) |>
       dplyr::select(year, vals)
 
+    # get mean data for axis limits
     sel_mean <- input$mean_type
     if (sel_mean == "none") sel_mean <- "mean"
     df_mean <- calc_mean_vals(plot_data(), sel_mean) |>
@@ -940,7 +965,7 @@ server <- function(input, output, session) {
 
     df_corr <- dplyr::inner_join(df_sel, df_mean, by = "year")
 
-    # ---- safety check ----
+    # check for enough overlapping years
     if (nrow(df_corr) < 5) {
       return(list(
         ok = FALSE,
@@ -949,7 +974,7 @@ server <- function(input, output, session) {
       ))
     }
 
-    # ---- compute correlation ----
+    # estimate correlation
     r <- cor(
       df_corr$vals.x,
       df_corr$vals.y,
@@ -1050,6 +1075,161 @@ server <- function(input, output, session) {
   })
 
 
+
+
+  # update ring edit card when a ring is selected with existing data
+  observe({
+    shinyjs::toggle(id = "ring_editor_card", condition = !is.null(clicked_ring()))
+
+    # if a ring is selected, update the inputs with saved flags and comment
+    req(clicked_ring())
+
+    saved_flags <- clicked_ring()$data
+    update_ring_editor_inputs(saved_flags, session)
+
+  }) |> bindEvent(clicked_ring(), ignoreNULL = FALSE, ignoreInit = FALSE)
+
+
+  # toggle the affected tissue selector based on exclude yes/no
+  observe({
+    # reset and hide affected tissue cb if necessary
+    if (input$sel_exclude == "no") {
+      updateRadioButtons(session, "sel_affected", selected = "NA")
+    }
+    shinyjs::toggle(id = "sel_affected", condition = input$sel_exclude == "yes")
+  }) |> bindEvent(input$sel_exclude)
+
+
+  # toggle warning message on disqualifying issues
+  # if at least one of "incomplete_ring", "missing_ring", "compression_wood" is in input$sel_disqual,
+  # then the uiOutput "warn_disq" should give a warning message:
+  observeEvent(c(input$sel_disqual, input$sel_exclude), {
+    if (isTruthy(input$sel_disqual)) {
+      sel_warning <- intersect(c("incomplete_ring" , "missing_ring", "x_dating",
+                                 "compression_wood", "orientation"),
+                               input$sel_disqual)
+      if (length(sel_warning) > 0 && input$sel_exclude == "no") {
+        output$warn_disq <- renderUI({
+          tags$div(
+            style = "color: red; font-weight: bold;",
+            "Warning: Rings with these issues should normally be excluded!\n",
+            paste(sel_warning, collapse = ", ")
+          )
+        })
+      } else {
+        output$warn_disq <- renderUI({
+          NULL
+        })
+      }
+    } else {
+      output$warn_disq <- renderUI({
+        NULL
+      })
+    }
+
+  }, ignoreNULL = FALSE)
+
+
+  # SAVING FLAG EDITS ----------------------------------------------------------
+  # Reactive container to hold all the flag edits (slightly debounced to avoid too many updates)
+  flag_changes <- reactive({
+    #req(isTruthy(clicked_ring()))
+    list(
+      exclude = input$sel_exclude,
+      affected = input$sel_affected,
+      discrete = input$sel_discrete,
+      disqual = input$sel_disqual,
+      technical = input$sel_technical_exact,
+      other = input$sel_other_iss,
+      comment = input$sel_comment
+    )
+  }) %>% debounce(150)
+
+  # update rings_data_edited when flag_changes occur
+  observe({
+    req(clicked_ring())
+    # TODO: should not be triggerd if a different ring is clicked!!
+
+    excl_flag <- ifelse(flag_changes()$exclude == "yes", TRUE, FALSE)
+    if (excl_flag){
+      affected_tissue <- flag_changes()$affected %||% NA_character_
+      affected_tissue <- ifelse(affected_tissue == "NA", NA_character_, affected_tissue)
+    } else {
+      affected_tissue <- NA_character_
+    }
+
+    disc_flags_on <- flag_changes()$discrete
+    disc_flags_off <- setdiff(unname(discrete_features), disc_flags_on)
+    disq_flags_on <- flag_changes()$disqual
+    disq_flags_off <- setdiff(unname(disqual_issues), disq_flags_on)
+    techn_flags_on <- flag_changes()$technical
+    techn_flags_off <- setdiff(unname(technical_issues), techn_flags_on)
+    other_flags_on <- flag_changes()$other
+    other_flags_off <- setdiff(unname(other_issues), other_flags_on)
+
+    df_rings <- rings_data_edited()
+    clicked_data <- clicked_ring()$data
+    ring_id <- which(df_rings$image_label == clicked_data$image_label &
+                          df_rings$year == clicked_data$year)
+
+    df_rings[ring_id, "exclude_issues"] <- excl_flag
+    df_rings[ring_id, "affected_tissue"] <- affected_tissue
+    df_rings[ring_id, c(disc_flags_on, disq_flags_on, techn_flags_on, other_flags_on)] <- TRUE
+    df_rings[ring_id, c(disq_flags_off, disc_flags_off, techn_flags_off, other_flags_off)] <- FALSE
+    df_rings[ring_id, "comment"] <- flag_changes()$comment
+
+    rings_data_edited(df_rings)
+
+  }) |> bindEvent(flag_changes(), ignoreNULL = FALSE, ignoreInit = TRUE)
+
+
+  # revert to raw input data for selected rin if "reset_to_raw" is clicked
+  observe({
+    req(clicked_ring())
+
+    # get original input data for the selected ring
+    sel_img <- clicked_ring()$data$image_label
+    sel_year <- clicked_ring()$data$year
+    df_rings_sel <- input_data$rings_data |> dplyr::filter(
+      image_label == sel_img,
+      year == sel_year
+    )
+
+    # initialize any missing flag columns if not present
+    new_flag_cols <- setdiff(c(unname(discrete_features),
+                               unname(disqual_issues),
+                               unname(technical_issues),
+                               unname(other_issues)),
+                             names(df_rings_sel))
+    df_rings_sel[new_flag_cols] <- FALSE
+    if (!"comment" %in% names(df_rings_sel)){
+      df_rings_sel$comment <- NA_character_
+    }
+    if ("affected_tissue" %in% names(df_rings_sel)){
+      df_rings_sel$affected_tissue <- as.character(df_rings_sel$affected_tissue)
+      if (any(!df_rings_sel["affected_tissue"] %in% c("ew", "lw", "all"))){
+        shiny::showNotification("Affected tissue values not in ['ew','lw','all'] converted to NA",
+                                type = "warning")
+        print("WARNING: INVALID AFFECTED TISSUE VALUES CONVERTED TO NA")
+        df_rings_sel[!df_rings_sel["affected_tissue"] %in% c("ew", "lw", "all"), "affected_tissue"] <- NA_character_
+      }
+    } else {
+      df_rings_sel["affected_tissue"] <- NA_character_
+    }
+
+    # update the ring editor inputs
+    update_ring_editor_inputs(df_rings_sel, session)
+
+  }) |> bindEvent(input$reset_to_raw, ignoreNULL = TRUE, ignoreInit = TRUE)
+
+  # save edits, update plot
+  observe({
+    req(rings_data_edited())
+    rings_data_org(rings_data_edited())
+  }) |> bindEvent(input$apply_changes, ignoreNULL = TRUE, ignoreInit = TRUE)
+
+
+  # RING COVERAGE PLOT & TABLE -------------------------------------------------
   output$cov_info <- renderPlot({
     req(clicked_ring())
     df_rings <- clicked_ring()$coverage
@@ -1057,9 +1237,9 @@ server <- function(input, output, session) {
       ggplot2::geom_tile() +
       ggplot2::scale_fill_viridis_c(direction = -1) +
       ggplot2::geom_point(
-         data = df_rings |> dplyr::filter(image_label == clicked_ring()$data$image_label,
-                                          year == clicked_ring()$year),
-         color = "red", fill = NA,   size = 5
+        data = df_rings |> dplyr::filter(image_label == clicked_ring()$data$image_label,
+                                         year == clicked_ring()$year),
+        color = "red", fill = NA,   size = 5
       ) +
       ggplot2::theme_minimal() +
       ggplot2::theme(axis.text=ggplot2::element_text(size=12),
@@ -1105,8 +1285,8 @@ server <- function(input, output, session) {
                 htmltools::tags$button(
                   class = "btn btn-sm btn-outline-primary",
                   onclick = sprintf(
-                    "Shiny.setInputValue('select_dupl', {image:  '%s', year:  %s, nonce: Math.random()})",
-                    row$image_label, row$year
+                    "Shiny.setInputValue('select_dupl', {woodpiece: '%s', image: '%s', year: %s, nonce: Math.random()})",
+                    row$woodpiece_label, row$image_label, row$year
                   ),
                   "Select instead"
                 )
@@ -1127,249 +1307,41 @@ server <- function(input, output, session) {
     )
   })
 
-  expected_excl <- reactiveVal(NULL)
-
-  # update ring edit card when a ring is selected with existing data
+  # change selected duplicate
   observe({
-    shinyjs::toggle(id = "ring_editor_card", condition = !is.null(clicked_ring()))
+    cat(".   select new duplicate\n")
+    sel_wp <- input$select_dupl$woodpiece
+    sel_image <- input$select_dupl$image
+    sel_year <- input$select_dupl$year
 
-    # if a ring is selected, update the inputs with saved flags and comment
-    req(clicked_ring())
-
-    saved_flags <- clicked_ring()$data
-    expected_excl(ifelse(saved_flags$exclude_issues, "yes", "no"))
-    updateRadioButtons(session, "sel_exclude",
-                       selected = ifelse(saved_flags$exclude_issues, "yes", "no"))
-
-    shinyjs::toggle(id = "sel_affected", condition = saved_flags$exclude_issues)
-    if (saved_flags$exclude_issues) {
-      updateRadioButtons(session, "sel_affected",
-                         selected = ifelse(is.na(saved_flags$affected_tissue),
-                                           "NA", saved_flags$affected_tissue))
-    }
-    # TODO: needed? } else {
-    #   updateRadioButtons(session, "sel_affected",
-    #                      selected = "NA")
-    # }
-
-    sel_disc_flags <- saved_flags %>%
-      dplyr::select(unname(discrete_features))
-    sel_disc_flags <- names(sel_disc_flags)[sel_disc_flags[1,] == TRUE]
-
-    updateCheckboxGroupInput(session, "sel_discrete",
-                             selected = sel_disc_flags)
-
-    sel_disq_flags <- saved_flags %>%
-      dplyr::select(unname(disqual_issues))
-    sel_disq_flags <- names(sel_disq_flags)[sel_disq_flags[1,] == TRUE]
-
-    updateCheckboxGroupInput(session, "sel_disqual",
-                             selected = sel_disq_flags)
-    #shinyjs::runjs('$("#sel_disqual input[type=checkbox]").first().prop("disabled", true);')
-
-    sel_tech_issues <- saved_flags %>%
-      dplyr::select(unname(technical_issues))
-    sel_tech_issues <- names(sel_tech_issues)[sel_tech_issues[1,] == TRUE]
-    updateCheckboxGroupInput(session, "sel_technical_exact",
-                         selected = sel_tech_issues)
-
-    sel_other_issues <- saved_flags %>%
-      dplyr::select(unname(other_issues))
-    sel_other_issues <- names(sel_other_issues)[sel_other_issues[1,] == TRUE]
-    updateCheckboxGroupInput(session, "sel_other_iss",
-                         selected = sel_other_issues)
-
-    # TODO: add other issues for disq card?
-
-    updateTextAreaInput(session, "sel_comment",
-                        value = saved_flags$comment)
-
-  }) |> bindEvent(clicked_ring(), ignoreNULL = FALSE, ignoreInit = FALSE)
-
-
-  # toggle the affected tissue selector based on exclude yes/no
-  observe({
-    shinyjs::toggle(id = "sel_affected", condition = input$sel_exclude == "yes")
-    # TODO: should also reset the value if hidden? read from where if shown?
-  }) |> bindEvent(input$sel_exclude)
-
-
-  # toggle warning message on certain disqualifying issues
-  # if at least one of "incomplete_ring", "missing_ring", "compression_wood" is in input$sel_disqual,
-  # then the uiOutput "warn_disq" should give a warning message:
-  observeEvent(c(input$sel_disqual, input$sel_exclude), {
-    if (isTruthy(input$sel_disqual)) {
-      sel_warning <- intersect(c("incomplete_ring" , "missing_ring", "x_dating",
-                                 "compression_wood", "orientation"),
-                               input$sel_disqual)
-      if (length(sel_warning) > 0 && input$sel_exclude == "no") {
-        output$warn_disq <- renderUI({
-          tags$div(
-            style = "color: red; font-weight: bold;",
-            "Warning: Rings with these issues should normally be excluded!\n",
-            paste(sel_warning, collapse = ", ")
-          )
-        })
-      } else {
-        output$warn_disq <- renderUI({
-          NULL
-        })
-      }
-    } else {
-      output$warn_disq <- renderUI({
-        NULL
-      })
-    }
-
-  }, ignoreNULL = FALSE)
-
-
-  # SAVING FLAG EDITS ----------------------------------------------------------
-  # Reactive container to hold all the flag edits (slightly debounced to avoid too many updates)
-  flag_changes <- reactive({
-    #req(isTruthy(clicked_ring()))
-    list(
-      exclude = input$sel_exclude,
-      affected = input$sel_affected,
-      # exclude_scope = if (!is.null(input$sel_exclude_scope))
-      #   input$sel_exclude_scope
-      # else
-      #   NA_character_,
-      discrete = input$sel_discrete,
-      disqual = input$sel_disqual,
-      technical = input$sel_technical_exact,
-      other = input$sel_other_iss,
-      comment = input$sel_comment
-    )
-  }) %>% debounce(150)
-
-  # update rings_data_edited when flag_changes occur
-  observe({
-    req(isTruthy(clicked_ring()))
-    # TODO: should not be triggerd if a different ring is clicked!!
-
-    excl_flag <- ifelse(flag_changes()$exclude == "yes", TRUE, FALSE)
-    disc_flags_on <- flag_changes()$discrete
-    disc_flags_off <- setdiff(unname(discrete_features), disc_flags_on)
-    disq_flags_on <- flag_changes()$disqual
-    disq_flags_off <- setdiff(unname(disqual_issues), disq_flags_on)
-    techn_flags_on <- flag_changes()$technical
-    techn_flags_off <- setdiff(unname(technical_issues), techn_flags_on)
-    other_flags_on <- flag_changes()$other
-    other_flags_off <- setdiff(unname(other_issues), other_flags_on)
-
+    # update edited rings data (with up to date flags)
     df_rings <- rings_data_edited()
-    clicked_data <- clicked_ring()$data
-    ring_id <- which(df_rings$image_label == clicked_data$image_label &
-                          df_rings$year == clicked_data$year)
+    df_rings[df_rings$woodpiece_label == sel_wp &
+             df_rings$year == sel_year, "exclude_dupl"] <- TRUE
+    df_rings[df_rings$image_label == sel_image &
+             df_rings$year == sel_year, "exclude_dupl"] <- FALSE
 
-    df_rings[ring_id, "exclude_issues"] <- excl_flag
-    df_rings[ring_id, c(disc_flags_on, disq_flags_on, techn_flags_on, other_flags_on)] <- TRUE#
-    df_rings[ring_id, c(disq_flags_off, disc_flags_off, techn_flags_off, other_flags_off)] <- FALSE #
-    df_rings[ring_id, "comment"] <- flag_changes()$comment
-
-    # TODO: change to affected_tissue
-    # Add the new flag column for EW/LW/ALL
-    # scope_val <- flag_changes()$exclude_scope
-    # if (is.null(scope_val) || length(scope_val) == 0) scope_val <- NA_character_
-    #
-    # if (!"exclude_scope" %in% names(df_rings)) {
-    #   df_rings$exclude_scope <- NA_character_
-    # }
-    #
-    # if (excl_flag) {
-    #   df_rings[ring_id, "exclude_scope"] <- scope_val
-    # } else {
-    #   df_rings[ring_id, "exclude_scope"] <- NA_character_
-    # }
-
-    rings_data_edited(df_rings)
-
-  }) |> bindEvent(flag_changes(), ignoreNULL = FALSE, ignoreInit = TRUE)
-
-
-  # revert to raw input data if "reset_to_raw" is clicked
-  observe({
-    req(isTruthy(clicked_ring()))
-
-    sel_img <- clicked_ring()$data$image_label
-    sel_year <- clicked_ring()$data$year
-
-    # initialize new flag columns if not present
-    new_flag_cols <- setdiff(c(unname(discrete_features),
-                               unname(disqual_issues), unname(technical_issues),
-                               unname(other_issues),
-                               "comment",
-                               "exclude_scope"),
-                             names(input_data$rings_data))
-    saved_flags <- input_data$rings_data |> dplyr::filter(
-      image_label == sel_img,
-      year == sel_year
-    )
-    saved_flags[new_flag_cols] <- FALSE
-    if ("comment" %in% new_flag_cols){
-      saved_flags$comment <- NA_character_
-    }
-    if ("exclude_scope" %in% new_flag_cols){
-      saved_flags$exclude_scope <- NA_character_
-    }
-
-    expected_excl(ifelse(saved_flags$exclude_issues, "yes", "no"))
-    updateRadioButtons(session, "sel_exclude",
-                       selected = ifelse(saved_flags$exclude_issues, "yes", "no"))
-
-    # NEW: Restore EW/LW/ALL selection
-    if (!is.na(saved_flags$exclude_scope)) {
-      updateRadioButtons(session, "sel_exclude_scope",
-                         selected = saved_flags$exclude_scope)
+    # update the df underlying the plot -> trigger rerender with updated trace
+    rings_data_org(df_rings)
+    # update the selected ring marker with the new y value
+    new_marker <- latest_marker()
+    if (input$sel_param %in% names(df_rings)){
+      new_val <- df_rings %>%
+        dplyr::filter(image_label == sel_image,
+                      year == sel_year) %>%
+        dplyr::pull(dplyr::all_of(input$sel_param)) # only one row per image/year
     } else {
-      updateRadioButtons(session, "sel_exclude_scope", selected = "ALL")
+      new_val <- input_data$prf_data |>
+        dplyr::filter(image_label == sel_image,
+                      year == sel_year,
+                      sector_n == as.numeric(input$sel_sector)) |>
+        dplyr::pull(dplyr::all_of(input$sel_param))
     }
+    new_marker$val <- new_val
+    latest_marker(new_marker)
 
-    sel_disc_flags <- saved_flags %>%
-      dplyr::select(unname(discrete_features))
-    sel_disc_flags <- names(sel_disc_flags)[sel_disc_flags[1,] == TRUE]
+  }) |> bindEvent(input$select_dupl)
 
-    updateCheckboxGroupInput(session, "sel_discrete",
-                             selected = sel_disc_flags)
-
-    sel_disq_flags <- saved_flags %>%
-      dplyr::select(unname(disqual_issues))
-    sel_disq_flags <- names(sel_disq_flags)[sel_disq_flags[1,] == TRUE]
-
-    updateCheckboxGroupInput(session, "sel_disqual",
-                             selected = sel_disq_flags)
-    #shinyjs::runjs('$("#sel_disqual input[type=checkbox]").first().prop("disabled", true);')
-
-    # if ("technical_issues" %in% sel_disq_flags) {
-    #   shinyjs::enable("sel_technical_exact")
-      sel_tech_issues <- saved_flags %>%
-        dplyr::select(unname(technical_issues))
-      sel_tech_issues <- names(sel_tech_issues)[sel_tech_issues[1,] == TRUE]
-      updateSelectizeInput(session, "sel_technical_exact",
-                           selected = sel_tech_issues)
-    # } else {
-    #   shinyjs::disable("sel_technical_exact")
-    #   updateSelectizeInput(session, "sel_technical_exact",
-    #                        selected = character(0))
-    # }
-
-      sel_other_issues <- saved_flags %>%
-        dplyr::select(unname(other_issues))
-      sel_other_issues <- names(sel_other_issues)[sel_other_issues[1,] == TRUE]
-      updateSelectizeInput(session, "sel_other_iss",
-                           selected = sel_other_issues)
-
-    updateTextAreaInput(session, "sel_comment",
-                        value = saved_flags$comment)
-
-  }) |> bindEvent(input$reset_to_raw, ignoreNULL = TRUE, ignoreInit = TRUE)
-
-  # save edits, update plot
-  observe({
-    req(isTruthy(rings_data_edited()))
-    rings_data_org(rings_data_edited())
-  }) |> bindEvent(input$apply_changes, ignoreNULL = TRUE, ignoreInit = TRUE)
 
 
   # OPEN IMAGE -----------------------------------------------------------------
@@ -1536,8 +1508,10 @@ server <- function(input, output, session) {
     # plotly::event_data("plotly_click",
     #                    source = "crn_plot2", priority = "event")
 
+    req(latest_marker())
     print(sample.int(1e6, 1))
-    crn_click_data()
+    latest_marker()
+    #rings_data_org() |> dplyr::filter(woodpiece_label == "S22_LADE_L11", year == 1726)
     #crn_lgnd_click()
 
 

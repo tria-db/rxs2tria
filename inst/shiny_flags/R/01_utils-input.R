@@ -154,3 +154,47 @@ validate_input_dfs <- function(prf_data_in, rings_data_in, rxsmeta_data_in){
                                min.rows = 1, any.missing = FALSE)
   TRUE
 }
+
+# helper function to update the ring editor card inputs (radiobuttons and
+# checkboxes of the current ring flags) given selected ring data
+update_ring_editor_inputs <- function(saved_flags, session){
+  # update exclude_issues radio buttons
+  updateRadioButtons(session, "sel_exclude",
+                     selected = ifelse(saved_flags$exclude_issues, "yes", "no"))
+
+  # if exclude_issues is TRUE, show affected_tissue radio buttons and set value
+  shinyjs::toggle(id = "sel_affected", condition = saved_flags$exclude_issues)
+  if (saved_flags$exclude_issues) {
+    updateRadioButtons(session, "sel_affected",
+                       selected = ifelse(is.na(saved_flags$affected_tissue),
+                                         "NA", saved_flags$affected_tissue))
+  }
+
+  # update the flag checkboxes for the different categories
+  sel_disc_flags <- saved_flags %>%
+    dplyr::select(dplyr::all_of(unname(discrete_features)))
+  sel_disc_flags <- names(sel_disc_flags)[sel_disc_flags[1,] == TRUE]
+  updateCheckboxGroupInput(session, "sel_discrete",
+                           selected = sel_disc_flags)
+
+  sel_disq_flags <- saved_flags %>%
+    dplyr::select(dplyr::all_of(unname(disqual_issues)))
+  sel_disq_flags <- names(sel_disq_flags)[sel_disq_flags[1,] == TRUE]
+  updateCheckboxGroupInput(session, "sel_disqual",
+                           selected = sel_disq_flags)
+
+  sel_tech_issues <- saved_flags %>%
+    dplyr::select(dplyr::all_of(unname(technical_issues)))
+  sel_tech_issues <- names(sel_tech_issues)[sel_tech_issues[1,] == TRUE]
+  updateCheckboxGroupInput(session, "sel_technical_exact",
+                           selected = sel_tech_issues)
+
+  sel_other_issues <- saved_flags %>%
+    dplyr::select(dplyr::all_of(unname(other_issues)))
+  sel_other_issues <- names(sel_other_issues)[sel_other_issues[1,] == TRUE]
+  updateCheckboxGroupInput(session, "sel_other_iss",
+                           selected = sel_other_issues)
+
+  updateTextAreaInput(session, "sel_comment",
+                      value = saved_flags$comment)
+}
