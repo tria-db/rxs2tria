@@ -3,12 +3,12 @@ title: "rxs2tria"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{rxs2tria}
-  %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  markdown: 
+    wrap: 72
 ---
-
-Example workflow ...
-
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
@@ -17,6 +17,144 @@ knitr::opts_chunk$set(
 )
 ```
 
-```{r setup}
+# Introduction to rxs2tria
+
+**Note:** This package is currently under development and not yet stable
+nor officially released.
+
+## Installation
+
+You can install the development version of `rxs2tria` from
+[GitHub](https://github.com/tria-db/rxs2tria/) with:
+
+```{r, eval = FALSE}
+pak::pak("tria-db/rxs2tria") # or pak::pak("tria-db/rxs2tria@develop") for the even more experimental develop branch
+```
+
+## Reading in ROXAS data
+
+Start by attaching the package:
+
+```{r setup, eval = FALSE}
 library(rxs2tria)
+```
+
+Set the path to a folder containing the ROXAS output files of your QWA
+dataset. The files may be organized in subdirectories. The
+`get_roxas_files()` function checks for the presence of the following
+required files and returns their full filepaths. - ROXAS cells output
+files (named `{IMAGEID}_Output_Cells.txt`) - ROXAS rings output files
+(named `{IMAGEID}_Output_Rings.txt`) - ROXAS settings files (named
+`{IMAGEID}_ROXAS_Settings.txt`) - corresponding JPEG image files
+(`{IMAGEID}.jpg` or `{IMAGEID}.jpeg`)
+
+```{r files, eval = FALSE}
+path_in <- '/Users/maranaegelin/Documents/QWAdata/LTAL_S22/rxs_out' #'./path/to/ROXAS_output_data'
+files <- get_roxas_files(path_in)
+str(files)
+```
+
+### Extracting the data structure
+
+QWA data are organized hierarchically, i.e., each analyzed *image* was
+taken and potentially cropped out from a *slide* with the mounted
+microsection, each microsection was cut from a *woodpiece* or core, and
+each woodpiece was sampled from a *tree* of a certain *species* at a
+specific *site*. Typically, (some of) this information is encoded in the
+name of each image. [Fonti et al.
+(2025)](https://doi.org/10.3389/fpls.2016.00781) recommend the following
+naming convention for QWA images and corresponding ROXAS output files:
+
+`{site}_{species}_{tree/woodpiece}_{slide}_{image}`
+
+e.g. `S22_LADE_L08b_1_2.jpg` would designate the *2nd* image of the
+*first* slide from woodpiece *b* of the Larix decidua tree *L08* at site *S22*,
+while `S17_LADE_L09_5_1.jpg` represents the *first* image of the *5th*
+slide from the only woodpiece sampled from of the Larix decidua tree *L09* at
+site *S17*.
+
+The function `extract_data_structure()` can be used to extract this
+information from the file names using a regular expression (regex) with
+[named
+groups](https://stringr.tidyverse.org/articles/regular-expressions.html#grouping:~:text=named%20capture%20group).
+Note that not all hierarchical components need to be present in the
+pattern, as long as each image can be uniquely identified. For example,
+if there is exactly one image per slide, the slide (or image) identifier
+can be omitted from the pattern.
+
+```{r strc, eval = FALSE}
+# Example pattern where the file names follow the recommended convention
+# `{site}_{species}_{tree}_{slide}_{image}`
+# with only one sample (woodpiece) per tree, so no woodpiece identifier is included in the pattern
+pattern <- "^(?<site>[:alnum:]+)_(?<species>[:alnum:]+)_(?<tree>[:alnum:].+)_(?<slide>[:alnum:]+)_(?<image>[:alnum:]+)$"
+df_structure <- extract_data_structure(files, pattern)
+```
+
+**Important:** Check the resulting dataframe with `View(df_structure)`
+to ensure that the hierarchy was extracted correctly.
+
+Alternative: if your files do not follow this naming convention, you can
+provide it manually.... (TODO)
+
+### Collecting QWA metadata
+
+Next, read all the available metadata from the ROXAS Settings files and
+the images directly.
+
+```{r rawmeta, eval = FALSE}
+df_rxsmeta <- collect_metadata_from_files(df_structure,
+                                          roxas_version='classic')
+```
+
+To provide the additional metadata required (e.g. site and tree
+information, author details, ...) for the submission of a dataset, you
+can use the interactive Shiny app which is part of this package.
+
+Launch the app with the following command: Inputs: df_rxsmeta from file
+or environment, or json file Outputs: json
+
+```{r metaapp, eval = FALSE}
+launch_metadata_app()
+```
+
+The app is also hosted on a WSL server and accessible via
+[webapps.wsl.ch/QWAmeta](https://webapps.wsl.ch/QWAmeta/).
+
+### Cleaning and validating QWA data
+
+To load and preprocess the cell and ring measurements:
+
+```{r rawdata, eval = FALSE}
+# read raw cells/rings data
+QWA_data <- collect_raw_data(df_structure)
+
+# clean raw data
+QWA_data <- validate_QWA_data(QWA_data, df_meta)
+
+# remove outliers
+# NOTE: ROXAS does some threshold based outlier checks and assigns these a
+# a negative value. Here, we replace these outliers with NAs
+QWA_data <- remove_outliers(QWA_data)
+
+# complete cell measures
+QWA_data <- complete_cell_measures(QWA_data)
+
+# save the cleaned data to files
+write.csv(QWA_data$cells,
+          file.path(path_out, paste0(dataset_name, '_cells.csv')),
+          row.names = FALSE)
+
+write.csv(QWA_data$rings,
+          file.path(path_out, paste0(dataset_name, '_rings.csv')),
+          row.names = FALSE)
+
+```
+
+To check the coverage and add ring quality flags and setting years to
+exclude:
+
+```{r, eval = FALSE}
+launch_coverage_app()
+
+# TODO: add export functionality to coverage app
 ```

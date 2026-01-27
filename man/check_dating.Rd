@@ -4,17 +4,18 @@
 \alias{check_dating}
 \title{Check that the data are properly dated}
 \usage{
-check_dating(df_rings_log)
+check_dating(df_rings_log, df_meta)
 }
 \arguments{
 \item{df_rings_log}{the dataframe containing the rings data with cell counts}
 }
 \value{
-the input dataframe with an additional logical column 'undated'
+TRUE if all the dating checks are passed, FALSE otherwise
 }
 \description{
 This function checks that the data are properly dated, i.e. that the year
-variable is never NA, and does not contain values in the future. If any
-invalid years are detected, the function will issue an error.
+variable is a sequence without gaps or duplicate within each image, is never
+NA, and does not contain values in the future nor after the outmost year.
+If any invalid years are detected, the function will issue an error.
 }
 \keyword{internal}

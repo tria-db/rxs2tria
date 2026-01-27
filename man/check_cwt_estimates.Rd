@@ -10,7 +10,7 @@ check_cwt_estimates(df_rings_log)
 \item{df_rings_log}{the dataframe containing the rings data incl. mean_cwttan}
 }
 \value{
-the input dataframe with an additional logical column 'no_cwt'
+TRUE if CWT estimates are present for all images, FALSE otherwise
 }
 \description{
 This function checks if the raw data include cell wall thickness estimates,

@@ -4,7 +4,12 @@
 \alias{validate_QWA_data}
 \title{Validate the raw QWA data}
 \usage{
-validate_QWA_data(QWA_data, df_meta, verbose_flags = FALSE)
+validate_QWA_data(
+  QWA_data,
+  df_meta,
+  verbose_flags = FALSE,
+  exclude_mode = c("incomplete_only", "missing_only", "either", "both")
+)
 }
 \arguments{
 \item{QWA_data}{a list containing the cells and rings dataframes}

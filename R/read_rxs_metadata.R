@@ -21,26 +21,24 @@ get_roxas_files <- function(path_in) {
   imgfiles_exclude_keywords = c("annotated", "ReferenceSeries", "Preview")
   pattern_excl_keywords <- paste(imgfiles_exclude_keywords, collapse="|")
 
-  files_cells <- normalizePath(list.files(
-    path_in,
-    pattern = pattern_cell_files,
-    full.names = TRUE, recursive = TRUE, ignore.case = TRUE
-  ))
-  files_rings <- normalizePath(list.files(
-    path_in,
-    pattern = pattern_ring_files,
-    full.names = TRUE, recursive = TRUE, ignore.case = TRUE
-  ))
-  files_settings <- normalizePath(list.files(
-    path_in,
-    pattern = pattern_settings_files,
-    full.names = TRUE, recursive = TRUE, ignore.case = TRUE
-  ))
-  files_images <- normalizePath(list.files(
-    path_in,
-    pattern = pattern_orgimg_files,
-    full.names = TRUE, recursive = TRUE, ignore.case = TRUE
-  )) |> stringr::str_subset(pattern = pattern_excl_keywords, negate = TRUE)
+  # use fs rather than base list.files, much faster for network shares
+  files_cells <- fs::dir_ls(
+    fs::path_abs(path_in),
+    regexp = pattern_cell_files,
+    recurse = TRUE)
+  files_rings <- fs::dir_ls(
+    fs::path_abs(path_in),
+    regexp = pattern_ring_files,
+    recurse = TRUE)
+  files_settings <- fs::dir_ls(
+    fs::path_abs(path_in),
+    regexp = pattern_settings_files,
+    recurse = TRUE)
+  files_images <- fs::dir_ls(
+    fs::path_abs(path_in),
+    regexp = pattern_orgimg_files,
+    recurse = TRUE) |>
+    stringr::str_subset(pattern = pattern_excl_keywords, negate = TRUE)
 
   # check: if the patterns are removed, the four file lists should match
   l_files <- list(
@@ -87,7 +85,6 @@ get_roxas_files <- function(path_in) {
     fname_settings = files_settings
   )
 }
-
 
 #' Extract the data structure from file names
 #'
@@ -286,25 +283,36 @@ extract_data_structure <- function(
 # TODO: check this works on Windows? (exifr requires PERL)
 # TODO: is it robust for different image types? (the exif tags)
 # TODO: can get date as well if we have original images? error handling for missing tags?
-collect_image_info <- function(files_images) {
-  checkmate::assert_file_exists(
-    files_images,
-    extension = c("jpg","jpeg","png","tiff","bmp","gif"))
+collect_image_info <- function(files_images, batch_size = 50) {
+  checkmate::assert(
+    all(fs::file_exists(files_images)))
 
-  df_image_meta <- exifr::read_exif(files_images,
-                                    tags = c(
-                                      "FileType", "FileSize",
-                                      "ImageWidth", "ImageHeight")) |>
+  # split into batches for progress bar
+  # (big batches are faster since read_exif is already vecotrized)
+  batches <- split(files_images, ceiling(seq_along(files_images) / batch_size))
+  results <- lapply(
+    cli::cli_progress_along(seq_along(batches),
+                            "Reading image metadata..."),
+    function(i) {
+      # read exif data for each batch
+      exifr::read_exif(batches[[i]],
+                       tags = c("FileType", "FileSize",
+                                "ImageWidth", "ImageHeight"))
+  })
+
+  df_image_meta <- dplyr::bind_rows(results)
+
+  cli::cli_inform(c(
+    "v" = glue::glue("Image metadata extracted for {length(files_images)} images")
+  ))
+
+  df_image_meta |>
     dplyr::rename(fname_image = SourceFile,
                   img_filetype = FileType,
                   img_size = FileSize,
                   img_width = ImageWidth,
-                  img_height = ImageHeight
-    )
-
-  df_image_meta
+                  img_height = ImageHeight)
 }
-
 
 #' Extract data from a ROXAS settings file
 #'
@@ -324,9 +332,14 @@ extract_roxas_settings <- function(file_settings,
                                    roxas_version = "classic") {
   if (roxas_version == "classic"){
     # read from a single settings file
-    df_settings <- readr::read_delim(file_settings,
-                                     delim = "\t",
-                                     col_types = readr::cols(.default = "c", RNUM = "d"))
+    # df_settings <- readr::read_delim(file_settings,
+    #                                  delim = "\t",
+    #                                  col_types = readr::cols(.default = "c", RNUM = "d"),
+    #                                  progress = FALSE)
+    df_settings <- vroom::vroom(file_settings,
+                                delim = "\t",
+                                col_types = c(.default = "c", RNUM = "d"),
+                                progress = FALSE)
 
     # NOTE: this relies heavily on the consistent layout of the settings file
     # in particular, we need tab delimiters, columns RNUM, SETTING, DESCRIPTION
@@ -375,14 +388,21 @@ extract_roxas_settings <- function(file_settings,
 #' @export
 collect_settings_data <- function(files_settings,
                                   roxas_version = 'classic') {
-  checkmate::assert_file_exists(
-    files_settings,
-    extension = c("txt"))
+  checkmate::assert(all(fs::file_exists(files_settings)))
   checkmate::assert_subset(roxas_version, c("classic"))
 
-  df_settings_all <- files_settings |>
-    purrr::map(\(x) extract_roxas_settings(x, roxas_version = roxas_version)) |>
-    purrr::list_rbind()
+  # seq <- 1:length(files_settings)
+  # results <- purrr::map(
+  #   cli::cli_progress_along(seq, "Reading ROXAS settings files..."),
+  #   function(i) {
+  #     extract_roxas_settings(files_settings[i], roxas_version = roxas_version)
+  # })
+  #
+
+  results <- files_settings |>
+    purrr::map(\(x) extract_roxas_settings(x, roxas_version = roxas_version),
+               .progress = list(name = "Reading ROXAS settings files...", clear = TRUE))
+  df_settings_all <- purrr::list_rbind(results)
 
   # convert columns to numeric and integer
   df_settings_all <- df_settings_all |>
@@ -390,6 +410,9 @@ collect_settings_data <- function(files_settings,
                                   dbl_cwt_threshold:max_cwttan_l), as.numeric),
                   dplyr::across(circ_lower_limit:max_cell_area, as.integer))
 
+  cli::cli_inform(c(
+    "v" = glue::glue("ROXAS settings data have been extracted for {nrow(df_settings_all)} files")
+  ))
   df_settings_all
 }
 

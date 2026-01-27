@@ -35,11 +35,10 @@ dataset_name <- 'LTAL_S22_AI'
 dataset_name <- 'YAM_1880'
 dataset_name <- 'YAM_AI_1880'
 
+path_in <- "/Volumes/Dendro/Dendrosciences_All/PatrickFonti_ALTAY_2020_PF/Box01-04/Box01/ROXAS/Edited/Box01/"
 
 ################################################################################
 # get overview of data to be read and extract data structure from filenames
-files <- get_roxas_files(path_in)
-
 # example: `{site}_{species}_{tree}{woodpiece}_{slide}_{image}` (with 2digit tree identifier and optional woodpiece)
 #pattern <- "(?<site>[:alnum:]+)_(?<species>[:alnum:]+)_(?<tree>[:alnum:][:alnum:])(?<woodpiece>[:alnum:]*)_(?<slide>[:alnum:]+)_(?<image>[:alnum:]+)"
 
@@ -47,16 +46,21 @@ files <- get_roxas_files(path_in)
 # pattern <- "(?<site>[:alnum:]+)_(?<species>[:alnum:]+)_(?<tree>[:alnum:]+)_(?<slide>[:alnum:]+)_(?<image>[:alnum:]+)"
 pattern <- "(?<site>[[:alnum:]]+)_(?<species>[[:alnum:]]+)_(?<tree>[[:alnum:].]+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)"
 
-
 # example2: `{site}_{species}_{tree}_{slide}_{image}`
 #pattern <- "(?<site>[:alnum:]+)_(?<species>[:alnum:]+)_(?<tree>[:alnum:].+)_(?<slide>[:alnum:]+)_(?<image>[:alnum:]+)"
 
-df_structure <- extract_data_structure(files, pattern)
+pattern <- "ALT_(?<tree>[[:alnum:]]+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)"
+
+df_structure <- extract_data_structure(files, pattern, site_label = "ALTAY", species_code = "LASI")
 # TODO: visualize as data.tree?
+
+# subset if wanted
+# manually enter if wanted
 
 ################################################################################
 # read available metadata
 df_images <- collect_image_info(df_structure$fname_image)
+
 df_settings <- collect_settings_data(files$fname_settings,#df_structure$fname_settings,
                                      roxas_version ='classic')
 # glimpse the created at dates to check format
