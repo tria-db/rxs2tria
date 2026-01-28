@@ -54,8 +54,8 @@ pattern <- "ALT_(?<tree>[[:alnum:]]+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]
 df_structure <- extract_data_structure(files, pattern, site_label = "ALTAY", species_code = "LASI")
 # TODO: visualize as data.tree?
 
-# subset if wanted
-# manually enter if wanted
+# STEP: subset if wanted
+# STEP: manually enter if wanted
 
 ################################################################################
 # read available metadata
@@ -80,6 +80,8 @@ rm(df_images, df_settings)
 # complete the required metadata form via the Shiny app
 # launch_metadata_app()
 # save the json metadata file from the app output once completed
+
+# STEP: remove unwanted (undated) images?
 
 ################################################################################
 # read raw cells/rings data

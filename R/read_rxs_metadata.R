@@ -391,14 +391,6 @@ collect_settings_data <- function(files_settings,
   checkmate::assert(all(fs::file_exists(files_settings)))
   checkmate::assert_subset(roxas_version, c("classic"))
 
-  # seq <- 1:length(files_settings)
-  # results <- purrr::map(
-  #   cli::cli_progress_along(seq, "Reading ROXAS settings files..."),
-  #   function(i) {
-  #     extract_roxas_settings(files_settings[i], roxas_version = roxas_version)
-  # })
-  #
-
   results <- files_settings |>
     purrr::map(\(x) extract_roxas_settings(x, roxas_version = roxas_version),
                .progress = list(name = "Reading ROXAS settings files...", clear = TRUE))
