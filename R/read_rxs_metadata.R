@@ -78,11 +78,12 @@ get_roxas_files <- function(path_in) {
     "i" = "Found {length(files_images)} image{?s} with associated ROXAS files."
   ))
 
+  # TODO: sorting as hotfix to ensure matching order, better to match based on extracted pattern?
   list(
-    fname_image = files_images,
-    fname_cells = files_cells,
-    fname_rings = files_rings,
-    fname_settings = files_settings
+    fname_image = sort(files_images),
+    fname_cells = sort(files_cells),
+    fname_rings = sort(files_rings),
+    fname_settings = sort(files_settings)
   )
 }
 
