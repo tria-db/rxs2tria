@@ -1,4 +1,5 @@
 function(el, x, inputName){
+  console.log("hi");
 
     // Function to extract trace information
     function extractTraceInfo() {

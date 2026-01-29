@@ -1,11 +1,11 @@
 # helper function to show the modal for input source selection
-show_input_source_modal <- function(){
+show_input_source_modal <- function(ns){
   showModal(
     modalDialog(
       title = "Select input source",
       tagList(
         radioButtons(
-          "load_type",
+          ns("load_type"),
           "Choose input option:",
           choices = c(
             "Load data from R environment" = "env",
@@ -13,11 +13,11 @@ show_input_source_modal <- function(){
             "Load example data" = "example")
         ),
         hr(),
-        uiOutput("load_details_ui") # dynamic UI to provide input details given load_type
+        uiOutput(ns("load_details_ui"))# dynamic UI to provide input details given load_type
       ),
       footer = tagList(
         modalButton("Cancel"),
-        actionButton("confirm_input", "Proceed")
+        actionButton(ns("confirm_input"), "Proceed")
       )
     )
   )

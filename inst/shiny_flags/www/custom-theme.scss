@@ -102,7 +102,8 @@ primary bg color, white font, white on hover, white active underline */
   background: $prim-col-grad-1 !important;
 }
 
-#sel_wp ~ .selectize-control .selectize-input {
+/* height of the filter wps input box */
+#flags-filt_wp ~ .selectize-control .selectize-input {
   max-height: 100px;
   overflow-y: auto;
 }

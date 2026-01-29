@@ -37,6 +37,7 @@ dataset_name <- 'YAM_AI_1880'
 
 path_in <- "/Volumes/Dendro/Dendrosciences_All/PatrickFonti_ALTAY_2020_PF/Box01-04/Box01/ROXAS/Edited/Box01/"
 
+files <- get_roxas_files(path_in)
 ################################################################################
 # get overview of data to be read and extract data structure from filenames
 # example: `{site}_{species}_{tree}{woodpiece}_{slide}_{image}` (with 2digit tree identifier and optional woodpiece)
@@ -70,7 +71,7 @@ df_settings |>
 # convert created at dates to POSIXct
 df_settings$created_at <- convert_settings_dates(
   df_settings$created_at,
-  orders = c("%d/%m/%Y %H:%M:%S","%d/%m/%Y %H:%M"), # cf. lubridate::parse_date_time
+  orders = c("%d.%m.%Y %H:%M:%S"), # cf. lubridate::parse_date_time c("%d/%m/%Y %H:%M:%S","%d/%m/%Y %H:%M")
   tz = Sys.timezone())
 
 df_rxsmeta <- combine_rxs_metadata(df_structure, df_images, df_settings)
@@ -262,3 +263,6 @@ create_rwl(prf_data = prf_data,
 
 # 20260103_TRIA_S22_AI_rings_edited.csv
 # 20251230_TRIA_YAM_AI_1880_rings_edited.csv
+
+
+
