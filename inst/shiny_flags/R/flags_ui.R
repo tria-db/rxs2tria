@@ -53,14 +53,20 @@ flags_ui <- function(id) {
     ), # end of sidebar
 
     # MAIN PANEL ---------------------------------------------------------------
-    selectInput(ns("sel_wp"), "Select woodpiece to edit",
-                choices = c("S22_LADE_L01", "S22_LADE_L02", "S22_LADE_L03"),
-                multiple = FALSE, selectize = TRUE),
+    # selectInput(ns("sel_wp"), "Select woodpiece to edit",
+    #             choices = c("S22_LADE_L01", "S22_LADE_L02", "S22_LADE_L03"),
+    #             multiple = FALSE, selectize = TRUE),
     bslib::card(
       min_height = "650px",
       max_height = "750px",
       bslib::card_body(class = "p-0",
         plotly::plotlyOutput(ns("main_plot")))
+    ),
+    # two action buttions to navigate rings
+    bslib::layout_column_wrap(
+      width = "217px", fixed_width = TRUE,
+      actionButton(ns("prev_ring"), "Previous", icon = icon("arrow-left")),
+      actionButton(ns("next_ring"), "Next", icon = icon("arrow-right"))
     ),
 
 

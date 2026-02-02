@@ -94,10 +94,10 @@ ui <- bslib::page_fluid(
           if (editingMode) {
             if (e.key === 'ArrowLeft') {
               e.preventDefault();
-              Shiny.setInputValue('prev_ring', Math.random()); // TODO: use action btn id directly
+              Shiny.setInputValue('flags-prev_ring', Math.random()); // TODO: use action btn id directly
             } else if (e.key === 'ArrowRight') {
               e.preventDefault();
-              Shiny.setInputValue('next_ring', Math.random());
+              Shiny.setInputValue('flags-next_ring', Math.random());
             }
           }
         });
