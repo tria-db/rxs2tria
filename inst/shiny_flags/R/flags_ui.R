@@ -45,8 +45,7 @@ flags_ui <- function(id) {
       hr(class = "hr-slim"),
       downloadButton(ns("save_data"), "Download new ring data",
                      class = "btn-tert"),
-      hr(class = "hr-slim"),
-      checkboxInput(ns("auto_open_image"), "Try to auto-open images", value = FALSE)
+
 
       #checkboxInput("tail_YTE", "show tail YTE", value = TRUE),
 
@@ -57,16 +56,38 @@ flags_ui <- function(id) {
     #             choices = c("S22_LADE_L01", "S22_LADE_L02", "S22_LADE_L03"),
     #             multiple = FALSE, selectize = TRUE),
     bslib::card(
-      min_height = "650px",
-      max_height = "750px",
+      #max_height = "750px",
+      bslib::card_header(
+        class = "d-flex justify-content-end p-1",
+        actionLink(ns("plot_settings"), "", icon = icon("gear"))
+      ),
       bslib::card_body(class = "p-0",
-        plotly::plotlyOutput(ns("main_plot")))
+
+        uiOutput(ns("main_plot_ui"))
+      )
     ),
     # two action buttions to navigate rings
-    bslib::layout_column_wrap(
-      width = "217px", fixed_width = TRUE,
-      actionButton(ns("prev_ring"), "Previous", icon = icon("arrow-left")),
-      actionButton(ns("next_ring"), "Next", icon = icon("arrow-right"))
+    # bslib::layout_column_wrap(
+    #   width = "217px", fixed_width = TRUE,
+    #   actionButton(ns("prev_ring"), "Previous", icon = icon("arrow-left")),
+    #   actionButton(ns("next_ring"), "Next", icon = icon("arrow-right"))
+    # ),
+
+    bslib::card(
+      class = "card-prim",
+      bslib::card_header(
+        class = "d-flex justify-content-between align-items-center p-1",
+        uiOutput(ns("selimg")),
+        div(
+          actionButton(ns("show_image"), "", icon = icon("image")),
+          actionButton(ns("prev_ring"), "", icon = icon("arrow-left")),
+          actionButton(ns("next_ring"), "", icon = icon("arrow-right")),
+          actionLink(ns("tbl_settings"), "", icon = icon("gear"))
+        )
+      ),
+      bslib::card_body(class = "p-0",
+        rhandsontable::rHandsontableOutput(ns("img_flags"))
+      )
     ),
 
 

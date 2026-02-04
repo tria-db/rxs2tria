@@ -77,6 +77,18 @@ ui <- bslib::page_fluid(
       .handsontable td.htInvalid {
         background-color: pink !important;
       }
+      input.htCheckboxRendererInput[type='checkbox'] {
+        accent-color: red !important;
+      }
+      /* Grey color for checkboxes in the first column (after row names) only */
+      .htCore tbody tr td:nth-child(2) input.htCheckboxRendererInput[type='checkbox'] {
+        accent-color: grey !important;
+      }
+
+      .handsontable th {
+        background-color: $tert-col-grad-3 !important;
+        color: white !important;
+      }
 
     ")),
 

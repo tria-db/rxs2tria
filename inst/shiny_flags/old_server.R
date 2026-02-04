@@ -338,7 +338,7 @@ server <- function(input, output, session) {
       plotly::layout(
         xaxis = list(title = "Year"),
         yaxis = list(title = sel_param),      # First subplot y-axis
-        yaxis2 = list(title = "N samples")) %>% # Second subplot y-axis)
+        yaxis2 = list(title = "N")) %>% # Second subplot y-axis)
       plotly::event_register("plotly_click") %>%
       plotly::event_register("plotly_relayout") %>%
       plotly::event_register("plotly_legendclick") %>%

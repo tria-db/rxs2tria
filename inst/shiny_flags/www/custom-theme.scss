@@ -88,6 +88,7 @@ primary bg color, white font, white on hover, white active underline */
   color: white !important;
 }
 
+
 /* custom input cards (nested) */
 .card .clean-card .card-body{
   background-color: $tert-col-grad-4 !important;
@@ -141,9 +142,8 @@ ol.custom-indent {
 
 /* handsontable */
 /* change header color of ht */
-.handsontable th {
-  background-color: $sec-col-grad-5 !important;
-}
+
+
 
 /* shiny inputs */
 /* borders of selected input fields */

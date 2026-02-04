@@ -306,6 +306,53 @@ flags_server <- function(id, main_session) {
     js_traces <- readLines("www/traces_to_input.js") |> paste(collapse = "\n")
 
 
+    sel_subplots <- reactiveVal(c("sd","cov"))
+
+    observe({
+      showModal(
+        modalDialog(
+          title = "Plot settings",
+          checkboxGroupInput(
+            ns("sel_plots"),
+            label = "Show / hide optional subplots",
+            choices = c(
+              "Sample depth plot" = "sd",
+              "Woodpiece coverage plot" = "cov"
+            ), selected = sel_subplots()
+          ),
+          easyClose = TRUE,
+          footer = tagList(
+            modalButton("Cancel"),
+            actionButton(ns("confirm_plots"), "Proceed")
+          )
+        )
+      )
+    }) |> bindEvent(input$plot_settings)
+
+    observe({
+      sel_subplots(input$sel_plots)
+      removeModal()
+
+    }) |> bindEvent(input$confirm_plots)
+
+    output$main_plot_ui <- renderUI({
+      min_height = "350px"
+      if ("sd" %in% sel_subplots()) {
+        min_height <- "400px"
+      }
+      if ("cov" %in% sel_subplots()) {
+        min_height <- "550px"
+      }
+      if ("sd" %in% sel_subplots() && "cov" %in% sel_subplots()){
+        min_height <- "600px"
+      }
+      max_height <- "700px"
+      div(
+        style = paste0("min-height: ", min_height, "; max-height: ", max_height),
+        plotly::plotlyOutput(ns("main_plot"), height = "100%")
+      )
+    })
+
     output$main_plot <- plotly::renderPlotly({
       validate(need(isTruthy(plot_data$df_selwp), "Please provide input data"))
       sel_param <- input$sel_param
@@ -366,69 +413,76 @@ flags_server <- function(id, main_session) {
           )
         )
 
-      # create sample depth subplot
-      p2 <- plotly::plot_ly(data = plot_data$df_sd,
-                            x = ~year,
-                            y = ~n_obs,
-                            type = "scatter",
-                            mode = "lines+markers",
-                            line = list(shape = "hvh", color = "darkgrey"),
-                            marker = list(size = 2, color = "#00206E"),
-                            name = "sample depth",
-                            showlegend = FALSE,
-                            source = "crn_plot",
-                            meta = list(role = "sampledepth"))
+      print(sel_subplots())
 
-      p3 <- plotly::plot_ly(
-        data = plot_data$df_cov,
-        x = ~year,
-        y = ~image_label,
-        color = ~image_label,
-        colors = "grey",
-        type = 'scatter',
-        mode = 'line',
-        name = ~paste0("covl.", image_label),
-        hoverinfo = "skip",
-        showlegend = FALSE,
-        source = "crn_plot",
-        meta = list(role = "covlines", wp_label = selwp)
-      ) %>%
-        plotly::add_trace(
+      plot_list <- list(p)
+      nrows <- 1
+      heights <- c(0.5)
+
+      if ("sd" %in% sel_subplots()){
+        # create sample depth subplot
+        p2 <- plotly::plot_ly(data = plot_data$df_sd,
+                              x = ~year,
+                              y = ~n_obs,
+                              type = "scatter",
+                              mode = "lines+markers",
+                              line = list(shape = "hvh", color = "#00206E"),
+                              marker = list(size = 3, color = "#00206E"),
+                              name = "sample depth",
+                              showlegend = FALSE,
+                              source = "crn_plot",
+                              meta = list(role = "sampledepth"))
+        plot_list <- c(plot_list, list(p2))
+        nrows <- nrows + 1
+        heights <- c(heights, 0.1)
+      }
+
+      if ("cov" %in% sel_subplots()){
+          p3 <- plotly::plot_ly(
+          data = plot_data$df_cov,
           x = ~year,
           y = ~image_label,
           type = 'scatter',
-          mode = 'markers',
+          mode = 'lines+markers',
           marker = list(
-            size =10,
-            color = ~cno,
-            colorscale = "Viridis",
-            symbol = "square"
-          ),
+                        size =10,
+                        color = ~cno,
+                        colorscale = list(c(0, "#FED976"), c(1, "#006268")),
+                        symbol = "square"
+                      ),
+          line = list(color = "darkgrey"),
           name = ~image_label,
           hoverinfo = 'text',
           text = ~paste0(image_label, "<br>",
                          year, ": ", cno, " cells"),
           showlegend = FALSE,
-          meta = list(role = "covpoints", wp_label = selwp)
+          source = "crn_plot",
+          meta = list(role = "covlines", wp_label = selwp)
         )
-      # %>%
-      #   plotly::layout(shapes = list(list(type = "line",x0 = 0,
-      #                                     x1 = 1,
-      #                                     xref = "paper",
-      #                                     y0 = sel_img,
-      #                                     y1 = sel_img,
-      #                                     line = list(color = 'red', width = 3),
-      #                                     layer = "below")))
+        # %>%
+        #   plotly::layout(shapes = list(list(type = "line",x0 = 0,
+        #                                     x1 = 1,
+        #                                     xref = "paper",
+        #                                     y0 = sel_img,
+        #                                     y1 = sel_img,
+        #                                     line = list(color = 'red', width = 3),
+        #                                     layer = "below")))
 
+        plot_list <- c(plot_list, list(p3))
+        nrows <- nrows + 1
+        heights <- c(heights, 0.4)
+      }
+      heights <- heights / sum(heights) # normalize heights to sum to 1
 
-      fig <- plotly::subplot(p, p2, p3,
-                             nrows = 3,
+      fig <- plotly::subplot(plot_list,
+                             nrows = nrows,
                              shareX = TRUE,
-                             heights = c(0.5, 0.1, 0.4)) %>%
+                             heights = heights) %>%
         plotly::layout(
           xaxis = list(title = "Year"),
           yaxis = list(title = sel_param),
-          yaxis2 = list(title = "N samples"))
+          #yaxis2 = list(title = "N"),
+          hovermode = "closest")
 
       fig <- fig %>%
         plotly::event_register("plotly_click") %>%
@@ -436,9 +490,12 @@ flags_server <- function(id, main_session) {
         plotly::config(
         modeBarButtonsToRemove = list('select2d', 'lasso2d',
                                       'hoverClosestCartesian',
-                                      'hoverCompareCartesian')) %>%
-        # first onRender: add synchronized hover on sample depth plot
-        htmlwidgets::onRender("
+                                      'hoverCompareCartesian'))
+
+      if ("sd" %in% sel_subplots()){
+        fig <- fig %>%
+          # add synchronized hover on sample depth plot
+          htmlwidgets::onRender("
           function(el, x) {
             el.on('plotly_hover', function(d) {
               var point = d.points[0];
@@ -461,11 +518,13 @@ flags_server <- function(id, main_session) {
               }
             });
           }
-      ") %>%
-      # second onRender: capture shown traces as Shiny input
-      htmlwidgets::onRender(js_traces, data = ns("traces_crn"))
+      ")
+      }
+      fig <- fig %>%
+        # capture shown traces as Shiny input
+        htmlwidgets::onRender(js_traces, data = ns("traces_crn"))
 
-    }) |> bindEvent(plot_data$df_selwp, plot_data$df_other)
+    }) |> bindEvent(plot_data$df_selwp, plot_data$df_other, sel_subplots(), ignoreInit = TRUE)
 
 
     # restore plot state after re-render -----------------------------------------
@@ -474,7 +533,7 @@ flags_server <- function(id, main_session) {
     # if plot data changes, set flag to restore state after render
     observe({
       awaiting_restoration(TRUE)
-    }) |> bindEvent(plot_data$df_selwp, plot_data$df_other,
+    }) |> bindEvent(plot_data$df_selwp, plot_data$df_other, sel_subplots(),
                     ignoreNULL = TRUE,
                     ignoreInit = TRUE)
 
@@ -492,18 +551,26 @@ flags_server <- function(id, main_session) {
         if (isTruthy(sel_marker())){
           cat("... redrawing sel ring markers\n")
           marker <- sel_marker()
+          yaxis_cov <- if ("sd" %in% sel_subplots()) "y3" else "y2"
           if (marker$wp_label %in% plot_data$df_selwp$woodpiece_label){
             # ensure we have up to date y val if param was changed
             ywp_val <- plot_data$df_selwp |>
               dplyr::filter(year == marker$year, image_label == marker$ycov_val) |>
               dplyr::pull(dplyr::any_of(input$sel_param))
 
+            df_excl <- rings_data_edited() |> dplyr::filter(
+              image_label == marker$ycov_val, year ==  marker$year) |>
+              dplyr::select(exclude_issues, exclude_dupl)
+            not_in_plot <- df_excl$exclude_dupl || df_excl$exclude_issues || is.na(ywp_val)
+            marker_col <- ifelse(not_in_plot, "#ff0099", "#e60000")
+
             sel_marker(
               list(
                 year = marker$year,
                 wp_label = marker$wp_label,
                 ywp_val = ywp_val,
-                ycov_val = marker$ycov_val
+                ycov_val = marker$ycov_val,
+                marker_col = marker_col
               )
             )
 
@@ -520,33 +587,36 @@ flags_server <- function(id, main_session) {
                     name = "sel_marker_wp",
                     marker = list(
                       size = 10,
-                      color = "red",
+                      color = marker_col,
                       symbol = "circle"
                     ),
                     showlegend = FALSE,
                     hoverinfo = "skip",
                     meta = list(role = "sel_marker_wp")
                   )
-                ) %>%
-                plotly::plotlyProxyInvoke(
-                  "addTraces",
-                  list(
-                    x = list(marker$year),
-                    y = list(marker$ycov_val),
-                    type = "scatter",
-                    mode = "markers",
-                    name = "sel_marker_cov",
-                    marker = list(
-                      size = 10,
-                      color = "red",
-                      symbol = "circle"
-                    ),
-                    showlegend = FALSE,
-                    hoverinfo = "skip",
-                    meta = list(role = "sel_marker_cov"),
-                    yaxis = "y3"
-                  )
                 )
+               if ("cov" %in% sel_subplots()) {
+                 p <- p %>%
+                  plotly::plotlyProxyInvoke(
+                    "addTraces",
+                    list(
+                      x = list(marker$year),
+                      y = list(marker$ycov_val),
+                      type = "scatter",
+                      mode = "markers",
+                      name = "sel_marker_cov",
+                      marker = list(
+                        size = 10,
+                        color = marker_col,
+                        symbol = "circle"
+                      ),
+                      showlegend = FALSE,
+                      hoverinfo = "skip",
+                      meta = list(role = "sel_marker_cov"),
+                      yaxis = yaxis_cov
+                    )
+                  )
+               }
             } else {
               wp_curveNumber <- current_traces[['sel_marker_wp']]$curveNumber
               cov_curveNumber <- current_traces[['sel_marker_cov']]$curveNumber
@@ -556,19 +626,84 @@ flags_server <- function(id, main_session) {
                   "restyle",
                   list(
                     x = list(list(marker$year)),
-                    y = list(list(ywp_val))
+                    y = list(list(ywp_val)),
+                    marker = list(
+                      size = 10,
+                      color = marker_col,
+                      symbol = "circle"
+                    )
                   ),
                   wp_curveNumber
-                ) %>%
+                )
+              if ("cov" %in% sel_subplots()) {
+                p <- p %>%
+                  plotly::plotlyProxyInvoke(
+                    "restyle",
+                    list(
+                      x = list(list(marker$year)),
+                      y = list(list(marker$ycov_val)),
+                      marker = list(
+                        size = 10,
+                        color = marker_col,
+                        symbol = "circle"
+                      )
+                    ),
+                    cov_curveNumber
+                  )
+              }
+            }
+
+            cat("... redrawing exclusion markers\n")
+            # TODO: also update if: sel woodpiece changes, plot rerenders
+            df_rings <- rings_data_edited() |>
+              dplyr::filter(woodpiece_label == sel_marker()$wp_label) |>
+              dplyr::filter(!exclude_dupl, exclude_issues) |>
+              dplyr::select(image_label, year)
+
+            excl_markers <- plot_data$df_selwp |>
+              dplyr::inner_join(df_rings, by = c("image_label", "year")) |>
+              dplyr::select(year, vals)
+            names(excl_markers) <- c("year", "ywp_val")
+
+            if (!"excl_markers" %in% names(current_traces)){
+              p <- p %>%
+                plotly::plotlyProxyInvoke(
+                  "addTraces",
+                  list(
+                    x = excl_markers$year,
+                    y = excl_markers$ywp_val,
+                    type = "scatter",
+                    mode = "markers",
+                    name = "excl_markers",
+                    marker = list(
+                      size = 7,
+                      color = "blue",
+                      symbol = "circle-open"
+                    ),
+                    showlegend = FALSE,
+                    hoverinfo = "skip",
+                    meta = list(role = "excl_markers")
+                  )
+                )
+            } else {
+              excl_curveNumber <- current_traces[['excl_markers']]$curveNumber
+
+              p <- p %>%
                 plotly::plotlyProxyInvoke(
                   "restyle",
                   list(
-                    x = list(list(marker$year)),
-                    y = list(list(marker$ycov_val))
+                    x = list(excl_markers$year),
+                    y = list(excl_markers$ywp_val),
+                    marker = list(
+                      size = 7,
+                      color = "blue",
+                      symbol = "circle-open"
+                    )
                   ),
-                  cov_curveNumber
+                  excl_curveNumber
                 )
             }
+
             p
           }
           else {
@@ -588,12 +723,12 @@ flags_server <- function(id, main_session) {
     plot_click <- reactive({
       req(plot_data$df_selwp)
       event <- plotly::event_data("plotly_click", source = "crn_plot", priority = "event")
-      req(event)
+      req(nrow(event) == 1) # filter out double clicks somehow capturing two points?
 
       current_traces <- isolate(input$traces_crn)
       clicked_trace <- purrr::keep(current_traces, ~.x$curveNumber == event$curveNumber)
       clicked_role <- clicked_trace[[1]]$meta$role
-      if (clicked_role %in% c("selwp", "covlines","covpoints")){
+      if (clicked_role %in% c("selwp", "covlines")){
         event$role <- clicked_role
         event$wp_label <- clicked_trace[[1]]$meta$wp_label
         event
@@ -640,22 +775,25 @@ flags_server <- function(id, main_session) {
             dplyr::filter(image_label == ycov_val, year == year_val) |>
             dplyr::pull(dplyr::any_of(input$sel_param))
         }
-        # TODO: marker colors:
-        # if exclude_dupl then different color / shape?
-        # if exclude_issues, and or NA value, different color / shape?
-        # check in rings_data_edited to keep up to date?
+        df_excl <- rings_data_edited() |> dplyr::filter(
+          image_label == ycov_val, year == year_val) |>
+          dplyr::select(exclude_issues, exclude_dupl)
+        not_in_plot <- df_excl$exclude_dupl || df_excl$exclude_issues || is.na(ywp_val)
+        marker_col <- ifelse(not_in_plot, "#ff0099", "#e60000")
 
         # update reactive
         marker <- list(
           year = year_val,
           wp_label = wp_label,
           ywp_val = ywp_val,
-          ycov_val = ycov_val
+          ycov_val = ycov_val,
+          marker_col = marker_col
         )
         sel_marker(
           marker
         )
 
+        yaxis_cov <- if ("sd" %in% sel_subplots()) "y3" else "y2"
         # update plot markers
         current_traces <- input$traces_crn
         p <- plotly::plotlyProxy("main_plot", session)
@@ -671,14 +809,16 @@ flags_server <- function(id, main_session) {
                   name = "sel_marker_wp",
                   marker = list(
                     size = 10,
-                    color = "red",
+                    color = marker_col,
                     symbol = "circle"
                   ),
                   showlegend = FALSE,
                   hoverinfo = "skip",
                   meta = list(role = "sel_marker_wp")
                 )
-              ) %>%
+              )
+            if ("cov" %in% sel_subplots()) {
+              p <- p %>%
               plotly::plotlyProxyInvoke(
                 "addTraces",
                 list(
@@ -689,15 +829,16 @@ flags_server <- function(id, main_session) {
                   name = "sel_marker_cov",
                   marker = list(
                     size = 10,
-                    color = "red",
+                    color = marker_col,
                     symbol = "circle"
                   ),
                   showlegend = FALSE,
                   hoverinfo = "skip",
                   meta = list(role = "sel_marker_cov"),
-                  yaxis = "y3"
+                  yaxis = yaxis_cov
                 )
               )
+            }
           } else {
             wp_curveNumber <- current_traces[['sel_marker_wp']]$curveNumber
             cov_curveNumber <- current_traces[['sel_marker_cov']]$curveNumber
@@ -707,18 +848,31 @@ flags_server <- function(id, main_session) {
                 "restyle",
                 list(
                   x = list(list(marker$year)),
-                  y = list(list(marker$ywp_val))
+                  y = list(list(marker$ywp_val)),
+                  marker = list(
+                    size = 10,
+                    color = marker_col,
+                    symbol = "circle"
+                  )
                 ),
                 wp_curveNumber
-              ) %>%
+              )
+            if ("cov" %in% sel_subplots()) {
+              p <- p %>%
               plotly::plotlyProxyInvoke(
                 "restyle",
                 list(
                   x = list(list(marker$year)),
-                  y = list(list(marker$ycov_val))
+                  y = list(list(marker$ycov_val)),
+                  marker = list(
+                    size = 10,
+                    color = marker_col,
+                    symbol = "circle"
+                  )
                 ),
                 cov_curveNumber
               )
+            }
           }
           p
         }
@@ -726,7 +880,6 @@ flags_server <- function(id, main_session) {
 
     observe({
       removeModal()
-      #req(!awaiting_restoration()) # avoid running if plot is rerendered
       click_data <- plot_click()
       year_val <- click_data$x
       wp_label <- click_data$wp_label
@@ -734,6 +887,11 @@ flags_server <- function(id, main_session) {
       ycov_val <- plot_data$df_other |>
         dplyr::filter(woodpiece_label == wp_label, year == year_val, !exclude_dupl) |>
         dplyr::pull(image_label)
+      df_excl <- rings_data_edited() |> dplyr::filter(
+        image_label == ycov_val, year == year_val) |>
+        dplyr::select(exclude_issues, exclude_dupl)
+      not_in_plot <- df_excl$exclude_dupl || df_excl$exclude_issues || is.na(ywp_val)
+      marker_col <- ifelse(not_in_plot, "#ff0099", "#e60000")
 
       sel_woodpiece(wp_label)
       sel_marker(
@@ -741,7 +899,8 @@ flags_server <- function(id, main_session) {
           year = year_val,
           wp_label = wp_label,
           ywp_val = ywp_val,
-          ycov_val = ycov_val
+          ycov_val = ycov_val,
+          marker_col = marker_col
         )
       )
     }) |> bindEvent(input$confirm_wp)
@@ -783,17 +942,29 @@ flags_server <- function(id, main_session) {
         return(NULL)
       }
 
+      year_val <- adj_years$year[1]
+      ywp_val <- adj_years[[input$sel_param]][1]
+      ycov_val <- adj_years$image_label[1]
+
+      df_excl <- rings_data_edited() |> dplyr::filter(
+        image_label == ycov_val, year == year_val) |>
+        dplyr::select(exclude_issues, exclude_dupl)
+      not_in_plot <- df_excl$exclude_dupl || df_excl$exclude_issues || is.na(ywp_val)
+      marker_col <- ifelse(not_in_plot, "#ff0099", "#e60000")
+
       marker <- list(
-        year = adj_years$year[1],
+        year = year_val,
         wp_label = sel_woodpiece(),
-        ywp_val = adj_years[[input$sel_param]][1],
-        ycov_val = adj_years$image_label[1]
+        ywp_val = ywp_val,
+        ycov_val = ycov_val,
+        marker_col = marker_col
       )
       sel_marker(
         marker
       )
 
       # redraw:
+      yaxis_cov <- if ("sd" %in% sel_subplots()) "y3" else "y2"
       # update plot markers
       current_traces <- input$traces_crn
       p <- plotly::plotlyProxy("main_plot", session)
@@ -809,14 +980,16 @@ flags_server <- function(id, main_session) {
               name = "sel_marker_wp",
               marker = list(
                 size = 10,
-                color = "red",
+                color = marker_col,
                 symbol = "circle"
               ),
               showlegend = FALSE,
               hoverinfo = "skip",
               meta = list(role = "sel_marker_wp")
             )
-          ) %>%
+          )
+        if ("cov" %in% sel_subplots()) {
+          p <- p %>%
           plotly::plotlyProxyInvoke(
             "addTraces",
             list(
@@ -827,15 +1000,16 @@ flags_server <- function(id, main_session) {
               name = "sel_marker_cov",
               marker = list(
                 size = 10,
-                color = "red",
+                color = marker_col,
                 symbol = "circle"
               ),
               showlegend = FALSE,
               hoverinfo = "skip",
               meta = list(role = "sel_marker_cov"),
-              yaxis = "y3"
+              yaxis = yaxis_cov
             )
           )
+        }
       } else {
         wp_curveNumber <- current_traces[['sel_marker_wp']]$curveNumber
         cov_curveNumber <- current_traces[['sel_marker_cov']]$curveNumber
@@ -845,38 +1019,450 @@ flags_server <- function(id, main_session) {
             "restyle",
             list(
               x = list(list(marker$year)),
-              y = list(list(marker$ywp_val))
+              y = list(list(marker$ywp_val)),
+              marker = list(
+                size = 10,
+                color = marker_col,
+                symbol = "circle"
+              )
             ),
             wp_curveNumber
-          ) %>%
+          )
+        if ("cov" %in% sel_subplots()) {
+          p <- p %>%
           plotly::plotlyProxyInvoke(
             "restyle",
             list(
               x = list(list(marker$year)),
-              y = list(list(marker$ycov_val))
+              y = list(list(marker$ycov_val)),
+              marker = list(
+                size = 10,
+                color = marker_col,
+                symbol = "circle"
+              )
             ),
             cov_curveNumber
           )
+        }
       }
+
       p
 
 
     }) |> bindEvent(shift_ring(), ignoreNULL = TRUE, ignoreInit = TRUE)
 
+    # EXCLUDED RINGS -----------------------------------------------------------
+    observe({
+      # TODO: also update if: sel woodpiece changes, plot rerenders
+      df_rings <- rings_data_edited() |>
+        dplyr::filter(woodpiece_label == sel_marker()$wp_label) |>
+        dplyr::filter(!exclude_dupl, exclude_issues) |>
+        dplyr::select(image_label, year)
+
+      excl_markers <- plot_data$df_selwp |>
+        dplyr::inner_join(df_rings, by = c("image_label", "year")) |>
+        dplyr::select(year, vals)
+      names(excl_markers) <- c("year", "ywp_val")
+
+      current_traces <- input$traces_crn
+      p <- plotly::plotlyProxy("main_plot", session)
+      if (!"excl_markers" %in% names(current_traces)){
+        p <- p %>%
+          plotly::plotlyProxyInvoke(
+            "addTraces",
+            list(
+              x = excl_markers$year,
+              y = excl_markers$ywp_val,
+              type = "scatter",
+              mode = "markers",
+              name = "excl_markers",
+              marker = list(
+                size = 7,
+                color = "blue",
+                symbol = "circle-open"
+              ),
+              showlegend = FALSE,
+              hoverinfo = "skip",
+              meta = list(role = "excl_markers")
+            )
+          )
+      } else {
+        excl_curveNumber <- current_traces[['excl_markers']]$curveNumber
+
+        p <- p %>%
+          plotly::plotlyProxyInvoke(
+            "restyle",
+            list(
+              x = list(excl_markers$year),
+              y = list(excl_markers$ywp_val),
+              marker = list(
+                size = 7,
+                color = "blue",
+                symbol = "circle-open"
+              )
+            ),
+            excl_curveNumber
+          )
+      }
+      p
+
+    }) |> bindEvent(excl_flags())
 
 
 
+
+    output$selimg <- renderUI({
+      req(sel_marker())
+      sel_img <- sel_marker()$ycov_val
+      df_img <- input_data$rxsmeta_data
+      card_title <- strong(glue::glue("Selected image: {sel_img}"))
+      if ("comment" %in% names(df_img)){
+        img_comment <- df_img |>
+          dplyr::filter(image_label == sel_img) |> dplyr::pull(comment)
+        if (!is.na(img_comment) && img_comment != ""){
+          card_title <- tagList(
+            card_title,
+            em(glue::glue("Comment: {img_comment}"))
+          )
+        }
+      }
+      card_title
+
+    })
+
+    sel_issues_stored <- reactiveVal(c(disqual_issues, technical_issues, other_issues))
+    sel_features_stored <- reactiveVal(discrete_features)
+
+    observe({
+      showModal(
+        modalDialog(
+          title = "Table settings",
+          checkboxInput(ns("auto_open_image"), "Try to auto-open images", value = FALSE),
+          strong("Show / hide optional columns:"),
+          checkboxGroupInput(
+            ns("sel_cols_issues"),
+            label = "Compromising issues",
+            choices = c(
+              disqual_issues,
+              technical_issues,
+              other_issues
+            ), selected = sel_issues_stored()
+          ),
+          checkboxGroupInput(
+            ns("sel_cols_features"),
+            label = "Discrete features",
+            choices = discrete_features,
+            selected = sel_features_stored()
+          ),
+          easyClose = TRUE,
+          footer = tagList(
+            modalButton("Cancel"),
+            actionButton(ns("confirm_cols"), "Proceed")
+          )
+        )
+      )
+    }) |> bindEvent(input$tbl_settings)
+
+    observe({
+      sel_issues_stored(input$sel_cols_issues)
+      sel_features_stored(input$sel_cols_features)
+      removeModal()
+
+    }) |> bindEvent(input$confirm_cols)
+
+    output$img_flags <- rhandsontable::renderRHandsontable({
+      req(sel_marker())
+      sel_disq <- intersect(sel_issues_stored(), disqual_issues)
+      sel_techn <- intersect(sel_issues_stored(), technical_issues)
+      sel_other <- intersect(sel_issues_stored(), other_issues)
+      sel_feat <- intersect(sel_features_stored(), discrete_features)
+      df_rings <- rings_data_edited() |>
+        dplyr::filter(image_label == sel_marker()$ycov_val) |>
+        dplyr::select(
+          year,
+          dplyr::all_of(c(
+            "duplicate_ring","exclude_dupl",
+            "exclude_issues","affected_tissue",
+            sel_disq, sel_techn, sel_other,
+            sel_feat,"comment"))
+        )
+
+      selring_idx <- which(df_rings$year == sel_marker()$year) - 1
+      df_rings <- df_rings |> tibble::column_to_rownames("year")
+
+      ro_ids_dupl <- which(rep(TRUE, nrow(df_rings))) - 1
+      ro_ids_excldupl <- which(!df_rings$duplicate_ring) - 1
+
+      color_dupl <- sec_col_grad[5]
+      color_excl <- sec_col_grad[4]
+      color_iss1 <- tert_col_grad[5]
+      color_iss2 <- tert_col_grad[6]
+
+      hot <- rhandsontable::rhandsontable(
+        df_rings,
+        stretchH = "all",
+        contextMenu = FALSE,
+        height = 400
+      ) |>
+      rhandsontable::hot_col("duplicate_ring", type = "checkbox", halign = "htCenter",
+                             renderer = renderer_cb_ro(selring_idx, ro_ids_dupl, color_dupl)) |>
+      rhandsontable::hot_col("exclude_dupl", type = "checkbox", halign = "htCenter",
+                             renderer = renderer_cb_ro(selring_idx, ro_ids_excldupl, color_dupl)) |>
+      rhandsontable::hot_col("exclude_issues",  type = "checkbox", halign = "htCenter",
+                             renderer = renderer_cb(selring_idx, color_excl)) |>
+      rhandsontable::hot_col("affected_tissue", type = "dropdown", source = c("", "all", "ew", "lw"),
+                             renderer = renderer_dd(selring_idx, color_excl))
+      if (length(sel_disq) > 0){
+        hot <- hot %>%
+          purrr::reduce(
+            sel_disq, # names in df
+            function(ht, col) {
+              ht |> rhandsontable::hot_col(col, type = "checkbox", halign = "htCenter",
+                                           renderer = renderer_cb(selring_idx, color_iss1))
+            },
+            .init = .
+          )
+      }
+      if (length(sel_techn) > 0){
+        hot <- hot %>%
+          purrr::reduce(
+            sel_techn, # names in df
+            function(ht, col) {
+              ht |> rhandsontable::hot_col(col, type = "checkbox", halign = "htCenter",
+                                           renderer = renderer_cb(selring_idx, color_iss2))
+            },
+            .init = .
+          )
+      }
+      if (length(sel_other) > 0){
+        hot <- hot %>%
+          purrr::reduce(
+            sel_other, # names in df
+            function(ht, col) {
+              ht |> rhandsontable::hot_col(col, type = "checkbox", halign = "htCenter",
+                                           renderer = renderer_cb(selring_idx, color_iss1))
+            },
+            .init = .
+          )
+      }
+      if (length(sel_feat) > 0){
+        hot <- hot %>%
+          purrr::reduce(
+            sel_feat, # names in df
+            function(ht, col) {
+              ht |> rhandsontable::hot_col(col, type = "checkbox", halign = "htCenter",
+                                           renderer = renderer_cb(selring_idx, color_iss2))
+            },
+            .init = .
+          )
+      }
+      hot |>
+        rhandsontable::hot_col("comment", renderer = renderer_txt(selring_idx, color_iss1)) |>
+        rhandsontable::hot_cols(colWidths = 25)
+
+    }) |> bindEvent(sel_marker(), input$confirm_cols, ignoreNULL = TRUE)
+
+    renderer_cb <- function(row_idx, bgcolor = NULL){
+      bgcolor_js <- if(is.null(bgcolor)) "" else bgcolor
+      htmlwidgets::JS(htmltools::HTML(sprintf("
+          function(instance, td, row, col, prop, value, cellProperties) {
+            if (row == %s) {
+              td.style.background = '#ed4c4c';
+            } else if ('%s' !== '') {
+              td.style.background = '%s';
+            }
+            Handsontable.renderers.CheckboxRenderer.apply(this, arguments);
+            return td;
+        }", row_idx, bgcolor_js, bgcolor_js)))
+    }
+
+    renderer_cb_ro <- function(row_idx, readonly_ids = NULL, bgcolor = NULL){
+      bgcolor_js <- if(is.null(bgcolor)) "" else bgcolor
+      readonly_js <- if(is.null(readonly_ids)) "[]" else jsonlite::toJSON(readonly_ids)
+
+      htmlwidgets::JS(htmltools::HTML(sprintf("
+        function(instance, td, row, col, prop, value, cellProperties) {
+          var readonlyRows = %s;
+
+          if (row == %s) {
+            td.style.background = '#ed4c4c';
+          } else if ('%s' !== '') {
+            td.style.background = '%s';
+          }
+
+          // Set readOnly for specific rows
+          if (readonlyRows.includes(row)) {
+            cellProperties.readOnly = true;
+            td.style.opacity = '0.6';  // Optional: visual indication
+          }
+
+          Handsontable.renderers.CheckboxRenderer.apply(this, arguments);
+          return td;
+        }", readonly_js, row_idx, bgcolor_js, bgcolor_js)))
+    }
+
+    renderer_dd <- function(row_idx, bgcolor = NULL){
+      bgcolor_js <- if(is.null(bgcolor)) "" else bgcolor
+      htmlwidgets::JS(htmltools::HTML(sprintf("
+          function(instance, td, row, col, prop, value, cellProperties) {
+            if (row == %s) {
+              td.style.background = '#ed4c4c';
+            } else if ('%s' !== '') {
+              td.style.background = '%s';
+            }
+            Handsontable.renderers.DropdownRenderer.apply(this, arguments);
+            return td;
+        }", row_idx, bgcolor_js, bgcolor_js)))
+    }
+    renderer_txt <- function(row_idx, bgcolor = NULL){
+      bgcolor_js <- if(is.null(bgcolor)) "" else bgcolor
+      htmlwidgets::JS(htmltools::HTML(sprintf("
+          function(instance, td, row, col, prop, value, cellProperties) {
+            if (row == %s) {
+              td.style.background = '#ed4c4c';
+            } else if ('%s' !== '') {
+              td.style.background = '%s';
+            }
+            Handsontable.renderers.TextRenderer.apply(this, arguments);
+            return td;
+        }", row_idx, bgcolor_js, bgcolor_js)))
+    }
+
+    # capture hot table edits
+    flags_out <- reactive({
+      rhandsontable::hot_to_r(input$img_flags)
+    })
+
+    # capture edits on the excl flags column specifically (for excl markers)
+    excl_flags <- reactiveVal()
+
+    # updated only if exclude_issues column changes
+    observe({
+      new_col <- flags_out()$exclude_issues
+      if (!identical(new_col, excl_flags())) {
+        excl_flags(new_col)
+      }
+    }) |> bindEvent(flags_out(), ignoreInit = TRUE)
+
+    # flags_out changes to update rings_data_edited
+    observe({
+      req(flags_out(), sel_marker())
+      df_flags <- flags_out()
+      img_sel <- sel_marker()$ycov_val
+      df_flags$image_label <- img_sel
+      df_flags <- df_flags |>
+        tibble::rownames_to_column("year") |>
+        dplyr::mutate(year = as.integer(year))
+
+      # adjusting the duplicate ring selections if changed ---------------------
+      old_dupl_sel <- rings_data_edited() |>
+        dplyr::filter(image_label == img_sel) |>
+        dplyr::filter(duplicate_ring) |>
+        dplyr::select(year, exclude_dupl) |>
+        dplyr::arrange(year)
+
+      new_dupl_sel <- df_flags |>
+        dplyr::filter(duplicate_ring) |>
+        dplyr::select(year, exclude_dupl) |>
+        dplyr::arrange(year)
+
+      if (any(old_dupl_sel$exclude_dupl != new_dupl_sel$exclude_dupl)){
+        cat(" new duplicate selected!\n")
+        for (k in 1:nrow(new_dupl_sel)){
+          # if new_dupl_sel is now set to FALSE -> set the other images to TRUE
+          if (!new_dupl_sel$exclude_dupl[k]){
+            df_new <- rings_data_edited() |>
+              dplyr::filter(woodpiece_label == sel_marker()$wp_label) |>
+              dplyr::filter(image_label != img_sel) |>
+              dplyr::filter(year == new_dupl_sel$year[k]) |>
+              dplyr::select(dplyr::all_of(names(df_flags))) |>
+              dplyr::mutate(exclude_dupl = TRUE)
+              print(df_new[c("image_label","year","exclude_issues", "exclude_dupl")])
+            df_flags <- df_flags |> dplyr::bind_rows(df_new)
+          } else {
+            # if new_dupl_sel is now TRUE -> find the one with max cno to set to FALSE
+            df_new <- rings_data_edited() |>
+              dplyr::filter(woodpiece_label == sel_marker()$wp_label) |>
+              dplyr::filter(image_label != img_sel) |>
+              dplyr::filter(year == new_dupl_sel$year[k]) |>
+              dplyr::mutate(duplicate_rank = cno - 100*as.numeric(exclude_issues),
+                            exclude_dupl = duplicate_rank < max(duplicate_rank)) |>
+              dplyr::select(dplyr::all_of(names(df_flags)))
+            print(df_new[c("image_label","year","exclude_issues", "exclude_dupl")])
+            df_flags <- df_flags |> dplyr::bind_rows(df_new)
+          }
+        }
+      }
+
+      # update the flags in the rings dataframe
+      df_rings <- rings_data_edited()
+      df_rings <- df_rings |>
+        dplyr::rows_update(df_flags, by = c("image_label", "year"))
+
+
+      rings_data_edited(df_rings)
+    }) |> bindEvent(flags_out(), ignoreInit = TRUE)
+
+    # TODO: highlight excluded markers based on rings_data_edited() (up to date)
+    # TODO: image comment
+    # TODO:
+
+
+    # save edits, update plot
+    observe({
+      req(rings_data_edited())
+      rings_data_org(rings_data_edited())
+    }) |> bindEvent(input$apply_changes, ignoreNULL = TRUE, ignoreInit = TRUE)
+
+
+    # OPEN IMAGE ---------------------------------------------------------------
+    observe({
+      req(sel_marker())
+      sel_img <- sel_marker()$ycov_val
+
+      image_path <- input_data$rxsmeta_data %>%
+        dplyr::filter(image_label == sel_img) %>%
+        dplyr::pull(fname_image)
+
+      base_path <- dirname(image_path)
+
+      # Check for annotated twin image in same folder
+      annotated_twin <- list.files(
+        base_path,
+        pattern = paste0(sel_img, "_annotated_twin\\."),
+        full.names = TRUE
+      )
+      annotated_image <- list.files(
+        base_path,
+        pattern = paste0(sel_img, "_annotated\\."),
+        full.names = TRUE
+      )
+
+      # Prefer twin > annotated > image file if found
+      if (length(annotated_twin) == 1) {
+        file_to_open <- annotated_twin
+      } else if (length(annotated_image) == 1) {
+        file_to_open <- annotated_image
+      } else {
+        file_to_open <- image_path
+      }
+
+      if (file.exists(file_to_open)) {
+        browseURL(file_to_open)
+      } else {
+        showNotification(
+          glue::glue("The following image could not be opened: {file_to_open}"),
+          type = "error"
+        )
+      }
+
+    }) |> bindEvent(input$show_image, ignoreNULL = TRUE)
 
 
     # DEBUG OUTPUT -------------------------------------------------------------
     output$debug <- renderPrint({
 
-    plot_click()
-
-
-
-
-
+      input$traces_crn[['exclude_markers']]
 
 
       # df_rings <- rings_data_edited() |> dplyr::filter(woodpiece_label == input$sel_wp)
