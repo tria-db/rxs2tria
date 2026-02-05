@@ -22,24 +22,24 @@ flags_ui <- function(id) {
       shinyjs::disabled(checkboxInput(ns("apply_detrend"), "Apply 32-years spline detrend", value = FALSE)),
       radioButtons(ns("sel_mean"), "Select mean type", choices = c("mean", "tbrm"), inline = TRUE, selected = "mean"),
       # show additional curves / markers
-      hr(class = "hr-slim"),
       checkboxInput(ns("show_mean"), "Show mean curve", value = FALSE),
+      shinyjs::disabled(selectInput(ns("sel_highlight"), "Highlight rings with these features",
+                                    choices = list(
+                                      "Overlaps" = c("Duplicate ring" = "duplicate_ring"),
+                                      "Issues" = c(disqual_issues, technical_issues, other_issues),
+                                      "Features" = discrete_features),
+                                    multiple = TRUE, selectize = TRUE)),
+      hr(class = "hr-slim"),
       checkboxInput(ns("show_excl"),
                     label_with_pop(
-                      "Show all excluded rings",
+                      "Include excluded rings",
                       "Click update plot to include/exclude newly edited rings (pink markers)"),
-                    value = TRUE),
-      selectInput(ns("sel_highlight"), "Highlight rings with these features",
-                  choices = list(
-                    "Overlaps" = c("Duplicate ring" = "duplicate_ring"),
-                    "Issues" = c(disqual_issues, technical_issues, other_issues),
-                    "Features" = discrete_features),
-                  multiple = TRUE, selectize = TRUE),
+                    value = FALSE),
       # TODO: change to radio buttons to highlight better?
       # TODO: have a ring edit mode and an overview mode? in overview, can highlight all points with issues / features?
 
       hr(class = "hr-slim"),
-      actionButton(ns("apply_changes"), "Apply edits to plot", icon = icon("arrows-rotate"),
+      actionButton(ns("apply_changes"), "Update excluded in plot", icon = icon("arrows-rotate"),
                    class = "btn-tert"),
 
       hr(class = "hr-slim"),
@@ -58,7 +58,9 @@ flags_ui <- function(id) {
     bslib::card(
       #max_height = "750px",
       bslib::card_header(
-        class = "d-flex justify-content-end p-1",
+        class = "d-flex justify-content-between align-items-center p-1",
+        style = "background-color: #CCE0E0",
+        uiOutput(ns("selwp")),
         actionLink(ns("plot_settings"), "", icon = icon("gear"))
       ),
       bslib::card_body(class = "p-0",
@@ -74,9 +76,9 @@ flags_ui <- function(id) {
     # ),
 
     bslib::card(
-      class = "card-prim",
       bslib::card_header(
         class = "d-flex justify-content-between align-items-center p-1",
+        style = "background-color: #CCE0E0",
         uiOutput(ns("selimg")),
         div(
           actionButton(ns("show_image"), "", icon = icon("image")),

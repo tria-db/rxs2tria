@@ -58,20 +58,6 @@ ui <- bslib::page_fluid(
         padding-top: 1rem;
       }
 
-      .bslib-card .value-card {
-        --bs-card-bg: #324a85;
-        --bs-card-color:  white;
-      }
-      .bslib-card.value-card > .card-header {
-        background-color: #324a85 !important;
-        border-bottom: none;
-        color: white !important;
-      }
-      .bslib-card.value-card > .card-body {
-        background-color: #324a85 !important;
-        color:  white !important;
-      }
-
       /* hot style overwrites: */
       /* bg color for the invalid cells */
       .handsontable td.htInvalid {
@@ -83,11 +69,6 @@ ui <- bslib::page_fluid(
       /* Grey color for checkboxes in the first column (after row names) only */
       .htCore tbody tr td:nth-child(2) input.htCheckboxRendererInput[type='checkbox'] {
         accent-color: grey !important;
-      }
-
-      .handsontable th {
-        background-color: $tert-col-grad-3 !important;
-        color: white !important;
       }
 
     ")),
@@ -114,7 +95,39 @@ ui <- bslib::page_fluid(
           }
         });
       });
+    ")),
+    tags$script(HTML("
+      $(document).ready(function() {
+        // Listen for enter key presses
+        $(document).on('keydown', function(e) {
+          if (e.key === 'Enter' || e.keyCode === 13) {
+            var activeElement = document.activeElement;
+            var isBody = activeElement === document.body;
+            console.log('Active element tag:', activeElement.tagName);
+
+            // More comprehensive check for interactive elements
+            var isInteractive = !isBody && (
+              activeElement.tagName.toLowerCase() === 'input' ||
+              activeElement.tagName.toLowerCase() === 'textarea' ||
+              activeElement.tagName.toLowerCase() === 'select' ||
+              activeElement.tagName.toLowerCase() === 'button' ||
+              activeElement.tagName.toLowerCase() === 'a' ||
+              activeElement.closest('.handsontable') ||
+              activeElement.closest('.shiny-input-container') ||
+              activeElement.closest('.btn') ||
+              activeElement.closest('[role=\"button\"]')
+            );
+
+            if (!isInteractive || isBody) {
+              console.log('Caught enter key');
+              Shiny.setInputValue('flags-enter_key', Math.random(), {priority: 'event'});
+              e.preventDefault();
+            }
+          }
+        });
+      });
     "))
+
   ),
 
 

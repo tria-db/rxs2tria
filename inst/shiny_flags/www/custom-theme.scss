@@ -142,6 +142,10 @@ ol.custom-indent {
 
 /* handsontable */
 /* change header color of ht */
+.handsontable th {
+  background-color: $tert-col-grad-1 !important;
+  color: white !important;
+}
 
 
 

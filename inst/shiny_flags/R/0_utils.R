@@ -10,6 +10,7 @@ tert_col_grad <- c("#324a85", "#6778a3", "#99a5c2", "#ccd2e0", "#e6e9f0", "#f2f4
 options(shiny.maxRequestSize = 100 * 1024^2)  # Set limit to 500 MB
 base_palette <- RColorBrewer::brewer.pal(11, "Spectral")
 #base_palette <- scales::pal_hue()(9)
+#base_palette <- c("#338585", "#324a85","#853270")
 
 # helper function to extend palette to desired length, reordering for better contrast if desired
 extend_palette <- function(palette, n, contrasting = TRUE) {
