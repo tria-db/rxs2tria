@@ -1857,21 +1857,67 @@ flags_server <- function(id, main_session) {
     })
 
     # SAVE RESULTS TO FILE -------------------------------------------------------
-    output$save_flags <- downloadHandler(
+    output$save_data <- downloadHandler(
       filename = function() {
         glue::glue("{format(Sys.Date(), '%Y%m%d')}_TRIA_DATASETNAME_rings_edited.csv")
       },
       content = function(con) {
-        readr::write_csv(rings_data_edited(),
-                         con)
+        df <- rings_data_edited()
+        df_char <- df |> dplyr::select(
+          affected_tissue, comment)
+        df_flags_opt <- df |> dplyr::select(
+          dplyr::any_of(setdiff(disqual_issues, c('incomplete_ring','missing_ring'))),
+          dplyr::any_of(c(unname(technical_issues), unname(other_issues),
+                          unname(discrete_features))))
+        df <- df[setdiff(names(df), c("affected_tissue", "comment", names(df_opt)))]
+        df_char <- df_char |> janitor::remove_empty(which = "cols", cutoff = 1)
+        df_flags_opt <- df_flags_opt |>
+          janitor::remove_empty(which = "cols", cutoff = 1) |>
+          dplyr::select(dplyr::where(~any(.)))
+        df <- df |> dplyr::bind_cols(df_char, df_flags_opt)
+        df <- df |> dplyr::select(dplyr::any_of(names(rings_data_edited())))
+        readr::write_csv(df, con)
       }
     )
+
+    observe({
+      showModal(modalDialog(
+        title = "Confirm exit",
+        "If you have completed your editing and saved your results, you can exit the application.
+        The edited rings dataframe will also be available in the R global environment under df_rings_edited if returning
+        to a local R session.",
+        easyClose = TRUE,
+        footer = tagList(
+          modalButton("Cancel"),
+          actionButton(ns("confirm_exit"), "Exit")
+        )
+      ))
+    }) |> bindEvent(input$close_app, ignoreNULL = TRUE)
+
+
+     observe({
+       df <- rings_data_edited()
+       df_char <- df |> dplyr::select(
+         affected_tissue, comment)
+       df_flags_opt <- df |> dplyr::select(
+         dplyr::any_of(setdiff(disqual_issues, c('incomplete_ring','missing_ring'))),
+         dplyr::any_of(c(unname(technical_issues), unname(other_issues),
+                         unname(discrete_features))))
+       df <- df[setdiff(names(df), c("affected_tissue", "comment", names(df_opt)))]
+       df_char <- df_char |> janitor::remove_empty(which = "cols", cutoff = 1)
+       df_flags_opt <- df_flags_opt |>
+         janitor::remove_empty(which = "cols", cutoff = 1) |>
+         dplyr::select(dplyr::where(~any(.)))
+       df <- df |> dplyr::bind_cols(df_char, df_flags_opt)
+       df <- df |> dplyr::select(dplyr::any_of(names(rings_data_edited())))
+       df_rings_edited <<- df
+       stopApp()
+     }) |> bindEvent(input$confirm_exit, ignoreNULL = TRUE)
 
 
     # DEBUG OUTPUT -------------------------------------------------------------
     output$debug <- renderPrint({
-      print(sample(1:10000, 1))
-      selected_row()
+      #print(sample(1:10000, 1))
       #input$traces_crn[['exclude_markers']]
 
 

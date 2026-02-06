@@ -45,6 +45,8 @@ flags_ui <- function(id) {
       hr(class = "hr-slim"),
       downloadButton(ns("save_data"), "Download new ring data",
                      class = "btn-tert"),
+      actionButton(ns("close_app"), "Close app", icon = icon("xmark"),
+                   class = "btn-danger"),
 
 
       #checkboxInput("tail_YTE", "show tail YTE", value = TRUE),
