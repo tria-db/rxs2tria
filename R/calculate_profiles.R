@@ -1,3 +1,6 @@
+#######################################
+##############' Calculate sector-wise cell parameter profiles
+#######################################
 #' Calculate sector-wise cell parameter profiles
 #'
 #' This function calculates sector-wise profiles of selected cell parameters
@@ -14,7 +17,7 @@
 #' parameters
 #' @export
 #'
-calculate_profiles <- function(df_cells, n_sectors, sel_cell_params, quant_probs){
+calculate_sector_profiles <- function(df_cells, n_sectors, sel_cell_params, quant_probs){
   prf_data <- df_cells |>
     # create sector number based on rraddistr (relative position within ring)
     dplyr::mutate(
@@ -60,8 +63,14 @@ calculate_profiles <- function(df_cells, n_sectors, sel_cell_params, quant_probs
   prf_data_agg
 }
 
-#' Helper function to create the moving band definitions for given a mrw,
-#' andwidth and stepsize
+
+
+#######################################
+##############' Calculate band-wise cell parameter profiles
+#######################################
+#'
+#' Helper function 1 to create the moving band definitions for given a mrw,
+#' bandwidth and stepsize
 #'
 #' @param mrw_val numeric, the mrw value to create bands for
 #' @param bandwidth numeric, the bandwidth of each band
@@ -92,6 +101,231 @@ create_bands_dt <- function(mrw_val, bandwidth, stepsize, band_rebound = TRUE) {
 }
 
 
+#' Helper function 2 to compute earlywood width (EWW) per ring
+#'
+#' This function computes earlywood width (EWW) at the ring level based on
+#' radial tracheid size ratios (RTSR) aggregated by sector. RTSR values are
+#' first averaged per sector, then smoothed using a rolling mean. A threshold
+#' (`mork`) is applied to distinguish earlywood (EW) from latewood (LW),
+#' and the maximum EW sector extent is converted into an earlywood width
+#' using the mean ring width (MRW).
+#'
+#' @param cells_dt data.table, cell-level measurements containing at least
+#'   `image_label`, `year`, `sector_n`, and `rtsr`
+#' @param rings_dt data.table, ring-level measurements containing at least
+#'   `image_label`, `year`, and `mrw`
+#' @param mork numeric, threshold applied to the rolling mean of RTSR values
+#'   to separate earlywood from latewood (default = 1)
+#' @param roll_k integer, window size for the rolling mean applied to sector-
+#'   averaged RTSR values (default = 9)
+#'
+#' @return a data.table with one row per ring (`image_label`, `year`) and a
+#'   numeric column `eww` giving the computed earlywood width. If no earlywood
+#'   sectors are detected for a ring, `eww` is set to 0.
+#'
+#' @keywords internal
+compute_eww_dt <- function(cells_dt, rings_dt, mork = 1, roll_k = 9) {
+
+  # Keep only needed columns
+  dt <- cells_dt[!is.na(rtsr), .(image_label, year, sector_n, rtsr)]
+
+  # Merge mrw from rings_dt
+  dt <- merge(dt, rings_dt[, .(image_label, year, mrw)],
+              by = c("image_label", "year"), all.x = TRUE)
+
+  # Skip rows with missing mrw
+  dt <- dt[!is.na(mrw)]
+
+  # Mean RTSR per sector
+  dt <- dt[, .(rtsr_mean = mean(rtsr, na.rm = TRUE),
+               mrw = unique(mrw)),  # carry mrw along
+           by = .(image_label, year, sector_n)]
+
+  # Rolling mean per ring
+  setorder(dt, image_label, year, sector_n)
+  dt[, rollmean := zoo::rollmean(rtsr_mean, roll_k, fill = c(NA, NA, Inf)),
+     by = .(image_label, year)]
+
+  # EW/LW decision
+  dt[, to_ewlw := fifelse(sector_n <= max(sector_n[rollmean <= mork], na.rm = TRUE),
+                          "EW", "LW"), by = .(image_label, year)]
+
+  # Compute EWW per ring safely
+  eww_dt <- dt[, .(
+    eww = if(any(to_ewlw == "EW", na.rm = TRUE)) {
+      max(sector_n[to_ewlw == "EW"], na.rm = TRUE) * unique(mrw) / 100
+    } else {
+      0
+    }
+  ), by = .(image_label, year)]
+
+  return(eww_dt)
+}
+
+
+
+#' Calculate radial band profiles from quantitative wood anatomy data
+#'
+#' This function computes radial band profiles by assigning individual cells
+#' to overlapping radial bands defined along the standardized ring width.
+#' Cell-level parameters are aggregated within each band to produce band-wise
+#' counts and summary statistics, optionally including quantiles. Earlywood
+#' and latewood bands are identified based on an RTSR-derived earlywood width
+#' (EWW) computed at the ring level.
+#'
+#' The function integrates cell-level and ring-level data, standardizes radial
+#' distances by mean ring width (MRW), defines moving radial bands, assigns
+#' cells to bands via interval overlap, and aggregates selected anatomical
+#' parameters per band.
+#'
+#' @param QWA_data list containing at least two elements:
+#'   \describe{
+#'     \item{cells}{data.frame or data.table with cell-level measurements}
+#'     \item{rings}{data.frame or data.table with ring-level measurements}
+#'   }
+#' @param bandwidth numeric, width of each radial band (same unit as MRW)
+#' @param stepsize numeric, step size between consecutive band starts
+#' @param sel_cell_params character vector of column names in `cells` to be
+#'   aggregated per band
+#' @param quant_probs numeric vector of probabilities in \[0, 1\] at which
+#'   quantiles should be computed per band (default = NULL, no quantiles)
+#' @param band_rebound logical, if TRUE the last band is shifted so that its
+#'   end coincides exactly with the ring boundary (default = TRUE)
+#' @param n_sectors integer, number of radial sectors used to determine
+#'   earlywood/latewood transitions (default = 100)
+#' @param roll_k integer, window size for the rolling mean applied to sector-
+#'   averaged RTSR values when determining EWW (default = 9)
+#' @param mork numeric, threshold applied to the rolling mean of RTSR values
+#'   to distinguish earlywood from latewood (default = 1)
+#'
+#' @return A tibble with one row per band and ring, containing band start/end
+#'   positions, aggregated cell-level statistics, earlywood width (`eww`),
+#'   and a logical indicator (`ew_band`) specifying whether the band lies
+#'   within earlywood.
+#'
+#' @details
+#' The processing steps are:
+#' \enumerate{
+#'   \item Standardize radial cell positions using mean ring width (MRW)
+#'   \item Subdivide rings into radial sectors to estimate earlywood width (EWW)
+#'   \item Define overlapping radial bands using a moving window
+#'   \item Assign cells to bands using interval overlap
+#'   \item Aggregate selected cell parameters per band (counts, means, quantiles)
+#'   \item Classify bands as earlywood or latewood based on EWW
+#' }
+#'
+#' @keywords internal
+calculate_band_profiles <- function(QWA_data,
+                                        bandwidth,
+                                        stepsize,
+                                        sel_cell_params,
+                                        quant_probs = NULL,
+                                        band_rebound = TRUE,
+                                        n_sectors = 100,  # number of sectors for EW/LW
+                                        roll_k = 9,       # rolling mean window
+                                        mork = 1) {       # threshold for EW/LW
+
+  # --- 1. Convert cells and rings to data.table ---
+  cells_dt <- data.table::as.data.table(QWA_data$cells)
+  rings_dt <- data.table::as.data.table(QWA_data$rings)[, .(image_label, year, mrw)]
+
+  # --- 2. Compute standardized radial distance ---
+  data.table::setkey(cells_dt, image_label, year)
+  data.table::setkey(rings_dt, image_label, year)
+
+  # Bring mrw into cells
+  cells_dt[rings_dt, mrw := i.mrw]
+
+  # Standardized radial distance
+  # cells_dt[rraddistr > 0 & !is.na(mrw),
+  #          raddistr.st := raddistr / rraddistr * mrw]
+  cells_dt[rraddistr >= 0 & rraddistr <= 100 & !is.na(mrw),
+           raddistr.st := rraddistr / 100 * mrw]
+
+
+
+  # --- 3. Compute sector number for EW/LW ---
+  cells_dt[, sector_n := as.numeric(cut(rraddistr,
+                                        breaks = seq(0, 100, length.out = n_sectors + 1),
+                                        labels = 1:n_sectors,
+                                        include.lowest = TRUE))]
+  cells_dt[rraddistr > 100 & rraddistr <= 101, sector_n := n_sectors] # rounding adjustment
+  cells_dt <- cells_dt[!is.na(raddistr.st) & !is.na(sector_n)]
+
+  # --- 4. Compute EW widths (EWW) per ring ---
+  if(!"eww" %in% names(rings_dt)){
+    eww_dt <- compute_eww_dt(cells_dt, rings_dt, mork = mork, roll_k = roll_k)
+    rings_dt[eww_dt, eww := i.eww, on = .(image_label, year)]
+  }
+
+  # --- 5. Create band definitions ---
+  ring_widths <- rings_dt[!is.na(mrw) & mrw > bandwidth, .(image_label, year, mrw, eww)]
+  band_defs <- ring_widths[, create_bands_dt(mrw[1], bandwidth, stepsize, band_rebound), by = .(image_label, year)]
+
+  # Ensure start/end numeric for foverlaps
+  band_defs[, start := as.numeric(start)]
+  band_defs[, end   := as.numeric(end)]
+  data.table::setkey(band_defs, image_label, year, start, end)
+
+  # --- 6. Assign cells to bands ---
+  cells_dt[, `:=`(start = raddistr.st, end = raddistr.st + 0.1)]
+  cells_dt[, raddistr.st := NULL]
+  data.table::setkey(cells_dt, image_label, year, start, end)
+
+  cli::cli_inform(c("i" = "Assigning cells to bands..."))
+  cell_bands <- foverlaps(cells_dt, band_defs, type = "within", nomatch = NULL)
+  cell_bands[, c("i.start", "i.end") := NULL]
+  # cleanup
+  rm(cells_dt)
+
+  # --- 7. Aggregate over bands ---
+  cli::cli_inform(c("i" = "Calculating band counts and means..."))
+  prf_data_agg <- cell_bands |>
+    collapse::fgroup_by(image_label, year, start, end) |>
+    collapse::fsummarise(across(sel_cell_params,
+                                list(N = collapse::fnobs,
+                                     mean = collapse::fmean)))
+
+  # --- 8. Quantiles if requested ---
+  if(!is.null(quant_probs) && length(quant_probs) > 0){
+    cli::cli_inform(c("i" = "Calculating band quantiles..."))
+    cell_bands_quant <- cell_bands |>
+      dplyr::select(
+        image_label, year, start, end,
+        all_of(sel_cell_params)
+      )
+
+    prf_data_quant <- cell_bands_quant |>
+      collapse::fgroup_by(image_label, year, start, end) |>
+      collapse::BY(collapse::.quantile,
+                   probs = quant_probs,
+                   expand.wide = TRUE)
+
+    old_col_names <- unlist(lapply(sel_cell_params, function(param) {
+      paste0(param, ".V", seq(length(quant_probs)))
+    }))
+    new_col_names <- unlist(lapply(sel_cell_params, function(param) {
+      paste0(param, "_q", sprintf("%02d", round(quant_probs*100)))
+    }))
+    setnames(prf_data_quant, old = old_col_names, new = new_col_names)
+    prf_data_agg <- prf_data_agg[prf_data_quant, on = c("image_label", "year", "start", "end")]
+    rm(prf_data_quant)
+  }
+
+  # --- 9. Add EW indicator ---
+  data.table::setkey(ring_widths, image_label, year)
+  data.table::setkey(prf_data_agg, image_label, year)
+  prf_data_agg <- ring_widths[prf_data_agg, on = .(image_label, year)]
+  prf_data_agg[, ew_band := ifelse(end <= eww, TRUE, FALSE)]
+  prf_data_agg[, end := start + bandwidth] # restore original end
+  setcolorder(prf_data_agg, "ew_band", after = "eww")
+
+  cli::cli_inform(c("v" = "All done!"))
+  return(as_tibble(prf_data_agg))
+}
+
+
+
 #' Calculate band-wise cell parameter profiles
 #'
 #' This function calculates band-wise profiles of selected cell parameters
@@ -110,7 +344,7 @@ create_bands_dt <- function(mrw_val, bandwidth, stepsize, band_rebound = TRUE) {
 #' @return a dataframe with the sector-wise profiles of the selected cell
 #' parameters
 #' @export
-calculate_band_profiles <- function(QWA_data,
+calculate_band_profiles_orig <- function(QWA_data,
                                     bandwidth, stepsize,
                                     sel_cell_params,
                                     quant_probs = NULL,
@@ -220,159 +454,6 @@ calculate_band_profiles <- function(QWA_data,
 
   cli::cli_inform(c("v"= "All done!"))
   tibble::as_tibble(prf_data_agg)
-}
-
-
-
-#################################
-#################################
-#################################
-#################################
-library(data.table)
-library(zoo)
-library(collapse)
-library(cli)
-library(tibble)
-
-compute_eww_dt <- function(cells_dt, rings_dt, mork = 1, roll_k = 9) {
-
-  # Keep only needed columns
-  dt <- cells_dt[!is.na(rtsr), .(image_label, year, sector_n, rtsr)]
-
-  # Merge mrw from rings_dt
-  dt <- merge(dt, rings_dt[, .(image_label, year, mrw)],
-              by = c("image_label", "year"), all.x = TRUE)
-
-  # Skip rows with missing mrw
-  dt <- dt[!is.na(mrw)]
-
-  # Mean RTSR per sector
-  dt <- dt[, .(rtsr_mean = mean(rtsr, na.rm = TRUE),
-               mrw = unique(mrw)),  # carry mrw along
-           by = .(image_label, year, sector_n)]
-
-  # Rolling mean per ring
-  setorder(dt, image_label, year, sector_n)
-  dt[, rollmean := zoo::rollmean(rtsr_mean, roll_k, fill = c(NA, NA, Inf)),
-     by = .(image_label, year)]
-
-  # EW/LW decision
-  dt[, to_ewlw := fifelse(sector_n <= max(sector_n[rollmean <= mork], na.rm = TRUE),
-                          "EW", "LW"), by = .(image_label, year)]
-
-  # Compute EWW per ring safely
-  eww_dt <- dt[, .(
-    eww = if(any(to_ewlw == "EW", na.rm = TRUE)) {
-      max(sector_n[to_ewlw == "EW"], na.rm = TRUE) * unique(mrw) / 100
-    } else {
-      0
-    }
-  ), by = .(image_label, year)]
-
-  return(eww_dt)
-}
-
-calculate_band_profiles_pat <- function(QWA_data,
-                                        bandwidth,
-                                        stepsize,
-                                        sel_cell_params,
-                                        quant_probs = NULL,
-                                        band_rebound = TRUE,
-                                        n_sectors = 100,  # number of sectors for EW/LW
-                                        roll_k = 9,       # rolling mean window
-                                        mork = 1) {       # threshold for EW/LW
-
-  # --- 1. Convert cells and rings to data.table ---
-  cells_dt <- as.data.table(QWA_data$cells)
-  rings_dt <- as.data.table(QWA_data$rings)[, .(image_label, year, mrw)]
-
-  # --- 2. Compute standardized radial distance ---
-  data.table::setkey(cells_dt, image_label, year)
-  data.table::setkey(rings_dt, image_label, year)
-
-  # Bring mrw into cells
-  cells_dt[rings_dt, mrw := i.mrw]
-
-  # Standardized radial distance
-  # cells_dt[rraddistr > 0 & !is.na(mrw),
-  #          raddistr.st := raddistr / rraddistr * mrw]
-  cells_dt[rraddistr >= 0 & rraddistr <= 100 & !is.na(mrw),
-           raddistr.st := rraddistr / 100 * mrw]
-
-
-
-  # --- 3. Compute sector number for EW/LW ---
-  cells_dt[, sector_n := as.numeric(cut(rraddistr,
-                                        breaks = seq(0, 100, length.out = n_sectors + 1),
-                                        labels = 1:n_sectors,
-                                        include.lowest = TRUE))]
-  cells_dt[rraddistr > 100 & rraddistr <= 101, sector_n := n_sectors] # rounding adjustment
-  cells_dt <- cells_dt[!is.na(raddistr.st) & !is.na(sector_n)]
-
-  # --- 4. Compute EW widths (EWW) per ring ---
-  if(!"eww" %in% names(rings_dt)){
-    eww_dt <- compute_eww_dt(cells_dt, rings_dt, mork = mork, roll_k = roll_k)
-    rings_dt[eww_dt, eww := i.eww, on = .(image_label, year)]
-  }
-
-  # --- 5. Create band definitions ---
-  ring_widths <- rings_dt[!is.na(mrw) & mrw > bandwidth, .(image_label, year, mrw, eww)]
-  band_defs <- ring_widths[, create_bands_dt(mrw[1], bandwidth, stepsize, band_rebound), by = .(image_label, year)]
-
-  # Ensure start/end numeric for foverlaps
-  band_defs[, start := as.numeric(start)]
-  band_defs[, end   := as.numeric(end)]
-  data.table::setkey(band_defs, image_label, year, start, end)
-
-  # --- 6. Assign cells to bands ---
-  cells_dt[, `:=`(start = raddistr.st, end = raddistr.st + 0.1)]
-  cells_dt[, raddistr.st := NULL]
-  data.table::setkey(cells_dt, image_label, year, start, end)
-
-  cli::cli_inform(c("i" = "Assigning cells to bands..."))
-  cell_bands <- foverlaps(cells_dt, band_defs, type = "within", nomatch = NULL)
-  cell_bands[, c("i.start", "i.end") := NULL]
-  # cleanup
-  rm(cells_dt)
-
-  # --- 7. Aggregate over bands ---
-  cli::cli_inform(c("i" = "Calculating band counts and means..."))
-  prf_data_agg <- cell_bands |>
-    collapse::fgroup_by(image_label, year, start, end) |>
-    collapse::fsummarise(across(sel_cell_params,
-                                list(N = collapse::fnobs,
-                                     mean = collapse::fmean)))
-
-  # --- 8. Quantiles if requested ---
-  if(!is.null(quant_probs) && length(quant_probs) > 0){
-    cli::cli_inform(c("i" = "Calculating band quantiles..."))
-    prf_data_quant <- cell_bands |>
-      collapse::fgroup_by(image_label, year, start, end) |>
-      collapse::BY(collapse::.quantile,
-                   probs = quant_probs,
-                   expand.wide = TRUE)
-
-    old_col_names <- unlist(lapply(sel_cell_params, function(param) {
-      paste0(param, ".V", seq(length(quant_probs)))
-    }))
-    new_col_names <- unlist(lapply(sel_cell_params, function(param) {
-      paste0(param, "_q", sprintf("%02d", round(quant_probs*100)))
-    }))
-    setnames(prf_data_quant, old = old_col_names, new = new_col_names)
-    prf_data_agg <- prf_data_agg[prf_data_quant, on = c("image_label", "year", "start", "end")]
-    rm(prf_data_quant)
-  }
-
-  # --- 9. Add EW indicator ---
-  data.table::setkey(ring_widths, image_label, year)
-  data.table::setkey(prf_data_agg, image_label, year)
-  prf_data_agg <- ring_widths[prf_data_agg, on = .(image_label, year)]
-  prf_data_agg[, ew_band := ifelse(end <= eww, TRUE, FALSE)]
-  prf_data_agg[, end := start + bandwidth] # restore original end
-  setcolorder(prf_data_agg, "ew_band", after = "eww")
-
-  cli::cli_inform(c("v" = "All done!"))
-  return(as_tibble(prf_data_agg))
 }
 
 

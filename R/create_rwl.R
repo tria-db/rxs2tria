@@ -129,30 +129,92 @@ create_rwl <- function(prf_data, df_rings, PAR = "mrw", SECTOR = NULL, path_out,
 
     if (remove_excluded && all(c("image_label", "year") %in% names(df_rings))) {
 
-      to_remove <- df_rings |>
+      # to_remove <- df_rings  |>   # %>% dplyr::filter(image_label == "YAM_LASI_2718_1") & year == 1550
+      #   dplyr::filter(
+      #     (exclude_issues %||% FALSE) |
+      #       !is.na(exclude_scope) |
+      #       x_dating
+      #   ) |>
+      #   dplyr::filter(!missing_ring & incomplete_ring) |>   # include small rings (missing rings with cno > 0) in the RWL file
+      #   dplyr::select(image_label, year) |>
+      #   dplyr::distinct()
+
+      to_remove <- df_rings  |>
+        mutate(image_label = stringr::str_replace(image_label, "(?<=\\d)_(?:\\d+_?)+$", "")) |> dplyr::filter(!exclude_dupl) %>%
+ #       dplyr::filter(image_label == "YAM_LASI_T1.01") %>%
         dplyr::filter(
-          (exclude_issues %||% FALSE) |
-            !is.na(exclude_scope)
+          (!missing_ring & incomplete_ring) |                      # include small rings (missing rings with cno > 0) in the RWL file
+            (x_dating & exclude_scope %in% c("ALL", "EW", "LW")) | # exclude dating issues
+            (decay    & exclude_scope %in% c("ALL", "EW", "LW"))   # exclude decay issues
         ) |>
-        dplyr::select(image_label, year) |>
+        select(image_label, year) |>
         dplyr::distinct()
 
       prf_df <- prf_df |>
-        dplyr::mutate(
-          image_label = stringr::str_replace(image_label, "_[0-9]+$", "")
-        ) |>
-        dplyr::anti_join(to_remove, by = c("image_label", "year"))
+        mutate(image_label = stringr::str_replace(image_label, "(?<=\\d)_(?:\\d+_?)+$", "")) |>
+        # dplyr::mutate(
+        #   image_label = stringr::str_replace(image_label, "_[0-9]+$", "")
+        # ) |>
+        dplyr::anti_join(to_remove, by = c("image_label", "year"))  # %>% dplyr::filter(image_label == "YAM_LASI_T1.01")
     }
 
-    rwl <- prf_df |>
+    # rwl <- prf_df |>
+    #   dplyr::select(image_label, year, !!rlang::sym(PAR)) |>
+    #   dplyr::filter(!is.na(.data[[PAR]])) |>
+    #   dplyr::mutate(series = make_series_id(image_label)) |>
+    #   dplyr::group_by(year, series) |>  # dplyr::filter(image_label == "YAM_LASI_100" & year == 1738) %>%       # df_rings %>%  dplyr::filter(cno == 0)
+    #   dplyr::summarise(value = mean(.data[[PAR]], na.rm = TRUE), .groups = "drop") |>
+    #   tidyr::pivot_wider(names_from = series, values_from = value) |>
+    #   dplyr::arrange(desc(year)) |>
+    #   tibble::column_to_rownames("year")
+
+    ## ---- 1. Measured rings (from prf_df) ----
+    measured_rings <- prf_df |>
       dplyr::select(image_label, year, !!rlang::sym(PAR)) |>
       dplyr::filter(!is.na(.data[[PAR]])) |>
-      dplyr::mutate(series = make_series_id(image_label)) |>
+      dplyr::mutate(
+        series = make_series_id(image_label),
+        value  = .data[[PAR]]
+      ) |>
       dplyr::group_by(year, series) |>
-      dplyr::summarise(value = mean(.data[[PAR]], na.rm = TRUE), .groups = "drop") |>
-      tidyr::pivot_wider(names_from = series, values_from = value) |>
+      dplyr::summarise(
+        value = mean(value, na.rm = TRUE),
+        .groups = "drop"
+      )
+
+    ## ---- 2. Missing rings (explicit zeros) ----
+    missing_rings <- df_rings |>
+      dplyr::filter(missing_ring, !incomplete_ring) |> # include missing rings in the RWL file
+      dplyr::mutate(
+        series = make_series_id(image_label),
+        value  = 0.01                                  # missing rings are assigned to value 1
+      ) |>
+      dplyr::select(image_label, year, series, value) |>
+      mutate(image_label = stringr::str_replace(image_label, "(?<=\\d)_(?:\\d+_?)+$", "")) |>   # KEEP image_label for anti_join
+      dplyr::anti_join(to_remove, by = c("image_label", "year")) |>
+      dplyr::select(-image_label)  # %>%  dplyr::filter(series == "YAM91")
+
+    ## ---- 3. Combine measured + missing rings ----
+    rwl_long <- dplyr::bind_rows(
+      measured_rings,
+      missing_rings
+    ) |>
+      # enforce missing rings (0) if any duplicates exist
+      dplyr::group_by(year, series) |>
+      dplyr::summarise(
+        value = min(value),
+        .groups = "drop"
+      )
+
+    ## ---- 4. Pivot to RWL matrix ----
+    rwl <- rwl_long |>
+      tidyr::pivot_wider(
+        names_from  = series,
+        values_from = value
+      ) |>
       dplyr::arrange(desc(year)) |>
       tibble::column_to_rownames("year")
+
   }
 
   # ----------------------------
@@ -172,102 +234,4 @@ create_rwl <- function(prf_data, df_rings, PAR = "mrw", SECTOR = NULL, path_out,
 
   invisible(rwl)
 }
-
-save_rwl_file <- function(param, df_rings,
-                          df_prf = NULL, sel_sect = NULL,
-                          auto_scale = TRUE, scaling = NULL,
-                          shorten_name = FALSE, df_structure = NULL,
-                          exclude_issue_rings = TRUE, file="", path_out = "") {
-  # check:
-  # param in df_rings xor df_prf
-  # df_rings has correct format, cols
-  # df_prf has correct format, cols if provided, incl. sel_sect
-
-  df_data <- df_rings |> dplyr::filter(!exclude_dupl)
-  if (exclude_issue_rings){
-    df_data <- df_data |> dplyr::filter(!exclude_issues)
-  }
-
-  df_data <- df_data |>
-    dplyr::select(woodpiece_label, image_label, year, dplyr::any_of(param))
-  # TODO: check not duplicates / max one value one per year/wp?
-
-  if (param %in% names(df_prf)){
-    df_data <- df_prf |>
-      dplyr::filter(sector_n == sel_sect) |>
-      dplyr::select(image_label, year, dplyr::all_of(param)) |>
-      dplyr::right_join(df_data, by = c("image_label", "year")) |>
-      dplyr::select(-image_label)
-  }
-
-  scale <- 1
-
-  if (auto_scale){
-    # to fit Tucson format requirements of max 5 digits
-    max_digits <- 5
-    vals <- df_data[[param]]
-    vals <- vals[!is.na(vals)]
-
-    if (length(vals[vals>0])>0){
-      max_val_pos <- max(vals[vals>0], na.rm = TRUE)
-    } else {
-      max_val_pos <- 0
-    }
-    if (length(vals[vals<0])>0){
-      max_val_neg <- abs(min(vals[vals<0], na.rm = TRUE))
-    } else {
-      max_val_neg <- 0
-    }
-
-    if (max_val_pos > max_val_neg){
-      max_val <- max_val_pos
-      max_representable <- 10^(max_digits) - 1
-    } else {
-      max_val <- max_val_neg
-      max_representable <- 10^(max_digits-1) - 1 # leave space for negative sign (note: none of the measurements usually have neg values?)
-    }
-
-    # find power of 10 scale that fits
-    optimal_scale <- max_representable / max_val
-    scale <- 10^floor(log10(optimal_scale))
-  }
-
-  if (!is.null(scaling)){
-    scale <- scaling
-  }
-
-  if (scale != 1){
-    cli::cli_warn("Scaling parameter {.var {param}} by factor {.val {scale}}.")
-  }
-  df_data[[param]] <- df_data[[param]] * scale / 1000 # (the /1000 because write.tucson rescales again later)
-
-  df_rwl <- df_data |>
-    tidyr::pivot_wider(names_from = woodpiece_label, values_from = !!param) |>
-    dplyr::arrange(year) |>
-    tidyr::complete(year = seq(min(year), max(year), by = 1)) |>
-    tibble::column_to_rownames("year") |>
-    dplR::as.rwl()
-
-  if (!is.null(file)){
-    fname <- file
-  } else {
-    fname <- paste0(param, ".rwl") # add site, sector, scaling, allow for path_out
-  }
-
-  # TODO: try to shorten names based on df_structure? what if multiple sites?
-  # TODO: add warning about auto renaming of dplR ir required
-
-  f <- dplR::write.tucson(
-    df_rwl,
-    fname = fname,
-    prec = 0.001, # IMPORTANT!
-    header = NULL,
-    append = FALSE,
-    long.names = FALSE,
-    mapping.fname = "id_map.txt"
-  )
-
-  cli::cli_inform("saved file under ..., with .. scaling, ..names mapping")
-}
-
 
