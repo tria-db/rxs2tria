@@ -59,7 +59,7 @@ summary_sector_chronologies <- function(
     as.numeric() |>
     unique() / 100
 
-  if (is.null(sel_cell_params)) sel_cell_params <- detected_params
+  if (is.null(sel_params)) sel_params <- detected_params
   if (is.null(quant_probs))     quant_probs     <- detected_probs
 
   stats <- c("mean", paste0("q", sprintf("%02d", quant_probs * 100)))
@@ -71,70 +71,74 @@ summary_sector_chronologies <- function(
     dplyr::filter(filtered_sector_data, sector_n %in% SECTOR)
   }
 
-  # --- 2️⃣ Prepare param × stat grid -----------------------------------------
-  grid <- tidyr::crossing(
-    param = sel_cell_params,
-    stat  = stats
-  ) |>
+  # Define the measurement columns
+  measure_cols <- setdiff(names(dat), c("tree_id", "image_label", "year", "sector_n"))
+
+  tree_year <- dat %>%
+    tidyr::pivot_longer(
+      cols = all_of(measure_cols),
+      names_to = "param_stat",
+      values_to = "value"
+    ) %>%
     dplyr::mutate(
-      col = ifelse(stat == "mean",
-                   paste0(param, "_mean"),
-                   paste0(param, "_", stat))
-    ) |>
-    dplyr::filter(col %in% names(dat))
+      # Handle mrw separately
+      param = ifelse(param_stat == "mrw", "mrw", sub("_.*$", "", param_stat)),
+      stat  = ifelse(param_stat == "mrw", "mean", sub(".*_", "", param_stat))
+    ) %>%
+    dplyr::select(tree_id, image_label, year, sector_n, param, stat, value) %>%
+    dplyr::mutate(year = as.numeric(year)) %>%
+    dplyr::arrange(-year, tree_id, image_label, sector_n, stat, param)
 
-  # --- 3️⃣ Compute tree × year × sector means --------------------------------
-  tree_year <- purrr::map_dfr(seq_len(nrow(grid)), function(i) {
-    param <- grid$param[i]
-    stat  <- grid$stat[i]
-    col   <- grid$col[i]
-
-    # Aggregate mean per tree_id × year × sector_n
-    agg <- dat |>
-      dplyr::group_by(tree_id, image_label, year, sector_n) |>
-      dplyr::summarise(value = mean(.data[[col]], na.rm = TRUE), .groups = "drop") |>
-      dplyr::mutate(param = param, stat = stat)
-
-    agg
-  }) %>%
-    dplyr::select(tree_id, image_label, year, sector_n, param, stat, value)
 
   # --- 4️⃣ Compute yearly chronologies (mean over trees) ----------------------
   chronology <- tree_year |>
     dplyr::group_by(sector_n, param, stat, year) |>
-    summarise(
+    dplyr::summarise(
       value = dplR::tbrm(value),
       .groups = "drop"
     )
 
   # --- 5️⃣ Compute inter-tree correlations -----------------------------------
-  correlation <- tree_year %>%
+  # --- 5️⃣ Compute inter-tree correlations + diagnostics ------------------------
+  diagnostics <- tree_year %>%
     dplyr::filter(year >= min_year_cor) %>%
     tidyr::pivot_wider(
-      id_cols = c("year", "sector_n", "param", "stat"),
-      names_from = "tree_id",
+      id_cols   = c("year", "sector_n", "param", "stat"),
+      names_from  = "tree_id",
       values_from = "value"
     ) %>%
     dplyr::group_by(sector_n, param, stat) %>%
-    dplyr::group_modify(~{
-      # Keep only tree columns
+    dplyr::group_modify(~ {
+
       tree_cols <- setdiff(names(.x), c("year", "sector_n", "param", "stat"))
 
-      # Keep only columns with ≥ 2 unique, non-NA values
+      # keep trees with signal
       tree_cols <- tree_cols[sapply(.x[, tree_cols, drop = FALSE], function(x) {
         length(unique(na.omit(x))) >= 2
       })]
 
-      if(length(tree_cols) < 2){
-        return(tibble::tibble(mean_cor = NA_real_))
+      n <- length(tree_cols)
+
+      if (n < 2) {
+        return(tibble::tibble(
+          Rbar    = NA_real_,
+          EPS     = NA_real_,
+          n_trees = n
+        ))
       }
 
-      # Compute correlation safely
-      mat <- suppressWarnings(
+      cor_mat <- suppressWarnings(
         cor(.x[, tree_cols, drop = FALSE], use = "pairwise.complete.obs")
       )
 
-      tibble::tibble(mean_cor = mean(mat[upper.tri(mat)], na.rm = TRUE))
+      rbar <- mean(cor_mat[upper.tri(cor_mat)], na.rm = TRUE)
+      eps  <- (n * rbar) / (n * rbar + (1 - rbar))
+
+      tibble::tibble(
+        Rbar    = rbar,
+        EPS     = eps,
+        n_trees = n
+      )
     }) %>%
     dplyr::ungroup()
 
@@ -156,7 +160,7 @@ summary_sector_chronologies <- function(
   list(
     chronology  = chronology,
     timeseries   = tree_year,
-    correlation = correlation
+    diagnostics = diagnostics
   )
 }
 
@@ -217,7 +221,7 @@ summary_band_chronologies <- function(
   library(stringr)
   library(purrr)
   library(readr)
-  library(dplR) # for mean.biweight()
+  library(dplR) # for tbrm()
 
   # --- 0️⃣ Detect parameters automatically if not provided ---
   if(is.null(sel_params)){
@@ -228,124 +232,126 @@ summary_band_chronologies <- function(
 
   # --- 1️⃣ Create a unique band identifier ---
   band_data <- band_data %>%
-    mutate(band_id = paste0(start, "-", end))
+    dplyr::mutate(band_id = paste0(start, "-", end))
 
   # --- 2️⃣ Full-ring summaries ---
   full_ring <- band_data %>%
-    pivot_longer(
+    tidyr::pivot_longer(
       cols = all_of(sel_params),
       names_to = "param",
       values_to = "value"
     ) %>%
-    group_by(tree_id, image_label, year, param) %>%
-    summarise(
+    dplyr::group_by(tree_id, image_label, year, param) %>%
+    dplyr::summarise(
       min_value  = if(all(is.na(value))) NA_real_ else min(value, na.rm = TRUE),
       max_value  = if(all(is.na(value))) NA_real_ else max(value, na.rm = TRUE),
       delta      = if(all(is.na(value))) NA_real_ else max(value, na.rm = TRUE) - min(value, na.rm = TRUE),
       mean_value = if(all(is.na(value))) NA_real_ else mean(value, na.rm = TRUE),
       .groups = "drop"
     ) %>%
-    mutate(ew_lw = "all")
+    dplyr::mutate(ew_lw = "all")
 
   # --- 3️⃣ EW/LW summaries ---
   ew_lw_summary <- band_data %>%
-    pivot_longer(
+    tidyr::pivot_longer(
       cols = all_of(sel_params),
       names_to = "param",
       values_to = "value"
     ) %>%
-    filter(!is.na(ew_band)) %>%
-    group_by(tree_id, image_label, year, ew_band, param) %>%
-    summarise(
+    dplyr::filter(!is.na(ew_band)) %>%
+    dplyr::group_by(tree_id, image_label, year, ew_band, param) %>%
+    dplyr::summarise(
       min_value  = if(all(is.na(value))) NA_real_ else min(value, na.rm = TRUE),
       max_value  = if(all(is.na(value))) NA_real_ else max(value, na.rm = TRUE),
       delta      = if(all(is.na(value))) NA_real_ else max(value, na.rm = TRUE) - min(value, na.rm = TRUE),
       mean_value = if(all(is.na(value))) NA_real_ else mean(value, na.rm = TRUE),
       .groups = "drop"
     ) %>%
-    mutate(ew_lw = if_else(ew_band, "EW", "LW")) %>%
-    select(-ew_band)
+    dplyr::mutate(ew_lw = if_else(ew_band, "EW", "LW")) %>%
+    dplyr::select(-ew_band)
 
   summary_data <- bind_rows(full_ring, ew_lw_summary)
 
-  # --- 4️⃣ Prepare tree_year (per-tree, per-year values) ---
+  # --- 4️⃣ Prepare tree_year (per-tree × year × param/stat) ---
   tree_year <- summary_data %>%
-    pivot_longer(
+    tidyr::pivot_longer(
       cols = c(min_value, max_value, delta, mean_value),
       names_to = "stat",
       values_to = "value"
     ) %>%
-    select(tree_id, image_label, year, ew_lw, param, stat, value)
+    dplyr::select(tree_id, image_label, year, ew_lw, param, stat, value)
 
   # --- 5️⃣ Compute chronology (Tukey biweight mean) ---
   chronology <- tree_year %>%
-    group_by(ew_lw, param, year, stat) %>%
-    summarise(
+    dplyr::group_by(ew_lw, param, year, stat) %>%
+    dplyr::summarise(
       value = dplR::tbrm(value),
       .groups = "drop"
     )
 
+  # --- 6️⃣ Compute Rbar, EPS, and n_trees per param/stat/ew_lw ---
+  # --- 6️⃣ Inter-tree correlation / diagnostics ---
+  # --- 6️⃣ Inter-tree correlation + EPS diagnostics ---
+  diagnostics <- purrr::map_dfr(c("all", "EW", "LW"), function(ew_type) {
 
-  # --- 6️⃣ Inter-tree correlation ---
-  correlation <- map_dfr(c("all", "EW", "LW"), function(ew_type) {
-
-    # Filter by EW/LW if needed
+    # Filter by EW/LW type if needed
     df <- tree_year
-    if (ew_type != "all") {
-      df <- df %>% filter(ew_lw == ew_type)
-    }
+    if (ew_type != "all") df <- df %>% dplyr::filter(ew_lw == ew_type)
 
     df %>%
-      group_by(param, stat) %>%
-      group_modify(~{
-        # Pivot to wide: columns = tree_id, rows = year
-        mat_df <- .x %>%
-          filter(year >= min_year_cor) %>%
-          group_by(tree_id, year, ew_lw) %>%
-          summarise(value = mean(value, na.rm = TRUE), .groups = "drop") %>%
-          pivot_wider(names_from = tree_id, values_from = value)
+      dplyr::group_by(param, stat) %>%
+      dplyr::group_modify(~{
 
-        tree_cols <- setdiff(names(mat_df), "year")
-        tree_cols <- tree_cols[sapply(mat_df[, tree_cols, drop = FALSE], function(x) {
-          is.numeric(x) && length(unique(na.omit(x))) >= 2
-        })]
+        tmp <- .x %>%
+          dplyr::filter(year >= min_year_cor) %>%
+          dplyr::select(tree_id, year, value) %>%  # keep only numeric columns
+          tidyr::pivot_wider(
+            names_from = tree_id,
+            values_from = value,
+            values_fn = mean
+          )
 
-        if(length(tree_cols) < 2) return(tibble(mean_cor = NA_real_))
+        tree_cols <- setdiff(names(tmp), "year")
+        n <- length(tree_cols)
 
+        if(n < 2){
+          return(tibble::tibble(Rbar = NA_real_, EPS = NA_real_, n_trees = n))
+        }
+
+        # safe correlation
         cor_mat <- suppressWarnings(
-          cor(mat_df[, tree_cols, drop = FALSE], use = "pairwise.complete.obs")
+          cor(tmp[, tree_cols], use = "pairwise.complete.obs")
         )
 
-        tibble(mean_cor = mean(cor_mat[upper.tri(cor_mat)], na.rm = TRUE))
+        rbar <- mean(cor_mat[upper.tri(cor_mat)], na.rm = TRUE)
+        eps  <- (n * rbar) / (n * rbar + (1 - rbar))
+
+        tibble::tibble(Rbar = rbar, EPS = eps, n_trees = n)
       }) %>%
-      mutate(ew_lw = ew_type)
+      dplyr::mutate(ew_lw = ew_type)
 
   }) %>%
-    select(ew_lw, param, stat, mean_cor)
+    dplyr::select(ew_lw, param, stat, Rbar, EPS, n_trees)
 
 
   # --- 7️⃣ Optional CSV export ---
   if(write_csv){
-    # Summary
     params <- unique(summary_data$param)
     for(p in params){
-      readr::write_csv(summary_data %>% filter(param == p),
+      readr::write_csv(summary_data %>% dplyr::filter(param == p),
                        paste0(fname_out, "_", p, "_summary.csv"))
     }
-    # Tree-year
     readr::write_csv(tree_year, paste0(fname_out, "_tree_year.csv"))
-    # Chronology
     readr::write_csv(chronology, paste0(fname_out, "_chronology.csv"))
-    # Correlation
-    readr::write_csv(correlation, paste0(fname_out, "_correlation.csv"))
+    readr::write_csv(diagnostics, paste0(fname_out, "_diagnostics.csv"))
   }
 
   # --- 8️⃣ Return tidy results ---
   list(
     summary_data = summary_data,   # per-tree min/max/delta/mean
-    timeseries    = tree_year,      # per-tree × year × param
+    timeseries    = tree_year,     # per-tree × year × param/stat
     chronology   = chronology,     # per-year Tukey biweight mean
-    correlation  = correlation     # mean inter-tree correlation
+    diagnostics  = diagnostics     # Rbar, EPS, n_trees
   )
 }
 

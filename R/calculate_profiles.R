@@ -142,12 +142,12 @@ compute_eww_dt <- function(cells_dt, rings_dt, mork = 1, roll_k = 9) {
            by = .(image_label, year, sector_n)]
 
   # Rolling mean per ring
-  setorder(dt, image_label, year, sector_n)
+  data.table::setorder(dt, image_label, year, sector_n)
   dt[, rollmean := zoo::rollmean(rtsr_mean, roll_k, fill = c(NA, NA, Inf)),
      by = .(image_label, year)]
 
   # EW/LW decision
-  dt[, to_ewlw := fifelse(sector_n <= max(sector_n[rollmean <= mork], na.rm = TRUE),
+  dt[, to_ewlw := ifelse(sector_n <= max(sector_n[rollmean <= mork], na.rm = TRUE),
                           "EW", "LW"), by = .(image_label, year)]
 
   # Compute EWW per ring safely
@@ -273,7 +273,7 @@ calculate_band_profiles <- function(QWA_data,
   data.table::setkey(cells_dt, image_label, year, start, end)
 
   cli::cli_inform(c("i" = "Assigning cells to bands..."))
-  cell_bands <- foverlaps(cells_dt, band_defs, type = "within", nomatch = NULL)
+  cell_bands <- data.table::foverlaps(cells_dt, band_defs, type = "within", nomatch = NULL)
   cell_bands[, c("i.start", "i.end") := NULL]
   # cleanup
   rm(cells_dt)
@@ -307,7 +307,7 @@ calculate_band_profiles <- function(QWA_data,
     new_col_names <- unlist(lapply(sel_cell_params, function(param) {
       paste0(param, "_q", sprintf("%02d", round(quant_probs*100)))
     }))
-    setnames(prf_data_quant, old = old_col_names, new = new_col_names)
+    data.table::setnames(prf_data_quant, old = old_col_names, new = new_col_names)
     prf_data_agg <- prf_data_agg[prf_data_quant, on = c("image_label", "year", "start", "end")]
     rm(prf_data_quant)
   }
@@ -318,10 +318,10 @@ calculate_band_profiles <- function(QWA_data,
   prf_data_agg <- ring_widths[prf_data_agg, on = .(image_label, year)]
   prf_data_agg[, ew_band := ifelse(end <= eww, TRUE, FALSE)]
   prf_data_agg[, end := start + bandwidth] # restore original end
-  setcolorder(prf_data_agg, "ew_band", after = "eww")
+  data.table::setcolorder(prf_data_agg, "ew_band", after = "eww")
 
   cli::cli_inform(c("v" = "All done!"))
-  return(as_tibble(prf_data_agg))
+  return(tibble::as_tibble(prf_data_agg))
 }
 
 

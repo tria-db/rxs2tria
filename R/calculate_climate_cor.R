@@ -1,4 +1,110 @@
-#' Compute cell-wise correlations between growth chronologies and climate
+#' Compute cell-wise correlations between growth chronologies and site grid
+library(dplyr)
+library(tidyr)
+
+compute_corr_sitegrid <- function(
+    clim_rasts,       # terra SpatRaster with layers named tmp_1, tmp_2, ...
+    chrono,           # tibble with columns: group_col, param, stat, year, value, det_method
+    xy_sel,           # data.frame or tibble with lon/lat for pixel(s)
+    group_col = "sector_n",
+    groups = NULL,
+    params = NULL,
+    stats = NULL,
+    seasons = list(JJA = 6:8),
+    clim_var = "temp",
+    start_year = 1901,
+    end_year = 2023,
+    min_years = 20
+) {
+  library(dplyr)
+  library(tidyr)
+
+  # Filter chronos
+  if (!is.null(groups)) chrono <- chrono %>% filter(.data[[group_col]] %in% groups)
+  if (!is.null(params)) chrono <- chrono %>% filter(param %in% params)
+  if (!is.null(stats))  chrono <- chrono %>% filter(stat %in% stats)
+
+  # Extract pixel values
+  clim_pixel <- terra::extract(clim_rasts[[clim_var]], xy_sel)
+  clim_pixel <- clim_pixel[, -1, drop = FALSE]  # remove ID
+
+  # Infer year/month
+  layer_index <- as.integer(gsub("tmp_", "", colnames(clim_pixel)))
+  clim_df <- tibble(
+    layer = colnames(clim_pixel),
+    clim_val = as.numeric(clim_pixel[1, ]),
+    year = start_year + (layer_index - 1) %/% 12,
+    month = (layer_index - 1) %% 12 + 1
+  )
+
+  results <- list()
+
+  for (season_name in names(seasons)) {
+    months_sel <- seasons[[season_name]]
+
+    # Determine if it's a "previous-year" season
+    if (all(months_sel < 0)) {
+      # Shift year +1
+      months_sel_pos <- abs(months_sel)
+      clim_s <- clim_df %>%
+        filter(month %in% months_sel_pos) %>%
+        mutate(year = year + 1) %>%
+        group_by(year) %>%
+        summarize(clim_val = mean(clim_val, na.rm = TRUE), .groups = "drop")
+    } else {
+      clim_s <- clim_df %>%
+        filter(month %in% months_sel) %>%
+        group_by(year) %>%
+        summarize(clim_val = mean(clim_val, na.rm = TRUE), .groups = "drop")
+    }
+
+    combos <- chrono %>% distinct(.data[[group_col]], param, stat, det_method)
+
+    for (i in seq_len(nrow(combos))) {
+      row <- combos[i, ]
+      grp <- row[[group_col]]
+      prm <- row$param
+      st  <- row$stat
+      det <- row$det_method
+
+      growth <- chrono %>%
+        filter(.data[[group_col]] == grp,
+               param == prm,
+               stat == st,
+               det_method == det,
+               year >= start_year, year <= end_year) %>%
+        arrange(year) %>%
+        group_by(year) %>%
+        summarize(growth = first(value), .groups = "drop")
+
+      if (nrow(growth) < min_years) next
+
+      df <- inner_join(clim_s, growth, by = "year") %>%
+        filter(complete.cases(clim_val, growth))
+
+      n_obs <- nrow(df)
+      r_val <- if (n_obs >= min_years) cor(df$clim_val, df$growth, use = "complete.obs") else NA_real_
+
+      results[[paste(grp, prm, st, det, clim_var, season_name, sep = ".")]] <- tibble(
+        lon = xy_sel$lon,
+        lat = xy_sel$lat,
+        group = grp,
+        param = prm,
+        stat = st,
+        det_method = det,
+        clim_var = clim_var,
+        season = season_name,
+        n = n_obs,
+        r = r_val
+      )
+    }
+  }
+
+  bind_rows(results)
+}
+
+
+#' Compute cell-wise correlations between growth chronologies and climate raster
 #'
 #' This function computes cell-wise Pearson correlations between per-group
 #' growth chronologies (sector-wise or band-wise) and seasonal climate variables.
@@ -212,4 +318,114 @@ raster_to_ggplot <- function(rast_obj) {
 
 
 
+compute_corr_rasters_det <- function(
+    clim_rasts,
+    chronos,
+    group_col = "sector_n",
+    groups = NULL,
+    params = NULL,
+    stat = "mean",
+    det_methods = NULL,          # NEW: which detrending methods to use
+    seasons = list(JJA = 6:8, JJ = 6:7),
+    clim_var = "temp",
+    start_year = 1901,
+    end_year = 2023,
+    min_years = 20
+) {
+
+  results <- list()
+
+  # Filter groups if needed
+  if (!is.null(groups)) {
+    chronos <- chronos %>%
+      filter(.data[[group_col]] %in% groups)
+  }
+
+  # Filter det_methods if provided
+  if (!is.null(det_methods)) {
+    chronos <- chronos %>% filter(det_method %in% det_methods)
+  }
+
+  # Precompute year/month lookup
+  years  <- rep(start_year:end_year, each = 12)
+  months <- rep(1:12, times = length(start_year:end_year))
+
+  # Convert climate raster once
+  clim_df <- as.data.frame(clim_rasts[[clim_var]], xy = TRUE) %>%
+    pivot_longer(
+      cols = starts_with("tmp_"),
+      names_to = "layer",
+      values_to = "clim_val"
+    ) %>%
+    mutate(
+      layer_index = as.integer(gsub("tmp_", "", layer)),
+      year  = years[layer_index],
+      month = months[layer_index]
+    ) %>%
+    select(lon = x, lat = y, year, month, clim_val)
+
+  # Loop over groups
+  for (grp in unique(chronos[[group_col]])) {
+
+    grp_data <- chronos %>%
+      filter(.data[[group_col]] == grp, stat == stat)
+
+    param_list <- if (is.null(params)) unique(grp_data$param) else params
+    det_method_list <- unique(grp_data$det_method)
+
+    for (param in param_list) {
+
+      for (dm in det_method_list) {
+
+        growth_df <- grp_data %>%
+          filter(param == !!param, det_method == !!dm) %>%
+          filter(year >= start_year, year <= end_year) %>%
+          group_by(year) %>%
+          summarize(
+            growth = if_else(param[1] == "mrw", max(value, na.rm = TRUE), first(value)),
+            .groups = "drop"
+          ) %>%
+          arrange(year)
+
+        if (nrow(growth_df) < min_years) next
+
+        # Loop over seasons
+        for (season_name in names(seasons)) {
+
+          months_sel <- seasons[[season_name]]
+
+          tmp_season <- clim_df %>%
+            filter(month %in% months_sel, year %in% growth_df$year) %>%
+            group_by(lon, lat, year) %>%
+            summarize(
+              season_val = mean(clim_val, na.rm = TRUE),
+              .groups = "drop"
+            )
+
+          corr_df <- tmp_season %>%
+            inner_join(growth_df, by = "year") %>%
+            group_by(lon, lat) %>%
+            summarize(
+              n = sum(complete.cases(season_val, growth)),
+              r = ifelse(
+                n >= min_years,
+                cor(season_val, growth, use = "pairwise.complete.obs"),
+                NA_real_
+              ),
+              .groups = "drop"
+            )
+
+          r_rast <- terra::rast(corr_df[, c("lon", "lat", "r")])
+
+          # --- NEW: include det_method in raster name ---
+          nm <- paste(grp, param, stat, dm, clim_var, season_name, sep = ".")
+          names(r_rast) <- nm
+          results[[nm]] <- r_rast
+        }
+      }
+    }
+  }
+
+  results
+}
 
