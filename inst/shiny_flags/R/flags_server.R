@@ -1524,22 +1524,30 @@ flags_server <- function(id, main_session) {
         ") %>%
         # keep track of user selected row in table
         htmlwidgets::onRender(sprintf("
-          function(el, x) {
-            var hot = this.hot;
+         function(el, x) {
+          var hot = this.hot;
 
-            // Capture user selection
-            hot.addHook('afterSelection', function(r, c, r2, c2) {
-              Shiny.setInputValue('%s', r + 1, {priority: 'event'});
-            });
+          // Remove previously attached hook if it exists
+          if (hot._mySelectionHook) {
+            hot.removeHook('afterSelection', hot._mySelectionHook);
           }
+
+          // Define and store the new hook
+          hot._mySelectionHook = function(r, c, r2, c2) {
+            Shiny.setInputValue('%s', r + 1, {priority: 'event'});
+          };
+
+          hot.addHook('afterSelection', hot._mySelectionHook);
+        }
         ", ns("selected_hot_row")))
 
     }) |> bindEvent(sel_marker(), input$confirm_cols, ignoreNULL = TRUE)
 
     # Update reactiveVal when user selects
     observeEvent(input$selected_hot_row, {
+      print(input$selected_hot_row)
         selected_row(input$selected_hot_row)
-    }, priority = 1)  # LOW PRIORITY)
+    })  # LOW PRIORITY)
 
     # Create a reactiveVal
     selected_row <- reactiveVal(NULL)
@@ -1755,9 +1763,6 @@ flags_server <- function(id, main_session) {
       rings_data_edited(df_rings)
     }) |> bindEvent(flags_out(), ignoreInit = TRUE)
 
-    # TODO: highlight excluded markers based on rings_data_edited() (up to date)
-    # TODO: image comment
-    # TODO:
 
 
     # save edits, update plot
@@ -1869,7 +1874,7 @@ flags_server <- function(id, main_session) {
           dplyr::any_of(setdiff(disqual_issues, c('incomplete_ring','missing_ring'))),
           dplyr::any_of(c(unname(technical_issues), unname(other_issues),
                           unname(discrete_features))))
-        df <- df[setdiff(names(df), c("affected_tissue", "comment", names(df_opt)))]
+        df <- df[setdiff(names(df), c("affected_tissue", "comment", names(df_flags_opt)))]
         df_char <- df_char |> janitor::remove_empty(which = "cols", cutoff = 1)
         df_flags_opt <- df_flags_opt |>
           janitor::remove_empty(which = "cols", cutoff = 1) |>
@@ -1903,7 +1908,7 @@ flags_server <- function(id, main_session) {
          dplyr::any_of(setdiff(disqual_issues, c('incomplete_ring','missing_ring'))),
          dplyr::any_of(c(unname(technical_issues), unname(other_issues),
                          unname(discrete_features))))
-       df <- df[setdiff(names(df), c("affected_tissue", "comment", names(df_opt)))]
+       df <- df[setdiff(names(df), c("affected_tissue", "comment", names(df_flags_opt)))]
        df_char <- df_char |> janitor::remove_empty(which = "cols", cutoff = 1)
        df_flags_opt <- df_flags_opt |>
          janitor::remove_empty(which = "cols", cutoff = 1) |>
