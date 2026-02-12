@@ -192,11 +192,11 @@ flags_server <- function(id, main_session) {
       if ("affected_tissue" %in% names(df_rings)){
         df_rings$affected_tissue <- as.character(df_rings$affected_tissue)
         # TODO: check in validation?
-        if (any(!df_rings["affected_tissue"] %in% c("ew", "lw", "all"))){
+        if (any(!df_rings$affected_tissue %in% c("ew", "lw", "all"))){
           shiny::showNotification("Affected tissue values not in ['ew','lw','all'] converted to NA",
                                   type = "warning")
           print("WARNING: INVALID AFFECTED TISSUE VALUES CONVERTED TO NA")
-          df_rings[!df_rings["affected_tissue"] %in% c("ew", "lw", "all"), "affected_tissue"] <- NA_character_
+          df_rings[!df_rings$affected_tissue %in% c("ew", "lw", "all"), "affected_tissue"] <- NA_character_
         }
       } else {
         df_rings["affected_tissue"] <- NA_character_
@@ -688,7 +688,9 @@ flags_server <- function(id, main_session) {
                       size = 10,
                       color = marker_col,
                       symbol = "circle"
-                    )
+                    ),
+                    hovertext = list(paste0(marker$ycov_val, "<br>",
+                                            marker$year, ": ", ywp_val))
                   ),
                   wp_curveNumber
                 )
@@ -802,6 +804,7 @@ flags_server <- function(id, main_session) {
     observe({
       req(!awaiting_restoration()) # avoid running if plot is rerendered
       cat(".   plot click\n")
+
       click_data <- plot_click()
 
       if (click_data$role == "otherwp"){
@@ -911,7 +914,9 @@ flags_server <- function(id, main_session) {
                     size = 10,
                     color = marker_col,
                     symbol = "circle"
-                  )
+                  ),
+                  hovertext = list(paste0(marker$ycov_val, "<br>",
+                                          marker$year, ": ", ywp_val))
                 ),
                 wp_curveNumber
               )
@@ -1085,7 +1090,9 @@ flags_server <- function(id, main_session) {
                 size = 10,
                 color = marker_col,
                 symbol = "circle"
-              )
+              ),
+              hovertext = list(paste0(marker$ycov_val, "<br>",
+                                      marker$year, ": ", ywp_val))
             ),
             wp_curveNumber
           )
