@@ -19,7 +19,7 @@ get_roxas_files <- function(path_in) {
   pattern_settings_files = "_ROXAS_Settings\\.txt$"
   pattern_orgimg_files = "\\.(jpg|jpeg)$" # "\\.(jpg|jpeg|png|gif|bmp|tiff)$"
   imgfiles_exclude_keywords = c("annotated", "ReferenceSeries", "Preview")
-  pattern_excl_keywords <- paste(imgfiles_exclude_keywords, collapse="|")
+  pattern_excl_keywords <- paste(imgfiles_exclude_keywords, collapse = "|")
 
   # use fs rather than base list.files, much faster for network shares
   files_cells <- fs::dir_ls(
@@ -79,10 +79,10 @@ get_roxas_files <- function(path_in) {
   ))
 
   list(
-    fname_image = files_images,
-    fname_cells = files_cells,
-    fname_rings = files_rings,
-    fname_settings = files_settings
+    fname_image = sort(files_images), # TODO: does this always make sure that the corresponding files are in the exact same order?
+    fname_cells = sort(files_cells),
+    fname_rings = sort(files_rings),
+    fname_settings = sort(files_settings)
   )
 }
 
@@ -181,7 +181,7 @@ get_structure_from_filenames <- function(
   # extract the relevant pattern part of the file names
   fnames <- stringr::str_extract(filenames, pattern)
 
-  if (any(is.na(fnames))){
+  if (any(is.na(fnames))) {
     dontmatch <- filenames[is.na(fnames)]
     cli::cli_abort(c(
       "All files must match the labeling pattern",
@@ -197,7 +197,7 @@ get_structure_from_filenames <- function(
       "Extracted structure must yield unique image identifiers",
       "x" = "The following files yield duplicate image identifiers",
       "x" = "when extracting the pattern {.code {lbl_structure}}:",
-      grep(paste(duplicates, collapse="|"), filenames, value=TRUE)
+      grep(paste(duplicates, collapse = "|"), filenames, value=TRUE)
     ))
   }
 
@@ -216,10 +216,10 @@ get_structure_from_filenames <- function(
     dplyr::bind_rows(df_structure) |> # ensure all columns are present
     dplyr::mutate(dplyr::across(dplyr::everything(), ~dplyr::na_if(.x, "")))
 
-  if (!is.null(site_label)){
+  if (!is.null(site_label)) {
     df_structure$site <- site_label
   }
-  if (!is.null(species_code)){
+  if (!is.null(species_code)) {
     df_structure$species <- species_code
   }
 
