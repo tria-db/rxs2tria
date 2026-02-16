@@ -629,6 +629,7 @@ flags_server <- function(id, main_session) {
                 marker_col = marker_col
               )
             )
+            # sel_image remains the same
 
             if (!"sel_marker_wp" %in% names(current_traces)){
               p <- p %>%
@@ -851,6 +852,7 @@ flags_server <- function(id, main_session) {
         sel_marker(
           marker
         )
+        sel_image(ycov_val)
 
         yaxis_cov <- if ("sd" %in% sel_subplots()) "y3" else "y2"
         # update plot markers
@@ -967,6 +969,7 @@ flags_server <- function(id, main_session) {
           marker_col = marker_col
         )
       )
+      sel_image(ycov_val)
     }) |> bindEvent(input$confirm_wp)
 
     shift_ring <- reactiveVal(NULL)
@@ -1026,6 +1029,9 @@ flags_server <- function(id, main_session) {
       sel_marker(
         marker
       )
+      if (!identical(sel_image(), ycov_val)) {
+        sel_image(ycov_val)
+      }
 
       # redraw:
       yaxis_cov <- if ("sd" %in% sel_subplots()) "y3" else "y2"
@@ -1116,7 +1122,6 @@ flags_server <- function(id, main_session) {
 
       p
 
-
     }) |> bindEvent(shift_ring(), ignoreNULL = TRUE, ignoreInit = TRUE)
 
     observe({
@@ -1142,12 +1147,15 @@ flags_server <- function(id, main_session) {
         marker_col = marker_col
       )
       sel_marker(marker)
-      shinyjs::runjs(sprintf("
-        var hot = HTMLWidgets.find('#%s');
-        if (hot && hot.hot) {
-          hot.hot.render();  // Just re-render cells with new highlighting
-        }
-      ", ns("img_flags")))
+      # no update to sel_image required
+      # new_selring_idx <- selected_row() - 1
+      # shinyjs::runjs(sprintf("
+      #   var widget = HTMLWidgets.find('#%s');
+      #   if (widget && widget.hot) {
+      #     widget.hot._highlightedRow = %s;
+      #     widget.hot.render();
+      #   }
+      # ", ns("img_flags"), new_selring_idx))
 
       # redraw:
       yaxis_cov <- if ("sd" %in% sel_subplots()) "y3" else "y2"
@@ -1212,7 +1220,9 @@ flags_server <- function(id, main_session) {
                 size = 10,
                 color = marker_col,
                 symbol = "circle"
-              )
+              ),
+              hovertext = list(paste0(marker$ycov_val, "<br>",
+                                      marker$year, ": ", ywp_val))
             ),
             wp_curveNumber
           )
@@ -1413,14 +1423,14 @@ flags_server <- function(id, main_session) {
 
     }) |> bindEvent(input$confirm_cols)
 
-    output$img_flags <- rhandsontable::renderRHandsontable({
-      req(sel_marker())
+    df_rings_hot <- reactive({
+      req(sel_image())
       sel_disq <- intersect(sel_issues_stored(), disqual_issues)
       sel_techn <- intersect(sel_issues_stored(), technical_issues)
       sel_other <- intersect(sel_issues_stored(), other_issues)
       sel_feat <- intersect(sel_features_stored(), discrete_features)
       df_rings <- rings_data_edited() |>
-        dplyr::filter(image_label == sel_marker()$ycov_val) |>
+        dplyr::filter(image_label == sel_image()) |>
         dplyr::select(
           year,
           dplyr::all_of(c(
@@ -1429,8 +1439,20 @@ flags_server <- function(id, main_session) {
             sel_disq, sel_techn, sel_other,
             sel_feat,"comment"))
         )
+    }) |> bindEvent(sel_image(), input$confirm_cols)
+
+    current_table_image <- reactiveVal(NULL)
+
+    output$img_flags <- rhandsontable::renderRHandsontable({
+      df_rings <- df_rings_hot()
+      sel_disq <- intersect(sel_issues_stored(), disqual_issues)
+      sel_techn <- intersect(sel_issues_stored(), technical_issues)
+      sel_other <- intersect(sel_issues_stored(), other_issues)
+      sel_feat <- intersect(sel_features_stored(), discrete_features)
+      current_table_image(sel_marker()$ycov_val)
 
       selring_idx <- which(df_rings$year == sel_marker()$year) - 1
+      print(selring_idx)
       df_rings <- df_rings |> tibble::column_to_rownames("year")
 
       ro_ids_dupl <- which(rep(TRUE, nrow(df_rings))) - 1
@@ -1450,20 +1472,20 @@ flags_server <- function(id, main_session) {
         height = 400
       ) |>
       rhandsontable::hot_col("duplicate_ring", type = "checkbox", halign = "htCenter",
-                             renderer = renderer_cb_ro(selring_idx, ro_ids_dupl, color_dupl)) |>
+                             renderer = renderer_cb_ro(ro_ids_dupl, color_dupl)) |>
       rhandsontable::hot_col("exclude_dupl", type = "checkbox", halign = "htCenter",
-                             renderer = renderer_cb_dupl(selring_idx, ro_ids_excldupl, color_dupl)) |>
+                             renderer = renderer_cb_dupl(ro_ids_excldupl, color_dupl)) |>
       rhandsontable::hot_col("exclude_issues",  type = "checkbox", halign = "htCenter",
-                             renderer = renderer_cb_val(selring_idx, warn_col_ids, color_excl)) |>
+                             renderer = renderer_cb_val(warn_col_ids, color_excl)) |>
       rhandsontable::hot_col("affected_tissue", type = "dropdown", source = c("", "all", "ew", "lw"),
-                             renderer = renderer_dd(selring_idx, color_excl))
+                             renderer = renderer_dd(color_excl))
       if (length(sel_disq) > 0){
         hot <- hot %>%
           purrr::reduce(
             sel_disq, # names in df
             function(ht, col) {
               ht |> rhandsontable::hot_col(col, type = "checkbox", halign = "htCenter",
-                                           renderer = renderer_cb(selring_idx, color_iss1))
+                                           renderer = renderer_cb(color_iss1))
             },
             .init = .
           )
@@ -1474,7 +1496,7 @@ flags_server <- function(id, main_session) {
             sel_techn, # names in df
             function(ht, col) {
               ht |> rhandsontable::hot_col(col, type = "checkbox", halign = "htCenter",
-                                           renderer = renderer_cb(selring_idx, color_iss2))
+                                           renderer = renderer_cb(color_iss2))
             },
             .init = .
           )
@@ -1485,7 +1507,7 @@ flags_server <- function(id, main_session) {
             sel_other, # names in df
             function(ht, col) {
               ht |> rhandsontable::hot_col(col, type = "checkbox", halign = "htCenter",
-                                           renderer = renderer_cb(selring_idx, color_iss1))
+                                           renderer = renderer_cb(color_iss1))
             },
             .init = .
           )
@@ -1496,13 +1518,13 @@ flags_server <- function(id, main_session) {
             sel_feat, # names in df
             function(ht, col) {
               ht |> rhandsontable::hot_col(col, type = "checkbox", halign = "htCenter",
-                                           renderer = renderer_cb(selring_idx, color_iss2))
+                                           renderer = renderer_cb(color_iss2))
             },
             .init = .
           )
       }
       hot |>
-        rhandsontable::hot_col("comment", renderer = renderer_txt(selring_idx, color_iss1)) |>
+        rhandsontable::hot_col("comment", renderer = renderer_txt(color_iss1)) |>
         rhandsontable::hot_cols(colWidths = 25) %>%
         # add esc key functionality to table
         htmlwidgets::onRender("
@@ -1533,6 +1555,9 @@ flags_server <- function(id, main_session) {
         htmlwidgets::onRender(sprintf("
          function(el, x) {
           var hot = this.hot;
+          // Set the initial highlighted row
+          hot._highlightedRow = %s;
+          console.log('Initial highlighted row:', hot._highlightedRow);
 
           // Remove previously attached hook if it exists
           if (hot._mySelectionHook) {
@@ -1545,35 +1570,37 @@ flags_server <- function(id, main_session) {
           };
 
           hot.addHook('afterSelection', hot._mySelectionHook);
-        }
-        ", ns("selected_hot_row")))
 
-    }) |> bindEvent(sel_marker(), input$confirm_cols, ignoreNULL = TRUE)
+          hot.render();
+        }
+        ", selring_idx, ns("selected_hot_row")))
+
+    }) |> bindEvent(df_rings_hot(), ignoreNULL = TRUE)
 
     # Update reactiveVal when user selects
     observeEvent(input$selected_hot_row, {
-      print(input$selected_hot_row)
         selected_row(input$selected_hot_row)
     })  # LOW PRIORITY)
 
     # Create a reactiveVal
     selected_row <- reactiveVal(NULL)
 
-    renderer_cb <- function(row_idx, bgcolor = NULL){
+    renderer_cb <- function(bgcolor = NULL){
       bgcolor_js <- if(is.null(bgcolor)) "" else bgcolor
       htmlwidgets::JS(htmltools::HTML(sprintf("
           function(instance, td, row, col, prop, value, cellProperties) {
-            if (row == %s) {
+            var selRow = (instance._highlightedRow !== undefined) ? instance._highlightedRow : -1;
+            if (row == selRow) {
               td.style.background = '#ed4c4c';
             } else if ('%s' !== '') {
               td.style.background = '%s';
             }
             Handsontable.renderers.CheckboxRenderer.apply(this, arguments);
             return td;
-        }", row_idx, bgcolor_js, bgcolor_js)))
+        }", bgcolor_js, bgcolor_js)))
     }
 
-    renderer_cb_ro <- function(row_idx, readonly_ids = NULL, bgcolor = NULL){
+    renderer_cb_ro <- function(readonly_ids = NULL, bgcolor = NULL){
       bgcolor_js <- if(is.null(bgcolor)) "" else bgcolor
       readonly_js <- if(is.null(readonly_ids)) "[]" else jsonlite::toJSON(readonly_ids)
 
@@ -1581,7 +1608,8 @@ flags_server <- function(id, main_session) {
         function(instance, td, row, col, prop, value, cellProperties) {
           var readonlyRows = %s;
 
-          if (row == %s) {
+          var selRow = (instance._highlightedRow !== undefined) ? instance._highlightedRow : -1;
+          if (row == selRow) {
             td.style.background = '#ed4c4c';
           } else if ('%s' !== '') {
             td.style.background = '%s';
@@ -1595,10 +1623,10 @@ flags_server <- function(id, main_session) {
 
           Handsontable.renderers.CheckboxRenderer.apply(this, arguments);
           return td;
-        }", readonly_js, row_idx, bgcolor_js, bgcolor_js)))
+        }", readonly_js, bgcolor_js, bgcolor_js)))
     }
 
-    renderer_cb_dupl <- function(row_idx, readonly_ids = NULL, bgcolor = NULL){
+    renderer_cb_dupl <- function(readonly_ids = NULL, bgcolor = NULL){
       bgcolor_js <- if(is.null(bgcolor)) "" else bgcolor
       readonly_js <- if(is.null(readonly_ids)) "[]" else jsonlite::toJSON(readonly_ids)
 
@@ -1606,9 +1634,9 @@ flags_server <- function(id, main_session) {
         function(instance, td, row, col, prop, value, cellProperties) {
           var readonlyRows = %s;
           var rowData = instance.getDataAtRow(row);
-          console.log(rowData);
 
-          if (row == %s) {
+          var selRow = (instance._highlightedRow !== undefined) ? instance._highlightedRow : -1;
+          if (row == selRow) {
             td.style.background = '#ed4c4c';
           } else if (rowData[0] && !value) {
               td.style.background = '#99C2C2';  // Light green
@@ -1624,10 +1652,10 @@ flags_server <- function(id, main_session) {
 
           Handsontable.renderers.CheckboxRenderer.apply(this, arguments);
           return td;
-        }", readonly_js, row_idx, bgcolor_js, bgcolor_js)))
+        }", readonly_js, bgcolor_js, bgcolor_js)))
     }
 
-    renderer_cb_val <- function(row_idx, warn_col_ids = NULL, bgcolor = NULL){
+    renderer_cb_val <- function(warn_col_ids = NULL, bgcolor = NULL){
       bgcolor_js <- if(is.null(bgcolor)) "" else bgcolor
       warn_js <- if(is.null(warn_col_ids)) "[]" else jsonlite::toJSON(warn_col_ids)
 
@@ -1639,8 +1667,8 @@ flags_server <- function(id, main_session) {
           }
           var warnCols = %s;
 
-          // Default styling based on row_idx and bgcolor
-          if (row == %s) {
+          var selRow = (instance._highlightedRow !== undefined) ? instance._highlightedRow : -1;
+          if (row == selRow) {
             td.style.background = '#ed4c4c';
           } else if ('%s' !== '') {
             td.style.background = '%s';
@@ -1658,47 +1686,63 @@ flags_server <- function(id, main_session) {
 
           Handsontable.renderers.CheckboxRenderer.apply(this, arguments);
           return td;
-        }", warn_js, row_idx, bgcolor_js, bgcolor_js)))
+        }", warn_js, bgcolor_js, bgcolor_js)))
     }
-
-
 
     # // green background for dupl_ids rows where value is false (selected duplicate)
     # if (duplRows.includes(row) && value === false) {
     #   td.style.background = '#90EE90';  // Light green
     # }
 
-    renderer_dd <- function(row_idx, bgcolor = NULL){
+    renderer_dd <- function(bgcolor = NULL){
       bgcolor_js <- if(is.null(bgcolor)) "" else bgcolor
       htmlwidgets::JS(htmltools::HTML(sprintf("
           function(instance, td, row, col, prop, value, cellProperties) {
-            if (row == %s) {
+            var selRow = (instance._highlightedRow !== undefined) ? instance._highlightedRow : -1;
+            if (row == selRow) {
               td.style.background = '#ed4c4c';
             } else if ('%s' !== '') {
               td.style.background = '%s';
             }
             Handsontable.renderers.DropdownRenderer.apply(this, arguments);
             return td;
-        }", row_idx, bgcolor_js, bgcolor_js)))
+        }", bgcolor_js, bgcolor_js)))
     }
-    renderer_txt <- function(row_idx, bgcolor = NULL){
+    renderer_txt <- function(bgcolor = NULL){
       bgcolor_js <- if(is.null(bgcolor)) "" else bgcolor
       htmlwidgets::JS(htmltools::HTML(sprintf("
           function(instance, td, row, col, prop, value, cellProperties) {
-            if (row == %s) {
+            var selRow = (instance._highlightedRow !== undefined) ? instance._highlightedRow : -1;
+            if (row == selRow) {
               td.style.background = '#ed4c4c';
             } else if ('%s' !== '') {
               td.style.background = '%s';
             }
             Handsontable.renderers.TextRenderer.apply(this, arguments);
             return td;
-        }", row_idx, bgcolor_js, bgcolor_js)))
+        }", bgcolor_js, bgcolor_js)))
     }
 
     # capture hot table edits
     flags_out <- reactive({
       rhandsontable::hot_to_r(input$img_flags)
     })
+
+    observe({
+      req(sel_marker())
+      req(identical(sel_marker()$ycov_val, current_table_image()))
+      # Compute the row index from current table data
+      df <- df_rings_hot()
+      new_idx <- which(df$year == sel_marker()$year) - 1
+
+      shinyjs::runjs(sprintf("
+        var widget = HTMLWidgets.find('#%s');
+        if (widget && widget.hot) {
+          widget.hot._highlightedRow = %s;
+          widget.hot.render();
+        }
+      ", ns("img_flags"), new_idx))
+    }) |> bindEvent(sel_marker(), ignoreNULL = TRUE)
 
     # capture edits on the excl flags column specifically (for excl markers)
     excl_flags <- reactiveVal()
@@ -1824,13 +1868,13 @@ flags_server <- function(id, main_session) {
 
     # auto open if sel image changes
     sel_image <- reactiveVal(NULL)
-    observe({
-      prev_img <- sel_image()
-      new_img <- sel_marker()$ycov_val
-      if (!identical(prev_img, new_img)){
-        sel_image(new_img)
-      }
-    }) |> bindEvent(sel_marker(), ignoreNULL = TRUE)
+    # observe({
+    #   prev_img <- sel_image()
+    #   new_img <- sel_marker()$ycov_val
+    #   if (!identical(prev_img, new_img)){
+    #     sel_image(new_img)
+    #   }
+    # }) |> bindEvent(sel_marker(), ignoreNULL = TRUE)
 
     observe({
       req(input$auto_open_image)
@@ -1929,6 +1973,8 @@ flags_server <- function(id, main_session) {
 
     # DEBUG OUTPUT -------------------------------------------------------------
     output$debug <- renderPrint({
+      sel_marker()
+      sel_image()
       #print(sample(1:10000, 1))
       #input$traces_crn[['exclude_markers']]
 

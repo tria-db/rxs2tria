@@ -181,10 +181,13 @@ ui <- bslib::page_fluid(
   # FOOTER ---------------------------------------------------------------------
   tags$footer(
     class = "wsl-footer",
-    tags$img(src = "WSL_Logo_neg.png",
-             height = "30px", style = "vertical-align:middle; margin-right: 10px;"),
+    tags$img(
+      src = "WSL_Logo_neg.png",
+      height = "30px",
+      style = "vertical-align:middle; margin-right: 10px;"
+    ),
     actionLink("contact_link", "Contact",
-               style = "color: white; margin-left: 20px; text-decoration: none;"),
+               style = "color: white; margin-left: 20px; text-decoration: none;")
   )
 
 ) # end of ui
