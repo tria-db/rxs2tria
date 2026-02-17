@@ -47,7 +47,6 @@ Imports:
     sf,
     shiny,
     shinyalert,
-    shinyFiles,
     shinyjs,
     shinyTree,
     shinyvalidate,

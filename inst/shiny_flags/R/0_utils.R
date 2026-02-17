@@ -1,36 +1,5 @@
-# COLORS ------------------
-# define color range
-prim_col <- "#006268"
-sec_col <- "#69004F"
-tert_col <- "#00206E"
-prim_col_grad <- c("#338585", "#66A3A3", "#99C2C2", "#CCE0E0", "#E6F0F0", "#F2F7F7")
-sec_col_grad <- c("#853270", "#A36794", "#C299B8", "#E0CCDB", "#F0E6ED", "#F7F2F6")
-tert_col_grad <- c("#324a85", "#6778a3", "#99a5c2", "#ccd2e0", "#e6e9f0", "#f2f4f7")
-
+# GLOBAL OPTIONS -----------
 options(shiny.maxRequestSize = 100 * 1024^2)  # Set limit to 500 MB
-base_palette <- RColorBrewer::brewer.pal(11, "Spectral")
-#base_palette <- scales::pal_hue()(9)
-#base_palette <- c("#338585", "#324a85","#853270")
-
-# helper function to extend palette to desired length, reordering for better contrast if desired
-extend_palette <- function(palette, n, contrasting = TRUE) {
-  if (n>length(palette)){
-    full_palette <- grDevices::colorRampPalette(palette)(n)
-  } else {
-    full_palette <- palette[1:n]
-  }
-
-  if (contrasting){
-    k <- n %/% length(palette) + 1
-    indices <- integer(0)
-    for (j in 1:k){
-      indices <- c(indices,seq(from = j, to = n, by = k))
-    }
-    full_palette <- full_palette[indices]
-  }
-
-  full_palette
-}
 
 # GLOBAL VARS ------------
 discrete_features <- c(
@@ -68,9 +37,7 @@ other_issues <- c(
 )
 
 
-
-
-
+# helper functions
 shinyInput_CB_DT <- function(id, num, values, disabled = FALSE){
   inputs <- character(num)
   for (i in seq_len(num)) {

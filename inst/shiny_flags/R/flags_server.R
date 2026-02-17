@@ -322,7 +322,7 @@ flags_server <- function(id, main_session) {
     }) |> bindEvent(rings_data_org(), input$filt_wp, input$sel_param, input$sel_sector,
                     input$show_excl, sel_woodpiece(), ignoreInit = TRUE)
 
-    js_traces <- readLines("www/traces_to_input.js") |> paste(collapse = "\n")
+    js_traces <- readLines("www/js/traces_to_input.js") |> paste(collapse = "\n")
 
 
     # Modal settings
