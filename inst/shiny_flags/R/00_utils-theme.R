@@ -33,6 +33,9 @@ extend_palette <- function(palette, n, contrasting = TRUE) {
   full_palette
 }
 
+sample_depth_color <- tert_col
+coverage_colorscale <- list(c(0, "#FED976"), c(1, prim_col))
+
 # BSLIB THEME ------------------
 # helper function to create the theme
 add_gradient_vars <- function(theme, prefix, gradient) {

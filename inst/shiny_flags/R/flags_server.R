@@ -1,249 +1,282 @@
 flags_server <- function(id, main_session) {
-  moduleServer(id, function(input, output, session) {
+  shiny::moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
-    # LOAD INPUT DATA ----------------------------------------------------------
+    # REACTIVE CONTAINERS ------------------------------------------------------
     # reactive container for input data
-    input_data <- reactiveValues(
+    input_data <- shiny::reactiveValues(
       prf_data = NULL,
       rings_data = NULL,
       rxsmeta_data = NULL
     )
+    # reactive containers for rings data
+    # NOTE: rings_data_org is the basis for the plot, rings_data_edited tracks
+    # edits of the flag inputs for selected rings. edits are then propagated back
+    # to rings_data_org when the save / update btn is clicked
+    rings_data_org <- shiny::reactiveVal(NULL)
+    rings_data_edited <- shiny::reactiveVal(NULL)
 
-    # open input modal when btn_input is clicked
-    observe({
+    # reactive containers for plot settings and data
+    sel_subplots <- reactiveVal(c("sd","cov")) # default: show optional subplots
+    awaiting_restoration <- reactiveVal(FALSE)
+
+    # reactive containers for currently selected trace / image / year in the
+    # plot(s) and table
+    sel_woodpiece <- reactiveVal(NULL)
+    sel_image <- reactiveVal(NULL)
+    sel_marker <- reactiveVal(NULL)
+
+
+    # LOAD INPUT DATA ----------------------------------------------------------
+    # open input modal when button open_input_modal is clicked
+    shiny::observe({
       # warn before overwriting existing data
       no_existing_inputs <- all(
         is.null(input_data$prf_data),
         is.null(input_data$rings_data),
         is.null(input_data$rxsmeta_data))
       if (!no_existing_inputs) {
-        showModal(
-          modalDialog(
-            title = "Warning",
-            "This action overwrites any existing inputs provided in the app,
-           including any unsaved edits.
-           Are you sure you want to proceed?",
-            footer = tagList(
-              modalButton("Cancel"),
-              actionButton(ns("confirm_overwrite"), "Proceed")
-            )
-          )
-        )
+        shiny::showModal(input_warning_modal(ns))
       } else {
-        show_input_source_modal(ns)
+        shiny::showModal(input_source_modal(ns))
       }
-    }) |> bindEvent(input$open_input_modal)
+    }) |> shiny::bindEvent(input$open_input_modal)
 
-    # if overwrite confirmed, also show input source modal
-    observe({
-      removeModal()
-      show_input_source_modal(ns)
-    }) |> bindEvent(input$confirm_overwrite)
+    # show input source modal after overwrite confirmed
+    shiny::observe({
+      shiny::removeModal()
+      shiny::showModal(input_source_modal(ns))
+    }) |> shiny::bindEvent(input$confirm_overwrite) # cf. input_warning_modal
 
-    # ui to provide input data based on selection (within input source modal)
-    output$load_details_ui <- renderUI({
-      req(input$load_type)
-      if (input$load_type == "env") {
-        tagList(
-          "Provide the names of the data.frames in the current R environment:",
-          textInput(ns("name_prf"), "Profile data", value = "prf_data"),
-          textInput(ns("name_rings"), "QWA rings data", value = "QWA_data$rings"),
-          textInput(ns("name_rxsmeta"), "ROXAS (image) metadata", value = "df_rxsmeta")
-        )
-      } else if (input$load_type == "csv") {
-        tagList(
-          "Provide the filepaths for the following:",
-          fileInput(ns("file_prf"), "Upload the QWA profile data", accept = c(".csv")),
-          fileInput(ns("file_rings"), "Upload the QWA rings data", accept = c(".csv")),
-          fileInput(ns("file_rxsmeta"), "Upload the ROXAS metadata", accept = c(".csv"))
-        )
-      } else if (input$load_type == "example") { # example
-        "not yet available..."
-      } else {
-        NULL
-      }
+    # dynamic ui to provide input data details (cf. input_source_modal)
+    output$load_details_ui <- shiny::renderUI({
+      shiny::req(input$load_type)
+
+      switch(input$load_type,
+        "env" = build_env_inputs(ns),
+        "csv" = build_csv_inputs(ns),
+        "example" = build_example_inputs(ns)
+      )
     })
 
-    # when input is confirmed, load data
-    observe({
+    # when inputs are confirmed, load data
+    shiny::observe({
       safe_block({
-        if (input$load_type == "env") {
-          res <- load_data_env(
+        res <- switch(input$load_type,
+          "env" = load_data_env(
             name_prf = input$name_prf,
             name_rings = input$name_rings,
             name_rxsmeta = input$name_rxsmeta
-          )
-        } else if (input$load_type == "csv"){
-          res <- load_data_csv(
+          ),
+          "csv" = load_data_csv(
             path_prf = input$file_prf$datapath,
             path_rings = input$file_rings$datapath,
             path_rxsmeta = input$file_rxsmeta$datapath
-          )
-        } else { # example
-          # TODO: res <- load_example_data()
-          removeModal()
-          return(NULL)
-        }
+          ),
+          "example" = {
+            # TODO: add example files to extdata
+            # path_prf <- system.file("extdata", "example_input",
+            #                         "prf_data.csv", package = "rxs2tria")
+            # path_rings <- system.file("extdata", "example_input",
+            #                           "rings_data.csv", package = "rxs2tria")
+            # path_rxsmeta <- system.file("extdata", "example_input",
+            #                             "rxsmeta_data.csv", package = "rxs2tria")
+            # load_data_csv(path_prf, path_rings, path_rxsmeta)
+          }
+        )
 
-        valid_inputs <- validate_input_dfs(res$prf_data, res$rings_data, res$rxsmeta_data)
-        # TODO: added flag cols as NA or FALSE?
-        # TODO: what if we don't want to provide prf, only rings?
-        # TODO: validate that the different dataframes match each other (prf in rings in rxsmeta)
-        # TODO: check that duplicate ring flags are correct, and exclude_dupl is ok
-        # TODO: check missing rings -> 0 mrw and prf measurements where applicable, rather than missing rows or NA?
+        validate_input_dfs(res$prf_data, res$rings_data, res$rxsmeta_data)
 
         input_data$prf_data <- res$prf_data
         input_data$rings_data <- res$rings_data
         input_data$rxsmeta_data <- res$rxsmeta_data
-        removeModal()
+        shiny::removeModal()
       },
       err_title = glue::glue("Error loading data from {input$load_type}"),
-      err_message = "There was an error reading the provided input data.frames:\n",
+      err_message = "There was an error reading the provided input data:\n",
       propagate_err = FALSE
       )
-    }) |> bindEvent(input$confirm_input)
+    }) |> shiny::bindEvent(input$confirm_input)
 
+    # initialize rings_data_out with input rings data
+    shiny::observe({
+      df_rings <- input_data$rings_data |>
+        init_flag_columns(all_flags) |>
+        init_char_columns() |>
+        dplyr::select(
+          dplyr::all_of(names(input_specs$rings_data$req_cols)),
+          dplyr::all_of(names(input_specs$rings_data$opt_cols)), # all exist now
+          dplyr::where(is.numeric)
+        ) |>
+        arrange_rings()
+
+      rings_data_org(df_rings)
+    }) |> shiny::bindEvent(input_data$rings_data)
+
+    # initialize editable copy of rings_data_out
+    shiny::observe({
+      rings_data_edited(rings_data_org())
+    }) |> shiny::bindEvent(rings_data_org())
+
+    # UI CHANGES GIVEN INPUT DATA:
     # update sidebar UI based on loaded input data
-    observe({
-      # TODO: what if we have no rxsmeta_data or no prf_data?
-      req(input_data$prf_data, input_data$rings_data, input_data$rxsmeta_data)
+    shiny::observe({
+      shiny::req(input_data$rings_data)
       prf_data <- input_data$prf_data
       rings_data <- input_data$rings_data
       rxsmeta_data <- input_data$rxsmeta_data
 
       # site and species select inputs
-      species_choices <- unique(rxsmeta_data$species_code)
-      updateSelectInput(session, "filt_species", choices = species_choices,
-                        selected = species_choices[1])
-      site_choices <- unique(rxsmeta_data$site_label)
-      filt_sites <- rxsmeta_data |>
-        dplyr::filter(species_code == species_choices[1]) |>
-        dplyr::pull(site_label) |> unique()
-      updateSelectInput(session, "filt_site", choices = site_choices,
-                        selected = filt_sites)
+      if (!is.null(rxsmeta_data)) {
+        shinyjs::show("filt_species")
+        shinyjs::show("filt_site")
 
+        species_choices <- unique(rxsmeta_data$species_code)
+        shiny::updateSelectInput(session, "filt_species",
+                                 choices = species_choices,
+                                 selected = species_choices[1])
+
+        site_choices <- unique(rxsmeta_data$site_label)
+        filt_sites <- rxsmeta_data |>
+          dplyr::filter(species_code == species_choices[1]) |>
+          dplyr::pull(site_label) |>
+          unique()
+        shiny::updateSelectInput(session, "filt_site",
+                                 choices = site_choices,
+                                 selected = filt_sites)
+      } else {
+        shinyjs::hide("filt_species")
+        shinyjs::hide("filt_site")
+
+        # without rxsmeta, just show all possible wp from rings_data
+        wp_choices <- unique(rings_data$woodpiece_label)
+        shiny::updateSelectInput(session, "filt_wp",
+                                 choices = wp_choices,
+                                 selected = wp_choices)
+      }
       # parameter select input
-      param_choices_prf <-  prf_data |>
-        dplyr::select(dplyr::where(is.numeric), -year, -sector_n) |> names()
       param_choices_ring <- rings_data |>
-        dplyr::select(dplyr::where(is.numeric), -year) |> names()
-      updateSelectInput(session, "sel_param", choices = list(
-        "Ring level" = param_choices_ring,
-        "Agg. cell level" = param_choices_prf
-      ), selected = param_choices_prf[1])
+        dplyr::select(dplyr::where(is.numeric), -year) |>
+        names()
 
-      # sector select input
-      sector_choices <- sort(unique(prf_data$sector_n))
-      updateSelectInput(session, "sel_sector", choices = sector_choices,
-                        selected = sector_choices[1])
-    }) |> bindEvent(input_data$prf_data,
-                    input_data$rings_data,
-                    input_data$rxsmeta_data,
-                    ignoreInit = TRUE)
+      if (!is.null(prf_data)) {
+        shinyjs::show("sel_sector")
 
-    # update select wp input based on sel site and species
-    observe({
-      req(input$filt_site, input$filt_species)
-      rxsmeta_data <- input_data$rxsmeta_data |> dplyr::filter(
-        site_label %in% input$filt_site,
-        species_code %in% input$filt_species
+        param_choices_prf <- prf_data |>
+          dplyr::select(dplyr::where(is.numeric), -year, -sector_n) |>
+          names()
+        shiny::updateSelectInput(
+          session, "sel_param",
+          choices = list(
+            "Ring level"      = param_choices_ring,
+            "Agg. cell level" = param_choices_prf
+          ),
+          selected = param_choices_prf[1]
+        )
+
+        sector_choices <- sort(unique(prf_data$sector_n))
+        shiny::updateSelectInput(session, "sel_sector",
+                                 choices = sector_choices,
+                                 selected = sector_choices[1])
+      } else {
+        shinyjs::hide("sel_sector")
+        shiny::updateSelectInput(
+          session, "sel_param",
+          choices = list(
+            "Ring level" = param_choices_ring
+          ),
+          selected = param_choices_ring[1]
+        )
+      }
+
+    }) |> shiny::bindEvent(input_data$prf_data,
+                           input_data$rings_data,
+                           input_data$rxsmeta_data,
+                           ignoreInit = TRUE)
+
+    # update filter wp input based on sel site and species
+    shiny::observe({
+      shiny::req(input_data$rxsmeta_data, input$filt_site, input$filt_species)
+      wp_choices <- input_data$rxsmeta_data |>
+        dplyr::filter(
+          site_label %in% input$filt_site,
+          species_code %in% input$filt_species
+        ) |>
+        dplyr::pull(woodpiece_label) |>
+        unique()
+      shiny::updateSelectInput(
+        session, "filt_wp",
+        choices = wp_choices,
+        selected = wp_choices
       )
-      wp_choices <- unique(rxsmeta_data$woodpiece_label)
-      updateSelectInput(session, "filt_wp", choices = wp_choices,
-                        selected = wp_choices)
-    }) |> bindEvent(input$filt_site, input$filt_species, ignoreInit = TRUE)
+    }) |> shiny::bindEvent(input$filt_site, input$filt_species,
+                           ignoreInit = TRUE)
 
     # enable/disable sector selection based on selected parameter
-    observe({
+    shiny::observe({
+      shiny::req(input_data$prf_data)
       sel_param <- input$sel_param
-      if (sel_param %in% names(input_data$prf_data)){
+      if (sel_param %in% names(input_data$prf_data)) {
         shinyjs::enable("sel_sector")
       } else {
         shinyjs::disable("sel_sector")
       }
-    }) |> bindEvent(input$sel_param, ignoreInit = TRUE)
+    }) |> shiny::bindEvent(input$sel_param, ignoreInit = TRUE)
 
-
-    # REACTIVE CONTAINER: EDITED FLAGS DATA ------------------------------------
-    # NOTE: rings_data_org is the basis for the plot, rings_data_edited tracks
-    # edits of the flag inputs for selected rings. edits are then propagated back
-    # to rings_data_org when the save / update btn is clicked
-    rings_data_org <- reactiveVal(NULL)
-    rings_data_edited <- reactiveVal(NULL)
-    sel_woodpiece <- reactiveVal(NULL)
-
-    # initialize rings_data_out with input data
-    observe({
-      df_rings <- input_data$rings_data
-      # initialize new flag columns if not present
-      new_flag_cols <- setdiff(c(unname(discrete_features),
-                                 unname(disqual_issues),
-                                 unname(technical_issues),
-                                 unname(other_issues)),
-                               names(df_rings))
-      df_rings[new_flag_cols] <- FALSE
-      # initialize comment and exclude_scope columns if not present
-      if ("comment" %in% names(df_rings)){
-        df_rings$comment <- as.character(df_rings$comment)
-      } else {
-        df_rings["comment"] <- NA_character_
-      }
-      if ("affected_tissue" %in% names(df_rings)){
-        df_rings$affected_tissue <- as.character(df_rings$affected_tissue)
-        # TODO: check in validation?
-        if (any(!df_rings$affected_tissue %in% c("ew", "lw", "all"))){
-          shiny::showNotification("Affected tissue values not in ['ew','lw','all'] converted to NA",
-                                  type = "warning")
-          print("WARNING: INVALID AFFECTED TISSUE VALUES CONVERTED TO NA")
-          df_rings[!df_rings$affected_tissue %in% c("ew", "lw", "all"), "affected_tissue"] <- NA_character_
-        }
-      } else {
-        df_rings["affected_tissue"] <- NA_character_
-      }
-
-      # order by woodpiece, image and year
-      df_rings <- df_rings |>
-        dplyr::group_by(woodpiece_label) |>
-        dplyr::mutate(min_year_wp = min(year)) |>
-        dplyr::group_by(woodpiece_label, image_label) |>
-        dplyr::mutate(min_year_img = min(year)) |>
-        dplyr::ungroup() |>
-        dplyr::arrange(min_year_wp, woodpiece_label, min_year_img, image_label, year) |>
-        dplyr::select(-min_year_wp, -min_year_img)
-
-      rings_data_org(df_rings)
-    }) |> bindEvent(input_data$rings_data)
-
-    # initialize editable copy of rings_data_out
-    observe({
-      rings_data_edited(rings_data_org())
-      #sel_woodpiece(unique(rings_data_org()$woodpiece_label)[1])
-    }) |> bindEvent(rings_data_org())
 
 
     # MEASUREMENTS PLOT --------------------------------------------------------
-    output$selwp <- renderUI({
-      req(rings_data_org())
-      # TODO: make it a selectInput to change woodpiece directly from plot card?
+    # UI: Plot card header with dynamic woodpiece selection input
+    output$selwp <- shiny::renderUI({
+      shiny::req(input$filt_wp)
       card_title <- strong(glue::glue("Selected woodpiece: "))
-      wp_choices_filt <- sort(unique(rings_data_org()$woodpiece_label))
-      div(
+      wp_choices_filt <- input$filt_wp
+      shiny::div(
         card_title,
-        selectInput(ns("sel_wp_trace"), NULL,
-                    choices = wp_choices_filt,
-                    selectize = TRUE, multiple = FALSE,
-                    selected = wp_choices_filt[1])
+        shiny::selectInput(
+          ns("sel_wp_trace"), NULL,
+          choices = wp_choices_filt,
+          selected = wp_choices_filt[1],
+          selectize = TRUE, multiple = FALSE
+        )
       )
     })
 
-    observe({
-      req(input$sel_wp_trace)
+    # choosing a different woodpiece via the input
+    shiny::observe({
       sel_woodpiece(input$sel_wp_trace)
+    }) |> shiny::bindEvent(input$sel_wp_trace,
+                           ignoreInit = TRUE, ignoreNULL = TRUE)
+
+    # UI: show modal when clicking on plot settings
+    shiny::observe({
+      shiny::showModal(
+        plot_settings_modal(ns, sel_subplots())
+      )
+    }) |> shiny::bindEvent(input$plot_settings)
+
+    # update selected subplots based on modal input
+    shiny::observe({
+      sel_subplots(input$sel_plots)
+      shiny::removeModal()
+    }) |> shiny::bindEvent(input$confirm_plots)
+
+    # variable height for the plot depending on shown subplots
+    output$main_plot_ui <- shiny::renderUI({
+      print(sel_subplots())
+      min_height <- compute_plot_height(sel_subplots())
+      print(min_height)
+      shiny::div(
+        style = paste0("min-height: ", min_height, "; max-height: ", plot_max_height),
+        plotly::plotlyOutput(ns("main_plot"), height = "100%")
+      )
     })
 
-    color_palette <- reactive({
-      req(input_data$rings_data)
+    # define REACTIVES as basis for plot(s)
+    #  create a color palette for the plot based on the max. nr of traces
+    color_palette <- shiny::reactive({
+      shiny::req(input_data$rings_data)
+      # use all woodpieces (not filtered) to keep colors consistent when changing filters
       wp_labels_all <- sort(unique(input_data$rings_data$woodpiece_label))
       pal <- extend_palette(base_palette, length(wp_labels_all),
                             contrasting = TRUE)
@@ -251,315 +284,125 @@ flags_server <- function(id, main_session) {
       pal
     })
 
-    # reactive container to hold all the plot dataframes
-    plot_data <- reactiveValues()
+    # reactive df_crn as basis for chronology traces
+    df_crn <- shiny::reactive({
+      shiny::req(rings_data_org(), input$filt_wp, input$sel_param)
 
-    observe({
-      req(rings_data_org(), input$filt_wp, input$sel_param, sel_woodpiece())
-      sel_param <- input$sel_param
-      df_crn <- rings_data_org() |>
-        dplyr::filter(woodpiece_label %in% input$filt_wp) |>
-        #dplyr::filter(!exclude_dupl) |> # always exclude duplicate rings from plot
-        dplyr::select(woodpiece_label, slide_label, image_label, year, exclude_dupl,
-                      exclude_issues, dplyr::any_of(sel_param))
-
-      # if sel_param is from prf data, then join (selected sector only)
-      if (sel_param %in% names(input_data$prf_data)){
-        df_crn  <- df_crn |>
-          dplyr::left_join(
-            input_data$prf_data |>
-              dplyr::filter(sector_n == as.numeric(input$sel_sector)) |>
-              dplyr::select(dplyr::all_of(c("image_label", "year", sel_param))),
-            by = c("image_label", "year")
-          )
-      }
-
-      # new column with clean values only
-      df_crn$vals <- df_crn[[sel_param]]
-      if (!input$show_excl){
-        # 'remove' excluded years by setting vals to NA
-        df_crn$vals[df_crn$exclude_issues] <- NA
-      }
-      # TODO: df_crn <- df_crn |> dplyr::select(-exclude_issues, -slide_label)
-
-      # if (input$spline_det){
-      # TODO
-      # transform the plot data to df where
-      # pivot wider to have (woodpiece_label, sel_param) as columns
-      # year to row names
-      # apply dplr::detrend(df, method = "Spline", nyrs = 32), check output
-      # potentially reapply NAS
-      # pivot longer back to original format
-      # }
-
-      # order chronologically within each woodpiece (Without reordering the woodpieces)
-      df_crn <- df_crn |>
-        dplyr::mutate(woodpiece_label = factor(woodpiece_label,
-                                               levels = unique(woodpiece_label))) |>
-        dplyr::group_by(woodpiece_label) |>
-        dplyr::arrange(year, .by_group = TRUE) |>
-        dplyr::ungroup() |>
-        dplyr::mutate(woodpiece_label = as.character(woodpiece_label))
-
-      plot_data$df_other <- df_crn |> dplyr::filter(woodpiece_label != sel_woodpiece())
-      plot_data$df_selwp <- df_crn |> dplyr::filter(woodpiece_label == sel_woodpiece())
-      plot_data$df_sd <- df_crn |>
-        dplyr::filter(!exclude_dupl) |>
-        dplyr::select(year,vals) |>
-        dplyr::group_by(year) |>
-        dplyr::summarise(n_obs = sum(!is.na(vals))) |>
-        dplyr::arrange(year)
-
-      plot_data$df_cov <- rings_data_org() |>
-        dplyr::filter(woodpiece_label == sel_woodpiece()) |>
-        dplyr::mutate(image_label = factor(image_label, levels = unique(image_label)))
-
-      #last_click_id(NULL)
-
-      # update sel_marker?
-
-
-    }) |> bindEvent(rings_data_org(), input$filt_wp, input$sel_param, input$sel_sector,
-                    input$show_excl, sel_woodpiece(), ignoreInit = TRUE)
-
-    js_traces <- readLines("www/js/traces_to_input.js") |> paste(collapse = "\n")
-
-
-    # Modal settings
-    sel_subplots <- reactiveVal(c("sd","cov"))
-
-    observe({
-      showModal(
-        modalDialog(
-          title = "Plot settings",
-          checkboxGroupInput(
-            ns("sel_plots"),
-            label = "Show / hide optional subplots",
-            choices = c(
-              "Sample depth plot" = "sd",
-              "Woodpiece coverage plot" = "cov"
-            ), selected = sel_subplots()
-          ),
-          easyClose = TRUE,
-          footer = tagList(
-            modalButton("Cancel"),
-            actionButton(ns("confirm_plots"), "Proceed")
-          )
-        )
+      df <- build_chronology_df(
+        rings_data = rings_data_org(),
+        prf_data = input_data$prf_data,
+        filt_wp = input$filt_wp,
+        sel_param = input$sel_param,
+        sel_sector = input$sel_sector,
+        show_excl = input$show_excl
       )
-    }) |> bindEvent(input$plot_settings)
 
-    observe({
-      sel_subplots(input$sel_plots)
-      removeModal()
+      if (input$apply_detrend) {
+        df <- detrend_crn(df, input$sel_param, method = "Spline", nyrs = 32)
+      }
 
-    }) |> bindEvent(input$confirm_plots)
-
-    # variable height for the plot
-    output$main_plot_ui <- renderUI({
-      min_height = "350px"
-      if ("sd" %in% sel_subplots()) {
-        min_height <- "400px"
-      }
-      if ("cov" %in% sel_subplots()) {
-        min_height <- "550px"
-      }
-      if ("sd" %in% sel_subplots() && "cov" %in% sel_subplots()){
-        min_height <- "600px"
-      }
-      max_height <- "700px"
-      div(
-        style = paste0("min-height: ", min_height, "; max-height: ", max_height),
-        plotly::plotlyOutput(ns("main_plot"), height = "100%")
-      )
+      df
     })
 
+    # reactive df_selwp for trace of selected woodpiece
+    # (includes also exclude_dupl years for plotting markers not on curve)
+    df_selwp <- shiny::reactive({
+      shiny::req(df_crn(), sel_woodpiece())
+      dplyr::filter(df_crn(), woodpiece_label == sel_woodpiece())
+    })
+
+    # reactive df_otherwps for traces of all other woodpieces
+    df_otherwps <- shiny::reactive({
+      shiny::req(df_crn(), sel_woodpiece())
+      df_crn() |>
+        dplyr::filter(woodpiece_label != sel_woodpiece(), !exclude_dupl)
+    })
+
+    # reactive df for sample depth plot
+    df_sd <- shiny::reactive({
+      if (!"sd" %in% sel_subplots()) return(NULL)
+      shiny::req(df_crn())
+      build_sample_depth_df(df_crn())
+    })
+
+    # reactive df for coverage plot
+    df_cov <- shiny::reactive({
+      if (!"cov" %in% sel_subplots()) return(NULL)
+      shiny::req(rings_data_org(), sel_woodpiece())
+      build_coverage_df(rings_data_org(), sel_woodpiece())
+    })
+
+    # TODO: update sel_marker when inputs change?
+    # TODO: check if ok for single woodpiece?
+
+    # load js callbacks as strings
+    js_sync_hover <- readLines("www/js/sync_hover_sd.js") |>
+      paste(collapse = "\n")
+    js_traces <- readLines("www/js/traces_to_input.js") |>
+      paste(collapse = "\n")
+
+    # rendering the main plot
     output$main_plot <- plotly::renderPlotly({
-      validate(need(isTruthy(plot_data$df_selwp), "Please provide input data"))
-      sel_param <- input$sel_param
-      validate(need(any(!is.na(plot_data$df_selwp$vals)),
+      shiny::validate(
+        shiny::need(shiny::isTruthy(df_selwp()),
+                    "Please provide input data"))
+      shiny::validate(
+        shiny::need(any(!is.na(df_selwp()$vals)),
                     "No data to display for the selected parameter and filters."))
-      # TODO: fix for one woodpiece?
 
       cat("=== PLOT RENDERING ===\n")
-      cat("Time:", Sys.time(), "\n")
+      cat("Time:", format(Sys.time()), "\n")
 
-      df_selwp <- plot_data$df_selwp |>
-        dplyr::filter(!exclude_dupl)
-      selwp <- sel_woodpiece()
+      p_crn <- build_crn_plot(df_otherwps(), df_selwp(),
+                              sel_woodpiece(), color_palette())
 
-      df_other <- plot_data$df_other |>
-        dplyr::filter(!exclude_dupl)
-
-      palette <- color_palette()
-      color_selwp <- palette[[selwp]] # or a fixed color?
-
-      p <- plotly::plot_ly(
-        data = df_other,
-        x = ~year,
-        y = ~vals,
-        color = ~woodpiece_label,
-        colors = palette,
-        type = 'scatter',
-        mode = 'lines',
-        opacity = 0.2,
-        name = ~woodpiece_label,
-        source = "crn_plot", # set source ID
-        showlegend = TRUE,
-        meta = list(role = "otherwp")
-      )
-
-      p <- p %>%
-        plotly::add_trace(
-          data = df_selwp,
-          x = ~year,
-          y = ~vals,
-          type = 'scatter',
-          mode = 'lines',
-          line = list(color = color_selwp, width = 2),
-          opacity = 1,
-          name = paste0("<b>", selwp, "</b>"),
-          showlegend = TRUE,
-          meta = list(role = "selwp", wp_label = selwp) # trace info for selected wp line
-        )
-
-      p <- p %>%
-        plotly::layout(
-          legend = list(
-            orientation = 'h',
-            yanchor = 'bottom', y = 1.1,
-            xanchor = 'center', x = 0.5
-            # itemclick = FALSE,      # Disable single click on legend (custom handling)
-            # itemdoubleclick = FALSE # Disable double click on legend (custom handling)
-          )
-        )
-
-      plot_list <- list(p)
-      nrows <- 1
-      heights <- c(0.5)
-
-      if ("sd" %in% sel_subplots()){
-        # create sample depth subplot
-        p2 <- plotly::plot_ly(data = plot_data$df_sd,
-                              x = ~year,
-                              y = ~n_obs,
-                              type = "scatter",
-                              mode = "lines+markers",
-                              line = list(shape = "hvh", color = "#00206E"),
-                              marker = list(size = 3, color = "#00206E"),
-                              name = "sample depth",
-                              showlegend = FALSE,
-                              source = "crn_plot",
-                              meta = list(role = "sampledepth"))
-        plot_list <- c(plot_list, list(p2))
-        nrows <- nrows + 1
-        heights <- c(heights, 0.1)
+      if ("sd" %in% sel_subplots()) {
+        p_sd <- build_sample_depth_plot(df_sd())
+      } else {
+        p_sd <- NULL
       }
 
-      if ("cov" %in% sel_subplots()){
-          p3 <- plotly::plot_ly(
-          data = plot_data$df_cov,
-          x = ~year,
-          y = ~image_label,
-          type = 'scatter',
-          mode = 'lines+markers',
-          marker = list(
-                        size =10,
-                        color = ~cno,
-                        colorscale = list(c(0, "#FED976"), c(1, "#006268")),
-                        symbol = "square"
-                      ),
-          line = list(color = "darkgrey"),
-          name = ~image_label,
-          hoverinfo = 'text',
-          text = ~paste0(image_label, "<br>",
-                         year, ": ", cno, " cells"),
-          showlegend = FALSE,
-          source = "crn_plot",
-          meta = list(role = "covlines", wp_label = selwp)
-        )
-        # %>%
-        #   plotly::layout(shapes = list(list(type = "line",x0 = 0,
-        #                                     x1 = 1,
-        #                                     xref = "paper",
-        #                                     y0 = sel_img,
-        #                                     y1 = sel_img,
-        #                                     line = list(color = 'red', width = 3),
-        #                                     layer = "below")))
-
-        plot_list <- c(plot_list, list(p3))
-        nrows <- nrows + 1
-        heights <- c(heights, 0.4)
+      if ("cov" %in% sel_subplots()) {
+        p_cov <- build_coverage_plot(df_cov(), sel_woodpiece())
+      } else {
+        p_cov <- NULL
       }
-      heights <- heights / sum(heights) # normalize heights to sum to 1
 
-      fig <- plotly::subplot(plot_list,
-                             nrows = nrows,
-                             shareX = TRUE,
-                             heights = heights) %>%
-        plotly::layout(
-          xaxis = list(title = "Year"),
-          yaxis = list(title = sel_param),
-          #yaxis2 = list(title = "N"),
-          hovermode = "closest")
+      fig <- assemble_main_plot(crn_plot = p_crn, sd_plot = p_sd,
+                                cov_plot = p_cov, sel_param = input$sel_param)
 
-      fig <- fig %>%
-        plotly::event_register("plotly_click") %>%
-        plotly::event_register("plotly_relayout") %>%
-        plotly::config(
-        modeBarButtonsToRemove = list('select2d', 'lasso2d',
-                                      'hoverClosestCartesian',
-                                      'hoverCompareCartesian'))
-
-      if ("sd" %in% sel_subplots()){
-        fig <- fig %>%
-          # add synchronized hover on sample depth plot
-          htmlwidgets::onRender("
-          function(el, x) {
-            el.on('plotly_hover', function(d) {
-              var point = d.points[0];
-              // check if the hovered trace is wp 'orgline'
-              var traceData = el.data[point.curveNumber];
-              const wproles = ['selwp', 'otherwp'];
-              if (traceData.meta && wproles.includes(traceData.meta.role)) {
-                // find the corresponding point on the sample depth trace
-                var sdCurveNumber = el.data.findIndex(trace => trace.meta && trace.meta.role === 'sampledepth');
-                var xValue = point.x;
-                var xData = el.data[sdCurveNumber].x;
-                var dsPtNum = xData.indexOf(xValue);
-                if (dsPtNum !== -1) {
-                  // re-do the hover on both subplots with the identified points
-                  Plotly.Fx.hover(el.id, [
-                    { curveNumber:point.curveNumber, pointNumber:point.pointNumber },
-                    { curveNumber:sdCurveNumber, pointNumber:dsPtNum }
-                  ], ['xy','xy2']);
-                }
-              }
-            });
-          }
-      ")
+      # attach JS callbacks
+      if ("sd" %in% sel_subplots()) {
+        fig <- fig %>% htmlwidgets::onRender(js_sync_hover)
       }
-      fig <- fig %>%
-        # capture shown traces as Shiny input
-        htmlwidgets::onRender(js_traces, data = ns("traces_crn"))
+      fig <- fig %>% htmlwidgets::onRender(js_traces, data = ns("traces_crn"))
 
-    }) |> bindEvent(plot_data$df_selwp, plot_data$df_other, sel_subplots(), ignoreInit = TRUE)
+      fig
+
+    }) |> shiny::bindEvent(df_selwp(), df_otherwps(), df_sd(), df_cov())
 
 
-    # restore plot state after re-render ---------------------------------------
-    awaiting_restoration <- reactiveVal(FALSE)
+    # TODO: highlight row of selected image in cov plot?
+    #   plotly::layout(shapes = list(list(type = "line",x0 = 0,
+    #                                     x1 = 1,
+    #                                     xref = "paper",
+    #                                     y0 = sel_img,
+    #                                     y1 = sel_img,
+    #                                     line = list(color = 'red', width = 3),
+    #                                     layer = "below")))
 
-    # if plot data changes, set flag to restore state after render
-    observe({
+
+    ## plot rerendering --------------------------------------------------------
+    # if plot data changes (-> render), set flag to restore state after render
+    shiny::observe({
       awaiting_restoration(TRUE)
-    }) |> bindEvent(plot_data$df_selwp, plot_data$df_other, sel_subplots(),
-                    ignoreNULL = TRUE,
-                    ignoreInit = TRUE)
+    }) |> shiny::bindEvent(df_selwp(), df_otherwps(), df_sd(), df_cov(),
+                           ignoreInit = TRUE)
 
     # restore state of plot
-    observe({
-      req(awaiting_restoration())
-      req(input$traces_crn)
+    shiny::observe({
+      shiny::req(awaiting_restoration())
+      shiny::req(input$traces_crn)
 
       cat("... restoring state\n")
 
@@ -593,9 +436,11 @@ flags_server <- function(id, main_session) {
         if (input$show_mean){
           cat("... redrawing mean trace\n")
 
-          df_crn <- plot_data$df_other |>
-            dplyr::bind_rows(plot_data$df_selwp) |>
+          df_crn <- df_crn() |>
             dplyr::filter(!exclude_dupl)
+          # df_crn <- plot_data$df_other |>
+          #   dplyr::bind_rows(plot_data$df_selwp) |>
+          #   dplyr::filter(!exclude_dupl)
 
           sel_mean <- input$sel_mean
           df_mean <- calc_mean_vals(df_crn, sel_mean)
@@ -608,9 +453,9 @@ flags_server <- function(id, main_session) {
           marker <- sel_marker()
           yaxis_cov <- if ("sd" %in% sel_subplots()) "y3" else "y2"
 
-          if (marker$wp_label %in% plot_data$df_selwp$woodpiece_label){
+          if (marker$wp_label %in% df_selwp()$woodpiece_label){
             # ensure we have up to date y val if param was changed
-            ywp_val <- plot_data$df_selwp |>
+            ywp_val <- df_selwp() |>
               dplyr::filter(year == marker$year, image_label == marker$ycov_val) |>
               dplyr::pull(dplyr::any_of(input$sel_param))
 
@@ -631,7 +476,7 @@ flags_server <- function(id, main_session) {
             )
             # sel_image remains the same
 
-            if (!"sel_marker_wp" %in% names(current_traces)){
+            if (!"sel_marker_wp" %in% names(current_traces)) {
               p <- p %>%
                 plotly::plotlyProxyInvoke(
                   "addTraces",
@@ -720,7 +565,7 @@ flags_server <- function(id, main_session) {
               dplyr::filter(!exclude_dupl, exclude_issues) |>
               dplyr::select(image_label, year)
 
-            excl_markers <- plot_data$df_selwp |>
+            excl_markers <- df_selwp() |>
               dplyr::inner_join(df_rings, by = c("image_label", "year")) |>
               dplyr::select(year, vals)
             names(excl_markers) <- c("year", "ywp_val")
@@ -777,61 +622,58 @@ flags_server <- function(id, main_session) {
     }) |> bindEvent(input$traces_crn, ignoreNULL = TRUE, ignoreInit = TRUE)
 
 
-    # PLOT CLICKS --------------------------------------------------------------
-    # capture click events on the selected woodpice trace or on a coverage plot point
-    plot_click <- reactive({
-      req(plot_data$df_selwp)
-      event <- plotly::event_data("plotly_click", source = "crn_plot", priority = "event")
-      req(nrow(event) == 1) # filter out double clicks somehow capturing two points?
+    # PLOT REACTIVITY ----------------------------------------------------------
+    ## plot clicks -------------------------------------------------------------
+    # capture click events on crn or cov plots, identify clicked trace and role
+    plot_click <- shiny::reactive({
+      shiny::req(df_selwp())
+      event <- plotly::event_data(
+        "plotly_click", source = "crn_plot", priority = "event"
+      )
+      shiny::req(nrow(event) == 1) # filter out double clicks somehow capturing two points
 
-      current_traces <- isolate(input$traces_crn)
-      clicked_trace <- purrr::keep(current_traces, ~.x$curveNumber == event$curveNumber)
+      current_traces <- shiny::isolate(input$traces_crn)
+      clicked_trace <- purrr::keep(current_traces,
+                                   ~.x$curveNumber == event$curveNumber)
       clicked_role <- clicked_trace[[1]]$meta$role
-      if (clicked_role %in% c("selwp", "covlines")){
-        event$role <- clicked_role
-        event$wp_label <- clicked_trace[[1]]$meta$wp_label
-        event
-      } else if (clicked_role == "otherwp"){
-        event$role <- "otherwp"
-        event$wp_label <- names(clicked_trace)
-        event
-      } else {
-        NULL
+
+      if (!clicked_role %in% c("selwp", "covlines", "otherwp")) {
+        return(NULL)
       }
+
+      event$role <- clicked_role
+      event$wp_label <- if (clicked_role == "otherwp") {
+        names(clicked_trace)
+      } else {
+        clicked_trace[[1]]$meta$wp_label
+      }
+
+      event
     })
 
-    sel_marker <- reactiveVal(NULL)
-
-    observe({
-      req(!awaiting_restoration()) # avoid running if plot is rerendered
+    shiny::observe({
+      shiny::req(!awaiting_restoration()) # avoid running if plot is being rerendered
       cat(".   plot click\n")
 
       click_data <- plot_click()
 
       if (click_data$role == "otherwp"){
         showModal(
-          modalDialog(
-            title = "Warning",
-            glue::glue("You have clicked on a different woodpiece trace: {click_data$wp_label}.
-            Do you want to switch to editing this woodpiece?"),
-            footer = tagList(
-              modalButton("Cancel"),
-              actionButton(ns("confirm_wp"), "Proceed")
-            )
-          )
+          switch_selwp_modal(ns, click_data$wp_label)
         )
       } else {
         # update the sel markers in plot
         year_val <- click_data$x
         wp_label <- click_data$wp_label
-        if (click_data$role == "selwp"){
+
+        if (click_data$role == "selwp") {
           ywp_val <- click_data$y
           ycov_val <- rings_data_edited() |>
             dplyr::filter(woodpiece_label == wp_label, year == year_val, !exclude_dupl) |>
             dplyr::pull(image_label)
         } else {
           ycov_val <- click_data$y
-          ywp_val <- plot_data$df_selwp |>
+          ywp_val <- df_selwp() |>
             dplyr::filter(image_label == ycov_val, year == year_val) |>
             dplyr::pull(dplyr::any_of(input$sel_param))
         }
@@ -949,7 +791,7 @@ flags_server <- function(id, main_session) {
       year_val <- click_data$x
       wp_label <- click_data$wp_label
       ywp_val <- click_data$y
-      ycov_val <- plot_data$df_other |>
+      ycov_val <- df_otherwps() |>
         dplyr::filter(woodpiece_label == wp_label, year == year_val, !exclude_dupl) |>
         dplyr::pull(image_label)
       df_excl <- rings_data_edited() |> dplyr::filter(
@@ -993,7 +835,7 @@ flags_server <- function(id, main_session) {
       current_year <- sel_marker()$year
       direction <- shift_ring()$dir
 
-      adj_years <- plot_data$df_selwp |>
+      adj_years <- df_selwp() |>
         dplyr::filter(!exclude_dupl) |>
         dplyr::filter(
           if (direction == "prev") year < current_year else year > current_year
@@ -1038,7 +880,7 @@ flags_server <- function(id, main_session) {
       # update plot markers
       current_traces <- input$traces_crn
       p <- plotly::plotlyProxy("main_plot", session)
-      if (!"sel_marker_wp" %in% names(current_traces)){
+      if (!"sel_marker_wp" %in% names(current_traces)) {
         p <- p %>%
           plotly::plotlyProxyInvoke(
             "addTraces",
@@ -1132,7 +974,7 @@ flags_server <- function(id, main_session) {
       if (old_marker$year == new_year){
         return(NULL) # no change
       }
-      ywp_val <- plot_data$df_selwp |>
+      ywp_val <- df_selwp() |>
         dplyr::filter(year == new_year, image_label == old_marker$ycov_val) |>
         dplyr::pull(dplyr::any_of(input$sel_param))
 
@@ -1252,7 +1094,7 @@ flags_server <- function(id, main_session) {
     # AXIS CHANGES -------------------------------------------------------------
     # capture axes limit changes and keep track of them
     crn_change_axes <- reactive({
-      req(plot_data$df_selwp)
+      req(df_selwp())
       plotly::event_data("plotly_relayout",
                          source = "crn_plot")
     })
@@ -1286,14 +1128,14 @@ flags_server <- function(id, main_session) {
         dplyr::filter(!exclude_dupl, exclude_issues) |>
         dplyr::select(image_label, year)
 
-      excl_markers <- plot_data$df_selwp |>
+      excl_markers <- df_selwp() |>
         dplyr::inner_join(df_rings, by = c("image_label", "year")) |>
         dplyr::select(year, vals)
       names(excl_markers) <- c("year", "ywp_val")
 
       current_traces <- input$traces_crn
       p <- plotly::plotlyProxy("main_plot", session)
-      if (!"excl_markers" %in% names(current_traces)){
+      if (!"excl_markers" %in% names(current_traces)) {
         p <- p %>%
           plotly::plotlyProxyInvoke(
             "addTraces",
@@ -1337,7 +1179,7 @@ flags_server <- function(id, main_session) {
 
     # MEAN TRACE ---------------------------------------------------------------
     observe({
-      req(plot_data$df_other, input$traces_crn)
+      req(df_otherwps(), input$traces_crn)
       cat(".   mean crn update\n")
 
       current_traces <- input$traces_crn
@@ -1350,9 +1192,10 @@ flags_server <- function(id, main_session) {
       }
 
       if (input$show_mean){
-        df_crn <- plot_data$df_other |>
-          dplyr::bind_rows(plot_data$df_selwp) |>
-          dplyr::filter(!exclude_dupl)
+        # df_crn <- df_otherwps() |>
+        #   dplyr::bind_rows(df_selwp()) |>
+        #   dplyr::filter(!exclude_dupl)
+        df_crn <- df_crn() |> dplyr::filter(!exclude_dupl)
 
         sel_mean <- input$sel_mean
         df_mean <- calc_mean_vals(df_crn, sel_mean)
@@ -1369,9 +1212,9 @@ flags_server <- function(id, main_session) {
       sel_img <- sel_image()
       df_img <- input_data$rxsmeta_data
       card_title <- strong(glue::glue("Selected image: {sel_img}"))
-      if ("comment" %in% names(df_img)){
+      if ("comments" %in% names(df_img)){
         img_comment <- df_img |>
-          dplyr::filter(image_label == sel_img) |> dplyr::pull(comment)
+          dplyr::filter(image_label == sel_img) |> dplyr::pull(comments)
         if (!is.na(img_comment) && img_comment != ""){
           card_title <- tagList(
             card_title,
@@ -1437,7 +1280,7 @@ flags_server <- function(id, main_session) {
             "duplicate_ring","exclude_dupl",
             "exclude_issues","affected_tissue",
             sel_disq, sel_techn, sel_other,
-            sel_feat,"comment"))
+            sel_feat,"comments"))
         )
     }) |> bindEvent(sel_image(), input$confirm_cols)
 
@@ -1524,7 +1367,7 @@ flags_server <- function(id, main_session) {
           )
       }
       hot |>
-        rhandsontable::hot_col("comment", renderer = renderer_txt(color_iss1)) |>
+        rhandsontable::hot_col("comments", renderer = renderer_txt(color_iss1)) |>
         rhandsontable::hot_cols(colWidths = 25) %>%
         # add esc key functionality to table
         htmlwidgets::onRender("
@@ -1867,7 +1710,7 @@ flags_server <- function(id, main_session) {
     }) |> bindEvent(input$show_image, ignoreNULL = TRUE)
 
     # auto open if sel image changes
-    sel_image <- reactiveVal(NULL)
+
     # observe({
     #   prev_img <- sel_image()
     #   new_img <- sel_marker()$ycov_val
@@ -1920,12 +1763,12 @@ flags_server <- function(id, main_session) {
       content = function(con) {
         df <- rings_data_edited()
         df_char <- df |> dplyr::select(
-          affected_tissue, comment)
+          affected_tissue, comments)
         df_flags_opt <- df |> dplyr::select(
           dplyr::any_of(setdiff(disqual_issues, c('incomplete_ring','missing_ring'))),
           dplyr::any_of(c(unname(technical_issues), unname(other_issues),
                           unname(discrete_features))))
-        df <- df[setdiff(names(df), c("affected_tissue", "comment", names(df_flags_opt)))]
+        df <- df[setdiff(names(df), c("affected_tissue", "comments", names(df_flags_opt)))]
         df_char <- df_char |> janitor::remove_empty(which = "cols", cutoff = 1)
         df_flags_opt <- df_flags_opt |>
           janitor::remove_empty(which = "cols", cutoff = 1) |>
@@ -1954,12 +1797,12 @@ flags_server <- function(id, main_session) {
      observe({
        df <- rings_data_edited()
        df_char <- df |> dplyr::select(
-         affected_tissue, comment)
+         affected_tissue, comments)
        df_flags_opt <- df |> dplyr::select(
          dplyr::any_of(setdiff(disqual_issues, c('incomplete_ring','missing_ring'))),
          dplyr::any_of(c(unname(technical_issues), unname(other_issues),
                          unname(discrete_features))))
-       df <- df[setdiff(names(df), c("affected_tissue", "comment", names(df_flags_opt)))]
+       df <- df[setdiff(names(df), c("affected_tissue", "comments", names(df_flags_opt)))]
        df_char <- df_char |> janitor::remove_empty(which = "cols", cutoff = 1)
        df_flags_opt <- df_flags_opt |>
          janitor::remove_empty(which = "cols", cutoff = 1) |>
@@ -1973,8 +1816,7 @@ flags_server <- function(id, main_session) {
 
     # DEBUG OUTPUT -------------------------------------------------------------
     output$debug <- renderPrint({
-      sel_marker()
-      sel_image()
+      sel_subplots()
       #print(sample(1:10000, 1))
       #input$traces_crn[['exclude_markers']]
 
