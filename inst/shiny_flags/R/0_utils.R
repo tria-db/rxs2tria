@@ -115,65 +115,6 @@ get_excluded <- function(rings_edit, sel_wp, plt_df){
   return(excl_markers)
 }
 
-draw_excl_markers <- function(plot_obj, x_years, y_vals){
-  plot_obj %>%
-    plotly::plotlyProxyInvoke(
-      "addTraces",
-      list(
-        x = as.list(x_years),
-        y = as.list(y_vals),
-        name = "excl_rings",
-        mode = "markers",
-        marker = list(
-          size = 6,
-          color = "hotpink",
-          symbol = "circle-open"
-        ),
-        showlegend = FALSE,
-        hoverinfo = "skip",
-        meta = list(role = "exclring")
-      )
-    )
-}
-
-calc_mean_vals <- function(df, sel_mean){
-  if (sel_mean == "mean"){
-    df_mean <- df |>
-      dplyr::select(year, vals) |>
-      collapse::fgroup_by(year) |>
-      collapse::fsummarise(N = collapse::fnobs(vals),
-                           vals = collapse::fmean(vals)) |>
-      collapse::fsubset(N > 1) |>
-      dplyr::select(year, vals)
-  } else if (sel_mean == "tbrm"){
-    df_mean <- df |>
-      dplyr::select(year, vals) |>
-      dplyr::group_by(year) |>
-      dplyr::filter(dplyr::n()>1) |>
-      dplyr::summarise(vals = dplR::tbrm(vals))
-
-  } else {
-    return(NULL)
-  }
-  df_mean
-}
-
-draw_mean_trace <- function(plot_obj, x_years, y_vals, sel_mean){
-  plot_obj %>%
-    plotly::plotlyProxyInvoke(
-      "addTraces",
-      list(
-        x = as.list(x_years),
-        y = as.list(y_vals),
-        name = paste("crn.", sel_mean, sep = ""),
-        type = 'scatter',
-        mode = 'lines',
-        line = list(width = 2, color = 'black'),
-        showlegend = FALSE,
-        hoverinfo = "skip",
-        meta = list(role = "crnline")
-      ))
-}
 
 label_with_pop <- function(label_text, popover_text, icon_name = "info-circle", icon_title = "Info", popover_title = NULL){
   span(
@@ -251,27 +192,6 @@ safe_block <- function(expr,
 
 
 
-draw_selected_marker <- function(plot_obj, x_val, y_val, marker_name, meta_info){
-  plot_obj %>%
-    # add new marker trace
-    plotly::plotlyProxyInvoke(
-      "addTraces",
-      list(
-        x = list(x_val),
-        y = list(y_val),
-        name = marker_name,
-        mode = "markers",
-        marker = list(
-          size = 10,
-          color = "red",
-          symbol = "circle"
-        ),
-        showlegend = FALSE,
-        hoverinfo = "skip",
-        meta = meta_info
-      )
-    )
-}
 
 get_adjacent_year <- function(df, woodpiece, current_year, param, direction){
   adj_years <- df |>

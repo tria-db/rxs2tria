@@ -16,15 +16,23 @@ flags_server <- function(id, main_session) {
     rings_data_org <- shiny::reactiveVal(NULL)
     rings_data_edited <- shiny::reactiveVal(NULL)
 
-    # reactive containers for plot settings and data
-    sel_subplots <- reactiveVal(c("sd","cov")) # default: show optional subplots
-    awaiting_restoration <- reactiveVal(FALSE)
-
     # reactive containers for currently selected trace / image / year in the
     # plot(s) and table
-    sel_woodpiece <- reactiveVal(NULL)
-    sel_image <- reactiveVal(NULL)
-    sel_marker <- reactiveVal(NULL)
+    sel_woodpiece <- shiny::reactiveVal(NULL)
+    sel_image <- shiny::reactiveVal(NULL)
+    sel_marker <- shiny::reactiveVal(NULL)
+
+    # reactive containers for plot settings and data
+    sel_subplots <- shiny::reactiveVal(c("sd","cov")) # default: show optional subplots
+    awaiting_restoration <- shiny::reactiveVal(FALSE)
+    shift_ring <- shiny::reactiveVal(NULL)
+
+    # reactive containers for table settings and data
+    sel_issue_cols <- shiny::reactiveVal(c(disqual_issues, technical_issues, other_issues)) # default: show all flag columns
+    sel_feat_cols <- shiny::reactiveVal(discrete_features)
+    excl_flags <- shiny::reactiveVal(NULL)
+    current_hot_image <- shiny::reactiveVal(NULL)
+    selected_row <- shiny::reactiveVal(NULL)
 
 
     # LOAD INPUT DATA ----------------------------------------------------------
@@ -570,7 +578,7 @@ flags_server <- function(id, main_session) {
               dplyr::select(year, vals)
             names(excl_markers) <- c("year", "ywp_val")
 
-            if (!"excl_markers" %in% names(current_traces)){
+            if (!"excl_markers" %in% names(current_traces)) {
               p <- p %>%
                 plotly::plotlyProxyInvoke(
                   "addTraces",
@@ -651,571 +659,201 @@ flags_server <- function(id, main_session) {
       event
     })
 
+    # react to plot click: switch wp or draw updated marker directly
     shiny::observe({
       shiny::req(!awaiting_restoration()) # avoid running if plot is being rerendered
       cat(".   plot click\n")
 
       click_data <- plot_click()
-
-      if (click_data$role == "otherwp"){
+      if (click_data$role == "otherwp") {
         showModal(
           switch_selwp_modal(ns, click_data$wp_label)
         )
       } else {
-        # update the sel markers in plot
-        year_val <- click_data$x
-        wp_label <- click_data$wp_label
+        new_marker <- resolve_click_marker(click_data, df_selwp(), input$sel_param)
+        sel_marker(new_marker)
+        sel_image(new_marker$ycov_val)
 
-        if (click_data$role == "selwp") {
-          ywp_val <- click_data$y
-          ycov_val <- rings_data_edited() |>
-            dplyr::filter(woodpiece_label == wp_label, year == year_val, !exclude_dupl) |>
-            dplyr::pull(image_label)
-        } else {
-          ycov_val <- click_data$y
-          ywp_val <- df_selwp() |>
-            dplyr::filter(image_label == ycov_val, year == year_val) |>
-            dplyr::pull(dplyr::any_of(input$sel_param))
-        }
-        df_excl <- rings_data_edited() |> dplyr::filter(
-          image_label == ycov_val, year == year_val) |>
-          dplyr::select(exclude_issues, exclude_dupl)
-        not_in_plot <- df_excl$exclude_dupl || df_excl$exclude_issues || is.na(ywp_val)
-        marker_col <- ifelse(not_in_plot, "#ff0099", "#e60000")
-
-        # update reactive
-        marker <- list(
-          year = year_val,
-          wp_label = wp_label,
-          ywp_val = ywp_val,
-          ycov_val = ycov_val,
-          marker_col = marker_col
-        )
-        sel_marker(
-          marker
-        )
-        sel_image(ycov_val)
-
-        yaxis_cov <- if ("sd" %in% sel_subplots()) "y3" else "y2"
-        # update plot markers
-        current_traces <- input$traces_crn
         p <- plotly::plotlyProxy("main_plot", session)
-          if (!"sel_marker_wp" %in% names(current_traces)){
-            p <- p %>%
-              plotly::plotlyProxyInvoke(
-                "addTraces",
-                list(
-                  x = list(marker$year),
-                  y = list(marker$ywp_val),
-                  type = "scatter",
-                  mode = "markers",
-                  name = "sel_marker_wp",
-                  marker = list(
-                    size = 10,
-                    color = marker_col,
-                    symbol = "circle"
-                  ),
-                  showlegend = FALSE,
-                  hoverinfo = 'text',
-                  text = list(paste0(marker$ycov_val, "<br>",
-                                     marker$year, ": ", ywp_val)),
-                  meta = list(role = "sel_marker_wp")
-                )
-              )
-            if ("cov" %in% sel_subplots()) {
-              p <- p %>%
-              plotly::plotlyProxyInvoke(
-                "addTraces",
-                list(
-                  x = list(marker$year),
-                  y = list(marker$ycov_val),
-                  type = "scatter",
-                  mode = "markers",
-                  name = "sel_marker_cov",
-                  marker = list(
-                    size = 10,
-                    color = marker_col,
-                    symbol = "circle"
-                  ),
-                  showlegend = FALSE,
-                  hoverinfo = "skip",
-                  meta = list(role = "sel_marker_cov"),
-                  yaxis = yaxis_cov
-                )
-              )
-            }
-          } else {
-            wp_curveNumber <- current_traces[['sel_marker_wp']]$curveNumber
-            cov_curveNumber <- current_traces[['sel_marker_cov']]$curveNumber
+        draw_sel_marker(p, new_marker, input$traces_crn, sel_subplots())
+      }
 
-            p <- p %>%
-              plotly::plotlyProxyInvoke(
-                "restyle",
-                list(
-                  x = list(list(marker$year)),
-                  y = list(list(marker$ywp_val)),
-                  marker = list(
-                    size = 10,
-                    color = marker_col,
-                    symbol = "circle"
-                  ),
-                  hovertext = list(paste0(marker$ycov_val, "<br>",
-                                          marker$year, ": ", ywp_val))
-                ),
-                wp_curveNumber
-              )
-            if ("cov" %in% sel_subplots()) {
-              p <- p %>%
-              plotly::plotlyProxyInvoke(
-                "restyle",
-                list(
-                  x = list(list(marker$year)),
-                  y = list(list(marker$ycov_val)),
-                  marker = list(
-                    size = 10,
-                    color = marker_col,
-                    symbol = "circle"
-                  )
-                ),
-                cov_curveNumber
-              )
-            }
-          }
-          p
-        }
-    }) |> bindEvent(plot_click(), ignoreNULL = TRUE, ignoreInit = FALSE)
+    }) |> shiny::bindEvent(plot_click(), ignoreNULL = TRUE, ignoreInit = FALSE)
 
-    observe({
-      removeModal()
+    # confirmed click on other woodpiece
+    shiny::observe({
+      shiny::removeModal()
       click_data <- plot_click()
-      year_val <- click_data$x
-      wp_label <- click_data$wp_label
-      ywp_val <- click_data$y
-      ycov_val <- df_otherwps() |>
-        dplyr::filter(woodpiece_label == wp_label, year == year_val, !exclude_dupl) |>
-        dplyr::pull(image_label)
-      df_excl <- rings_data_edited() |> dplyr::filter(
-        image_label == ycov_val, year == year_val) |>
-        dplyr::select(exclude_issues, exclude_dupl)
-      not_in_plot <- df_excl$exclude_dupl || df_excl$exclude_issues || is.na(ywp_val)
-      marker_col <- ifelse(not_in_plot, "#ff0099", "#e60000")
+      new_marker <- resolve_click_marker(click_data, df_otherwps(), input$sel_param)
 
-      updateSelectInput(session, "sel_wp_trace", selected = wp_label)
-      #sel_woodpiece(wp_label)
-      sel_marker(
-        list(
-          year = year_val,
-          wp_label = wp_label,
-          ywp_val = ywp_val,
-          ycov_val = ycov_val,
-          marker_col = marker_col
-        )
-      )
-      sel_image(ycov_val)
-    }) |> bindEvent(input$confirm_wp)
+      sel_marker(new_marker)
+      sel_image(new_marker$ycov_val)
 
-    shift_ring <- reactiveVal(NULL)
+      # trigger updates of plot, markers, table indirectly:
+      # input$sel_wp_trace > sel_woodpiece() > df_selwp(), df_otherwps() > plot rerender
+      shiny::updateSelectInput(session, "sel_wp_trace", selected = new_marker$wp_label)
 
-    observe({
+    }) |> shiny::bindEvent(input$confirm_wp)
+
+    ## ring shifts -------------------------------------------------------------
+    # capture and track direction of ring shift (button or keybinding)
+    shiny::observe({
+      cat(".   shift ring next\n")
       shift_ring(list(
         dir = "next",
         nonce = sample(1e6, 1)
       ))
-    }) |> bindEvent(input$next_ring)
+    }) |> shiny::bindEvent(input$next_ring)
 
-    observe({
+    shiny::observe({
+      cat(".   shift ring prev\n")
       shift_ring(list(
         dir = "prev",
         nonce = sample(1e6, 1)
       ))
-    }) |> bindEvent(input$prev_ring)
+    }) |> shiny::bindEvent(input$prev_ring)
 
-    observe({
-      req(sel_marker())
+    # update the selected marker after shift
+    shiny::observe({
+      shiny::req(sel_marker())
+      sel_wp <- sel_marker()$wp_label
       current_year <- sel_marker()$year
       direction <- shift_ring()$dir
 
-      adj_years <- df_selwp() |>
-        dplyr::filter(!exclude_dupl) |>
-        dplyr::filter(
-          if (direction == "prev") year < current_year else year > current_year
-        ) |>
-        dplyr::select(image_label, year, dplyr::all_of(input$sel_param)) |>
-        dplyr::arrange(if (direction == "prev") dplyr::desc(year) else year)
-
-      if (nrow(adj_years) == 0){
-        showNotification(sprintf(
+      new_marker <- resolve_shift_marker(sel_wp, current_year, direction,
+                                         df_selwp(), input$sel_param)
+      if (is.null(new_marker)) {
+        shiny::showNotification(sprintf(
           "No %s year available for this woodpiece in current plot.",
           if (direction == "prev") "earlier" else "later"),
           type = "warning")
         return(NULL)
       }
 
-      year_val <- adj_years$year[1]
-      ywp_val <- adj_years[[input$sel_param]][1]
-      ycov_val <- adj_years$image_label[1]
-
-      df_excl <- rings_data_edited() |> dplyr::filter(
-        image_label == ycov_val, year == year_val) |>
-        dplyr::select(exclude_issues, exclude_dupl)
-      not_in_plot <- df_excl$exclude_dupl || df_excl$exclude_issues || is.na(ywp_val)
-      marker_col <- ifelse(not_in_plot, "#ff0099", "#e60000")
-
-      marker <- list(
-        year = year_val,
-        wp_label = sel_woodpiece(),
-        ywp_val = ywp_val,
-        ycov_val = ycov_val,
-        marker_col = marker_col
-      )
-      sel_marker(
-        marker
-      )
-      if (!identical(sel_image(), ycov_val)) {
-        sel_image(ycov_val)
+      sel_marker(new_marker)
+      # only update sel_image() if necessary to avoid hot rerender
+      if (!identical(sel_image(), new_marker$ycov_val)) {
+        sel_image(new_marker$ycov_val)
       }
 
-      # redraw:
-      yaxis_cov <- if ("sd" %in% sel_subplots()) "y3" else "y2"
-      # update plot markers
-      current_traces <- input$traces_crn
+      # redraw marker(s)
       p <- plotly::plotlyProxy("main_plot", session)
-      if (!"sel_marker_wp" %in% names(current_traces)) {
-        p <- p %>%
-          plotly::plotlyProxyInvoke(
-            "addTraces",
-            list(
-              x = list(marker$year),
-              y = list(marker$ywp_val),
-              type = "scatter",
-              mode = "markers",
-              name = "sel_marker_wp",
-              marker = list(
-                size = 10,
-                color = marker_col,
-                symbol = "circle"
-              ),
-              showlegend = FALSE,
-              hoverinfo = 'text',
-              text = list(paste0(marker$ycov_val, "<br>",
-                                 marker$year, ": ", ywp_val)),
-              meta = list(role = "sel_marker_wp")
-            )
-          )
-        if ("cov" %in% sel_subplots()) {
-          p <- p %>%
-          plotly::plotlyProxyInvoke(
-            "addTraces",
-            list(
-              x = list(marker$year),
-              y = list(marker$ycov_val),
-              type = "scatter",
-              mode = "markers",
-              name = "sel_marker_cov",
-              marker = list(
-                size = 10,
-                color = marker_col,
-                symbol = "circle"
-              ),
-              showlegend = FALSE,
-              hoverinfo = "skip",
-              meta = list(role = "sel_marker_cov"),
-              yaxis = yaxis_cov
-            )
-          )
-        }
-      } else {
-        wp_curveNumber <- current_traces[['sel_marker_wp']]$curveNumber
-        cov_curveNumber <- current_traces[['sel_marker_cov']]$curveNumber
+      draw_sel_marker(p, new_marker, input$traces_crn, sel_subplots())
 
-        p <- p %>%
-          plotly::plotlyProxyInvoke(
-            "restyle",
-            list(
-              x = list(list(marker$year)),
-              y = list(list(marker$ywp_val)),
-              marker = list(
-                size = 10,
-                color = marker_col,
-                symbol = "circle"
-              ),
-              hovertext = list(paste0(marker$ycov_val, "<br>",
-                                      marker$year, ": ", ywp_val))
-            ),
-            wp_curveNumber
-          )
-        if ("cov" %in% sel_subplots()) {
-          p <- p %>%
-          plotly::plotlyProxyInvoke(
-            "restyle",
-            list(
-              x = list(list(marker$year)),
-              y = list(list(marker$ycov_val)),
-              marker = list(
-                size = 10,
-                color = marker_col,
-                symbol = "circle"
-              )
-            ),
-            cov_curveNumber
-          )
-        }
-      }
+    }) |> shiny::bindEvent(shift_ring(), ignoreNULL = TRUE, ignoreInit = TRUE)
 
-      p
 
-    }) |> bindEvent(shift_ring(), ignoreNULL = TRUE, ignoreInit = TRUE)
-
-    observe({
+    ## hot row changes ---------------------------------------------------------
+    shiny::observe({
       # require single selected?
-      req(sel_marker())
-      old_marker <- sel_marker()
+      shiny::req(sel_marker())
+      sel_wp <- sel_marker()$wp_label
+      sel_img <- sel_marker()$ycov_val
       new_year <- as.integer(rownames(flags_out())[selected_row()])
-      if (old_marker$year == new_year){
-        return(NULL) # no change
-      }
-      ywp_val <- df_selwp() |>
-        dplyr::filter(year == new_year, image_label == old_marker$ycov_val) |>
-        dplyr::pull(dplyr::any_of(input$sel_param))
 
-      marker_col <- ifelse(flags_out()$exclude_dupl[selected_row()] ||
-                             flags_out()$exclude_issues[selected_row()] ||
-                             is.na(ywp_val), "#ff0099", "#e60000")
-      marker <- list(
-        year = new_year,
-        wp_label = old_marker$wp_label,
-        ywp_val = ywp_val,
-        ycov_val = old_marker$ycov_val, # TODO: get new cov val based on year?
-        marker_col = marker_col
-      )
-      sel_marker(marker)
+      if (sel_marker()$year == new_year) {
+        return(NULL) # same row
+      }
+
+      new_marker <- resolve_row_marker(sel_wp, sel_img, new_year, df_selwp(), input$sel_param)
+
+      sel_marker(new_marker)
       # no update to sel_image required
-      # new_selring_idx <- selected_row() - 1
-      # shinyjs::runjs(sprintf("
-      #   var widget = HTMLWidgets.find('#%s');
-      #   if (widget && widget.hot) {
-      #     widget.hot._highlightedRow = %s;
-      #     widget.hot.render();
-      #   }
-      # ", ns("img_flags"), new_selring_idx))
 
-      # redraw:
-      yaxis_cov <- if ("sd" %in% sel_subplots()) "y3" else "y2"
-      # update plot markers
-      current_traces <- input$traces_crn
+      # redraw sel marker(s)
       p <- plotly::plotlyProxy("main_plot", session)
-      if (!"sel_marker_wp" %in% names(current_traces)){
-        p <- p %>%
-          plotly::plotlyProxyInvoke(
-            "addTraces",
-            list(
-              x = list(marker$year),
-              y = list(marker$ywp_val),
-              type = "scatter",
-              mode = "markers",
-              name = "sel_marker_wp",
-              marker = list(
-                size = 10,
-                color = marker_col,
-                symbol = "circle"
-              ),
-              showlegend = FALSE,
-              hoverinfo = 'text',
-              text = list(paste0(marker$ycov_val, "<br>",
-                                 marker$year, ": ", ywp_val)),
-              meta = list(role = "sel_marker_wp")
-            )
-          )
-        if ("cov" %in% sel_subplots()) {
-          p <- p %>%
-            plotly::plotlyProxyInvoke(
-              "addTraces",
-              list(
-                x = list(marker$year),
-                y = list(marker$ycov_val),
-                type = "scatter",
-                mode = "markers",
-                name = "sel_marker_cov",
-                marker = list(
-                  size = 10,
-                  color = marker_col,
-                  symbol = "circle"
-                ),
-                showlegend = FALSE,
-                hoverinfo = "skip",
-                meta = list(role = "sel_marker_cov"),
-                yaxis = yaxis_cov
-              )
-            )
-        }
+      draw_sel_marker(p, new_marker, input$traces_crn, sel_subplots())
+
+    }) |> shiny::bindEvent(selected_row(), ignoreNULL = TRUE)
+
+
+    ## x axis changes ----------------------------------------------------------
+    # capture axis limit changes for the x axis via plotly relayout events
+    crn_x_axes <- shiny::reactive({
+      shiny::req(df_selwp())
+      relayout <- plotly::event_data("plotly_relayout", source = "crn_plot")
+      shiny::req(relayout)
+
+      # ignore events that don't affect the x-axis (e.g. yaxis changes)
+      x_autorange <- !is.null(relayout[["xaxis.autorange"]])
+      has_x_range  <- !is.null(relayout[["xaxis.range[0]"]])
+      shiny::req(x_autorange || has_x_range)
+
+      if (x_autorange) {
+        list(x_min = NULL, x_max = NULL)
       } else {
-        wp_curveNumber <- current_traces[['sel_marker_wp']]$curveNumber
-        cov_curveNumber <- current_traces[['sel_marker_cov']]$curveNumber
-
-        p <- p %>%
-          plotly::plotlyProxyInvoke(
-            "restyle",
-            list(
-              x = list(list(marker$year)),
-              y = list(list(marker$ywp_val)),
-              marker = list(
-                size = 10,
-                color = marker_col,
-                symbol = "circle"
-              ),
-              hovertext = list(paste0(marker$ycov_val, "<br>",
-                                      marker$year, ": ", ywp_val))
-            ),
-            wp_curveNumber
-          )
-        if ("cov" %in% sel_subplots()) {
-          p <- p %>%
-            plotly::plotlyProxyInvoke(
-              "restyle",
-              list(
-                x = list(list(marker$year)),
-                y = list(list(marker$ycov_val)),
-                marker = list(
-                  size = 10,
-                  color = marker_col,
-                  symbol = "circle"
-                )
-              ),
-              cov_curveNumber
-            )
-        }
+        list(
+          x_min = relayout[["xaxis.range[0]"]],
+          x_max = relayout[["xaxis.range[1]"]]
+        )
       }
-
-      p
-
-    }) |> bindEvent(selected_row(), ignoreNULL = TRUE)
-
-
-    # AXIS CHANGES -------------------------------------------------------------
-    # capture axes limit changes and keep track of them
-    crn_change_axes <- reactive({
-      req(df_selwp())
-      plotly::event_data("plotly_relayout",
-                         source = "crn_plot")
     })
 
-    crn_x_axes <- reactiveVal(NULL)
 
-    observe({
-      relayout <- crn_change_axes()
-      x_axes <- crn_x_axes()
-
-      if (!is.null(relayout[["xaxis.range[0]"]])){
-        x_axes$x_min <- relayout[["xaxis.range[0]"]]
+    ## excluded rings markers --------------------------------------------------
+    # capture edits on the excl flags column specifically
+    shiny::observe({
+      new_col <- flags_out()$exclude_issues
+      if (!identical(new_col, excl_flags())) {
+        excl_flags(new_col)
       }
-      if (!is.null(relayout[["xaxis.range[1]"]])){
-        x_axes$x_max <- relayout[["xaxis.range[1]"]]
-      }
-      if (!is.null(relayout[["xaxis.autorange"]])){
-        x_axes$x_min <- NULL
-        x_axes$x_max <- NULL
-      }
+    }) |> shiny::bindEvent(flags_out(), ignoreInit = TRUE)
 
-      crn_x_axes(x_axes)
-    }) |> bindEvent(crn_change_axes())
+    # if exclude flags are edited, update markers
+    # NOTE: show_excl / change of sel_wp handled via plot rerender
+    shiny::observe({
+       shiny::req(excl_flags())
+       cat(".   excl flags update\n")
+      # TODO: do not trigger if excl_flags change but only because image is changed
 
+      excl_markers <- get_excl_markers(sel_woodpiece(), df_selwp(), rings_data_edited())
 
-    # EXCLUDED RINGS -----------------------------------------------------------
-    observe({
-      # TODO: also update if: sel woodpiece changes, plot rerenders
-      df_rings <- rings_data_edited() |>
-        dplyr::filter(woodpiece_label == sel_marker()$wp_label) |>
-        dplyr::filter(!exclude_dupl, exclude_issues) |>
-        dplyr::select(image_label, year)
-
-      excl_markers <- df_selwp() |>
-        dplyr::inner_join(df_rings, by = c("image_label", "year")) |>
-        dplyr::select(year, vals)
-      names(excl_markers) <- c("year", "ywp_val")
-
-      current_traces <- input$traces_crn
       p <- plotly::plotlyProxy("main_plot", session)
-      if (!"excl_markers" %in% names(current_traces)) {
-        p <- p %>%
-          plotly::plotlyProxyInvoke(
-            "addTraces",
-            list(
-              x = excl_markers$year,
-              y = excl_markers$ywp_val,
-              type = "scatter",
-              mode = "markers",
-              name = "excl_markers",
-              marker = list(
-                size = 7,
-                color = "blue",
-                symbol = "circle-open"
-              ),
-              showlegend = FALSE,
-              hoverinfo = "skip",
-              meta = list(role = "excl_markers")
-            )
-          )
-      } else {
-        excl_curveNumber <- current_traces[['excl_markers']]$curveNumber
+      draw_excl_markers(p, excl_markers, input$traces_crn)
 
-        p <- p %>%
-          plotly::plotlyProxyInvoke(
-            "restyle",
-            list(
-              x = list(excl_markers$year),
-              y = list(excl_markers$ywp_val),
-              marker = list(
-                size = 7,
-                color = "blue",
-                symbol = "circle-open"
-              )
-            ),
-            excl_curveNumber
-          )
-      }
-      p
+    }) |> shiny::bindEvent(excl_flags())
 
-    }) |> bindEvent(excl_flags())
 
-    # MEAN TRACE ---------------------------------------------------------------
-    observe({
-      req(df_otherwps(), input$traces_crn)
+    ## mean crn trace ----------------------------------------------------------
+    shiny::observe({
+      shiny::req(df_crn())
       cat(".   mean crn update\n")
 
-      current_traces <- input$traces_crn
-      crn_trace <- purrr::detect(current_traces, \(x) isTRUE(x$meta$role == "crnline"))
+      has_mean_trace <- "mean_trace" %in% names(input$traces_crn)
 
       p <- plotly::plotlyProxy("main_plot", session)
-      if (!is.null(crn_trace)){
-        # remove existing mean trace
-        p <- p %>% plotly::plotlyProxyInvoke("deleteTraces", crn_trace$curveNumber)
+      # remove existing mean trace (either no longer shown or needs to be
+      # recalculated)
+      if (has_mean_trace) {
+        crn_curveNumber <- input$traces_crn[['mean_trace']]$curveNumber
+        p <- p %>% plotly::plotlyProxyInvoke("deleteTraces", crn_curveNumber)
       }
 
-      if (input$show_mean){
-        # df_crn <- df_otherwps() |>
-        #   dplyr::bind_rows(df_selwp()) |>
-        #   dplyr::filter(!exclude_dupl)
-        df_crn <- df_crn() |> dplyr::filter(!exclude_dupl)
-
+      # recalculate and redraw mean trace only if shown
+      if (input$show_mean) {
+        df_data <- df_crn() |> dplyr::filter(!exclude_dupl)
         sel_mean <- input$sel_mean
-        df_mean <- calc_mean_vals(df_crn, sel_mean)
-        p <- p |> draw_mean_trace(df_mean$year, df_mean$vals, sel_mean)
+        df_mean <- calc_mean_vals(df_data, sel_mean)
+        p <- draw_mean_trace(p, df_mean$year, df_mean$vals, sel_mean)
       }
 
       p
-    }) |> bindEvent(input$show_mean, input$sel_mean)
+    }) |> shiny::bindEvent(input$show_mean, input$sel_mean)
 
 
-    # FLAGS EDITING ------------------------------------------------------------
-    output$selimg <- renderUI({
-      req(sel_image())
+    # FLAGS TABLE --------------------------------------------------------------
+    # UI: plot card header with dynamic selected image and comment
+    output$selimg <- shiny::renderUI({
+      shiny::req(sel_image())
       sel_img <- sel_image()
       df_img <- input_data$rxsmeta_data
       card_title <- strong(glue::glue("Selected image: {sel_img}"))
-      if ("comments" %in% names(df_img)){
+
+      if ("comments" %in% names(df_img)) {
         img_comment <- df_img |>
-          dplyr::filter(image_label == sel_img) |> dplyr::pull(comments)
-        if (!is.na(img_comment) && img_comment != ""){
+          dplyr::filter(image_label == sel_img) |>
+          dplyr::pull(comments)
+        if (!is.na(img_comment) && img_comment != "") {
           card_title <- tagList(
             card_title,
             em(glue::glue("Comment: {img_comment}"))
@@ -1223,55 +861,29 @@ flags_server <- function(id, main_session) {
         }
       }
       card_title
-
     })
 
-    sel_issues_stored <- reactiveVal(c(disqual_issues, technical_issues, other_issues))
-    sel_features_stored <- reactiveVal(discrete_features)
-
-    observe({
-      showModal(
-        modalDialog(
-          title = "Table settings",
-          checkboxInput(ns("auto_open_image"), "Try to auto-open images", value = FALSE),
-          strong("Show / hide optional columns:"),
-          checkboxGroupInput(
-            ns("sel_cols_issues"),
-            label = "Compromising issues",
-            choices = c(
-              disqual_issues,
-              technical_issues,
-              other_issues
-            ), selected = sel_issues_stored()
-          ),
-          checkboxGroupInput(
-            ns("sel_cols_features"),
-            label = "Discrete features",
-            choices = discrete_features,
-            selected = sel_features_stored()
-          ),
-          easyClose = TRUE,
-          footer = tagList(
-            modalButton("Cancel"),
-            actionButton(ns("confirm_cols"), "Proceed")
-          )
-        )
+    # UI: show modal when clicking on table settings
+    shiny::observe({
+      shiny::showModal(
+        hot_settings_modal(ns, sel_issue_cols(), sel_feat_cols())
       )
-    }) |> bindEvent(input$tbl_settings)
+    }) |> shiny::bindEvent(input$tbl_settings)
 
-    observe({
-      sel_issues_stored(input$sel_cols_issues)
-      sel_features_stored(input$sel_cols_features)
-      removeModal()
+    # update selected table columns based on modal inputs
+    shiny::observe({
+      sel_issue_cols(input$sel_cols_issues)
+      sel_feat_cols(input$sel_cols_features)
+      shiny::removeModal()
+    }) |> shiny::bindEvent(input$confirm_cols)
 
-    }) |> bindEvent(input$confirm_cols)
-
-    df_rings_hot <- reactive({
-      req(sel_image())
-      sel_disq <- intersect(sel_issues_stored(), disqual_issues)
-      sel_techn <- intersect(sel_issues_stored(), technical_issues)
-      sel_other <- intersect(sel_issues_stored(), other_issues)
-      sel_feat <- intersect(sel_features_stored(), discrete_features)
+    # prepare reactive for hot table input
+    df_rings_hot <- shiny::reactive({
+      shiny::req(sel_image())
+      sel_disq <- intersect(sel_issue_cols(), disqual_issues)
+      sel_techn <- intersect(sel_issue_cols(), technical_issues)
+      sel_other <- intersect(sel_issue_cols(), other_issues)
+      sel_feat <- intersect(sel_feat_cols(), discrete_features)
       df_rings <- rings_data_edited() |>
         dplyr::filter(image_label == sel_image()) |>
         dplyr::select(
@@ -1282,20 +894,18 @@ flags_server <- function(id, main_session) {
             sel_disq, sel_techn, sel_other,
             sel_feat,"comments"))
         )
-    }) |> bindEvent(sel_image(), input$confirm_cols)
+    }) |> shiny::bindEvent(sel_image(), input$confirm_cols)
 
-    current_table_image <- reactiveVal(NULL)
-
+    # render the HOT
     output$img_flags <- rhandsontable::renderRHandsontable({
       df_rings <- df_rings_hot()
-      sel_disq <- intersect(sel_issues_stored(), disqual_issues)
-      sel_techn <- intersect(sel_issues_stored(), technical_issues)
-      sel_other <- intersect(sel_issues_stored(), other_issues)
-      sel_feat <- intersect(sel_features_stored(), discrete_features)
-      current_table_image(sel_marker()$ycov_val)
+      sel_disq <- intersect(sel_issue_cols(), disqual_issues)
+      sel_techn <- intersect(sel_issue_cols(), technical_issues)
+      sel_other <- intersect(sel_issue_cols(), other_issues)
+      sel_feat <- intersect(sel_feat_cols(), discrete_features)
+      current_hot_image(sel_marker()$ycov_val)
 
       selring_idx <- which(df_rings$year == sel_marker()$year) - 1
-      print(selring_idx)
       df_rings <- df_rings |> tibble::column_to_rownames("year")
 
       ro_ids_dupl <- which(rep(TRUE, nrow(df_rings))) - 1
@@ -1420,160 +1030,16 @@ flags_server <- function(id, main_session) {
 
     }) |> bindEvent(df_rings_hot(), ignoreNULL = TRUE)
 
-    # Update reactiveVal when user selects
+    # Update selected_row reactive given js hook
     observeEvent(input$selected_hot_row, {
         selected_row(input$selected_hot_row)
-    })  # LOW PRIORITY)
-
-    # Create a reactiveVal
-    selected_row <- reactiveVal(NULL)
-
-    renderer_cb <- function(bgcolor = NULL){
-      bgcolor_js <- if(is.null(bgcolor)) "" else bgcolor
-      htmlwidgets::JS(htmltools::HTML(sprintf("
-          function(instance, td, row, col, prop, value, cellProperties) {
-            var selRow = (instance._highlightedRow !== undefined) ? instance._highlightedRow : -1;
-            if (row == selRow) {
-              td.style.background = '#ed4c4c';
-            } else if ('%s' !== '') {
-              td.style.background = '%s';
-            }
-            Handsontable.renderers.CheckboxRenderer.apply(this, arguments);
-            return td;
-        }", bgcolor_js, bgcolor_js)))
-    }
-
-    renderer_cb_ro <- function(readonly_ids = NULL, bgcolor = NULL){
-      bgcolor_js <- if(is.null(bgcolor)) "" else bgcolor
-      readonly_js <- if(is.null(readonly_ids)) "[]" else jsonlite::toJSON(readonly_ids)
-
-      htmlwidgets::JS(htmltools::HTML(sprintf("
-        function(instance, td, row, col, prop, value, cellProperties) {
-          var readonlyRows = %s;
-
-          var selRow = (instance._highlightedRow !== undefined) ? instance._highlightedRow : -1;
-          if (row == selRow) {
-            td.style.background = '#ed4c4c';
-          } else if ('%s' !== '') {
-            td.style.background = '%s';
-          }
-
-          // Set readOnly for specific rows
-          if (readonlyRows.includes(row)) {
-            cellProperties.readOnly = true;
-            td.style.opacity = '0.6';  // Optional: visual indication
-          }
-
-          Handsontable.renderers.CheckboxRenderer.apply(this, arguments);
-          return td;
-        }", readonly_js, bgcolor_js, bgcolor_js)))
-    }
-
-    renderer_cb_dupl <- function(readonly_ids = NULL, bgcolor = NULL){
-      bgcolor_js <- if(is.null(bgcolor)) "" else bgcolor
-      readonly_js <- if(is.null(readonly_ids)) "[]" else jsonlite::toJSON(readonly_ids)
-
-      htmlwidgets::JS(htmltools::HTML(sprintf("
-        function(instance, td, row, col, prop, value, cellProperties) {
-          var readonlyRows = %s;
-          var rowData = instance.getDataAtRow(row);
-
-          var selRow = (instance._highlightedRow !== undefined) ? instance._highlightedRow : -1;
-          if (row == selRow) {
-            td.style.background = '#ed4c4c';
-          } else if (rowData[0] && !value) {
-              td.style.background = '#99C2C2';  // Light green
-          } else if ('%s' !== '') {
-            td.style.background = '%s';
-          }
-
-          // Set readOnly for specific rows
-          if (readonlyRows.includes(row)) {
-            cellProperties.readOnly = true;
-            td.style.opacity = '0.6';  // Optional: visual indication
-          }
-
-          Handsontable.renderers.CheckboxRenderer.apply(this, arguments);
-          return td;
-        }", readonly_js, bgcolor_js, bgcolor_js)))
-    }
-
-    renderer_cb_val <- function(warn_col_ids = NULL, bgcolor = NULL){
-      bgcolor_js <- if(is.null(bgcolor)) "" else bgcolor
-      warn_js <- if(is.null(warn_col_ids)) "[]" else jsonlite::toJSON(warn_col_ids)
-
-      htmlwidgets::JS(htmltools::HTML(sprintf("
-        function(instance, td, row, col, prop, value, cellProperties) {
-          // remove old tippy if necessary
-          if(td.hasOwnProperty('_tippy')) {
-            td._tippy.destroy();
-          }
-          var warnCols = %s;
-
-          var selRow = (instance._highlightedRow !== undefined) ? instance._highlightedRow : -1;
-          if (row == selRow) {
-            td.style.background = '#ed4c4c';
-          } else if ('%s' !== '') {
-            td.style.background = '%s';
-          }
-
-          // invalid warning if other cells in same row, but warn_col_ids include value true
-          if (warnCols.length > 0) {
-            var rowData = instance.getDataAtRow(row);
-            var has_issues = warnCols.map((item) => rowData[item]).includes(true);
-            if (!value && has_issues) {
-              td.style.background = 'pink';
-              tippy(td, { content: 'exclude ring with disqualifying issues?' });
-            }
-          }
-
-          Handsontable.renderers.CheckboxRenderer.apply(this, arguments);
-          return td;
-        }", warn_js, bgcolor_js, bgcolor_js)))
-    }
-
-    # // green background for dupl_ids rows where value is false (selected duplicate)
-    # if (duplRows.includes(row) && value === false) {
-    #   td.style.background = '#90EE90';  // Light green
-    # }
-
-    renderer_dd <- function(bgcolor = NULL){
-      bgcolor_js <- if(is.null(bgcolor)) "" else bgcolor
-      htmlwidgets::JS(htmltools::HTML(sprintf("
-          function(instance, td, row, col, prop, value, cellProperties) {
-            var selRow = (instance._highlightedRow !== undefined) ? instance._highlightedRow : -1;
-            if (row == selRow) {
-              td.style.background = '#ed4c4c';
-            } else if ('%s' !== '') {
-              td.style.background = '%s';
-            }
-            Handsontable.renderers.DropdownRenderer.apply(this, arguments);
-            return td;
-        }", bgcolor_js, bgcolor_js)))
-    }
-    renderer_txt <- function(bgcolor = NULL){
-      bgcolor_js <- if(is.null(bgcolor)) "" else bgcolor
-      htmlwidgets::JS(htmltools::HTML(sprintf("
-          function(instance, td, row, col, prop, value, cellProperties) {
-            var selRow = (instance._highlightedRow !== undefined) ? instance._highlightedRow : -1;
-            if (row == selRow) {
-              td.style.background = '#ed4c4c';
-            } else if ('%s' !== '') {
-              td.style.background = '%s';
-            }
-            Handsontable.renderers.TextRenderer.apply(this, arguments);
-            return td;
-        }", bgcolor_js, bgcolor_js)))
-    }
-
-    # capture hot table edits
-    flags_out <- reactive({
-      rhandsontable::hot_to_r(input$img_flags)
     })
 
+
     observe({
+      # if selected marker is updated but still in same image, update highlighted row
       req(sel_marker())
-      req(identical(sel_marker()$ycov_val, current_table_image()))
+      req(identical(sel_marker()$ycov_val, current_hot_image()))
       # Compute the row index from current table data
       df <- df_rings_hot()
       new_idx <- which(df$year == sel_marker()$year) - 1
@@ -1587,16 +1053,11 @@ flags_server <- function(id, main_session) {
       ", ns("img_flags"), new_idx))
     }) |> bindEvent(sel_marker(), ignoreNULL = TRUE)
 
-    # capture edits on the excl flags column specifically (for excl markers)
-    excl_flags <- reactiveVal()
 
-    # updated only if exclude_issues column changes
-    observe({
-      new_col <- flags_out()$exclude_issues
-      if (!identical(new_col, excl_flags())) {
-        excl_flags(new_col)
-      }
-    }) |> bindEvent(flags_out(), ignoreInit = TRUE)
+    # capture hot table edits
+    flags_out <- reactive({
+      rhandsontable::hot_to_r(input$img_flags)
+    })
 
     # flags_out changes to update rings_data_edited
     observe({
@@ -1658,6 +1119,35 @@ flags_server <- function(id, main_session) {
     }) |> bindEvent(flags_out(), ignoreInit = TRUE)
 
 
+    # ENTER KEY TO SELECT CELL IN TABLE ----------------------------------------
+    observeEvent(input$enter_key, {
+      req(sel_marker(), flags_out())
+      marker <- sel_marker()
+
+      # Check conditions
+      if (is.null(marker$year)){
+        return(NULL)
+      }
+
+      df_hot <- flags_out()
+      # Find matching row
+      target_year <- as.character(marker$year)
+      row_idx <- which(rownames(df_hot) == target_year)
+
+      if (length(row_idx) == 0) {
+        return(NULL)
+      }
+
+      # Select the cell
+      shinyjs::runjs(sprintf("
+        var hot = HTMLWidgets.find('#%s');
+        if (hot && hot.hot) {
+          hot.hot.selectCell(%d, 2);
+          hot.hot.scrollViewportTo(%d, 2);
+        }
+      ", ns("img_flags"), row_idx - 1, row_idx - 1))
+    })
+
 
     # save edits, update plot
     observe({
@@ -1709,16 +1199,7 @@ flags_server <- function(id, main_session) {
 
     }) |> bindEvent(input$show_image, ignoreNULL = TRUE)
 
-    # auto open if sel image changes
-
-    # observe({
-    #   prev_img <- sel_image()
-    #   new_img <- sel_marker()$ycov_val
-    #   if (!identical(prev_img, new_img)){
-    #     sel_image(new_img)
-    #   }
-    # }) |> bindEvent(sel_marker(), ignoreNULL = TRUE)
-
+    # auto open if sel_image changes
     observe({
       req(input$auto_open_image)
       cat(glue::glue(".   auto open image {sel_image()}"), "\n")
@@ -1726,34 +1207,6 @@ flags_server <- function(id, main_session) {
       shinyjs::click("show_image")
     }) |> bindEvent(sel_image(), ignoreNULL = TRUE)
 
-    # ENTER KEY TO SELECT CELL IN TABLE ----------------------------------------
-     observeEvent(input$enter_key, {
-       req(sel_marker(), flags_out())
-       marker <- sel_marker()
-
-      # Check conditions
-      if (is.null(marker$year)){
-        return(NULL)
-      }
-
-      df_hot <- flags_out()
-      # Find matching row
-      target_year <- as.character(marker$year)
-      row_idx <- which(rownames(df_hot) == target_year)
-
-      if (length(row_idx) == 0) {
-        return(NULL)
-      }
-
-      # Select the cell
-      shinyjs::runjs(sprintf("
-        var hot = HTMLWidgets.find('#%s');
-        if (hot && hot.hot) {
-          hot.hot.selectCell(%d, 2);
-          hot.hot.scrollViewportTo(%d, 2);
-        }
-      ", ns("img_flags"), row_idx - 1, row_idx - 1))
-    })
 
     # SAVE RESULTS TO FILE -------------------------------------------------------
     output$save_data <- downloadHandler(
@@ -1815,10 +1268,21 @@ flags_server <- function(id, main_session) {
 
 
     # DEBUG OUTPUT -------------------------------------------------------------
-    output$debug <- renderPrint({
-      sel_subplots()
-      #print(sample(1:10000, 1))
-      #input$traces_crn[['exclude_markers']]
+      output$debug <- renderPrint({
+        #sel_subplots()
+        print(sample(1:10000, 1))
+        req(input$traces_crn)
+        df <- input$traces_crn |>
+          purrr::map(\(x) {
+            # separate nested from flat elements
+            nested <- purrr::keep(x, is.list)
+            flat   <- purrr::discard(x, is.list)
+            # flatten one level and convert to tibble row
+            tibble::as_tibble(c(flat, unlist(nested, recursive = FALSE)))
+          }) |>
+          purrr::list_rbind(names_to = "name")
+        tail(df)
+
 
 
       # df_rings <- rings_data_edited() |> dplyr::filter(woodpiece_label == input$sel_wp)

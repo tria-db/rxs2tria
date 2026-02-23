@@ -269,3 +269,338 @@ switch_selwp_modal <- function(ns, new_wp) {
     )
   )
 }
+
+
+# create marker (lookup image_label / measueremnt val / color) given click info
+resolve_click_marker <- function(click_data, df_data, sel_param) {
+
+  year_val <- click_data$x
+  wp_label <- click_data$wp_label
+
+  switch(click_data$role,
+    "selwp" = {
+      ywp_val <- click_data$y
+      ycov_val <- df_data |>
+        dplyr::filter(year == year_val, !exclude_dupl) |> # selected image
+        dplyr::pull(image_label) |>
+        dplyr::first()
+    },
+    "covlines" = {
+      ycov_val <- click_data$y
+      ywp_val <- df_data |>
+        dplyr::filter(image_label == ycov_val, year == year_val) |>
+        dplyr::pull(dplyr::all_of(sel_param)) |>
+        dplyr::first()
+    },
+    "otherwp" = {
+      ywp_val <- click_data$y
+      ycov_val <- df_data |>
+        dplyr::filter(woodpiece_label == wp_label, year == year_val, !exclude_dupl) |>
+        dplyr::pull(image_label)
+    },
+    stop("Unknown click role")
+  )
+
+  df_excl <- df_data |> # TODO: or rings_data_edited? update color if edited?
+    dplyr::filter(image_label == ycov_val, year == year_val)
+  not_in_plot <- df_excl$exclude_dupl || df_excl$exclude_issues || is.na(ywp_val)
+  marker_col <- ifelse(not_in_plot, "#ff0099", "#e60000")
+
+  return(
+    list(
+      year = year_val,
+      wp_label = wp_label,
+      ywp_val = ywp_val,
+      ycov_val = ycov_val,
+      marker_col = marker_col
+    )
+  )
+}
+
+# build info for adding marker traces
+build_marker_trace <- function(x, y, color, role,
+                               hoverinfo = "skip", text = NULL, yaxis = "y",
+                               marker_size = 10, marker_symbol = "circle") {
+  trace <- list(
+    x = list(x),
+    y = list(y),
+    type = "scatter",
+    mode = "markers",
+    name = role,
+    marker = list(
+      size = marker_size,
+      color = color,
+      symbol = marker_symbol
+    ),
+    hoverinfo = hoverinfo,
+    showlegend = FALSE,
+    meta = list(role = role),
+    yaxis = yaxis
+  )
+  if (hoverinfo == "text") {
+    trace$text <- list(text)
+  }
+
+  trace
+}
+
+# build info for restyling marker traces
+restyle_marker_trace <- function(x, y, color, text = NULL,
+                                 marker_size = 10, marker_symbol = "circle") {
+  list(
+    x = list(list(x)),
+    y = list(list(y)),
+    marker = list(
+      size = marker_size,
+      color = color,
+      symbol = marker_symbol
+    ),
+    hovertext = text
+  )
+}
+
+# draw (add / restyle) the selected marker trace(s)
+draw_sel_marker <- function(plot_obj, marker, traces, sel_subpl) {
+  selm_trace_exists <- "sel_marker_wp" %in% names(traces)
+
+  if (!selm_trace_exists) {
+    trace_info_crn <- build_marker_trace(
+      x = marker$year,
+      y = marker$ywp_val,
+      color = marker$marker_col,
+      role = "sel_marker_wp",
+      hoverinfo = "text",
+      text = list(paste0(marker$ycov_val, "<br>",
+                         marker$year, ": ", marker$ywp_val)),
+      yaxis = "y"
+    )
+
+    plot_obj <- plot_obj %>%
+      plotly::plotlyProxyInvoke(
+        "addTraces",
+        trace_info_crn
+      )
+  } else {
+    wp_curveNumber <- traces[['sel_marker_wp']]$curveNumber
+
+    trace_info_crn <- restyle_marker_trace(
+      x = marker$year,
+      y = marker$ywp_val,
+      color = marker$marker_col,
+      text = list(paste0(marker$ycov_val, "<br>",
+                         marker$year, ": ", marker$ywp_val))
+    )
+
+    plot_obj <- plot_obj %>%
+      plotly::plotlyProxyInvoke(
+        "restyle",
+        trace_info_crn,
+        wp_curveNumber
+      )
+  }
+
+  if ("cov" %in% sel_subpl) {
+    selm_trace_cov_exists <- "sel_marker_cov" %in% names(traces)
+    yaxis_cov <- if ("sd" %in% sel_subpl) "y3" else "y2"
+
+    if (!selm_trace_cov_exists) {
+      trace_info_cov <- build_marker_trace(
+        x = marker$year,
+        y = marker$ycov_val,
+        color = marker$marker_col,
+        role = "sel_marker_cov",
+        hoverinfo = "skip",
+        yaxis = yaxis_cov
+      )
+
+      plot_obj <- plot_obj %>%
+        plotly::plotlyProxyInvoke(
+          "addTraces",
+          trace_info_cov
+        )
+    } else {
+      cov_curveNumber <- traces[['sel_marker_cov']]$curveNumber
+
+      trace_info_cov <- restyle_marker_trace(
+        x = marker$year,
+        y = marker$ycov_val,
+        color = marker$marker_col
+      )
+
+      plot_obj <- plot_obj %>%
+        plotly::plotlyProxyInvoke(
+          "restyle",
+          trace_info_cov,
+          cov_curveNumber
+        )
+    }
+  }
+
+  plot_obj
+}
+
+# create shifted marker
+resolve_shift_marker <- function(sel_wp, current_year, shift_dir, df_data, sel_param){
+  adj_years <- df_data |>
+    dplyr::filter(!exclude_dupl) |>
+    dplyr::filter(
+      if (shift_dir == "prev") year < current_year else year > current_year
+    ) |>
+    dplyr::select(image_label, year, dplyr::all_of(sel_param)) |>
+    dplyr::arrange(if (shift_dir == "prev") dplyr::desc(year) else year) |>
+    dplyr::slice(1)
+
+  if (nrow(adj_years) == 0) {
+    return(NULL)
+  }
+
+  year_val <- adj_years$year
+  ywp_val <- adj_years[[sel_param]]
+  ycov_val <- adj_years$image_label
+
+  df_excl <- df_data |> dplyr::filter(
+    image_label == ycov_val, year == year_val)
+  not_in_plot <- df_excl$exclude_dupl || df_excl$exclude_issues || is.na(ywp_val)
+  marker_col <- ifelse(not_in_plot, "#ff0099", "#e60000")
+
+  return(
+    list(
+      year = year_val,
+      wp_label = sel_wp,
+      ywp_val = ywp_val,
+      ycov_val = ycov_val,
+      marker_col = marker_col
+    )
+  )
+}
+
+# create marker given new selected row
+resolve_row_marker <- function(sel_wp, sel_img, new_year, df_data, sel_param) {
+  ywp_val <- df_data |>
+    dplyr::filter(year == new_year, image_label == sel_img) |>
+    dplyr::pull(dplyr::any_of(sel_param))
+
+  df_excl <- df_data |> dplyr::filter(
+    image_label == sel_img, year == new_year)
+  not_in_plot <- df_excl$exclude_dupl || df_excl$exclude_issues || is.na(ywp_val)
+  marker_col <- ifelse(not_in_plot, "#ff0099", "#e60000")
+
+  return(
+    list(
+      year = new_year,
+      wp_label = sel_wp,
+      ywp_val = ywp_val,
+      ycov_val = sel_img,
+      marker_col = marker_col
+    )
+  )
+}
+
+# get the excluded (due to issues) rings for selected woodpiece
+get_excl_markers <- function(sel_wp, df_data, df_flags) {
+
+  # find the rings exclude_issues flags for the selected woodpiece
+  df_rings <- df_flags |>
+    dplyr::filter(woodpiece_label == sel_wp) |>
+    dplyr::filter(!exclude_dupl, exclude_issues) |>
+    dplyr::select(image_label, year)
+
+  # get the corresponding measurement vals from the plot data
+  excl_markers <- df_data |>
+    dplyr::inner_join(df_rings, by = c("image_label", "year")) |>
+    dplyr::select(year, vals) |>
+    dplyr::filter(!is.na(vals))
+  names(excl_markers) <- c("year", "ywp_val")
+
+  excl_markers
+}
+
+# draw (add / restyle) the trace for excluded issues markers
+draw_excl_markers <- function(plot_obj, excl_markers, traces) {
+  excl_trace_exists <- "excl_markers" %in% names(traces)
+  have_excl_markers <- nrow(excl_markers) > 0
+
+  if (!excl_trace_exists && have_excl_markers) {
+    excl_trace_info <- build_marker_trace(
+      x = excl_markers$year,
+      y = excl_markers$ywp_val,
+      color = "blue",
+      role = "excl_markers",
+      hoverinfo = "skip",
+      marker_size = 7,
+      marker_symbol = "circle-open",
+      yaxis = "y"
+    )
+    plot_obj <- plot_obj %>%
+      plotly::plotlyProxyInvoke(
+        "addTraces",
+        excl_trace_info
+      )
+  } else if (have_excl_markers) {
+    excl_curveNumber <- traces[['excl_markers']]$curveNumber
+    if (nrow(excl_markers) == 1) {
+      xvals <- list(list(excl_markers$year))
+      yvals <- list(list(excl_markers$ywp_val))
+    } else {
+      xvals <- list(excl_markers$year)
+      yvals <- list(excl_markers$ywp_val)
+    }
+
+    plot_obj <- plot_obj %>%
+      plotly::plotlyProxyInvoke(
+        "restyle",
+        list(
+          x = xvals,
+          y = yvals
+        ),
+        excl_curveNumber
+      )
+  } else if (excl_trace_exists) {
+    excl_curveNumber <- traces[['excl_markers']]$curveNumber
+    plot_obj <- plot_obj %>%
+      plotly::plotlyProxyInvoke("deleteTraces", excl_curveNumber)
+  }
+  plot_obj
+}
+
+# calculate the crn mean
+calc_mean_vals <- function(df_all, sel_mean) {
+  switch(sel_mean,
+    "mean" = {
+      df_all |>
+        dplyr::select(year, vals) |>
+        collapse::fgroup_by(year) |>
+        collapse::fsummarise(N = collapse::fnobs(vals),
+                             vals = collapse::fmean(vals)) |>
+        collapse::fsubset(N > 1) |> # only if we have at sample depth > 1
+        dplyr::select(year, vals)
+    },
+    "tbrm" = {
+      df_all |>
+        dplyr::select(year, vals) |>
+        dplyr::group_by(year) |>
+        dplyr::filter(dplyr::n() > 1) |>
+        dplyr::summarise(vals = dplR::tbrm(vals))
+    },
+    return(NULL)
+  )
+}
+
+# draw (add) the mean trace
+draw_mean_trace <- function(plot_obj, x_years, y_vals, sel_mean) {
+  plot_obj %>%
+    plotly::plotlyProxyInvoke(
+      "addTraces",
+      list(
+        x = as.list(x_years),
+        y = as.list(y_vals),
+        name = "mean_trace",
+        type = "scatter",
+        mode = "lines",
+        line = list(width = 2, color = "black"),
+        showlegend = FALSE,
+        hoverinfo = "skip",
+        meta = list(role = "crnline", crn_type = sel_mean)
+      )
+    )
+}
