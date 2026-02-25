@@ -257,6 +257,30 @@ assemble_main_plot <- function(crn_plot, sd_plot, cov_plot, sel_param) {
                                                   'hoverCompareCartesian'))
 }
 
+update_marker_info <- function(marker, df_data, sel_param){
+  year_val <- marker$year
+  ycov_val <- marker$ycov_val
+  ywp_val <- df_data |>
+    dplyr::filter(image_label == ycov_val, year == year_val) |>
+    dplyr::pull(dplyr::all_of(sel_param)) |>
+    dplyr::first()
+
+  df_excl <- df_data |> # TODO: or rings_data_edited? update color if edited?
+    dplyr::filter(image_label == ycov_val, year == year_val)
+  not_in_plot <- df_excl$exclude_dupl || df_excl$exclude_issues || is.na(ywp_val)
+  marker_col <- ifelse(not_in_plot, "#ff0099", "#e60000")
+
+  return(
+    list(
+      year = marker$year,
+      wp_label = marker$wp_label,
+      ywp_val = ywp_val,
+      ycov_val = marker$ycov_val,
+      marker_col = marker_col
+    )
+  )
+}
+
 # create modal to confirm clicking on another woodpiece trace
 switch_selwp_modal <- function(ns, new_wp) {
   shiny::modalDialog(
@@ -322,8 +346,8 @@ build_marker_trace <- function(x, y, color, role,
                                hoverinfo = "skip", text = NULL, yaxis = "y",
                                marker_size = 10, marker_symbol = "circle") {
   trace <- list(
-    x = list(x),
-    y = list(y),
+    x = as.list(x),
+    y = as.list(y),
     type = "scatter",
     mode = "markers",
     name = role,
@@ -604,3 +628,20 @@ draw_mean_trace <- function(plot_obj, x_years, y_vals, sel_mean) {
       )
     )
 }
+
+# helper to transform input$traces_crn into df for debugging
+traces_to_df <- function(traces){
+  traces |>
+    purrr::map(\(x) {
+      # separate nested from flat elements
+      nested <- purrr::keep(x, is.list)
+      flat   <- purrr::discard(x, is.list)
+      if (!is.null(flat$visible)) { # visible may be logical or "legendonly" -> as char
+        flat$visible <- as.character(flat$visible)
+      }
+      # flatten one level and convert to tibble row
+      tibble::as_tibble(c(flat, unlist(nested, recursive = FALSE)))
+    }) |>
+    purrr::list_rbind(names_to = "name")
+}
+

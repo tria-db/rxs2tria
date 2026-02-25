@@ -1,6 +1,100 @@
 # GLOBAL OPTIONS -----------
 options(shiny.maxRequestSize = 100 * 1024^2)  # Set limit to 500 MB
 
+# COLORS ------------------
+# define color range
+prim_col <- "#006268"
+sec_col <- "#69004F"
+tert_col <- "#00206E"
+prim_col_grad <- c("#338585", "#66A3A3", "#99C2C2", "#CCE0E0", "#E6F0F0", "#F2F7F7")
+sec_col_grad <- c("#853270", "#A36794", "#C299B8", "#E0CCDB", "#F0E6ED", "#F7F2F6")
+tert_col_grad <- c("#324a85", "#6778a3", "#99a5c2", "#ccd2e0", "#e6e9f0", "#f2f4f7")
+
+# create palette for plots
+base_palette <- RColorBrewer::brewer.pal(11, "Spectral")
+#base_palette <- scales::pal_hue()(9)
+#base_palette <- c("#338585", "#324a85","#853270")
+
+# helper function to extend palette to desired length,
+# reordering for better contrast if desired
+extend_palette <- function(palette, n, contrasting = TRUE) {
+  if (n > length(palette)) {
+    full_palette <- grDevices::colorRampPalette(palette)(n)
+  } else {
+    full_palette <- palette[1:n]
+  }
+
+  if (contrasting) {
+    k <- n %/% length(palette) + 1
+    indices <- integer(0)
+    for (j in 1:k) {
+      indices <- c(indices, seq(from = j, to = n, by = k))
+    }
+    full_palette <- full_palette[indices]
+  }
+
+  full_palette
+}
+
+sample_depth_color <- tert_col
+coverage_colorscale <- list(c(0, "#FED976"), c(1, prim_col))
+
+default_bg_color <- tert_col_grad[4]
+hot_color_dupl <- prim_col_grad[3]
+hot_color_excl <- tert_col_grad[3]
+hot_color_iss1 <- tert_col_grad[4]
+hot_color_iss2 <- tert_col_grad[5]
+
+sel_row_color <- "#ed4c4c"
+chosen_dupl_color <- prim_col_grad[2]
+warn_inv_color <- 'pink'
+
+# BSLIB THEME ------------------
+# helper function to create the theme
+add_gradient_vars <- function(theme, prefix, gradient) {
+  vars <- stats::setNames(
+    as.list(gradient),
+    paste0(prefix, "-", seq_along(gradient))
+  )
+
+  # Build the full argument list: theme first, then the variables
+  args <- c(list(theme), vars)
+  do.call(bslib::bs_add_variables, args)
+}
+create_theme <- function(
+  prim_col, sec_col, tert_col,
+  prim_col_grad, sec_col_grad, tert_col_grad
+) {
+  theme <- bslib::bs_theme(
+    version = 5,
+    primary   = prim_col,
+    secondary = sec_col,
+    info      = tert_col,
+    font_scale = 0.8,
+    preset = "zephyr"
+  ) |>
+  bslib::bs_add_variables(
+    "body-bg"         = prim_col_grad[5],
+    "focus-ring-color" = sec_col_grad[4]
+  ) |>
+  add_gradient_vars("prim-col-grad", prim_col_grad) |>
+  add_gradient_vars("sec-col-grad", sec_col_grad) |>
+  add_gradient_vars("tert-col-grad", tert_col_grad) |>
+  bslib::bs_add_rules(
+    list(
+      sass::sass_file("www/css/custom-theme.scss")   # ← the big CSS block lives here
+    )
+  )
+
+  theme
+}
+
+theme <- create_theme(
+  prim_col, sec_col, tert_col,
+  prim_col_grad, sec_col_grad, tert_col_grad
+)
+
+
 # GLOBAL VARS ------------
 discrete_features <- c(
   "Blue ring" = "blue_ring",
@@ -52,7 +146,7 @@ input_specs <- list(
     opt_cols = c(
       # any of the quality flag columns (e.g. if data was previously edited in app)
       setNames(rep("l", length(all_flags)), all_flags),
-      affected_tissue = "c", comments = "c")
+      affected_tissue = "c", comment = "c")
     # plus any numeric columns to considered as measurements -> see below
   ),
   rxsmeta_data = list(
@@ -64,74 +158,20 @@ input_specs <- list(
   )
 )
 
-# helper functions
-shinyInput_CB_DT <- function(id, num, values, disabled = FALSE){
-  inputs <- character(num)
-  for (i in seq_len(num)) {
-    if (!is.na(values[i])){
-      if (disabled){
-        inputs[i] <- as.character(shinyjs::disabled(shiny::checkboxInput(
-          paste0(id, i), label = NULL, value = values[i], width = NULL)))
-      } else {
-        inputs[i] <- as.character(shiny::checkboxInput(
-          paste0(id, i), label = NULL, value = values[i], width = NULL))
-      }
-    } else {
-      inputs[i] <- ""
-    }
-  }
-  inputs
-}
-
-get_new_excluded <- function(rings_org, rings_edit, sel_wp, plt_df, param){
-  new_excl <- rings_edit %>%
-    dplyr::filter(woodpiece_label %in% sel_wp) %>%
-    #dplyr::filter(exclude_issues) %>%
-    dplyr::anti_join(rings_org,
-                     by = c("image_label", "year", "exclude_issues")) |>
-    dplyr::select(image_label, year)
-
-  excl_markers <- plt_df |> # plot data has no duplicate years
-    dplyr::inner_join(new_excl, by = c("image_label", "year")) |>
-    dplyr::mutate(y = .data[[param]]) |>
-    dplyr::select(year, y, woodpiece_label)
-
-  return(excl_markers)
-}
-
-get_excluded <- function(rings_edit, sel_wp, plt_df){
-  new_excl <- rings_edit %>%
-    dplyr::filter(woodpiece_label %in% sel_wp) %>%
-    dplyr::filter(exclude_issues) %>%
-    dplyr::select(image_label, year)
-
-  excl_markers <- plt_df |> # plot data has no duplicate years
-    dplyr::inner_join(new_excl, by = c("image_label", "year")) |>
-    #dplyr::mutate(y = .data[[param]]) |>
-    dplyr::mutate(y = vals) |>
-    dplyr::filter(!is.na(vals)) |>
-    dplyr::select(year, y, vals, woodpiece_label)
-
-  return(excl_markers)
-}
-
-
-label_with_pop <- function(label_text, popover_text, icon_name = "info-circle", icon_title = "Info", popover_title = NULL){
-  span(
-    label_text,
-    bslib::popover(
-      bsicons::bs_icon(icon_name, title = icon_title),
-      title = popover_title,
-      popover_text
-    )
+# GENERAL HELPERS ------------------
+label_with_pop <- function(label_text, popover_text,
+                           icon_name = "info-circle", icon_title = "Info",
+                           popover_title = NULL){
+span(
+  label_text,
+  bslib::popover(
+    bsicons::bs_icon(icon_name, title = icon_title),
+    title = popover_title,
+    popover_text
   )
+)
 }
 
-
-
-
-
-# ERRORS and WARNINGS ------------------------------
 # wrapper for an error message
 show_error_modal <- function(title, message) {
   if (shiny::isRunning()) {
@@ -185,60 +225,6 @@ safe_block <- function(expr,
       return(NULL)
     }
   )
-}
-
-
-
-
-
-
-
-get_adjacent_year <- function(df, woodpiece, current_year, param, direction){
-  adj_years <- df |>
-    dplyr::filter(
-      woodpiece_label == woodpiece,
-      if (direction == "prev") year < current_year else year > current_year #,
-      # !is.na(.data[[param]])
-    ) |>
-    dplyr::select(year, param) |>
-    dplyr::arrange(if (direction == "prev") dplyr::desc(year) else year)
-
-  if (nrow(adj_years) == 0){
-    showNotification(sprintf(
-      "No %s year available for this woodpiece in current plot.",
-      if (direction == "prev") "earlier" else "later"),
-      type = "warning")
-    return(NULL)
-  }
-
-  return(setNames(
-    list(adj_years$year[1], adj_years[[param]][1]),
-    c("year", "val")
-  ))
-}
-
-get_overlapping_images <- function(df_rings, target_image) {
-  # Get year range for target image
-  target_range <- df_rings |>
-    dplyr::filter(image_label == target_image) |>
-    dplyr:: summarise(start = min(year), end = max(year))
-
-  # Find images that overlap or are within 2 years
-  valid_images <- df_rings |>
-    dplyr::group_by(image_label) |>
-    dplyr::summarise(start = min(year), end = max(year)) |>
-    dplyr::filter(
-      # overlaps with target
-      (start <= target_range$end & end >= target_range$start) |
-        # ends within 2 years before target starts
-        (end >= target_range$start - 2 & end < target_range$start) |
-        # starts within 2 years after target ends
-        (start <= target_range$end + 2 & start > target_range$end)
-    ) |>
-    dplyr:: pull(image_label)
-
-  df_rings |>
-    dplyr::filter(image_label %in% valid_images)
 }
 
 

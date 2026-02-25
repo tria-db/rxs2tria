@@ -1,4 +1,4 @@
-library(shiny) # TODO: namespace all shiny/htmltools functions
+#library(shiny) # TODO: namespace all shiny/htmltools functions
 
 ui <- bslib::page_fluid(
   shinyjs::useShinyjs(),

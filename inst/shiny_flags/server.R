@@ -4,22 +4,22 @@ server <- function(input, output, session) {
 
   # footer ---------------------------------------------------------------------
   # open contact information modal on click
-  observeEvent(input$contact_link, {
-    showModal(modalDialog(
+  shiny::observeEvent(input$contact_link, {
+    shiny::showModal(shiny::modalDialog(
       title = "Publisher and contact information",
       "Swiss Federal Institute for Forest, Snow and Landscape Research WSL",
-      tags$br(),
+      htmltools::br(),
       "Zürcherstrasse 111",
-      tags$br(),
+      htmltools::br(),
       "8903 Birmensdorf",
-      tags$br(),
+      htmltools::br(),
       "Switzerland",
-      tags$br(),
-      tags$br(),
-      strong("Contact:"), "Mara Nägelin, ",
-      tags$a(href = "mailto:mara.naegelin@wsl.ch","mara.naegelin(at)wsl.ch"),
+      htmltools::br(),
+      htmltools::br(),
+      htmltools::strong("Contact:"), "Mara Nägelin, ",
+      htmltools::a(href = "mailto:mara.naegelin@wsl.ch","mara.naegelin(at)wsl.ch"),
       easyClose = TRUE,
-      footer = modalButton("Close")
+      footer = shiny::modalButton("Close")
     ))
   })
 }

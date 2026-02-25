@@ -216,7 +216,7 @@ load_data_csv <- function(path_prf, path_rings, path_rxsmeta,
       path_rxsmeta, col_types = specs$rxsmeta_data$req_cols
     )
     # NOTE: force correct type for optional cols as well
-    rsxmeta_cols <- split(names(specs$rxsmeta_data$opt_cols),
+    rxsmeta_cols <- split(names(specs$rxsmeta_data$opt_cols),
                           specs$rxsmeta_data$opt_cols)
     rxsmeta_data_in <- rxsmeta_data_in |>
       dplyr::select(dplyr::all_of(names(specs$rxsmeta_data$req_cols)),
@@ -297,12 +297,12 @@ init_flag_columns <- function(df, flag_cols = all_flags) {
 
 # initialize or coerce comments/affected_tissue columns to character
 init_char_columns <- function(df) {
-  new_cols <- setdiff(c("affected_tissue","comments"), names(df))
+  new_cols <- setdiff(c("affected_tissue","comment"), names(df))
   df[new_cols] <- NA_character_
 
   df <- df |>
     dplyr::mutate(
-      comments = as.character(comments),
+      comment = as.character(comment),
       affected_tissue = tolower(as.character(affected_tissue))
     )
 
@@ -332,6 +332,44 @@ arrange_rings <- function(df) {
     dplyr::select(-".min_year_wp", -".min_year_img")
 }
 
+# prepare edited flags data frame for output
+prepare_rings_out <- function(df_edited, rings_data = NULL){
+  # the character cols
+  df_char <- df_edited |> dplyr::select(
+    affected_tissue, comment)
+  # the optional flag colums
+  df_flags_opt <- df_edited |> dplyr::select(
+    dplyr::any_of(setdiff(disqual_issues, c('incomplete_ring','missing_ring'))),
+    dplyr::any_of(c(unname(technical_issues),
+                    unname(other_issues),
+                    unname(discrete_features))))
+  # the rest of the columns
+  df <- df_edited[setdiff(names(df_edited),
+                          c("affected_tissue", "comment", names(df_flags_opt)))]
+  # char: remove completely empty columns
+  df_char <- df_char |> janitor::remove_empty(which = "cols", cutoff = 1)
+  # opt: remove completely empty / all FALSE cols
+  df_flags_opt <- df_flags_opt |>
+    janitor::remove_empty(which = "cols", cutoff = 1) |>
+    dplyr::select(dplyr::where(~any(.)))
+
+  # combine and restore original column order
+  df <- df |> dplyr::bind_cols(df_char, df_flags_opt)
+  df <- df |> dplyr::select(dplyr::any_of(names(df_edited)))
+
+  if (!is.null(rings_data)) {
+    id_cols <- c("woodpiece_label", "slide_label", "image_label", "year")
+    df_same <- df |> dplyr::select(dplyr::any_of(names(rings_data)))
+    df_new <- df |> dplyr::select(
+      dplyr::all_of(id_cols),
+      dplyr::all_of(setdiff(names(df), names(rings_data))))
+    df <- rings_data |>
+      dplyr::rows_update(df_same, by = id_cols) |>
+      dplyr::left_join(df_new, by = id_cols)
+  }
+
+  df
+}
 
 
 # # helper function to update the ring editor card inputs (radiobuttons and
