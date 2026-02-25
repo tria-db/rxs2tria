@@ -78,6 +78,7 @@ get_roxas_files <- function(path_in) {
     "i" = "Found {length(files_images)} image{?s} with associated ROXAS files."
   ))
 
+  # TODO: sorting as hotfix to ensure matching order, better to match based on extracted pattern?
   list(
     fname_image = sort(files_images), # TODO: does this always make sure that the corresponding files are in the exact same order?
     fname_cells = sort(files_cells),
