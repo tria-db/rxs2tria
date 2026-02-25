@@ -15,7 +15,8 @@ read_cells_output <- function(file_cells, selcols_cells, colname_variants){
   tryCatch(
     {
       df_raw <- vroom::vroom(file_cells, delim = "\t",
-                             col_types = c(.default="d", ID="c")) %>%
+                             col_types = c(.default = "d", ID = "c"),
+                             progress = FALSE) %>%
         dplyr::rename(dplyr::any_of(colname_variants)) %>%
         dplyr::select(dplyr::all_of(selcols_cells)) %>%
         janitor::clean_names()
@@ -71,7 +72,8 @@ collect_cells_data <- function(df_structure){
     dplyr::select(image_label, fname_cells) %>%
     dplyr::mutate(raw_data = purrr::map(
       fname_cells,
-      \(x) read_cells_output(x, selcols_cells, colname_variants)
+      \(x) read_cells_output(x, selcols_cells, colname_variants),
+      .progress = list(name = "Reading ROXAS cells output files...", clear = TRUE)
     )) %>%
     tidyr::unnest(raw_data) %>%
     dplyr::select(-fname_cells) |>
@@ -80,7 +82,7 @@ collect_cells_data <- function(df_structure){
   # check for any files that could not be read properly
   df_cells_failed <- df_cells_all |>
     dplyr::filter(is.na(year))
-  if(nrow(df_cells_failed) > 0){
+  if (nrow(df_cells_failed) > 0) {
     failed_files <- df_structure |>
       dplyr::filter(image_label %in% df_cells_failed$image_label) |>
       dplyr::select(image_label, fname_cells)
@@ -111,7 +113,8 @@ read_rings_output <- function(file_rings, selcols_rings, colname_variants){
   tryCatch(
     {
       df_raw <- vroom::vroom(file_rings, delim = "\t",
-                             col_types = c(.default="d", ID="c")) %>%
+                             col_types = c(.default="d", ID="c"),
+                             progress = FALSE) %>%
         dplyr::select(dplyr::all_of(selcols_rings)) %>%
         dplyr::rename(dplyr::any_of(colname_variants)) %>%
         janitor::clean_names()
@@ -169,7 +172,9 @@ collect_rings_data <- function(df_structure){
     dplyr::select(woodpiece_label, slide_label, image_label, fname_rings) %>%
     dplyr::mutate(raw_data = purrr::map(
       fname_rings,
-      \(x) read_rings_output(x, selcols_rings, colname_variants))) %>%
+      \(x) read_rings_output(x, selcols_rings, colname_variants),
+      .progress = list(name = "Reading ROXAS rings output files...",
+                       clear = TRUE))) %>%
     tidyr::unnest(raw_data) %>%
     dplyr::select(-fname_rings) |>
     dplyr::arrange(image_label, year)
@@ -177,7 +182,7 @@ collect_rings_data <- function(df_structure){
   # check for any files that could not be read properly
   df_rings_failed <- df_rings_all |>
     dplyr::filter(is.na(year))
-  if(nrow(df_rings_failed) > 0){
+  if(nrow(df_rings_failed) > 0) {
     failed_files <- df_structure |>
       dplyr::filter(image_label %in% df_rings_failed$image_label) |>
       dplyr::select(image_label, fname_rings)

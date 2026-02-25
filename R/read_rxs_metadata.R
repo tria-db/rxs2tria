@@ -19,7 +19,7 @@ get_roxas_files <- function(path_in) {
   pattern_settings_files = "_ROXAS_Settings\\.txt$"
   pattern_orgimg_files = "\\.(jpg|jpeg)$" # "\\.(jpg|jpeg|png|gif|bmp|tiff)$"
   imgfiles_exclude_keywords = c("annotated", "ReferenceSeries", "Preview")
-  pattern_excl_keywords <- paste(imgfiles_exclude_keywords, collapse="|")
+  pattern_excl_keywords <- paste(imgfiles_exclude_keywords, collapse = "|")
 
   # use fs rather than base list.files, much faster for network shares
   files_cells <- fs::dir_ls(
@@ -80,7 +80,7 @@ get_roxas_files <- function(path_in) {
 
   # TODO: sorting as hotfix to ensure matching order, better to match based on extracted pattern?
   list(
-    fname_image = sort(files_images),
+    fname_image = sort(files_images), # TODO: does this always make sure that the corresponding files are in the exact same order?
     fname_cells = sort(files_cells),
     fname_rings = sort(files_rings),
     fname_settings = sort(files_settings)
@@ -182,7 +182,7 @@ get_structure_from_filenames <- function(
   # extract the relevant pattern part of the file names
   fnames <- stringr::str_extract(filenames, pattern)
 
-  if (any(is.na(fnames))){
+  if (any(is.na(fnames))) {
     dontmatch <- filenames[is.na(fnames)]
     cli::cli_abort(c(
       "All files must match the labeling pattern",
@@ -198,7 +198,7 @@ get_structure_from_filenames <- function(
       "Extracted structure must yield unique image identifiers",
       "x" = "The following files yield duplicate image identifiers",
       "x" = "when extracting the pattern {.code {lbl_structure}}:",
-      grep(paste(duplicates, collapse="|"), filenames, value=TRUE)
+      grep(paste(duplicates, collapse = "|"), filenames, value=TRUE)
     ))
   }
 
@@ -217,10 +217,10 @@ get_structure_from_filenames <- function(
     dplyr::bind_rows(df_structure) |> # ensure all columns are present
     dplyr::mutate(dplyr::across(dplyr::everything(), ~dplyr::na_if(.x, "")))
 
-  if (!is.null(site_label)){
+  if (!is.null(site_label)) {
     df_structure$site <- site_label
   }
-  if (!is.null(species_code)){
+  if (!is.null(species_code)) {
     df_structure$species <- species_code
   }
 
@@ -370,7 +370,55 @@ extract_roxas_settings <- function(file_settings,
                       into = c("origin_calibrated_x", "origin_calibrated_y"),
                       sep = "[ ]*/[ ]*", remove = TRUE, convert = TRUE) |>
       dplyr::relocate(fname_settings, software, sw_version)
-  } else {
+  } else if (roxas_version == "man"){
+    # read from a single settings file
+    # df_settings <- readr::read_delim(file_settings,
+    #                                  delim = "\t",
+    #                                  col_types = readr::cols(.default = "c", RNUM = "d"),
+    #                                  progress = FALSE)
+    df_settings <- vroom::vroom(file_settings,
+                                delim = "\t",
+                                col_types = c(.default = "c", RNUM = "d"),
+                                progress = FALSE)
+
+    # NOTE: this relies heavily on the consistent layout of the settings file
+    # in particular, we need tab delimiters, columns RNUM, SETTING, DESCRIPTION
+    # and the right values in the rows 8,9,10,12,13,17,20,31,33,166,203:208!
+    df_settings <- df_settings |>
+      dplyr::filter(RNUM %in% c(8,9,10,
+                                12,13,
+                                17,18,19,20,
+                                31,33,166,
+                                203,204,205,206,207,208,
+                                246
+      )) |>
+      dplyr::mutate(new_names = c(
+        "configuration_file", "created_at", "sw_version",
+        "spatial_resolution", "origin_calibrated",
+        "meas_geometry", "circ_lower_limit", "circ_upper_limit", "outmost_year",
+        "min_cell_area", "max_cell_area", "dbl_cwt_threshold",
+        "max_cwtrad_s", "max_cwtrad_l", "relwidth_cwt_window", "maxrel_opp_cwt",
+        "max_cwttan_s", "max_cwttan_l",
+        "annotated_image"
+      )) |>
+      dplyr::select(SETTING, new_names) |>
+      tidyr::pivot_wider(names_from = new_names, values_from = SETTING) |>
+      dplyr::mutate(
+        meas_geometry = dplyr::if_else(meas_geometry==1, "linear", "circular"),
+        annotated_image = dplyr::case_when(
+          annotated_image == 0 ~ "none",
+          annotated_image == 1 ~ "outlines",
+          annotated_image == 3 ~ "filled",
+          TRUE ~ NA
+        ),
+        fname_settings = file_settings,
+        software = "ROXAS") |>
+      tidyr::separate(origin_calibrated,
+                      into = c("origin_calibrated_x", "origin_calibrated_y"),
+                      sep = "[ ]*/[ ]*", remove = TRUE, convert = TRUE) |>
+      dplyr::relocate(fname_settings, software, sw_version)
+  }
+  else {
     cli::cli_abort("Only classical ROXAS supported atm.")
   }
 
@@ -390,7 +438,7 @@ extract_roxas_settings <- function(file_settings,
 collect_settings_data <- function(files_settings,
                                   roxas_version = 'classic') {
   checkmate::assert(all(fs::file_exists(files_settings)))
-  checkmate::assert_subset(roxas_version, c("classic"))
+  checkmate::assert_subset(roxas_version, c("classic","man"))
 
   results <- files_settings |>
     purrr::map(\(x) extract_roxas_settings(x, roxas_version = roxas_version),
