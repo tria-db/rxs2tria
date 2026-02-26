@@ -11,3 +11,4 @@ main.R
 docs
 inst/doc
 .RDataTmp
+logs_MN.R

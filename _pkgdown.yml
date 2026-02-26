@@ -32,5 +32,10 @@ reference:
   - create_coverage_plots
   - remove_outliers
   - validate_QWA_data
+  - calculate_band_profiles
+  - calculate_profiles
+  - create_rwl
+  - launch_flags_app
+  - update_QWAdata
 
 
