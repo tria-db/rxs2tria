@@ -66,17 +66,30 @@ remove_outliers <- function(QWA_data){
 }
 
 
-#' Complete cell measures
-#'
-#' Some additional cell measures are calculated based on the existing data.
+
 #' @keywords internal
 max_na_inf <- function(x){
   x_na <- is.na(x)
   if(all(x_na)) -Inf else max(x[!x_na])
 }
 
-# calculate additional measures (see rxs complete)
-# TODO: finalize
+#' Complete QWA measures
+#'
+#' Some additional cell measures are calculated based on the existing data:
+#' - tca: la + cwa
+#' - rwd2: cwtrad/drad
+#' - dcwt
+#' - raddistr.st: raddistr standardized by mrw
+#' - cwtall.adj
+#' - cdrad, cdtan, cdratio
+#' - sector100
+#' - ew_lw: indicates if it is an EW or LW cell (based on Mork index <1)
+#' And for the rings, we add
+#' - eww and lww estimates  (based on Mork index <1)
+#'
+#' @param QWA_data a list containing the cells and rings dataframes
+#' @return a list containing the updated cells and rings dataframes with the new measures
+#' @export
 complete_cell_measures <- function(QWA_data){
 
   df_cells <- QWA_data$cells %>%
@@ -142,7 +155,7 @@ complete_cell_measures <- function(QWA_data){
       # the boundary is set at the highest sector with a rolling mean below mork
       # TODO: check edge cases
       max_EW_sector = max_na_inf(sector100[ROLLMEAN <= mork]),
-      eww = ifelse(max_EW_sector >=0, max_EW_sector*mrw/100, 0),
+      eww = ifelse(max_EW_sector >= 0, max_EW_sector*mrw/100, 0),
       lww = mrw - eww, .groups = 'drop'
     )
 
@@ -598,7 +611,7 @@ validate_QWA_data <- function(QWA_data, df_meta, verbose_flags = FALSE, exclude_
   df_rings_log <- df_rings_log |> dplyr::mutate(
     mrw = dplyr::if_else(missing_ring & is.na(mrw) & cno < 5, 0, mrw),
     ra = dplyr::if_else(missing_ring & is.na(ra) & cno < 5, 0, ra),
-    eww = dplyr::if_else(missing_ring & is.na(eww) & cno < 5, 0, eww),
+    eww = dplyr::if_else(missing_ring & is.na(eww) & cno < 5, 0, eww), # TODO: requires ew/lw estimation - make flexible?
     lww = dplyr::if_else(missing_ring & is.na(lww) & cno < 5, 0, lww),
   )
 
@@ -615,7 +628,7 @@ validate_QWA_data <- function(QWA_data, df_meta, verbose_flags = FALSE, exclude_
 
   # TODO: finalize after checking, can already remove unnecessary cols in functions
   # remove unwanted columns
-  if (!verbose_flags){
+  if (!verbose_flags) {
     df_rings_log <- df_rings_log |>
       dplyr::select(-dplyr::any_of(c(
         'innermost_ring','outermost_ring',
