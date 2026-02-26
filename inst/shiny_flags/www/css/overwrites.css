@@ -1,0 +1,23 @@
+/* bslib style overwrites: */
+/* spacing around sidebar title*/
+.bslib-sidebar-layout .sidebar-title {
+  margin-bottom: 0px;
+  padding-bottom: 10px;
+}
+
+.bslib-sidebar-layout>.sidebar>.sidebar-content {
+  padding-top: 1rem;
+}
+
+/* hot style overwrites: */
+/* bg color for the invalid cells */
+.handsontable td.htInvalid {
+  background-color: pink !important;
+}
+input.htCheckboxRendererInput[type='checkbox'] {
+  accent-color: red !important;
+}
+/* Grey color for checkboxes in the first column (after row names) only */
+.htCore tbody tr td:nth-child(2) input.htCheckboxRendererInput[type='checkbox'] {
+  accent-color: grey !important;
+}

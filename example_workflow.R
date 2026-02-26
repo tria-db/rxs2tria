@@ -10,13 +10,13 @@ load_all()
 # set path to the input and output data
 # where the ROXAS files are (can contain subfolders)
 # path_in <- '/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out'
-# path_in <- '/Users/maranaegelin/Documents/QWAdata/YAM_1880/rxs_out'
-# path_in <- '/Users/maranaegelin/Documents/QWAdata/LTAL_S22/rxs_out'
+path_in <- '/Users/maranaegelin/Documents/QWAdata/YAM_1880/rxs_out'
+path_in <- '/Users/maranaegelin/Documents/QWAdata/LTAL_S22/rxs_out'
 # path_in <- '/Volumes/Dendro/Dendrosciences_All/PatrickFonti_LOTanatomy_2021_PF/S22/ROXAS/4_Roxas_final/S22_LADE_L01'
 path_in <- '~/Desktop/Ltal_S22/4_Roxas_final'
 path_in <- '~/Desktop/Ltal_S22/4_Roxas_final_AI'
 path_in <- '~/Desktop/New Yamal 1880'
-path_in <- '~/Desktop/New Yamal AI 1880'
+# path_in <- '~/Desktop/New Yamal AI 1880'
 
 
 # where output files should be saved to
@@ -37,21 +37,27 @@ dataset_name <- 'YAM_AI_1880'
 
 path_in <- "/Volumes/Dendro/Dendrosciences_All/PatrickFonti_ALTAY_2020_PF/Box01-04/Box01/ROXAS/Edited/Box01/"
 
+path_in <- "/Volumes/Dendro/Dendrosciences_All/PatrickFonti_CALDERA_2019_PF/YAMAL CLEANED/New Yamal AI 1880"
+pattern <- "(?<site>[[:alnum:]]+)_(?<species>[[:alnum:]]+)_(?<tree>[[:alnum:].]+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)"
+
+
+files <- get_roxas_files(path_in)
 ################################################################################
 # get overview of data to be read and extract data structure from filenames
 # example: `{site}_{species}_{tree}{woodpiece}_{slide}_{image}` (with 2digit tree identifier and optional woodpiece)
-#pattern <- "(?<site>[:alnum:]+)_(?<species>[:alnum:]+)_(?<tree>[:alnum:][:alnum:])(?<woodpiece>[:alnum:]*)_(?<slide>[:alnum:]+)_(?<image>[:alnum:]+)"
+pattern <- "(?<site>[:alnum:]+)_(?<species>[:alnum:]+)_(?<tree>[:alnum:][:alnum:])(?<woodpiece>[:alnum:]*)_(?<slide>[:alnum:]+)_(?<image>[:alnum:]+)"
 
 # example: `{site}_{species}_{tree}_{slide}_{image}`, e.g. S22_LADE_L20_9_3
 # pattern <- "(?<site>[:alnum:]+)_(?<species>[:alnum:]+)_(?<tree>[:alnum:]+)_(?<slide>[:alnum:]+)_(?<image>[:alnum:]+)"
 pattern <- "(?<site>[[:alnum:]]+)_(?<species>[[:alnum:]]+)_(?<tree>[[:alnum:].]+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)"
 
 # example2: `{site}_{species}_{tree}_{slide}_{image}`
-#pattern <- "(?<site>[:alnum:]+)_(?<species>[:alnum:]+)_(?<tree>[:alnum:].+)_(?<slide>[:alnum:]+)_(?<image>[:alnum:]+)"
+pattern <- "(?<site>[:alnum:]+)_(?<species>[:alnum:]+)_(?<tree>[:alnum:].+)_(?<slide>[:alnum:]+)_(?<image>[:alnum:]+)"
 
 pattern <- "ALT_(?<tree>[[:alnum:]]+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)"
 
-df_structure <- extract_data_structure(files, pattern, site_label = "ALTAY", species_code = "LASI")
+df_structure <- extract_data_structure(files, pattern)
+#, site_label = "ALTAY", species_code = "LASI")
 # TODO: visualize as data.tree?
 
 # STEP: subset if wanted
@@ -70,12 +76,15 @@ df_settings |>
 # convert created at dates to POSIXct
 df_settings$created_at <- convert_settings_dates(
   df_settings$created_at,
-  orders = c("%d/%m/%Y %H:%M:%S","%d/%m/%Y %H:%M"), # cf. lubridate::parse_date_time
+  orders = c("%d.%m.%Y %H:%M:%S", "%d/%m/%Y %H:%M"), # cf. lubridate::parse_date_time c("%d/%m/%Y %H:%M:%S","%d/%m/%Y %H:%M")
   tz = Sys.timezone())
 
 df_rxsmeta <- combine_rxs_metadata(df_structure, df_images, df_settings)
 
 rm(df_images, df_settings)
+
+readr::write_csv(df_rxsmeta,
+                 paste0('/Users/maranaegelin/Documents/QWAdata/YAM_1880/rxs2tria/20260211_TRIA_YAM_AI_1880', '_rxsmeta.csv'))
 ################################################################################
 # complete the required metadata form via the Shiny app
 # launch_metadata_app()
@@ -137,16 +146,15 @@ n_sectors <- 5
 # divide cells into n_sectors based on position in ring (rraddsitr)
 # calculate profiles for each sector and year
 # i.e. aggregate over all cells per year/sector for selected parameters (this might take a while)
-sel_cell_params <- c("la", "cwttan", "cwtrad", "cwtall", "drad", "dtan",
-                     "cwa", "tca", "cdrad", "cdtan", "cdratio")
+sel_cell_params <- c("la", "cwttan", "cwtrad", "cwtall")
 quant_probs <- c(0.1, 0.5, 0.9)
 
 prf_data <- calculate_profiles(
   QWA_data$cells, n_sectors, sel_cell_params, quant_probs
 )
 
-prf_data2 <- calculate_sector_profiles(
-  QWA_data, n_sectors, sel_cell_params, quant_probs
+prf_data <- calculate_sector_profiles(
+  QWA_data$cells, n_sectors, sel_cell_params, quant_probs
 )
 # TODO: handling missing rings: currently, if ring has few cells, they seem to fall in sector 5
 # what if there are no cells? what about the other sectors?
@@ -171,7 +179,7 @@ df_rxsmeta <- vroom::vroom("/Users/maranaegelin/Documents/QWAdata/LTAL_S22/rxs2t
 # launch the shiny app to explore data and flag rings
 launch_flags_app()
 
-
+df_rings <- vroom::vroom("/Users/maranaegelin/Documents/QWAdata/YAM_1880/20260211_TRIA_YAM_AI_1880_rings_edited.csv")
 
 ################################################################################
 # moving band profiles with fixed bandwidth and stepsize
@@ -262,3 +270,6 @@ create_rwl(prf_data = prf_data,
 
 # 20260103_TRIA_S22_AI_rings_edited.csv
 # 20251230_TRIA_YAM_AI_1880_rings_edited.csv
+
+
+
