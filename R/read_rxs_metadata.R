@@ -284,7 +284,7 @@ extract_data_structure <- function(
 # TODO: check this works on Windows? (exifr requires PERL)
 # TODO: is it robust for different image types? (the exif tags)
 # TODO: can get date as well if we have original images? error handling for missing tags?
-collect_image_info <- function(files_images, batch_size = 50) {
+collect_image_info <- function(files_images, batch_size = 50, tz = "UTC") {
   checkmate::assert(
     all(fs::file_exists(files_images)))
 
@@ -298,10 +298,44 @@ collect_image_info <- function(files_images, batch_size = 50) {
       # read exif data for each batch
       exifr::read_exif(batches[[i]],
                        tags = c("FileType", "FileSize",
-                                "ImageWidth", "ImageHeight"))
+                                "ImageWidth", "ImageHeight",
+                                "DateTimeOriginal", "DateCreated",
+                                "DateTimeDigitized", "CreateDate"))
   })
 
+
+
   df_image_meta <- dplyr::bind_rows(results)
+  df_image_meta[setdiff(c("DateTimeOriginal", "DateCreated",
+                          "DateTimeDigitized", "CreateDate"),
+                        names(df_image_meta))] <- NA_character_
+
+  # TODO: we assume a consistent date format without tz offset in exifs, so atm we warn if it goes wrong:
+  sample_dates <- unlist(df_image_meta[c("DateTimeOriginal","DateCreated",
+                                     "DateTimeDigitized", "CreateDate")], use.names = FALSE)
+  sample_dates <- sample_dates[!is.na(sample_dates)]
+  valid_format <- "^\\d{4}:\\d{2}:\\d{2} \\d{2}:\\d{2}:\\d{2}$"
+  if (any(!grepl(valid_format, sample_dates))) {
+    cli::cli_warn("Some EXIF dates don't match expected format")
+  }
+
+  df_image_meta <- df_image_meta |>
+    dplyr::mutate(
+      # get the most likely creation date from the available tags: convert to date, use earliest
+      # img_created = pmin(
+      #   as.POSIXct(DateTimeOriginal, format="%Y:%m:%d %H:%M:%S", tz = "UTC"),
+      #   as.POSIXct(DateCreated, format="%Y:%m:%d %H:%M:%S", tz = "UTC"),
+      #   as.POSIXct(DateTimeDigitized, format="%Y:%m:%d %H:%M:%S", tz = "UTC"),
+      #   as.POSIXct(CreateDate, format="%Y:%m:%d %H:%M:%S", tz = "UTC"),
+      #   na.rm = TRUE
+      # )
+      img_created = as.POSIXct(
+        pmin(DateTimeOriginal, DateCreated, DateTimeDigitized, CreateDate, na.rm = TRUE),
+        format = "%Y:%m:%d %H:%M:%S",
+        tz = tz
+      ),
+      .keep = "unused" # remove the original date cols
+    )
 
   cli::cli_inform(c(
     "v" = glue::glue("Image metadata extracted for {length(files_images)} images")
@@ -480,13 +514,13 @@ convert_settings_dates <- function(date_strings,
   checkmate::assert_string(tz)
 
   conv_dates <- date_strings %>%
-    lubridate::parse_date_time(., orders = orders, tz=tz)
+    lubridate::parse_date_time(., orders = orders, tz = tz)
 
   # plausibility checks: no NAs and not in future
   check_dates <- any(is.na(conv_dates)) || any(conv_dates > Sys.time())
-  if (check_dates){
+  if (check_dates) {
     cli::cli_abort(c(
-      "Error converting dates from the ROXAS settings files",
+      "Not all dates from the ROXAS settings files could be converted",
       "x" = "Please check the format of the Date created field in the raw files."
     ))
   }
@@ -506,7 +540,7 @@ convert_settings_dates <- function(date_strings,
 #' @param df_images Dataframe with extracted image exif data.
 #' @param df_settings Dataframe with extracted ROXAS settings data.
 #'
-#' @returns A single dataframe consisting of the joined input dataframes.
+#' @returns A `QWAmetadata` object with the joined image-level metadata in `$images`.
 #' @export
 combine_rxs_metadata <- function(df_structure,
                                  df_images,
@@ -521,13 +555,13 @@ combine_rxs_metadata <- function(df_structure,
   checkmate::assert_subset(c('fname_settings'), colnames(df_settings))
 
   df_rxsmeta <- df_structure |>
-    dplyr::left_join(df_images, by='fname_image') |>
-    dplyr::left_join(df_settings, by='fname_settings') |>
+    dplyr::left_join(df_images, by = 'fname_image') |>
+    dplyr::left_join(df_settings, by = 'fname_settings') |>
     dplyr::relocate(dplyr::starts_with('fname'), .after = dplyr::last_col())
 
   cli::cli_inform(c(
     "v" = "Available ROXAS metadata extracted to {.var df_rxsmeta}"
   ))
 
-  df_rxsmeta
+  new_QWAmetadata(images = df_rxsmeta)
 }

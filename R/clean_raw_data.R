@@ -4,14 +4,15 @@
 #' in cell (and ring?) measures by their negative value. This function replaces
 #' these 'negatives' with NA.
 #'
-#' @param QWA_data a list containing the cells and rings dataframes
-#' @returns QWA_data with the 'negative' outliers replaced by NAs
+#' @param QWA_data a `QWAdata` object containing the cells and rings dataframes
+#' @returns A `QWAdata` object with the 'negative' outliers replaced by NAs
 #'
 #' @export
 # TODO: finalize: sel cols, warn about how many are replaced? sure that these cols cannot have neg values?
 remove_outliers <- function(QWA_data){
-  checkmate::assert_list(QWA_data, types = "data.frame", len = 2)
-  checkmate::check_subset(names(QWA_data), c("cells", "rings"))
+  checkmate::assert_class(QWA_data, "QWAdata")
+  checkmate::assert_data_frame(QWA_data$cells)
+  checkmate::assert_data_frame(QWA_data$rings)
 
   outl_cols_cells <- c("raddistr", "rraddistr", "nbrno", "nbrid", "la", "asp",
                        "majax", "kh", "cwtpi", "cwtba", "cwtle", "cwtri",
@@ -50,11 +51,18 @@ remove_outliers <- function(QWA_data){
     ))
   }
 
-  QWA_data_rm <- list()
-  QWA_data_rm$cells <- QWA_data$cells %>%
+  if (!is.null(QWA_data$profiles)) {
+    cli::cli_warn(c(
+      "!" = "Profiles present in {.var QWA_data} will be dropped.",
+      "i" = "Profiles are derived from cells and rings data and must be",
+      "i" = "recomputed after outlier removal."
+    ))
+  }
+
+  cells_rm <- QWA_data$cells %>%
     dplyr::mutate(dplyr::across(dplyr::all_of(outl_cols_cells),
                                 ~ dplyr::if_else(.x < 0, NA_real_, .x)))
-  QWA_data_rm$rings <- QWA_data$rings %>%
+  rings_rm <- QWA_data$rings %>%
     dplyr::mutate(dplyr::across(dplyr::all_of(outl_cols_rings),
                                 ~ dplyr::if_else(.x < 0, NA_real_, .x)))
 
@@ -62,7 +70,7 @@ remove_outliers <- function(QWA_data){
     "v" = "Outliers (negative values) have been replaced with NA"
   ))
 
-  QWA_data_rm
+  new_QWAdata(cells = cells_rm, rings = rings_rm, metadata = QWA_data$metadata)
 }
 
 
@@ -87,10 +95,19 @@ max_na_inf <- function(x){
 #' And for the rings, we add
 #' - eww and lww estimates  (based on Mork index <1)
 #'
-#' @param QWA_data a list containing the cells and rings dataframes
-#' @return a list containing the updated cells and rings dataframes with the new measures
+#' @param QWA_data a `QWAdata` object containing the cells and rings dataframes
+#' @return a `QWAdata` object with the updated cells and rings dataframes with the new measures
 #' @export
 complete_cell_measures <- function(QWA_data){
+  checkmate::assert_class(QWA_data, "QWAdata")
+
+  if (!is.null(QWA_data$profiles)) {
+    cli::cli_warn(c(
+      "!" = "Profiles present in {.var QWA_data} will be dropped.",
+      "i" = "Profiles are derived from cells and rings data and must be",
+      "i" = "recomputed after completing cell measures."
+    ))
+  }
 
   df_cells <- QWA_data$cells %>%
     # need MRW for some calculations
@@ -173,11 +190,7 @@ complete_cell_measures <- function(QWA_data){
     "v" = "Added additional cell measures and EW / LW estimation."
   ))
 
-  return(
-    stats::setNames(
-      list(df_cells, df_rings),
-      c('cells','rings')
-    ))
+  new_QWAdata(cells = df_cells, rings = df_rings, metadata = QWA_data$metadata)
 }
 
 
@@ -556,15 +569,15 @@ flag_duplicate_rings <- function(df_rings_log){
 #' number of cells for each overlap is the one that would then usually be
 #' selected for further analysis when building chronologies.
 #'
-#' @param QWA_data a list containing the cells and rings dataframes
-#' @param df_meta a dataframe containing the metadata for the images
-#' (spatial_resolution required for the incomplete innermost ring check)
-#' @returns validated QWA_data (no changes to cells df, but added minimum required ring flag columns to rings df).
+#' @param QWA_data a `QWAdata` object containing the cells and rings dataframes
+#' @param rxs_meta a `QWAmetadata` object whose `$images` dataframe contains the
+#' image-level metadata (spatial_resolution required for the incomplete innermost ring check)
+#' @returns A `QWAdata` object with the validated data: cells unchanged, rings with
+#' added flag columns, and `rxs_meta` attached as `$metadata`.
 #' @export
 #'
-validate_QWA_data <- function(QWA_data, df_meta, verbose_flags = FALSE, exclude_mode = c("incomplete_only", "missing_only", "either", "both")){
-  checkmate::assert_list(QWA_data, types = "data.frame", len = 2)
-  checkmate::check_subset(names(QWA_data), c("cells", "rings"))
+validate_QWA_data <- function(QWA_data, rxs_meta, verbose_flags = FALSE, exclude_mode = c("incomplete_only", "missing_only", "either", "both")){
+  checkmate::assert_class(QWA_data, "QWAdata")
   checkmate::assert_subset(
     c('image_label','year','cwttan'),
     names(QWA_data$cells)
@@ -574,7 +587,8 @@ validate_QWA_data <- function(QWA_data, df_meta, verbose_flags = FALSE, exclude_
     names(QWA_data$rings)
   )
 
-  checkmate::assert_data_frame(df_meta)
+  checkmate::assert_class(rxs_meta, "QWAmetadata")
+  df_meta <- rxs_meta$images  # extract image-level dataframe for internal use
   checkmate::assert_subset(
     c('image_label','spatial_resolution','outmost_year'),
     names(df_meta)
@@ -661,11 +675,8 @@ validate_QWA_data <- function(QWA_data, df_meta, verbose_flags = FALSE, exclude_
   # message(paste0(capture.output(print(as.data.frame(issue_counts),
   #                               row.names = FALSE)), collapse='\n'))
 
-  return(
-    stats::setNames(
-      list(QWA_data$cells, df_rings_log),
-      c('cells','rings'))
-  )
+  new_QWAdata(cells = QWA_data$cells, rings = df_rings_log,
+              profiles = QWA_data$profiles, metadata = rxs_meta)
 }
 
 

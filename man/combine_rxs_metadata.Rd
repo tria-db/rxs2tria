@@ -14,7 +14,7 @@ combine_rxs_metadata(df_structure, df_images, df_settings)
 \item{df_settings}{Dataframe with extracted ROXAS settings data.}
 }
 \value{
-A single dataframe consisting of the joined input dataframes.
+A \code{QWAmetadata} object with the joined image-level metadata in \verb{$images}.
 }
 \description{
 Combine the extracted ROXAS filenames plus data structures (from

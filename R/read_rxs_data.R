@@ -205,16 +205,14 @@ collect_rings_data <- function(df_structure){
 #' Read and combine data from all cells and ring output files
 #'
 #' @param df_structure Dataframe containing filenames and data structure.
-#' @returns `QWA_data`, i.e. a named list containing the combined raw data
-#' for cells and rings in two dataframes under `$cells` and `$rings`, respectively.
+#' @returns A `QWAdata` object containing the combined raw data for cells and
+#' rings in `$cells` and `$rings`, respectively.
 #' @export
 collect_raw_data <- function(df_structure){
   df_cells_all <- collect_cells_data(df_structure)
   df_rings_all <- collect_rings_data(df_structure)
 
-  return(setNames(
-    list(df_cells_all, df_rings_all),
-    c('cells', 'rings')))
+  new_QWAdata(cells = df_cells_all, rings = df_rings_all)
 }
 
 

@@ -4,7 +4,7 @@
 \alias{collect_image_info}
 \title{Read and combine image exif data}
 \usage{
-collect_image_info(files_images)
+collect_image_info(files_images, batch_size = 50, tz = "UTC")
 }
 \arguments{
 \item{files_images}{Vector/list of image filenames}
