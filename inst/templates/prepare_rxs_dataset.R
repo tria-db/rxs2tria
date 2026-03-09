@@ -30,13 +30,19 @@ df_structure <- extract_data_structure(files, pattern)
 # Step 3: Collect metadata
 # ------------------------------------------------------------------------------
 
-df_images   <- collect_image_info(df_structure$fname_image)
+df_images <- collect_image_info(df_structure$fname_image)
 df_settings <- collect_settings_data(df_structure$fname_settings,
                                      roxas_version = "classic")
 
-# Adapt the date format orders and timezone to match your ROXAS version / locale
-df_settings$created_at <- convert_settings_dates(
-  df_settings$created_at,
+# Due to high chance of errors, the datetime type conversion is made explicit:
+# Adapt the date format orders and timezone as required
+df_images$img_created_at <- lubridate::parse_date_time(
+  df_images$img_created_at, 
+  orders = "%Y:%m:%d %H:%M:%S", # common EXIF format
+  tz = "UTC" # commonly used in EXIF tags
+)
+df_settings$rxs_created_at <- lubridate::parse_date_time(
+  df_settings$rxs_created_at,
   orders = c("%d.%m.%Y %H:%M:%S", "%d/%m/%Y %H:%M"),
   tz = Sys.timezone()
 )

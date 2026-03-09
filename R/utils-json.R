@@ -77,5 +77,41 @@ resolve_schema <- function(schema_path) {
   }
 }
 
+#' Validate against json schema
+#' @param df the data frame to validate.
+#' @param schema the name of the QWAmetadata element under question
+#' @param warn_only abort on errors
+#' @return passes if validation ok
+validate_schema <- function(df, schema = c("dataset", "authors", "funding",
+  "relresources", "sites", "trees", "woodpieces", "slides", "images"), warn_only = TRUE, greedy = FALSE){
+  schema <- match.arg(schema)
+  rel_schema_path <- switch(schema,
+    "dataset" = "extdata/json_schema/base_schema/20251007_tria_ds_data_schema.json",
+    "authors" = "extdata/json_schema/base_schema/20251007_tria_author_data_schema.json",
+    "funding" = "extdata/json_schema/base_schema/20251007_tria_funding_data_schema.json",
+    "relresources" = "extdata/json_schema/base_schema/20251007_tria_relresource_data_schema.json",
+    "sites" = "extdata/json_schema/base_schema/20251007_tria_site_data_schema.json", 
+    "trees" = "extdata/json_schema/20251007_tria_tree_ext_schema.json",
+    "woodpieces" = "extdata/json_schema/base_schema/20251007_tria_woodpiece_data_schema.json", 
+    "slides" = "extdata/json_schema/base_schema/20251007_tria_slide_data_schema.json", 
+    "images" = "extdata/json_schema/base_schema/20251007_tria_roxas_data_schema.json",
+  )
+  schema_path <- system.file(rel_schema_path, package = "rxs2tria")
+  schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
+  result <- schema_obj$validate(
+    jsonlite::toJSON(df, na = "null", POSIXt = "ISO8601"),
+    verbose = TRUE,
+    greedy = greedy  # collect all errors, or just the first
+  )
+  if (!result) {
+    # TODO: print nicer messages with more info
+    errors <- attr(result, "errors")
+    msg <- unique(errors$message)
+    names(msg) <- rep("*", length(msg))
+    if (warn_only) cli::cli_warn(c("!" = glue::glue("QWAmetadata${schema} validation failed:"), msg))
+    else cli::cli_abort(c("x" = "QWAmetadata${schema} validation failed:", msg))
+  }
+  invisible(result)
+}
 
 

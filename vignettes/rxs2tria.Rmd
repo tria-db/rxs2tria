@@ -125,8 +125,13 @@ explicitly convert them to POSIXct with the appropriate format(s) and timezone.
 df_images <- collect_image_info(df_structure$fname_image)
 df_settings <- collect_settings_data(df_structure$fname_settings,
                                      roxas_version = "classic")
-df_settings$created_at <- convert_settings_dates(
-  df_settings$created_at,
+df_images$img_created_at <- lubridate::parse_date_time(
+  df_images$img_created_at, 
+  orders = "%Y:%m:%d %H:%M:%S", # common EXIF format
+  tz = "UTC" # commonly used in EXIF tags
+)
+df_settings$rxs_created_at <- lubridate::parse_date_time(
+  df_settings$rxs_created_at,
   orders = c("%d.%m.%Y %H:%M:%S", "%d/%m/%Y %H:%M"),
   tz = Sys.timezone()
 )

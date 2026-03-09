@@ -5,7 +5,6 @@
 #' within (including subdirectories).
 #'
 #' @param path_in path of the input directory.
-#'
 #' @returns A list of lists containing filepaths of images and ROXAS output
 #'          files (cells, rings, settings).
 #' @export
@@ -21,7 +20,7 @@ get_roxas_files <- function(path_in) {
   imgfiles_exclude_keywords = c("annotated", "ReferenceSeries", "Preview")
   pattern_excl_keywords <- paste(imgfiles_exclude_keywords, collapse = "|")
 
-  # use fs rather than base list.files, much faster for network shares
+  # NOTE: use fs rather than base list.files, much faster for network shares
   files_cells <- fs::dir_ls(
     fs::path_abs(path_in),
     regexp = pattern_cell_files,
@@ -80,7 +79,7 @@ get_roxas_files <- function(path_in) {
 
   # TODO: sorting as hotfix to ensure matching order, better to match based on extracted pattern?
   list(
-    fname_image = sort(files_images), # TODO: does this always make sure that the corresponding files are in the exact same order?
+    fname_image = sort(files_images),
     fname_cells = sort(files_cells),
     fname_rings = sort(files_rings),
     fname_settings = sort(files_settings)
@@ -157,7 +156,7 @@ get_roxas_files <- function(path_in) {
 #'    site_label = "SITEA", species_code = "PISY")
 get_structure_from_filenames <- function(
     filenames,
-    pattern = "(?<site>[[:alnum:]]+)_(?<species>[[:alnum:]]+)_(?<tree>[[:alnum:].]+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)", #"(?<site>[:alnum:]+)_(?<species>[:alnum:]+)_(?<tree>[:alnum:][:alnum:])(?<woodpiece>[:alnum:]*)_(?<slide>[:alnum:]+)_(?<image>[:alnum:]+)",
+    pattern = "(?<site>[:alnum:]+)_(?<species>[:alnum:]+)_(?<tree>[:alnum:][:alnum:])(?<woodpiece>[:alnum:]*)_(?<slide>[:alnum:]+)_(?<image>[:alnum:]+)",
     site_label = NULL, species_code = NULL){
   checkmate::assert_character(filenames, any.missing = FALSE, min.len = 1)
   checkmate::assert_string(pattern)
@@ -203,8 +202,12 @@ get_structure_from_filenames <- function(
   }
 
   # extract the matched pattern groups and collect info into df
-  df_structure <- as.data.frame(stringr::str_match(fnames,pattern)) |>
-    dplyr::rename(org_img_name = V1) # original pattern is in column 1
+  # add org_img_name as the base filename (no path, no extension)
+  # TODO: what if we need part of the path to identify images?
+  df_structure <- as.data.frame(stringr::str_match(fnames, pattern)) |>
+    dplyr::select(-V1) |>
+    dplyr::mutate(org_img_name = tools::file_path_sans_ext(basename(filenames)),
+                  .before = 1)
 
   df_structure <- tibble::tibble(
     org_img_name = character(0),
@@ -281,9 +284,6 @@ extract_data_structure <- function(
 #'
 #' @returns A dataframe containing the extracted data.
 #' @export
-# TODO: check this works on Windows? (exifr requires PERL)
-# TODO: is it robust for different image types? (the exif tags)
-# TODO: can get date as well if we have original images? error handling for missing tags?
 collect_image_info <- function(files_images, batch_size = 50, tz = "UTC") {
   checkmate::assert(
     all(fs::file_exists(files_images)))
@@ -299,40 +299,21 @@ collect_image_info <- function(files_images, batch_size = 50, tz = "UTC") {
       exifr::read_exif(batches[[i]],
                        tags = c("FileType", "FileSize",
                                 "ImageWidth", "ImageHeight",
-                                "DateTimeOriginal", "DateCreated",
+                                "DateTimeOriginal", "DateCreated", # potential date tags
                                 "DateTimeDigitized", "CreateDate"))
   })
-
-
 
   df_image_meta <- dplyr::bind_rows(results)
   df_image_meta[setdiff(c("DateTimeOriginal", "DateCreated",
                           "DateTimeDigitized", "CreateDate"),
                         names(df_image_meta))] <- NA_character_
 
-  # TODO: we assume a consistent date format without tz offset in exifs, so atm we warn if it goes wrong:
-  sample_dates <- unlist(df_image_meta[c("DateTimeOriginal","DateCreated",
-                                     "DateTimeDigitized", "CreateDate")], use.names = FALSE)
-  sample_dates <- sample_dates[!is.na(sample_dates)]
-  valid_format <- "^\\d{4}:\\d{2}:\\d{2} \\d{2}:\\d{2}:\\d{2}$"
-  if (any(!grepl(valid_format, sample_dates))) {
-    cli::cli_warn("Some EXIF dates don't match expected format")
-  }
-
   df_image_meta <- df_image_meta |>
     dplyr::mutate(
-      # get the most likely creation date from the available tags: convert to date, use earliest
-      # img_created = pmin(
-      #   as.POSIXct(DateTimeOriginal, format="%Y:%m:%d %H:%M:%S", tz = "UTC"),
-      #   as.POSIXct(DateCreated, format="%Y:%m:%d %H:%M:%S", tz = "UTC"),
-      #   as.POSIXct(DateTimeDigitized, format="%Y:%m:%d %H:%M:%S", tz = "UTC"),
-      #   as.POSIXct(CreateDate, format="%Y:%m:%d %H:%M:%S", tz = "UTC"),
-      #   na.rm = TRUE
-      # )
-      img_created = as.POSIXct(
-        pmin(DateTimeOriginal, DateCreated, DateTimeDigitized, CreateDate, na.rm = TRUE),
-        format = "%Y:%m:%d %H:%M:%S",
-        tz = tz
+      img_created_at = pmin(
+        dplyr::coalesce(DateTimeOriginal, DateCreated),
+        dplyr::coalesce(DateTimeDigitized, CreateDate),
+        na.rm = TRUE
       ),
       .keep = "unused" # remove the original date cols
     )
@@ -367,10 +348,6 @@ extract_roxas_settings <- function(file_settings,
                                    roxas_version = "classic") {
   if (roxas_version == "classic"){
     # read from a single settings file
-    # df_settings <- readr::read_delim(file_settings,
-    #                                  delim = "\t",
-    #                                  col_types = readr::cols(.default = "c", RNUM = "d"),
-    #                                  progress = FALSE)
     df_settings <- vroom::vroom(file_settings,
                                 delim = "\t",
                                 col_types = c(.default = "c", RNUM = "d"),
@@ -387,7 +364,7 @@ extract_roxas_settings <- function(file_settings,
                                 203,204,205,206,207,208
                                 )) |>
       dplyr::mutate(new_names = c(
-        "configuration_file", "created_at", "sw_version",
+        "configuration_file", "rxs_created_at", "sw_version",
         "spatial_resolution", "origin_calibrated",
         "meas_geometry", "circ_lower_limit", "circ_upper_limit", "outmost_year",
         "min_cell_area", "max_cell_area", "dbl_cwt_threshold",
@@ -404,55 +381,7 @@ extract_roxas_settings <- function(file_settings,
                       into = c("origin_calibrated_x", "origin_calibrated_y"),
                       sep = "[ ]*/[ ]*", remove = TRUE, convert = TRUE) |>
       dplyr::relocate(fname_settings, software, sw_version)
-  } else if (roxas_version == "man"){
-    # read from a single settings file
-    # df_settings <- readr::read_delim(file_settings,
-    #                                  delim = "\t",
-    #                                  col_types = readr::cols(.default = "c", RNUM = "d"),
-    #                                  progress = FALSE)
-    df_settings <- vroom::vroom(file_settings,
-                                delim = "\t",
-                                col_types = c(.default = "c", RNUM = "d"),
-                                progress = FALSE)
-
-    # NOTE: this relies heavily on the consistent layout of the settings file
-    # in particular, we need tab delimiters, columns RNUM, SETTING, DESCRIPTION
-    # and the right values in the rows 8,9,10,12,13,17,20,31,33,166,203:208!
-    df_settings <- df_settings |>
-      dplyr::filter(RNUM %in% c(8,9,10,
-                                12,13,
-                                17,18,19,20,
-                                31,33,166,
-                                203,204,205,206,207,208,
-                                246
-      )) |>
-      dplyr::mutate(new_names = c(
-        "configuration_file", "created_at", "sw_version",
-        "spatial_resolution", "origin_calibrated",
-        "meas_geometry", "circ_lower_limit", "circ_upper_limit", "outmost_year",
-        "min_cell_area", "max_cell_area", "dbl_cwt_threshold",
-        "max_cwtrad_s", "max_cwtrad_l", "relwidth_cwt_window", "maxrel_opp_cwt",
-        "max_cwttan_s", "max_cwttan_l",
-        "annotated_image"
-      )) |>
-      dplyr::select(SETTING, new_names) |>
-      tidyr::pivot_wider(names_from = new_names, values_from = SETTING) |>
-      dplyr::mutate(
-        meas_geometry = dplyr::if_else(meas_geometry==1, "linear", "circular"),
-        annotated_image = dplyr::case_when(
-          annotated_image == 0 ~ "none",
-          annotated_image == 1 ~ "outlines",
-          annotated_image == 3 ~ "filled",
-          TRUE ~ NA
-        ),
-        fname_settings = file_settings,
-        software = "ROXAS") |>
-      tidyr::separate(origin_calibrated,
-                      into = c("origin_calibrated_x", "origin_calibrated_y"),
-                      sep = "[ ]*/[ ]*", remove = TRUE, convert = TRUE) |>
-      dplyr::relocate(fname_settings, software, sw_version)
-  }
-  else {
+  } else {
     cli::cli_abort("Only classical ROXAS supported atm.")
   }
 
@@ -491,43 +420,6 @@ collect_settings_data <- function(files_settings,
   df_settings_all
 }
 
-#' Handle date conversion for ROXAS settings created at dates
-#'
-#' The Date created field in the raw ROXAS settings files may have different
-#' formats depending on the ROXAS version and user locale.
-#'
-#' @param date_strings Vector of date strings to be converted.
-#' @param orders One or more date formats to be used for parsing,
-#' see [lubridate::parse_date_time()].
-#' @param tz Timezone for the converted dates (default: system timezone).
-#' @param exact Whether to enforce exact matching of the provided format(s), or
-#' allow lubridate some flexibility to guess.
-#'
-#' @returns A vector of POSIXct dates.
-#' @export
-convert_settings_dates <- function(date_strings,
-                                  orders = c("%d.%m.%Y %H:%M:%S", "%d/%m/%Y %H:%M"),
-                                  tz = Sys.timezone(),
-                                  exact = TRUE) {
-  checkmate::assert_character(date_strings, any.missing = FALSE)
-  checkmate::assert_character(orders, any.missing = FALSE)
-  checkmate::assert_string(tz)
-
-  conv_dates <- date_strings %>%
-    lubridate::parse_date_time(., orders = orders, tz = tz)
-
-  # plausibility checks: no NAs and not in future
-  check_dates <- any(is.na(conv_dates)) || any(conv_dates > Sys.time())
-  if (check_dates) {
-    cli::cli_abort(c(
-      "Not all dates from the ROXAS settings files could be converted",
-      "x" = "Please check the format of the Date created field in the raw files."
-    ))
-  }
-
-  conv_dates
-}
-
 
 #' Combine raw ROXAS metadata
 #'
@@ -559,8 +451,12 @@ combine_rxs_metadata <- function(df_structure,
     dplyr::left_join(df_settings, by = 'fname_settings') |>
     dplyr::relocate(dplyr::starts_with('fname'), .after = dplyr::last_col())
 
+  # TODO: validate? should have correct columns by construction except for dates
+  # but what if user does funny stuff before?
+  validate_schema(df_rxsmeta, schema = "images", warn_only = TRUE)
+
   cli::cli_inform(c(
-    "v" = "Available ROXAS metadata extracted to {.var df_rxsmeta}"
+    "v" = "Available ROXAS metadata extracted to {.var QWAmetadata} object"
   ))
 
   new_QWAmetadata(images = df_rxsmeta)
