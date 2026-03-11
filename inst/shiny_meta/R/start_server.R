@@ -1,34 +1,34 @@
 # MODULE SERVER ----------------------------------------------------------------
 start_server <- function(id, main_session) {
-  moduleServer(id, function(input, output, session) {
+  shiny::moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
     # reactive container for input data
-    input_meta <- reactiveValues(
+    input_meta <- shiny::reactiveValues(
       source = "Please select input source and load data",
-      roxas_data = NULL,
+      images = NULL,
       dataset_tbls = NULL,
       site_tbls = NULL
     )
 
     # next button
     # toggle: enable only if we have input data and check_raw is checked
-    observe({
+    shiny::observe({
       shinyjs::toggleState(
-        id = "btn_next", condition = !is.null(input_meta$roxas_data))
+        id = "btn_next", condition = !is.null(input_meta$images))
     })
     # functionality: switch to next tab
-    observeEvent(input$btn_next, {
-      nav_select(id = 'tabs', selected = tab_general, session = main_session)
+    shiny::observeEvent(input$btn_next, {
+      bslib::nav_select(id = 'tabs', selected = tab_general, session = main_session)
     })
 
 
     # LOAD INPUT DATA ----------------------------------------------------------
-    observeEvent(input$btn_input, {
+    shiny::observeEvent(input$btn_input, {
       # warn before overwriting existing data
-      if (!is.null(input_meta$roxas_data)) {
-        showModal(
-          modalDialog(
+      if (!is.null(input_meta$images)) {
+        shiny::showModal(
+          shiny::modalDialog(
             title = "Warning",
             "This action overwrites any existing inputs provided in the app,
             including any data already provided in the other tabs.
@@ -46,23 +46,22 @@ start_server <- function(id, main_session) {
     })
 
     # if overwrite confirmed, also show input source modal
-    observeEvent(input$confirm_overwrite, {
-      removeModal()
+    shiny::observeEvent(input$confirm_overwrite, {
+      shiny::removeModal()
       show_input_modal(ns)
     })
 
     # ui to provide input data based on selected option
-    output$load_details_ui <- renderUI({
-      req(input$load_type)
-      if (input$load_type == "fresh") {
-        tagList(
-          fileInput(ns("csv_file"), "Load CSV containing raw metadata", accept = c(".csv")),
-          if (!server_run){
-            textInput(ns("df_name"), "Or provide name of data.frame in current R environment", value = "")
-          } else NULL
-        )
-      } else if (input$load_type == "continue") {
-        fileInput(ns("json_file"), "Load JSON with partially completed submission", accept = c(".json"))
+    output$load_details_ui <- shiny::renderUI({
+      shiny::req(input$load_type)
+      if (input$load_type == "env"){
+        if (!server_run){
+          shiny::textInput(ns("input_name"), "Provide the name of the object in your current R environment", value = "rxs_meta")
+        } else {
+          shiny::tags$i("Only possible for local runs.")
+        }
+      } else if (input$load_type == "file") {
+        shiny::fileInput(ns("input_file"), "Load data from file (.json, .csv)", accept = c(".json", ".csv"))
       } else { # example
         NULL
       }
@@ -70,58 +69,57 @@ start_server <- function(id, main_session) {
 
     observeEvent(input$confirm_input, {
       safe_block({
-        # new submission: load df from env or file
-        if (input$load_type == "fresh") {
-          if (!is.null(input$df_name) && input$df_name != "") {
-            df <- get(input$df_name, envir = .GlobalEnv)
-            source <- glue::glue("data.frame {input$df_name} from current R environment")
-          } else if (!is.null(input$csv_file)) {
-            df <- vroom::vroom(input$csv_file$datapath, show_col_types = FALSE)
-            source <- glue::glue("read from file {input$csv_file$name}")
-          } else {
+        if (input$load_type == "env") {
+          if (is.null(input$input_name) || is.na(input$input_name) || input$input_name == "") {
             stop("Please provide input source.")
+          } else {
+            res <- get_from_env(input$input_name, envir = .GlobalEnv)
+            source <- glue::glue("object {input$input_name} from current R environment")
           }
-          # validate input table and update reactive
-          df <- validate_df(df, "roxas", force_required = TRUE, ignore_colnames = FALSE)
-          input_meta$source <- source
-          input_meta$roxas_data <- df
-          input_meta$dataset_tbls <- NULL # reset if necessary
-          input_meta$site_tbls <- NULL # reset if necessary
-        # existing submission: load data from json
-        } else if (input$load_type == "continue") {
-          if (!is.null(input$json_file)) {
-            imported <- jsonlite::read_json(input$json_file$datapath, simplifyVector = TRUE)
-            source <- glue::glue("read from file {input$json_file$name}")
-            # validate json and update reactive
-            validated <- validate_json(imported)
-            input_meta$source <- source
-            input_meta$roxas_data <- validated$roxas_data
-            input_meta$dataset_tbls <- validated[names(validated) %in% c("ds_data","author_data", "funding_data", "relresource_data")]
-            input_meta$site_tbls <- validated[names(validated) %in% c("site_data","tree_data", "woodpiece_data", "slide_data")]
+        } else if (input$load_type == "file"){
+          if (is.null(input$input_file) || is.na(input$input_file) || input$input_file == "") {
+            stop("Please provide input source.")
+          } else {
+            ext <- tools::file_ext(input$input_file$datapath)
+            if (ext == "csv"){
+              res <- vroom::vroom(input$input_file$datapath, show_col_types = FALSE)
+            } else {
+              res <- jsonlite::read_json(input$input_file$datapath, simplifyVector = TRUE)
+            }
+            source <- glue::glue("read from file {input$input_file$name}")
           }
-        # example run: load example data
         } else {
           example_file <- system.file("extdata", "20251015_TRIA_POGSTO2024_collected_metadata.json", package = "rxs2tria")
-          imported <- jsonlite::read_json(example_file, simplifyVector = TRUE)
+          res <- jsonlite::read_json(example_file, simplifyVector = TRUE)
           source <- glue::glue("using example dataset")
-          # validate json and update reactive
-          validated <- validate_json(imported) # should always pass
+        }
+        if (inherits(res, "QWAmetadata")) {
+          # QWAmetadata object from R environment: unpack directly
           input_meta$source <- source
-          input_meta$roxas_data <- validated$roxas_data
-          input_meta$dataset_tbls <- validated[names(validated) %in% c("ds_data","author_data", "funding_data", "relresource_data")]
-          input_meta$site_tbls <- validated[names(validated) %in% c("site_data","tree_data", "woodpiece_data", "slide_data")]
+          input_meta$images <- validate_df(res$images, "images", force_required = TRUE)
+          input_meta$dataset_tbls <- res[c("dataset", "authors", "funding", "relresources")]
+          input_meta$site_tbls <- res[c("sites", "trees", "woodpieces", "slides")]
+        } else if (is.data.frame(res)){
+          # single df: assume it's QWAmetadata$images
+          df <- validate_df(res, "images", force_required = TRUE, ignore_colnames = FALSE)
+          input_meta$source <- source
+          input_meta$images <- df
+          input_meta$dataset_tbls <- NULL # reset if necessary
+          input_meta$site_tbls <- NULL # reset if necessary
+        } else {
+          validated <- validate_json(res)
+          input_meta$source <- source
+          input_meta$images <- validated$images
+          input_meta$dataset_tbls <- validated[names(validated) %in% c("dataset", "authors", "funding", "relresources")]
+          input_meta$site_tbls <- validated[names(validated) %in% c("sites", "trees", "woodpieces", "slides")]
         }
         removeModal()
       }, propagate_err = FALSE)
     })
 
-
-
-
-
     # output with source of input data
     output$file_status <- renderUI({
-      if (is.null(input_meta$roxas_data)) {
+      if (is.null(input_meta$images)) {
         code(input_meta$source,
              class = 'code-output', style = 'color: #da292e;') # bs-danger color
       } else {
@@ -133,9 +131,9 @@ start_server <- function(id, main_session) {
     # RENDER SHINYTREE ---------------------------------------------------------
     # create data.tree and shinyTree compatible JSON of data structure
     dtree_json <- reactive({
-      req(input_meta$roxas_data)
+      req(input_meta$images)
 
-      df_dtree <- input_meta$roxas_data %>% dplyr::select(site_label, species_code, tree_label, woodpiece_label, slide_label, image_label, org_img_name)
+      df_dtree <- input_meta$images %>% dplyr::select(site_label, species_code, tree_label, woodpiece_label, slide_label, image_label, org_img_name)
       df_dtree <- df_dtree |>
         dplyr::mutate(
           tree = stringr::str_remove(tree_label, glue::glue("({site_label}_)*({species_code}_)*")),
@@ -182,22 +180,22 @@ start_server <- function(id, main_session) {
     })
 
     output$tree <- shinyTree::renderTree({
-      validate(need(!is.null(input_meta$roxas_data), "No data to show"))
+      validate(need(!is.null(input_meta$images), "No data to show"))
 
       dtree_json()
       })
 
 
     # RENDER DATATABLE ---------------------------------------------------------
-    roxas_data_out <- reactiveVal(NULL)
+    images_out <- reactiveVal(NULL)
 
-    observeEvent(input_meta$roxas_data, {
-      roxas_data_out(input_meta$roxas_data)
+    observeEvent(input_meta$images, {
+      images_out(input_meta$images)
     })
 
     # for the conditional panel with the column selection
     output$roxas_data_available <- reactive({
-      !is.null(input_meta$roxas_data)
+      !is.null(input_meta$images)
     })
     outputOptions(output, "roxas_data_available", suspendWhenHidden = FALSE)
 
@@ -271,9 +269,9 @@ start_server <- function(id, main_session) {
 
     # render DT
     output$roxas_table <- DT::renderDT({
-      validate(need(!is.null(input_meta$roxas_data), "No data to show"))
+      validate(need(!is.null(input_meta$images), "No data to show"))
 
-      df <- input_meta$roxas_data # render initially based on input_meta$roxas_data
+      df <- input_meta$images # render initially based on input_meta$images
 
       # get ready for display
       df$.DT_RowIndex <- seq_len(nrow(df))
@@ -285,7 +283,7 @@ start_server <- function(id, main_session) {
 
       # TODO: get idxs of hidden cols from input$cols_meta and add to columnDefs visible = FALSE
       # from schema dtColGroup
-      obj <- get_schema('roxas_data')
+      obj <- get_schema('images')
       tbl_schema <- jsonlite::fromJSON(obj$schema$schema)
       extracted_groups <- sapply(tbl_schema$items$properties, function(x) x$dtColGroup)
       col_groups <- split(names(extracted_groups), extracted_groups)
@@ -355,12 +353,12 @@ start_server <- function(id, main_session) {
     observeEvent(input$cols_meta, {
       req(roxas_proxy)
 
-      df <- roxas_data_out()
+      df <- images_out()
 
       # Determine which columns to show (note: .DT_RowIndex is not in df, but always last and always hidden)
       selected_groups <- input$cols_meta
 
-      obj <- get_schema('roxas_data')
+      obj <- get_schema('images')
       tbl_schema <- jsonlite::fromJSON(obj$schema$schema)
       extracted_groups <- sapply(tbl_schema$items$properties, function(x) x$dtColGroup)
       col_groups <- split(names(extracted_groups), extracted_groups)
@@ -407,8 +405,8 @@ start_server <- function(id, main_session) {
           info$value[info$value == "TRUE"] <- TRUE
           info$value[info$value == "FALSE"] <- FALSE
           # update reactive
-          updated_data <- DT::editData(roxas_data_out(), info, rownames = FALSE)
-          roxas_data_out(updated_data)
+          updated_data <- DT::editData(images_out(), info, rownames = FALSE)
+          images_out(updated_data)
 
           # adaptions for display
           cb_col <- "only_ew"
@@ -447,7 +445,7 @@ start_server <- function(id, main_session) {
     # return the input meta and val check for use in other tabs
     return(
       list(
-        roxas_data = roxas_data_out,
+        images = images_out,
         dataset_tbls = reactive(input_meta$dataset_tbls),
         site_tbls = reactive(input_meta$site_tbls)
         #val_checks = validation_checks

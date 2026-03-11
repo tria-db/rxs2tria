@@ -21,33 +21,33 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
     observeEvent(dataset_tbls_in(),{
       tbls <- dataset_tbls_in()
 
-      # Update ds_data fields if available and possible
-      if (!is.null(tbls$ds_data)){
+      # Update dataset fields if available and possible
+      if (!is.null(tbls$dataset)){
         updateTextInput(
           session, "ds_name",
-          value = ifelse(isTruthy(tbls$ds_data$ds_name), tbls$ds_data$ds_name, ""))
+          value = ifelse(isTruthy(tbls$dataset$ds_name), tbls$dataset$ds_name, ""))
         updateTextAreaInput(
           session, "acknowledgements",
-          value = ifelse(isTruthy(tbls$ds_data$acknowledgements), tbls$ds_data$acknowledgements, ""))
+          value = ifelse(isTruthy(tbls$dataset$acknowledgements), tbls$dataset$acknowledgements, ""))
         safe_block({
-          if (isTruthy(tbls$ds_data$ds_access)) {
-            updateRadioButtons(session, "ds_access", selected = tbls$ds_data$ds_access)
-            if (tbls$ds_data$ds_access == "public"){
+          if (isTruthy(tbls$dataset$ds_access)) {
+            updateRadioButtons(session, "ds_access", selected = tbls$dataset$ds_access)
+            if (tbls$dataset$ds_access == "public"){
               updateSelectizeInput(
                 session, "ds_license",
-                selected = ifelse(isTruthy(tbls$ds_data$ds_license), tbls$ds_data$ds_license, "CC BY 4.0"))
-            } else if (tbls$ds_data$ds_access == "restricted"){
+                selected = ifelse(isTruthy(tbls$dataset$ds_license), tbls$dataset$ds_license, "CC BY 4.0"))
+            } else if (tbls$dataset$ds_access == "restricted"){
               updateDateInput(
                 session, "embargoed_until",
-                value = ifelse(isTruthy(tbls$ds_data$embargoed_until), as.Date(tbls$ds_data$embargoed_until), Sys.Date() + 365))
+                value = ifelse(isTruthy(tbls$dataset$embargoed_until), as.Date(tbls$dataset$embargoed_until), Sys.Date() + 365))
             }
           }
-          if (isTruthy(tbls$ds_data$description)) {
+          if (isTruthy(tbls$dataset$description)) {
             updateTextAreaInput(
               session, "description",
-              value = tbls$ds_data$description)
+              value = tbls$dataset$description)
           } else {
-            template <- generate_desc_template(tbls$roxas_data)
+            template <- generate_desc_template(tbls$images)
             updateTextAreaInput(
               session, "description",
               value = template)
@@ -55,19 +55,19 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
         }, err_message = "Some dataset fields could not be updated", propagate_err = FALSE)
       }
 
-      # Update author_data_in if available
-      if(!is.null(tbls$author_data)) {
-        author_data_in(tbls$author_data)
+      # Update authors if available
+      if(!is.null(tbls$authors)) {
+        author_data_in(tbls$authors)
       }
 
-      # Update funding_data_in if available
-      if(!is.null(tbls$funding_data)) {
-        funding_data_in(tbls$funding_data)
+      # Update funding if available
+      if(!is.null(tbls$funding)) {
+        funding_data_in(tbls$funding)
       }
 
-      # Update doi_data_in if available
-      if(!is.null(tbls$relresource_data)) {
-        relres_data_in(tbls$relresource_data)
+      # Update relresources if available
+      if(!is.null(tbls$relresources)) {
+        relres_data_in(tbls$relresources)
       }
 
     })
@@ -719,7 +719,7 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
     return(
       list(
         dataset_tbls  = list(
-          ds_data = reactive(data.frame(
+          dataset = reactive(data.frame(
             ds_name = input$ds_name,
             description = input$description,
             ds_access = input$ds_access,
@@ -727,9 +727,9 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
             embargoed_until = ifelse(input$ds_access == "restricted", input$embargoed_until, ""),
             acknowledgements = input$acknowledgements
           )),
-          author_data = author_data_out,
-          funding_data = funding_data_out,
-          relresource_data = relres_data_out
+          authors = author_data_out,
+          funding = funding_data_out,
+          relresources = relres_data_out
         ),
         val_check = validation_checks
       )

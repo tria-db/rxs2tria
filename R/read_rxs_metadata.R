@@ -451,8 +451,8 @@ combine_rxs_metadata <- function(df_structure,
     dplyr::left_join(df_settings, by = 'fname_settings') |>
     dplyr::relocate(dplyr::starts_with('fname'), .after = dplyr::last_col())
 
-  # TODO: validate? should have correct columns by construction except for dates
-  # but what if user does funny stuff before?
+  # validate against the base schema, but warn only. user may want to fix 
+  # things manually in the metadata app
   validate_schema(df_rxsmeta, schema = "images", warn_only = TRUE)
 
   cli::cli_inform(c(

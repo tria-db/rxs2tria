@@ -33,7 +33,7 @@ server <- function(input, output, session) {
   dataset_out <- dataset_server('ds', session, start_out$dataset_tbls)
 
   site_out <- site_server('site', session,
-                          start_out$roxas_data, start_out$site_tbls,
+                          start_out$images, start_out$site_tbls,
                           countries_list)
 
   summary_server('summary', session,

@@ -25,18 +25,17 @@ summary_server <- function(id, main_session, start_out, dataset_out, site_out) {
     })
 
     data_combined <- reactive({
-      results <- list()
-      results$ds_data <- dataset_out$dataset_tbls$ds_data()
-      results$author_data <- dataset_out$dataset_tbls$author_data()
-      results$funding_data <- dataset_out$dataset_tbls$funding_data()
-      results$relresource_data <- dataset_out$dataset_tbls$relresource_data()
-      results$site_data <- site_out$site_tbls$site_data()
-      results$tree_data <- site_out$site_tbls$tree_data()
-      results$woodpiece_data <- site_out$site_tbls$woodpiece_data()
-      results$slide_data <- site_out$site_tbls$slide_data()
-      results$roxas_data <- start_out$roxas_data()
-
-      results
+      new_QWAmetadata(
+        dataset     = dataset_out$dataset_tbls$dataset(),
+        authors     = dataset_out$dataset_tbls$authors(),
+        funding     = dataset_out$dataset_tbls$funding(),
+        relresources = dataset_out$dataset_tbls$relresources(),
+        sites       = site_out$site_tbls$sites(),
+        trees       = site_out$site_tbls$trees(),
+        woodpieces  = site_out$site_tbls$woodpieces(),
+        slides      = site_out$site_tbls$slides(),
+        images      = start_out$images()
+      )
     })
 
 
@@ -80,17 +79,14 @@ summary_server <- function(id, main_session, start_out, dataset_out, site_out) {
 
     output$final_export <- downloadHandler(
       filename = function() {
-        ds_name <- data_combined()$ds_data$ds_name[1] %||% ""
+        ds_name <- data_combined()$dataset$ds_name[1] %||% ""
         ds_name <- convert_ds_name_filename(ds_name)
         curr_date <- format(Sys.Date(), "%Y%m%d")
         glue::glue("{curr_date}_TRIA_{ds_name}_collected_metadata.json")
       },
       content = function(file) {
         removeModal()
-        # Save the data to a file
-        data_to_export <- data_combined()
-        #data_to_export$export_type <- 'final'
-        jsonlite::write_json(data_to_export, file, pretty = TRUE)
+        jsonlite::write_json(data_combined(), file, pretty = TRUE)
       }
     )
 

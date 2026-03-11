@@ -56,7 +56,7 @@ new_QWAmetadata <- function(dataset = NULL,
       slides = slides,      # slide-level metadata
       images = images       # image-level metadata (ROXAS output + EXIF + settings)
     ),
-    class = "QWAmetadata"
+    class = c("QWAmetadata", "list")
   )
 }
 
@@ -335,6 +335,11 @@ print.QWAmetadata <- function(x, ...) {
 #' @export
 summary.QWAmetadata <- function(object, ...) {
   print(object, ...)
+}
+
+#' @exportS3Method jsonlite::toJSON
+toJSON.QWAmetadata <- function(x, ...) {
+  NextMethod()
 }
 
 

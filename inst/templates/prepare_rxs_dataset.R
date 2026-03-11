@@ -20,7 +20,7 @@ files <- get_roxas_files(path_in)
 # Example below assumes the common convention {site}_{species}_{tree}_{slide}_{image}
 # (one woodpiece per tree, so no woodpiece identifier in the pattern)
 
-pattern <- "^(?<site>[[:alnum:]]+)_(?<species>[[:alnum:]]+)_(?<tree>[[:alnum:].]+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)$"
+pattern <- "(?<site>[[:alnum:]]+)_(?<species>[[:alnum:]]+)_(?<tree>[[:alnum:]]+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)"
 df_structure <- extract_data_structure(files, pattern)
 
 # Always check the result before proceeding:
@@ -34,8 +34,9 @@ df_images <- collect_image_info(df_structure$fname_image)
 df_settings <- collect_settings_data(df_structure$fname_settings,
                                      roxas_version = "classic")
 
-# Due to high chance of errors, the datetime type conversion is made explicit:
-# Adapt the date format orders and timezone as required
+# To avoid conversion errors, datetime columns are originally read as pure
+# character strings, and you need to explicitly convert them to POSIXct with
+# the appropriate format(s) and timezone.
 df_images$img_created_at <- lubridate::parse_date_time(
   df_images$img_created_at, 
   orders = "%Y:%m:%d %H:%M:%S", # common EXIF format
@@ -54,7 +55,7 @@ rm(df_images, df_settings)
 # Step 4: Read and clean the measurement data
 # ------------------------------------------------------------------------------
 
-QWA_data <- collect_raw_data(df_structure)
+QWA_data <- collect_raw_data(df_structure) 
 QWA_data <- remove_outliers(QWA_data)
 QWA_data <- complete_cell_measures(QWA_data)
 
