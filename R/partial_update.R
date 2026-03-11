@@ -10,7 +10,7 @@ update_rxsmeta <- function(df_rxsmeta, imgs_to_update, settings_date_orders,
                                            roxas_version = roxas_version)
 
   # convert created at dates to POSIXct
-  df_settings_new$rxs_created_at <- convert_settings_dates(
+  df_settings_new$rxs_created_at <- lubridate::parse_date_time(
     df_settings_new$rxs_created_at,
     orders = settings_date_orders, # cf. lubridate::parse_date_time
     tz = Sys.timezone())

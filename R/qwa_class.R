@@ -20,7 +20,7 @@ new_QWAdata <- function(cells = NULL,
       profiles = profiles,
       metadata = metadata
     ),
-    class = "QWAdata"
+    class = c("QWAdata", "list")
   )
 }
 
@@ -335,11 +335,6 @@ print.QWAmetadata <- function(x, ...) {
 #' @export
 summary.QWAmetadata <- function(object, ...) {
   print(object, ...)
-}
-
-#' @exportS3Method jsonlite::toJSON
-toJSON.QWAmetadata <- function(x, ...) {
-  NextMethod()
 }
 
 

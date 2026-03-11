@@ -44,7 +44,7 @@ df_images$img_created_at <- lubridate::parse_date_time(
 )
 df_settings$rxs_created_at <- lubridate::parse_date_time(
   df_settings$rxs_created_at,
-  orders = c("%d.%m.%Y %H:%M:%S", "%d/%m/%Y %H:%M"),
+  orders = c("%d.%m.%Y %H:%M:%S", "%d/%m/%Y %H:%M"), 
   tz = Sys.timezone()
 )
 
@@ -55,6 +55,8 @@ rm(df_images, df_settings)
 # Step 4: Read and clean the measurement data
 # ------------------------------------------------------------------------------
 
+# NOTE: we need at least the structure and filepath columns to collect the raw
+# data, so rxs_meta$images also works as input
 QWA_data <- collect_raw_data(df_structure) 
 QWA_data <- remove_outliers(QWA_data)
 QWA_data <- complete_cell_measures(QWA_data)

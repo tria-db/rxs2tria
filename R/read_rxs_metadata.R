@@ -23,18 +23,22 @@ get_roxas_files <- function(path_in) {
   # NOTE: use fs rather than base list.files, much faster for network shares
   files_cells <- fs::dir_ls(
     fs::path_abs(path_in),
+    type = "file",
     regexp = pattern_cell_files,
     recurse = TRUE)
   files_rings <- fs::dir_ls(
     fs::path_abs(path_in),
+    type = "file",
     regexp = pattern_ring_files,
     recurse = TRUE)
   files_settings <- fs::dir_ls(
     fs::path_abs(path_in),
+    type = "file",
     regexp = pattern_settings_files,
     recurse = TRUE)
   files_images <- fs::dir_ls(
     fs::path_abs(path_in),
+    type = "file",
     regexp = pattern_orgimg_files,
     recurse = TRUE) |>
     stringr::str_subset(pattern = pattern_excl_keywords, negate = TRUE)
