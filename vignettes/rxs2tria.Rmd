@@ -122,11 +122,11 @@ hey are originally read as pure character strings, and you need to
 explicitly convert them to POSIXct with the appropriate format(s) and timezone.
 
 ```{r rawmeta, eval = FALSE}
-df_images <- collect_image_info(df_structure$fname_image)
 df_settings <- collect_settings_data(df_structure$fname_settings,
-                                     roxas_version = "classic")
-df_images$img_created_at <- lubridate::parse_date_time(
-  df_images$img_created_at, 
+                                     roxas_version = "roxas",
+                                     files_images = df_structure$fname_image)
+df_settings$img_created_at <- lubridate::parse_date_time(
+  df_settings$img_created_at,
   orders = "%Y:%m:%d %H:%M:%S", # common EXIF format
   tz = "UTC" # commonly used in EXIF tags
 )
@@ -135,8 +135,8 @@ df_settings$rxs_created_at <- lubridate::parse_date_time(
   orders = c("%d.%m.%Y %H:%M:%S", "%d/%m/%Y %H:%M"),
   tz = Sys.timezone()
 )
-rxs_meta <- combine_rxs_metadata(df_structure, df_images, df_settings)
-rm(df_images, df_settings)
+rxs_meta <- combine_rxs_metadata(df_structure, df_settings)
+rm(df_settings)
 
 rxs_meta  # prints a summary of the metadata
 ```

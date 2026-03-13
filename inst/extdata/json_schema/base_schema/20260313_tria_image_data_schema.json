@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "TODO:addurltoTRIAschema",
+  "title": "image_data",
+  "description": "Reference only, common properties for ROXAS and ROXAS AI schemata",
+  "type": "object",
+  "properties": {
+    "image_label": {
+      "type": "string",
+      "minLength": 1,
+      "dtColGroup": "cols_structure"
+    },
+    "slide_label": {
+      "type": "string",
+      "minLength": 1,
+      "dtColGroup": "cols_structure"
+    },
+    "woodpiece_label": {
+      "type": "string",
+      "minLength": 1,
+      "dtColGroup": "cols_structure"
+    },
+    "tree_label": {
+      "type": "string",
+      "minLength": 1,
+      "dtColGroup": "cols_structure"
+    },
+    "species_code": {
+      "type": ["string", "null"],
+      "dtColGroup": "cols_structure"
+    },
+    "site_label": {
+      "type": "string",
+      "minLength": 1,
+      "title": "Site",
+      "description": "Site identifier",
+      "dtColGroup": "cols_structure"
+    },
+    "sample_type": {
+      "type": ["string", "null"],
+      "enum": ["", "conifer", "angiosperm"],
+      "dtColGroup": "cols_settings"
+    },
+    "band_width": {
+      "type": ["number", "null"],
+      "dtColGroup": "cols_userinput"
+    },
+    "only_ew": {
+      "type": ["boolean", "null"],
+      "dtColGroup": "cols_userinput"
+    },
+    "spatial_resolution": {
+        "type": ["number", "null"],
+        "dtColGroup": "cols_settings"
+    },
+    "meas_geometry": {
+      "type": ["string", "null"],
+      "enum": ["", "linear", "circular"],
+      "dtColGroup": "cols_settings"
+    },
+    "org_img_name": {
+      "type": "string",
+      "minLength": 1,
+      "dtColGroup": "cols_images"
+    },
+    "img_filetype": {
+      "type": ["string", "null"],
+      "dtColGroup": "cols_images"
+    },
+    "img_size": {
+      "type": ["number", "null"],
+      "dtColGroup": "cols_images"
+    },
+    "img_width": {
+      "type": ["number", "null"],
+      "dtColGroup": "cols_images"
+    },
+    "img_height": {
+      "type": ["number", "null"],
+      "dtColGroup": "cols_images"
+    },
+    "img_created_at": {
+      "type": ["string","null"],
+      "format": "date-time",
+      "dtColGroup": "cols_images"
+    },
+    "img_software": {
+      "type": ["string", "null"],
+      "title": "Scanner software",
+      "description": "Software used to scan the image",
+      "dtColGroup": "cols_images"
+    },
+    "scan_mode": {
+      "type": ["string", "null"],
+      "enum": ["", "RGB", "other"],
+      "dtColGroup": "cols_images"
+    },
+    "software": {
+      "type": "string",
+      "minLength": 1,
+      "enum": ["roxas", "roxas_ai"],
+      "dtColGroup": "cols_settings"
+    },
+    "sw_version": {
+      "type": ["string", "null"],
+      "dtColGroup": "cols_settings"
+    },
+    "rxs_created_at": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "dtColGroup": "cols_settings"
+    },
+    "outmost_year": {
+      "type": ["number", "null"],
+      "dtColGroup": "cols_settings"
+    },
+    "fname_image": {
+      "type": ["string", "null"],
+      "dtColGroup": "cols_paths"
+    },
+    "fname_cells": {
+      "type": ["string", "null"],
+      "dtColGroup": "cols_paths"
+    },
+    "fname_rings": {
+      "type": ["string", "null"],
+      "dtColGroup": "cols_paths"
+    },
+    "fname_settings": {
+      "type": ["string", "null"],
+      "dtColGroup": "cols_paths"
+    }
+  },
+  "required": ["image_label", "slide_label", "woodpiece_label", "tree_label", 
+    "site_label", "org_img_name", "software"]
+}

@@ -30,26 +30,32 @@ df_structure <- extract_data_structure(files, pattern)
 # Step 3: Collect metadata
 # ------------------------------------------------------------------------------
 
-df_images <- collect_image_info(df_structure$fname_image)
-df_settings <- collect_settings_data(df_structure$fname_settings,
-                                     roxas_version = "classic")
+# ROXAS (image EXIF metadata is collected automatically from files_images):
+df_settings <- collect_settings_data(files_settings = df_structure$fname_settings,
+                                     files_images = df_structure$fname_image,
+                                     roxas_version = "roxas")
+
+# ROXAS AI (image metadata is already in the settings JSON files):
+df_settings <- collect_settings_data(files_settings = df_structure$fname_settings,
+                                     roxas_version = "roxas_ai")
 
 # To avoid conversion errors, datetime columns are originally read as pure
 # character strings, and you need to explicitly convert them to POSIXct with
 # the appropriate format(s) and timezone.
-df_images$img_created_at <- lubridate::parse_date_time(
-  df_images$img_created_at, 
+# ROXAS only (img_created_at comes from EXIF, common format):
+df_settings$img_created_at <- lubridate::parse_date_time(
+  df_settings$img_created_at,
   orders = "%Y:%m:%d %H:%M:%S", # common EXIF format
   tz = "UTC" # commonly used in EXIF tags
 )
 df_settings$rxs_created_at <- lubridate::parse_date_time(
   df_settings$rxs_created_at,
-  orders = c("%d.%m.%Y %H:%M:%S", "%d/%m/%Y %H:%M"), 
+  orders = c("%d.%m.%Y %H:%M:%S", "%d/%m/%Y %H:%M"),
   tz = Sys.timezone()
 )
 
-rxs_meta <- combine_rxs_metadata(df_structure, df_images, df_settings)
-rm(df_images, df_settings)
+rxs_meta <- combine_rxs_metadata(df_structure, df_settings)
+rm(df_settings)
 
 # ------------------------------------------------------------------------------
 # Step 4: Read and clean the measurement data

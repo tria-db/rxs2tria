@@ -43,21 +43,27 @@ write_QWAmetadata <- function(x, file, compress = TRUE, overwrite = FALSE) {
 read_QWAmetadata <- function(file, warn_only = TRUE) {
   checkmate::assert_file_exists(file)
   raw <- jsonlite::read_json(file, simplifyVector = TRUE)
+  # TODO: warn if extra components are ignored?
   # NULL components are serialised as [] and read back as list(); restore to NULL
   df_or_null <- function(x) if (length(x) == 0) NULL else x
+  # Align each present component to its schema (coerce types, drop extra cols)
+  align <- function(df, schema){
+    if (!is.null(df)) align_df_to_schema(df, schema, align = TRUE) else NULL
+  } 
+  # TODO: need to get software from df itself in case of images
+  # a task for purrr::lmap?
 
   meta <- new_QWAmetadata(
-    dataset      = df_or_null(raw$dataset),
-    authors      = df_or_null(raw$authors),
-    funding      = df_or_null(raw$funding),
-    relresources = df_or_null(raw$relresources),
-    sites        = df_or_null(raw$sites),
-    trees        = df_or_null(raw$trees),
-    woodpieces   = df_or_null(raw$woodpieces),
-    slides       = df_or_null(raw$slides),
-    images       = raw$images %||% data.frame()
+    dataset = align(df_or_null(raw$dataset), "dataset"),
+    authors = align(df_or_null(raw$authors), "authors"),
+    funding = align(df_or_null(raw$funding), "funding"),
+    related = align(df_or_null(raw$related), "related"),
+    sites = align(df_or_null(raw$sites), "sites"),
+    trees = align(df_or_null(raw$trees), "trees"),
+    woodpieces = align(df_or_null(raw$woodpieces),"woodpieces"),
+    slides = align(df_or_null(raw$slides), "slides"),
+    images = align(raw$images %||% data.frame(), "images")
   )
-  # TODO: validate all the available components
   validate_schema(meta$images, "images", warn_only = warn_only)
   cli::cli_inform(c("v" = "QWAmetadata read from {.file {file}}"))
   meta
