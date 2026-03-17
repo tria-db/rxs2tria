@@ -28,7 +28,7 @@ new_QWAdata <- function(cells = NULL,
 new_QWAmetadata <- function(dataset = NULL,
                             authors = NULL,
                             funding = NULL,
-                            relresources = NULL,
+                            related = NULL,
                             sites = NULL,
                             trees = NULL,
                             woodpieces = NULL,
@@ -37,7 +37,7 @@ new_QWAmetadata <- function(dataset = NULL,
   stopifnot(is.null(dataset) || is.data.frame(dataset))
   stopifnot(is.null(authors) || is.data.frame(authors))
   stopifnot(is.null(funding) || is.data.frame(funding))
-  stopifnot(is.null(relresources) || is.data.frame(relresources))
+  stopifnot(is.null(related) || is.data.frame(related))
   stopifnot(is.null(sites) || is.data.frame(sites))
   stopifnot(is.null(trees) || is.data.frame(trees))
   stopifnot(is.null(woodpieces) || is.data.frame(woodpieces))
@@ -46,15 +46,15 @@ new_QWAmetadata <- function(dataset = NULL,
 
   structure(
     list(
-      dataset = dataset,    # name, description, license
-      authors = authors,    # detailed info about the author(s)
-      funding = funding,    # funding sources and grants
-      relresources = relresources, # related resources (publications, datasets, etc.)
-      sites = sites,        # site-level metadata
-      trees = trees,        # tree-level metadata
-      woodpieces = woodpieces, # woodpiece-level metadata
-      slides = slides,      # slide-level metadata
-      images = images       # image-level metadata (ROXAS output + EXIF + settings)
+      dataset = dataset,
+      authors = authors,
+      funding = funding,
+      related = related,
+      sites = sites,
+      trees = trees, 
+      woodpieces = woodpieces, 
+      slides = slides, 
+      images = images 
     ),
     class = c("QWAmetadata", "list")
   )

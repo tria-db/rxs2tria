@@ -4,12 +4,10 @@
 \alias{combine_rxs_metadata}
 \title{Combine raw ROXAS metadata}
 \usage{
-combine_rxs_metadata(df_structure, df_images, df_settings)
+combine_rxs_metadata(df_structure, df_settings)
 }
 \arguments{
 \item{df_structure}{Dataframe with all input filenames and data structure.}
-
-\item{df_images}{Dataframe with extracted image exif data.}
 
 \item{df_settings}{Dataframe with extracted ROXAS settings data.}
 }
@@ -17,8 +15,7 @@ combine_rxs_metadata(df_structure, df_images, df_settings)
 A \code{QWAmetadata} object with the joined image-level metadata in \verb{$images}.
 }
 \description{
-Combine the extracted ROXAS filenames plus data structures (from
-\code{\link[=extract_data_structure]{extract_data_structure()}}), image exif data (from \code{\link[=collect_image_info]{collect_image_info()}}),
-and ROXAS settings data (with converted dates, cf. \code{\link[=collect_settings_data]{collect_settings_data()}}
-and \code{\link[=convert_settings_dates]{convert_settings_dates()}}) into one raw metadata dataframe.
+Combine the extracted ROXAS filenames plus data structure (from
+\code{\link[=extract_data_structure]{extract_data_structure()}}) and ROXAS settings and image exif data (from
+\code{\link[=collect_settings_data]{collect_settings_data()}}) into one raw metadata dataframe.
 }

@@ -2,20 +2,37 @@
 % Please edit documentation in R/utils-json.R
 \name{validate_schema}
 \alias{validate_schema}
-\title{Validate against json schema}
+\title{Validate a data frame against its JSON schema}
 \usage{
-validate_schema(df, schema = c("images", "authors"), warn_only = TRUE)
+validate_schema(
+  df,
+  schema,
+  roxas_version = NULL,
+  warn_only = TRUE,
+  greedy = TRUE
+)
 }
 \arguments{
-\item{df}{the data frame to validate.}
+\item{df}{Data frame to validate (slot of \code{\link[=QWAmetadata]{QWAmetadata()}} object).}
 
-\item{schema}{the name of the QWAmetadata element under question}
+\item{schema}{Name of the QWAmetadata component. For \code{"images"},
+\code{roxas_version} must be provided to select the correct schema.}
 
-\item{warn_only}{abort on errors}
+\item{roxas_version}{ROXAS software version: \code{"roxas"} or \code{"roxas_ai"}.
+Required when \code{schema = "images"}, ignored otherwise.}
+
+\item{warn_only}{If \code{TRUE} (default), validation failures raise a warning;
+if \code{FALSE}, they raise an error.}
+
+\item{greedy}{If \code{TRUE} (default), stops on the first validation error;
+if \code{FALSE}, collects all errors.}
 }
 \value{
-passes if validation ok
+Invisibly returns the validation result.
 }
 \description{
-Validate against json schema
+Validate a data frame against its JSON schema
+}
+\seealso{
+\code{\link[=align_df_to_schema]{align_df_to_schema()}}
 }

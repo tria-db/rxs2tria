@@ -4,7 +4,7 @@
 \alias{get_roxas_files}
 \title{Identify ROXAS data files}
 \usage{
-get_roxas_files(path_in)
+get_roxas_files(path_in, roxas_version = c("roxas", "roxas_ai"))
 }
 \arguments{
 \item{path_in}{path of the input directory.}

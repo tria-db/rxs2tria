@@ -122,9 +122,10 @@ hey are originally read as pure character strings, and you need to
 explicitly convert them to POSIXct with the appropriate format(s) and timezone.
 
 ```{r rawmeta, eval = FALSE}
-df_settings <- collect_settings_data(df_structure$fname_settings,
-                                     roxas_version = "roxas",
-                                     files_images = df_structure$fname_image)
+df_settings <- collect_settings_data(files_settings = df_structure$fname_settings,
+                                     files_images = df_structure$fname_image,
+                                     roxas_version = "roxas"
+                                     )
 df_settings$img_created_at <- lubridate::parse_date_time(
   df_settings$img_created_at,
   orders = "%Y:%m:%d %H:%M:%S", # common EXIF format
@@ -146,6 +147,11 @@ component holds the per-image metadata (ROXAS file paths, image data,
 and ROXAS settings). The optional components (`$dataset`, `$authors`,
 `$sites`, `$trees`, ...) are empty at this stage and can be provided
 separately for a full TRIA database submission.
+
+To save the `QWAmetadata` object to file:
+```{r savemeta, eval = FALSE}
+write_QWAmetadata(rxs_meta, "path/to/output_data/QWAmetadata.json")
+```
 
 ### Additional metadata (for TRIA submission)
 

@@ -341,10 +341,11 @@ collect_image_info <- function(files_images, batch_size = 50) {
         na.rm = TRUE
       ),
       .keep = "unused" # remove the original date cols
-    ) |> 
-    dplyr::mutate(
-      scan_mode = NA_character_ # TODO: infer somehow?
-    )
+    ) 
+  # |> 
+  #   dplyr::mutate(
+  #     scan_mode = NA_character_ # TODO: infer somehow?
+  #   )
 
   cli::cli_inform(c(
     "v" = glue::glue("Image metadata extracted from {length(files_images)} images")
@@ -495,8 +496,8 @@ collect_settings_data <- function(files_settings,
     df_settings_all <- df_settings_all |>
       dplyr::mutate(dplyr::across(c(spatial_resolution,
                                     dbl_cwt_threshold:max_cwttan_l), as.numeric),
-                    dplyr::across(circ_lower_limit:max_cell_area, as.integer),
-                    sample_type = NA_character_ # TODO: as input?
+                    dplyr::across(circ_lower_limit:max_cell_area, as.integer)
+                    #sample_type = NA_character_ # TODO: as input?
                   )
     # collect image EXIF metadata and bind alongside settings columns
     # NOTE: files_images and files_settings need to be in the same order
@@ -542,33 +543,34 @@ combine_rxs_metadata <- function(df_structure,
     c("image_label", "slide_label", "woodpiece_label", "tree_label", "site_label",  
       "fname_image",'fname_cells','fname_rings','fname_settings'),
     colnames(df_structure))
-  checkmate::assert_character(df_structure$image_label, unique = TRUE)
   checkmate::assert_data_frame(df_settings)
   checkmate::assert_subset(c('fname_settings'), colnames(df_settings))
   checkmate::assert_permutation(
     df_structure$fname_settings,
     df_settings$fname_settings, na.ok = FALSE)
+  # custom check of the hierarchy defined by the structure columns
   check_structure(df_structure)
 
   df_rxsmeta <- df_structure |>
-    dplyr::left_join(df_settings, by = 'fname_settings') |> 
-    dplyr::mutate( # initialize the missing user-input columns (empty, cannot be read from files)
-      band_width = NA_character_,
-      only_ew = NA
-    )
-  # |>
-  #   dplyr::relocate(dplyr::starts_with('fname'), .after = dplyr::last_col())
+    dplyr::left_join(df_settings, by = 'fname_settings') 
+  # |> 
+  #   dplyr::mutate( # initialize the missing user-input columns (empty, cannot be read from files)
+  #     band_width = NA_character_,
+  #     only_ew = NA
+  #   )
 
   # auto-detect schema version from the software column
   schema_name <- "images"
-  rv <- df_rxsmeta$software[1]
-  if (!(rv %in% c("roxas", "roxas_ai"))){
+  rv <- unique(df_rxsmeta$software)
+  if (length(rv) != 1 || !(rv %in% c("roxas", "roxas_ai"))){
     cli::cli_abort("The column `df_settings$software` needs to be 'roxas' or 'roxas_ai'.")
   }
 
   # align columns and types to schema (coerce with warnings)
-  df_rxsmeta <- align_df_to_schema(df_rxsmeta, schema_name, roxas_version = rv, 
-    force_required = FALSE)
+  df_rxsmeta <- align_df_to_schema(df_rxsmeta, 
+    schema_name, roxas_version = rv, 
+    allow_missing_req = FALSE, add_missing_opt = FALSE,
+    mute_info = TRUE) # silent mode except for important warnings
 
   # validate against the base schema, but warn only. user may want to fix
   # things manually in the metadata app

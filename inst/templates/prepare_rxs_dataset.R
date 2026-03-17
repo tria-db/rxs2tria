@@ -9,7 +9,7 @@ library(rxs2tria)
 # Step 1: Locate ROXAS files
 # ------------------------------------------------------------------------------
 
-path_in <- "./path/to/ROXAS_output_data"
+path_in <- "./path/to/ROXAS_data"
 files <- get_roxas_files(path_in)
 
 # ------------------------------------------------------------------------------
@@ -30,19 +30,18 @@ df_structure <- extract_data_structure(files, pattern)
 # Step 3: Collect metadata
 # ------------------------------------------------------------------------------
 
-# ROXAS (image EXIF metadata is collected automatically from files_images):
+# ROXAS (image EXIF metadata is collected from files_images):
 df_settings <- collect_settings_data(files_settings = df_structure$fname_settings,
                                      files_images = df_structure$fname_image,
                                      roxas_version = "roxas")
 
-# ROXAS AI (image metadata is already in the settings JSON files):
+# ROXAS AI (image EXIF metadata is already part of the JSON files_settings):
 df_settings <- collect_settings_data(files_settings = df_structure$fname_settings,
                                      roxas_version = "roxas_ai")
 
 # To avoid conversion errors, datetime columns are originally read as pure
 # character strings, and you need to explicitly convert them to POSIXct with
 # the appropriate format(s) and timezone.
-# ROXAS only (img_created_at comes from EXIF, common format):
 df_settings$img_created_at <- lubridate::parse_date_time(
   df_settings$img_created_at,
   orders = "%Y:%m:%d %H:%M:%S", # common EXIF format
@@ -57,13 +56,29 @@ df_settings$rxs_created_at <- lubridate::parse_date_time(
 rxs_meta <- combine_rxs_metadata(df_structure, df_settings)
 rm(df_settings)
 
+# To save the QWAmetadata object to a file for later, use:
+# write_QWAmetadata(rxs_meta, "path/to/output_data/QWAmetadata.json")
+
+# ------------------------------------------------------------------------------
+# Step 3b: Additional metadata (for TRIA submission)
+# ------------------------------------------------------------------------------
+# To provide the site-, tree-, ..., and dataset-level metadata required for a
+# TRIA submission, use the interactive Shiny app.
+# If run locally, the app can access objects such as `rxs_meta` from the current
+# environment.
+launch_metadata_app()
+
+
 # ------------------------------------------------------------------------------
 # Step 4: Read and clean the measurement data
 # ------------------------------------------------------------------------------
 
-# NOTE: we need at least the structure and filepath columns to collect the raw
-# data, so rxs_meta$images also works as input
-QWA_data <- collect_raw_data(df_structure) 
+# if you would like to read rxs_meta data from file:
+# rxs_meta <- read_QWAmetadata('filename')
+
+# NOTE: only the structure and filepath columns are required to collect the raw
+# data, so df_structure also works as input for `collect_raw_data()`.
+QWA_data <- collect_raw_data(rxs_meta$images) 
 QWA_data <- remove_outliers(QWA_data)
 QWA_data <- complete_cell_measures(QWA_data)
 
@@ -81,6 +96,8 @@ QWA_data <- validate_QWA_data(QWA_data, rxs_meta)
 
 path_out     <- "./path/to/output"
 dataset_name <- "my_dataset"
+
+# TODO: write_QWAdata(QWA_data)
 
 write.csv(QWA_data$cells,
           file.path(path_out, paste0(dataset_name, "_cells.csv")),

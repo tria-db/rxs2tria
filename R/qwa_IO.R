@@ -4,19 +4,21 @@
 #'
 #' @param x A [QWAmetadata] object.
 #' @param file Path to the output `.json` file.
-#' @param compress If `TRUE` (default), write `.json.gz` file.
-#' @param overwrite Allow to overwrite existing files? (default `FALSE`).
+#' @param compress If `TRUE`, write compressed `.json.gz` file. (default `FALSE`).
+#' @param overwrite Allow to overwrite existing files? (default `TRUE`).
 #' @returns The output file path, invisibly.
 #' @seealso [read_QWAmetadata()]
 #' @export
-write_QWAmetadata <- function(x, file, compress = TRUE, overwrite = FALSE) {
+write_QWAmetadata <- function(x, file, compress = FALSE, overwrite = TRUE) {
   checkmate::assert_class(x, "QWAmetadata")
-  ext <- if (compress) ".json.gz" else ".json"
-  file_fixed <- paste0(sub("\\.json(\\.gz)?$", "", file), ext)
-  if (file_fixed != file) {
-    cli::cli_warn("Adjusted {.arg file} extension to {.val {ext}}: {.file {file_fixed}}")
+  if (compress){
+    file_fixed <- fs::path_ext_set(file, ".json.gz")
+    if (file_fixed != file){
+      cli::cli_warn("Adjusted {.arg file} extension to {.val .json.gz}: {.file {file_fixed}}")
+    }
     file <- file_fixed
   }
+
   checkmate::assert_path_for_output(file, overwrite = overwrite)
   if (compress){
     write(
@@ -34,37 +36,62 @@ write_QWAmetadata <- function(x, file, compress = TRUE, overwrite = FALSE) {
 
 #' Read a QWAmetadata object from a JSON file
 #'
-#' @param file Path to a `.json` metadata file. 
-#' @param warn_only If `TRUE` (default), schema validation issues raise warnings
-#'   rather than errors.
+#' @param file Path to a `.json` or `.json.gz` file of QWAmetadata.
+#' @param roxas_version ROXAS software version (optional). Should usually be inferred
+#'  from the data directly, but can be overwritten here (`"roxas"` or `"roxas_ai"``).
+#' @param allow_missing_req If `FALSE` (default), missing required columns raise an error; 
+#'   if `TRUE`, they raise a warning and are added as `NA`.
+#' @param add_missing_opt If `FALSE` (default), missing optional columns raise a warning only;
+#'   if `TRUE` they raise a warning and are added as `NA`.
 #' @returns A [QWAmetadata] object.
 #' @seealso [write_QWAmetadata()]
 #' @export
-read_QWAmetadata <- function(file, warn_only = TRUE) {
+read_QWAmetadata <- function(file, roxas_version = NULL, allow_missing_req = FALSE, add_missing_opt = FALSE) {
   checkmate::assert_file_exists(file)
+  checkmate::assert_choice(roxas_version, c("roxas","roxas_ai"), null.ok = TRUE)
+  checkmate::assert_logical(allow_missing_req, add_missing_opt)
+  
   raw <- jsonlite::read_json(file, simplifyVector = TRUE)
-  # TODO: warn if extra components are ignored?
-  # NULL components are serialised as [] and read back as list(); restore to NULL
-  df_or_null <- function(x) if (length(x) == 0) NULL else x
-  # Align each present component to its schema (coerce types, drop extra cols)
-  align <- function(df, schema){
-    if (!is.null(df)) align_df_to_schema(df, schema, align = TRUE) else NULL
-  } 
-  # TODO: need to get software from df itself in case of images
-  # a task for purrr::lmap?
+
+  preprocess_raw_tbl <- function(df, schema){
+    if (is.null(df) || length(df) == 0) {
+      return(NULL)
+    }
+    df_prep <- tibble::as_tibble(df, .name_repair = janitor::make_clean_names)
+    # try to read roxas_version from data for images table
+    if (is.null(roxas_version) && schema == "images"){
+      roxas_version <- unique(df_prep$software)
+      if (length(roxas_version) != 1 || !roxas_version %in% c("roxas","roxas_ai")){
+        cli::cli_abort("Could not establish ROXAS software used from data, check data or provide as input.")
+      }
+    }
+    df_prep <- align_df_to_schema(df_prep, schema, roxas_version, allow_missing_req, add_missing_opt) 
+    
+    validate_schema(df_prep, schema, roxas_version, warn_only = TRUE, greedy = FALSE)
+    df_prep
+  }
 
   meta <- new_QWAmetadata(
-    dataset = align(df_or_null(raw$dataset), "dataset"),
-    authors = align(df_or_null(raw$authors), "authors"),
-    funding = align(df_or_null(raw$funding), "funding"),
-    related = align(df_or_null(raw$related), "related"),
-    sites = align(df_or_null(raw$sites), "sites"),
-    trees = align(df_or_null(raw$trees), "trees"),
-    woodpieces = align(df_or_null(raw$woodpieces),"woodpieces"),
-    slides = align(df_or_null(raw$slides), "slides"),
-    images = align(raw$images %||% data.frame(), "images")
+    dataset = preprocess_raw_tbl(raw$dataset, "dataset"),
+    authors = preprocess_raw_tbl(raw$authors, "authors"),
+    funding = preprocess_raw_tbl(raw$funding, "funding"),
+    related = preprocess_raw_tbl(raw$related, "related"),
+    sites = preprocess_raw_tbl(raw$sites, "sites"),
+    trees = preprocess_raw_tbl(raw$trees, "trees"),
+    woodpieces = preprocess_raw_tbl(raw$woodpieces, "woodpieces"),
+    slides = preprocess_raw_tbl(raw$slides, "slides"),
+    images = preprocess_raw_tbl(raw$images, "images") # required by def
   )
-  validate_schema(meta$images, "images", warn_only = warn_only)
+
+  # minimal requirements: valid hierarchy in the structure columns
+  check_structure(meta$images)
+  # TODO: check that structure across tables image - site works
+
+  extra_components <- setdiff(names(raw), names(meta))
+  if (length(extra_components)>0){
+    cli::cli_warn(c("i" = "Extra components in the json are ignored."))
+  }
+  
   cli::cli_inform(c("v" = "QWAmetadata read from {.file {file}}"))
   meta
 }
@@ -160,13 +187,12 @@ write_QWAdata <- function(x, dir = NULL, file_cells = NULL, file_rings = NULL,
 #'   is used, a matching metadata file is auto-detected.
 #' @param dataset_name Optional string to disambiguate when multiple matching
 #'   files are found in `dir`.
-#' @param warn_only Passed to [read_QWAmetadata()] for schema validation.
 #' @returns A [QWAdata] object, with `$metadata` attached if a metadata file
 #'   was found/provided.
 #' @seealso [write_QWAdata()]
 #' @export
 read_QWAdata <- function(dir = NULL, file_cells = NULL, file_rings = NULL,
-                         file_meta = NULL, dataset_name = NULL, warn_only = TRUE) {
+                         file_meta = NULL, dataset_name = NULL) {
   use_dir <- !is.null(dir)
   use_files <- !is.null(file_cells) && !is.null(file_rings)
   if (use_dir == use_files) {
@@ -234,7 +260,7 @@ read_QWAdata <- function(dir = NULL, file_cells = NULL, file_rings = NULL,
     ), show_col_types = FALSE)
 
   metadata <- if (!is.null(file_meta)) {
-    read_QWAmetadata(file = file_meta, warn_only = warn_only)
+    read_QWAmetadata(file = file_meta)
   } else NULL
 
   cli::cli_inform(c(

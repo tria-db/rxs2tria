@@ -4,14 +4,20 @@
 \alias{collect_image_info}
 \title{Read and combine image exif data}
 \usage{
-collect_image_info(files_images, batch_size = 50, tz = "UTC")
+collect_image_info(files_images, batch_size = 50)
 }
 \arguments{
 \item{files_images}{Vector/list of image filenames}
+
+\item{batch_size}{Nr of images to read exif data from at a time.
+Note that \code{\link[exifr:read_exif]{exifr::read_exif()}} is vectorized, so the only purpose for the
+batching is to generate a progress bar. Increase for more speed.}
 }
 \value{
 A dataframe containing the extracted data.
 }
 \description{
-Collect the exif data from all image files
+Collect the exif data from all image files. Used preliminarily for data generated
+with classic ROXAS, for ROXAS AI the image exif inormation is already stored in the
+settings files.
 }

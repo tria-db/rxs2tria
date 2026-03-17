@@ -4,16 +4,32 @@
 \alias{collect_settings_data}
 \title{Read and combine ROXAS settings data}
 \usage{
-collect_settings_data(files_settings, roxas_version = "classic")
+collect_settings_data(
+  files_settings,
+  files_images = NULL,
+  roxas_version = c("roxas", "roxas_ai")
+)
 }
 \arguments{
-\item{files_settings}{Vector/list of ROXAS settings filenames}
+\item{files_settings}{Vector/list of ROXAS settings filenames.}
 
-\item{roxas_version}{The version of ROXAS used to create the files (classic, AI)}
+\item{files_images}{Vector/list of image filenames in the same order as
+\code{files_settings}. Required when \code{roxas_version = "roxas"}.}
+
+\item{roxas_version}{The version of ROXAS used to create the files.}
 }
 \value{
 A dataframe containing the extracted data.
 }
 \description{
-Collect the settings data from all ROXAS settings files
+Collect the settings data from all ROXAS settings files.
+}
+\details{
+For \code{roxas_version = "roxas"}, image EXIF metadata is collected from the
+image files via \code{\link[=collect_image_info]{collect_image_info()}} and joined to the settings data.
+\code{files_images} is required in this case and must be in the same order as
+\code{files_settings}.
+
+For \code{roxas_version = "roxas_ai"}, image metadata is already embedded in
+the settings JSON files; \code{files_images} is not needed.
 }
