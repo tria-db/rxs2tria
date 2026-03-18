@@ -158,7 +158,7 @@ QWAdata <- function(cells = NULL,
 #' - **`$dataset`**: dataset-level information (name, description, license).
 #' - **`$authors`**: author information.
 #' - **`$funding`**: funding sources and grant numbers.
-#' - **`$relresources`**: related resources (publications, datasets, etc.).
+#' - **`$related`**: related resources (publications, datasets, etc.).
 #' - **`$sites`**: site-level metadata (location, climate, etc.).
 #' - **`$trees`**: tree-level metadata (species, DBH, age, etc.).
 #' - **`$woodpieces`**: woodpiece-level metadata (disc, core, etc.).
@@ -173,7 +173,7 @@ QWAdata <- function(cells = NULL,
 #' @param dataset Data frame with dataset-level metadata (optional).
 #' @param authors Data frame with author information (optional).
 #' @param funding Data frame with funding information (optional).
-#' @param relresources Data frame with related resources (optional).
+#' @param related Data frame with related resources (optional).
 #' @param sites Data frame with site-level metadata (optional).
 #' @param trees Data frame with tree-level metadata (optional).
 #' @param woodpieces Data frame with woodpiece-level metadata (optional).
@@ -188,7 +188,7 @@ QWAdata <- function(cells = NULL,
 QWAmetadata <- function(dataset = NULL,
                         authors = NULL,
                         funding = NULL,
-                        relresources = NULL,
+                        related = NULL,
                         sites = NULL,
                         trees = NULL,
                         woodpieces = NULL,
@@ -196,12 +196,54 @@ QWAmetadata <- function(dataset = NULL,
                         images = data.frame()) {
   stopifnot(is.data.frame(images))
 
-  # TODO:
-  # validation of the components (if present)
-  # validation of integrity between components
+  validate_component <- function(df, schema, roxas_version = NULL) {
+    if (is.null(df) || nrow(df) == 0) return(df)
+    df <- align_df_to_schema(df, schema, roxas_version,
+                             allow_missing_req = FALSE, add_missing_opt = FALSE)
+    validate_schema(df, schema, roxas_version, warn_only = TRUE, greedy = FALSE)
+    df
+  }
 
-  new_QWAmetadata(dataset, authors, funding, relresources, sites, trees,
+  # images: auto-detect roxas_version from software column
+  if (nrow(images) > 0) {
+    rv <- unique(images$software)
+    if (length(rv) != 1 || !(rv %in% c("roxas", "roxas_ai")))
+      cli::cli_abort("Could not establish ROXAS software version from {.var images$software}.")
+    images <- validate_component(images, "images", rv)
+    check_structure(images)
+  }
+
+  dataset      <- validate_component(dataset,      "dataset")
+  authors      <- validate_component(authors,      "authors")
+  funding      <- validate_component(funding,      "funding")
+  related <- validate_component(related, "related")
+  sites        <- validate_component(sites,        "sites")
+  trees        <- validate_component(trees,        "trees")
+  woodpieces   <- validate_component(woodpieces,   "woodpieces")
+  slides       <- validate_component(slides,       "slides")
+
+  new_QWAmetadata(dataset, authors, funding, related, sites, trees,
                   woodpieces, slides, images)
+}
+
+
+#' Coerce a list to a QWAmetadata object
+#'
+#' Safely constructs a [QWAmetadata] object from a named list. Component names
+#' are matched against the [QWAmetadata()] constructor parameters; unknown
+#' names are dropped with a warning.
+#'
+#' @param x A named list with any subset of the [QWAmetadata()] components.
+#' @returns A [QWAmetadata] object.
+#' @seealso [QWAmetadata()]
+#' @export
+as_QWAmetadata <- function(x) {
+  checkmate::assert_list(x, names = "named")
+  valid_args <- names(formals(QWAmetadata))
+  extra <- setdiff(names(x), valid_args)
+  if (length(extra) > 0)
+    cli::cli_warn("Ignoring unknown components: {.val {extra}}")
+  do.call(QWAmetadata, x[intersect(names(x), valid_args)])
 }
 
 
@@ -316,7 +358,7 @@ print.QWAmetadata <- function(x, ...) {
   }
 
   # --- Optional components checklist ---
-  optional <- c("dataset", "authors", "funding", "relresources",
+  optional <- c("dataset", "authors", "funding", "related",
                 "sites", "trees", "woodpieces", "slides")
   cli::cli_text("{.strong Optional components}")
   for (comp in optional) {

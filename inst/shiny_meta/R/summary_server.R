@@ -29,7 +29,7 @@ summary_server <- function(id, main_session, start_out, dataset_out, site_out) {
         dataset     = dataset_out$dataset_tbls$dataset(),
         authors     = dataset_out$dataset_tbls$authors(),
         funding     = dataset_out$dataset_tbls$funding(),
-        relresources = dataset_out$dataset_tbls$relresources(),
+        related = dataset_out$dataset_tbls$related(),
         sites       = site_out$site_tbls$sites(),
         trees       = site_out$site_tbls$trees(),
         woodpieces  = site_out$site_tbls$woodpieces(),

@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "TODO:addurltoTRIAschema",
+  "allOf": [
+    { "$ref": "base_schema/20260313_tria_roxas_data_schema.json"},
+    {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "image_label": {
+            "htType": "character",
+            "dtColGroup": "cols_structure"
+          },
+          "slide_label": {
+            "htType": "character",
+            "dtColGroup": "cols_structure"
+          },
+          "woodpiece_label": {
+            "htType": "character",
+            "dtColGroup": "cols_structure"
+          },
+          "tree_label": {
+            "htType": "character",
+            "dtColGroup": "cols_structure"
+          },
+          "species_code": {
+            "htType": "character",
+            "dtColGroup": "cols_structure"
+          },
+          "site_label": {
+            "htType": "character",
+            "dtColGroup": "cols_structure"
+          },
+          "band_width": {
+            "htType": "numeric",
+            "dtColGroup": "cols_userinput"
+          },
+          "only_ew": {
+            "htType": "checkbox",
+            "dtColGroup": "cols_userinput"
+          },
+          "spatial_resolution": {
+            "htType": "character",
+            "dtColGroup": "cols_settings"
+          },
+          "meas_geometry": {
+            "htType": "dropdown",
+            "dtColGroup": "cols_settings"
+          },
+          "org_img_name": {
+            "htType": "character",
+            "dtColGroup": "cols_images"
+          },
+          "img_filetype": {
+            "htType": "character",
+            "dtColGroup": "cols_images"
+          },
+          "img_size": {
+            "htType": "numeric",
+            "dtColGroup": "cols_images"
+          },
+          "img_width": {
+            "htType": "numeric",
+            "dtColGroup": "cols_images"
+          },
+          "img_height": {
+            "htType": "numeric",
+            "dtColGroup": "cols_images"
+          },
+          "img_created_at": {
+            "htType": "character",
+            "dtColGroup": "cols_images"
+          },
+          "img_software": {
+            "htType": "character",
+            "dtColGroup": "cols_images"
+          },
+          "scan_mode": {
+            "htType": "character",
+            "dtColGroup": "cols_images"
+          },
+          "software": {
+            "htType": "dropdown",
+            "dtColGroup": "cols_settings"
+          },
+          "sw_version": {
+            "htType": "character",
+            "dtColGroup": "cols_settings"
+          },
+          "rxs_created_at": {
+            "htType": "character",
+            "dtColGroup": "cols_settings"
+          },
+          "outmost_year": {
+            "htType": "numeric",
+            "dtColGroup": "cols_settings"
+          },
+          "fname_image": {
+            "htType": "character",
+            "dtColGroup": "cols_paths"
+          },
+          "fname_cells": {
+            "htType": "character",
+            "dtColGroup": "cols_paths"
+          },
+          "fname_rings": {
+            "htType": "character",
+            "dtColGroup": "cols_paths"
+          },
+          "fname_settings": {
+            "htType": "character",
+            "dtColGroup": "cols_paths"
+          },
+          "configuration_file": {
+            "htType": "character",
+            "dtColGroup": "cols_settings"
+          },
+          "origin_calibrated_x": {
+            "htType": "numeric",
+            "dtColGroup": "cols_settings"
+          },
+          "origin_calibrated_y": {
+            "htType": "numeric",
+            "dtColGroup": "cols_settings"
+          },
+          "circ_lower_limit": {
+            "htType": "numeric",
+            "dtColGroup": "cols_settings"
+          },
+          "circ_upper_limit": {
+            "htType": "numeric",
+            "dtColGroup": "cols_settings"
+          },
+          "min_cell_area": {
+            "htType": "numeric",
+            "dtColGroup": "cols_settings"
+          },
+          "max_cell_area": {
+            "htType": "numeric",
+            "dtColGroup": "cols_settings"
+          },
+          "dbl_cwt_threshold": {
+            "htType": "numeric",
+            "dtColGroup": "cols_settings"
+          },
+          "max_cwtrad_s": {
+            "htType": "numeric",
+            "dtColGroup": "cols_settings"
+          },
+          "max_cwtrad_l": {
+            "htType": "numeric",
+            "dtColGroup": "cols_settings"
+          },
+          "relwidth_cwt_window": {
+            "htType": "numeric",
+            "dtColGroup": "cols_settings"
+          },
+          "maxrel_opp_cwt": {
+            "htType": "numeric",
+            "dtColGroup": "cols_settings"
+          },
+          "max_cwttan_s": {
+            "htType": "numeric",
+            "dtColGroup": "cols_settings"
+          },
+          "max_cwttan_l": {
+            "htType": "numeric",
+            "dtColGroup": "cols_settings"
+          }
+        }
+      }
+    }
+  ]
+}

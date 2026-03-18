@@ -28,6 +28,12 @@
             "type": ["string", "null"],
             "format": "date-time",
             "dtColGroup": "cols_settings"
+          },
+          "sample_type": {
+            "type": ["string", "null"],
+            "enum": ["", "conifer", "angiosperm"],
+            "title": "Sample type",
+            "description": "Description"
           }
         },
         "required": ["rings_segmentation_model", "cells_segmentation_model"]

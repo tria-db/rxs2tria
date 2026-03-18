@@ -223,7 +223,7 @@ show_error_modal <- function(title, message) {
   if (shiny::isRunning()) {
     shiny::showModal(modalDialog(
       title = title,
-      message,
+      cli::ansi_strip(message),
       easyClose = TRUE,
       footer = NULL
     ))
@@ -235,7 +235,7 @@ show_error_modal <- function(title, message) {
 # wrapper for a warning notification
 show_warning_notification <- function(message) {
   if (shiny::isRunning()) {
-    shiny::showNotification(message, type = "warning")
+    shiny::showNotification(cli::ansi_strip(message), type = "warning")
   } else {
     message(sprintf("[WARNING] %s", message))
   }

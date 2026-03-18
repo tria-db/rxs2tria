@@ -120,6 +120,7 @@ start_ui <- function(id) {
 
     ), # end of accordion
 
+    rhandsontable::rHandsontableOutput(ns("image_table")),
     verbatimTextOutput(ns("testing")),
     br()
   ) # end of layout_sidebar

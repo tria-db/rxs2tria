@@ -60,13 +60,57 @@ resolve_allOfs <- function(x){
     for (k in seq_along(x[["allOf"]])[-1]){
       sublist <- x$allOf[[k]]
       combined$required <- union(combined$required %||% character(0),
-                                 sublist$required   %||% character(0))
+                                 sublist$required %||% character(0))
       sublist$required <- NULL
       combined <- modifyList(combined, sublist) # TODO: better merge logic?
     }
     return(resolve_allOfs(combined))
   }
   purrr::map(x, resolve_allOfs)
+}
+
+#' @keywords internal
+extract_required <- function(x) {
+  if (!is.list(x)) return(NULL)
+  # collect "required" at this level
+  current <- if (!is.null(x$required)) list(x$required) else list()
+  # recurse into all children and combine
+  children <- purrr::map(x, extract_required) 
+  c(current, children) |> purrr::list_flatten() |> unname()
+}
+#' @keywords internal
+merge_props <- function(a, b) {
+  new_keys  <- setdiff(names(b), names(a))
+  both_keys <- intersect(names(b), names(a))
+  
+  a[new_keys] <- b[new_keys]
+  
+  for (key in both_keys) {
+    if (is.list(a[[key]]) && is.list(b[[key]])) {
+      a[[key]] <- merge_props(a[[key]], b[[key]])  # recurse for sub-lists
+    } else {
+      a[[key]] <- c(a[[key]], b[[key]])  # concatenate atomics
+    }
+  }
+  a
+}
+#' @keywords internal
+extract_properties <- function(x) {
+  if (!is.list(x)) return(NULL)
+
+  current <- if (!is.null(x$properties)) x$properties else list()
+
+  children <- purrr::map(x, extract_properties) |> purrr::compact()
+
+  all_props <- c(list(current), children)
+
+  purrr::reduce(all_props, merge_props, .init = list())
+}
+#' @keywords internal
+get_tbl_props <- function(tbl_schema){
+  required <- tbl_schema |> extract_required() |> unlist()
+  properties <- tbl_schema |> extract_properties()
+  list(properties = properties, required = required)
 }
 
 #' Create an empty dataframe conforming to a JSON schema
@@ -178,6 +222,7 @@ align_df_to_schema <- function(df,
   tbl_schema <- tbl_schema |> 
     resolve_refs(fs::path_dir(schema_path)) |> 
     resolve_allOfs()
+  # TODO: replace resolve_allOfs with new get_tbl_props approach, use tbl_props instead
 
   target_structure <- create_empty_df(tbl_schema, nrows = 0)
   target_cols <- names(target_structure)

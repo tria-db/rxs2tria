@@ -309,33 +309,41 @@ check_dating <- function(df_rings_log, df_meta){
     )
 
   dating_issues <- df_rings_dating |>
-    dplyr::filter(missing_year|dupl_year|undated|in_future|after_outmost) |>
+    dplyr::filter(missing_year | dupl_year | undated | in_future| after_outmost) |>
+    dplyr::group_by(image_label) |>
+    dplyr::summarise(
+      dplyr::across(c(missing_year, dupl_year, undated, in_future, after_outmost),
+                    \(x) sum(x, na.rm = TRUE)), .groups = "drop") |> 
     dplyr::mutate(
-      missing_year = dplyr::if_else(missing_year, "missing", NA_character_),
-      dupl_year = dplyr::if_else(dupl_year, "duplicate", NA_character_),
-      undated = dplyr::if_else(undated, "undated", NA_character_),
-      in_future = dplyr::if_else(in_future, "in future", NA_character_),
-      after_outmost = dplyr::if_else(after_outmost, "after outmost", NA_character_),
+      missing_year = dplyr::if_else(missing_year > 0, glue::glue("{missing_year} missing"), NA_character_),
+      dupl_year = dplyr::if_else(dupl_year > 0, glue::glue("{dupl_year} duplicates"), NA_character_),
+      undated = dplyr::if_else(undated > 0, glue::glue("{undated} undated"), NA_character_),
+      in_future = dplyr::if_else(in_future > 0, glue::glue("{in_future} in future"), NA_character_),
+      after_outmost = dplyr::if_else(after_outmost > 0, glue::glue("{after_outmost} after outmost"), NA_character_)
     ) |>
-    tidyr::unite("issues",
-                 missing_year, dupl_year, undated, in_future, after_outmost,
+    tidyr::unite("issues", missing_year, dupl_year,  undated, in_future, after_outmost,
                  na.rm = TRUE, sep = ", ") |>
-    glue::glue_data("{image_label}, {year}: {issues}")
+    glue::glue_data("{image_label}: {issues}")
 
   if (length(dating_issues) > 0){
     img_labels <- dating_issues[1:min(9, length(dating_issues))]
     if (length(dating_issues) > 9) {img_labels <- c(img_labels, '...')}
     cli::cli_abort(c(
       "x" = "Dating issues detected in rings data",
-      "i" = "The following images/years have problems with the dating:",
+      "i" = "The following images have problems with the dating:",
       img_labels
-    ))
-    return(FALSE)
+    ),
+    class = "rxs2tria_val_error",
+    issues = dating_issues)
   }
 
   TRUE
 }
-
+# to access the issues:
+# result <- tryCatch(
+#   check_dating(df_rings_log, df_meta),
+#   rxs2tria_val_error = function(e) e   # returns the condition object
+# )
 
 
 #' Helper function to check if an innermost ring is incomplete

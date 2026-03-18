@@ -66,8 +66,8 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
       }
 
       # Update relresources if available
-      if(!is.null(tbls$relresources)) {
-        relres_data_in(tbls$relresources)
+      if(!is.null(tbls$related)) {
+        relres_data_in(tbls$related)
       }
 
     })
@@ -729,7 +729,7 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
           )),
           authors = author_data_out,
           funding = funding_data_out,
-          relresources = relres_data_out
+          related = relres_data_out
         ),
         val_check = validation_checks
       )

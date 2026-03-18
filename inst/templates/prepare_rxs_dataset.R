@@ -78,7 +78,7 @@ launch_metadata_app()
 
 # NOTE: only the structure and filepath columns are required to collect the raw
 # data, so df_structure also works as input for `collect_raw_data()`.
-QWA_data <- collect_raw_data(rxs_meta$images) 
+QWA_data <- collect_raw_data(rxs_meta$images)
 QWA_data <- remove_outliers(QWA_data)
 QWA_data <- complete_cell_measures(QWA_data)
 

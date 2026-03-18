@@ -8,127 +8,154 @@
     "image_label": {
       "type": "string",
       "minLength": 1,
-      "dtColGroup": "cols_structure"
+      "readOnly": true,
+      "title": "Image",
+      "description": "Description"
     },
     "slide_label": {
       "type": "string",
       "minLength": 1,
-      "dtColGroup": "cols_structure"
+      "readOnly": true,
+      "title": "Slide",
+      "description": "Description"
     },
     "woodpiece_label": {
       "type": "string",
       "minLength": 1,
-      "dtColGroup": "cols_structure"
+      "readOnly": true,
+      "title": "Woodpiece",
+      "description": "Description"
     },
     "tree_label": {
       "type": "string",
       "minLength": 1,
-      "dtColGroup": "cols_structure"
+      "title": "Tree",
+      "readOnly": true,
+      "description": "Description"
     },
     "species_code": {
       "type": ["string", "null"],
-      "dtColGroup": "cols_structure"
+      "readOnly": true,
+      "title": "Species",
+      "description": "Description (change in sites tab if required)"
     },
     "site_label": {
       "type": "string",
       "minLength": 1,
+      "readOnly": true,
       "title": "Site",
-      "description": "Site identifier",
-      "dtColGroup": "cols_structure"
-    },
-    "sample_type": {
-      "type": ["string", "null"],
-      "enum": ["", "conifer", "angiosperm"],
-      "dtColGroup": "cols_settings"
+      "description": "Site identifier"
     },
     "band_width": {
       "type": ["number", "null"],
-      "dtColGroup": "cols_userinput"
+      "minimum": 0,
+      "title": "Bandwidth",
+      "description": "Description"
     },
     "only_ew": {
       "type": ["boolean", "null"],
-      "dtColGroup": "cols_userinput"
+      "title": "Only EW",
+      "description": "Description"
     },
     "spatial_resolution": {
-        "type": ["number", "null"],
-        "dtColGroup": "cols_settings"
+      "type": ["number", "null"],
+      "title": "Spatial resolution",
+      "description": "Description"
     },
     "meas_geometry": {
       "type": ["string", "null"],
       "enum": ["", "linear", "circular"],
-      "dtColGroup": "cols_settings"
+      "title": "Geometry",
+      "description": "Description"
     },
     "org_img_name": {
       "type": "string",
       "minLength": 1,
-      "dtColGroup": "cols_images"
+      "title": "Original name",
+      "description": "Description"
     },
     "img_filetype": {
       "type": ["string", "null"],
-      "dtColGroup": "cols_images"
+      "title": "Filetype",
+      "description": "Description"
     },
     "img_size": {
-      "type": ["number", "null"],
-      "dtColGroup": "cols_images"
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "title": "Size",
+      "description": "Description"
     },
     "img_width": {
-      "type": ["number", "null"],
-      "dtColGroup": "cols_images"
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "title": "Width",
+      "description": "Description"
     },
     "img_height": {
-      "type": ["number", "null"],
-      "dtColGroup": "cols_images"
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "title": "Height",
+      "description": "Description"
     },
     "img_created_at": {
       "type": ["string","null"],
       "format": "date-time",
-      "dtColGroup": "cols_images"
+      "title": "Image created",
+      "description": "Description"
     },
     "img_software": {
       "type": ["string", "null"],
       "title": "Scanner software",
-      "description": "Software used to scan the image",
-      "dtColGroup": "cols_images"
+      "description": "Software used to scan the image"
     },
     "scan_mode": {
       "type": ["string", "null"],
       "enum": ["", "RGB", "other"],
-      "dtColGroup": "cols_images"
+      "title": "Scan mode",
+      "description": "Description"
     },
     "software": {
       "type": "string",
       "minLength": 1,
       "enum": ["roxas", "roxas_ai"],
-      "dtColGroup": "cols_settings"
+      "title": "Analysis sw",
+      "description": "Description"
     },
     "sw_version": {
       "type": ["string", "null"],
-      "dtColGroup": "cols_settings"
+      "title": "SW version",
+      "description": "Description"
     },
     "rxs_created_at": {
       "type": ["string", "null"],
       "format": "date-time",
-      "dtColGroup": "cols_settings"
+      "title": "ROXAS created",
+      "description": "Description"
     },
     "outmost_year": {
-      "type": ["number", "null"],
-      "dtColGroup": "cols_settings"
+      "type": ["integer", "null"],
+      "title": "Outmost year",
+      "description": "Description"
     },
     "fname_image": {
       "type": ["string", "null"],
-      "dtColGroup": "cols_paths"
+      "title": "File image",
+      "description": "Description"
     },
     "fname_cells": {
       "type": ["string", "null"],
-      "dtColGroup": "cols_paths"
+      "title": "File cells",
+      "description": "Description"
     },
     "fname_rings": {
       "type": ["string", "null"],
-      "dtColGroup": "cols_paths"
+      "title": "File rings",
+      "description": "Description"
     },
     "fname_settings": {
       "type": ["string", "null"],
-      "dtColGroup": "cols_paths"
+      "title": "File Settings",
+      "description": "Description"
     }
   },
   "required": ["image_label", "slide_label", "woodpiece_label", "tree_label", 

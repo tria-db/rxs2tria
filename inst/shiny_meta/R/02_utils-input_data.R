@@ -276,3 +276,55 @@ generate_desc_template <- function(df_rxsmeta){
    ")
    desc
 }
+
+
+#' Coerce a named list to a QWAmetadata object for use in the Shiny app
+#'
+#' Similar to [rxs2tria::as_QWAmetadata()] but with Shiny-specific behaviour:
+#' all optional columns are initialised as `NA` (`add_missing_opt = TRUE`) and
+#' `validate_schema` is skipped (validation is performed on the hot tables in
+#' the app directly).
+#'
+#' @param x A named list with any subset of the QWAmetadata components.
+#' @returns A `QWAmetadata` object.
+input_QWAmetadata <- function(x) {
+  checkmate::assert_list(x, names = "named")
+
+  # auto-detect roxas_version from images$software
+  roxas_version <- NULL
+  if (!is.null(x$images) && is.data.frame(x$images) && "software" %in% names(x$images)) {
+    rv <- unique(x$images$software)
+    if (length(rv) == 1 && rv %in% c("roxas", "roxas_ai"))
+      roxas_version <- rv
+  }
+  if (is.null(roxas_version))
+    cli::cli_abort("Could not establish ROXAS software version from {.var images$software}.")
+
+  align <- function(df, schema, rv = NULL) {
+    if (is.null(df) || (is.data.frame(df) && nrow(df) == 0)) return(df)
+    df_prep <- tibble::as_tibble(df, .name_repair = janitor::make_clean_names)
+    align_df_to_schema(df_prep, schema, rv,
+                       allow_missing_req = FALSE, add_missing_opt = TRUE)
+  }
+
+  valid_names <- c("dataset", "authors", "funding", "related",
+                   "sites", "trees", "woodpieces", "slides", "images")
+  extra <- setdiff(names(x), valid_names)
+  if (length(extra) > 0)
+    cli::cli_warn(c("i" = "Extra components in the JSON are ignored: {.val {extra}}"))
+
+  images <- align(x$images, "images", roxas_version)
+  check_structure(images)
+
+  new_QWAmetadata(
+    dataset    = align(x$dataset,    "dataset"),
+    authors    = align(x$authors,    "authors"),
+    funding    = align(x$funding,    "funding"),
+    related    = align(x$related,    "related"),
+    sites      = align(x$sites,      "sites"),
+    trees      = align(x$trees,      "trees"),
+    woodpieces = align(x$woodpieces, "woodpieces"),
+    slides     = align(x$slides,     "slides"),
+    images     = images
+  )
+}
