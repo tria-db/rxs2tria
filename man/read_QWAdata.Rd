@@ -8,30 +8,36 @@ read_QWAdata(
   dir = NULL,
   file_cells = NULL,
   file_rings = NULL,
-  file_meta = NULL,
-  dataset_name = NULL
+  file_profiles = NULL,
+  dataset_name = NULL,
+  components = c("cells", "rings")
 )
 }
 \arguments{
-\item{dir}{Directory to search for cells, rings, and (optionally) metadata
-files. Mutually exclusive with \code{file_cells}/\code{file_rings}.}
+\item{dir}{Directory to search for cells, rings, and profiles files.
+Mutually exclusive with \code{file_cells}/\code{file_rings}.}
 
 \item{file_cells, file_rings}{Explicit paths to the cells and rings CSV files.
 Both must be provided together. Mutually exclusive with \code{dir}.}
 
-\item{file_meta}{Optional path to a metadata JSON file. If \code{NULL} and \code{dir}
-is used, a matching metadata file is auto-detected.}
+\item{file_profiles}{Optional path(s) to profiles CSV file(s). Can be a
+character vector to load multiple profiles. When using \code{dir}, all matching
+\verb{_profiles_*.csv} files are loaded automatically.}
 
 \item{dataset_name}{Optional string to disambiguate when multiple matching
 files are found in \code{dir}.}
+
+\item{components}{Character vector of components to read. Any subset of
+\code{c("cells", "rings", "profiles")}. Defaults to \code{c("cells", "rings")}.
+Omitted components are \code{NULL} in the returned \link{QWAdata} object.}
 }
 \value{
-A \link{QWAdata} object, with \verb{$metadata} attached if a metadata file
-was found/provided.
+A \link{QWAdata} object.
 }
 \description{
-Reads cells and rings from (compressed) CSV files and optionally attaches a
-\link{QWAmetadata} object if a matching JSON file is found or provided.
+Reads cells, rings, and optionally profiles from (compressed) CSV files.
+Use the \code{components} argument to load only a subset, e.g. to avoid reading
+a large cells file when only rings are needed.
 }
 \seealso{
 \code{\link[=write_QWAdata]{write_QWAdata()}}

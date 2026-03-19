@@ -70,7 +70,7 @@ remove_outliers <- function(QWA_data){
     "v" = "Outliers (negative values) have been replaced with NA"
   ))
 
-  new_QWAdata(cells = cells_rm, rings = rings_rm, metadata = QWA_data$metadata)
+  new_QWAdata(cells = cells_rm, rings = rings_rm)
 }
 
 
@@ -190,7 +190,7 @@ complete_cell_measures <- function(QWA_data){
     "v" = "Added additional cell measures and EW / LW estimation."
   ))
 
-  new_QWAdata(cells = df_cells, rings = df_rings, metadata = QWA_data$metadata)
+  new_QWAdata(cells = df_cells, rings = df_rings)
 }
 
 
@@ -578,10 +578,11 @@ flag_duplicate_rings <- function(df_rings_log){
 #' selected for further analysis when building chronologies.
 #'
 #' @param QWA_data a `QWAdata` object containing the cells and rings dataframes
-#' @param rxs_meta a `QWAmetadata` object whose `$images` dataframe contains the
-#' image-level metadata (spatial_resolution required for the incomplete innermost ring check)
-#' @returns A `QWAdata` object with the validated data: cells unchanged, rings with
-#' added flag columns, and `rxs_meta` attached as `$metadata`.
+#' @param rxs_meta a [QWAmetadata] or [QWAimages] object whose image-level
+#'   metadata provides `spatial_resolution` (required for the incomplete
+#'   innermost ring check) and `outmost_year`.
+#' @returns A `QWAdata` object with the validated data: cells unchanged, rings
+#'   with added flag columns.
 #' @export
 #'
 validate_QWA_data <- function(QWA_data, rxs_meta, verbose_flags = FALSE, exclude_mode = c("incomplete_only", "missing_only", "either", "both")){
@@ -595,8 +596,8 @@ validate_QWA_data <- function(QWA_data, rxs_meta, verbose_flags = FALSE, exclude
     names(QWA_data$rings)
   )
 
-  checkmate::assert_class(rxs_meta, "QWAmetadata")
-  df_meta <- rxs_meta$images  # extract image-level dataframe for internal use
+  checkmate::assert_class(rxs_meta, "QWAimages")
+  df_meta <- rxs_meta
   checkmate::assert_subset(
     c('image_label','spatial_resolution','outmost_year'),
     names(df_meta)
@@ -683,8 +684,9 @@ validate_QWA_data <- function(QWA_data, rxs_meta, verbose_flags = FALSE, exclude
   # message(paste0(capture.output(print(as.data.frame(issue_counts),
   #                               row.names = FALSE)), collapse='\n'))
 
+  # TODO: reset profiles if present and issues corrected? should be recalculated, no?
   new_QWAdata(cells = QWA_data$cells, rings = df_rings_log,
-              profiles = QWA_data$profiles, metadata = rxs_meta)
+              profiles = QWA_data$profiles)
 }
 
 

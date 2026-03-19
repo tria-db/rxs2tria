@@ -523,19 +523,26 @@ collect_settings_data <- function(files_settings,
 }
 
 
-#' Combine raw ROXAS metadata
+#' Build a QWAimages object from raw ROXAS metadata
 #'
-#' Combine the extracted ROXAS filenames plus data structure (from
+#' Combines the extracted ROXAS filenames plus data structure (from
 #' [extract_data_structure()]) and ROXAS settings and image exif data (from
-#' [collect_settings_data()]) into one raw metadata dataframe.
+#' [collect_settings_data()]) into a [QWAimages] object.
+#'
+#' This is the typical starting point of the `prepare_rxs_dataset` workflow.
+#' The resulting [QWAimages] can be passed directly to [collect_raw_data()] and
+#' to the metadata Shiny app ([launch_metadata_app()]), which enriches it with
+#' site-, tree-, and dataset-level metadata to produce a full [QWAmetadata].
 #'
 #' @param df_structure Dataframe with all input filenames and data structure.
 #' @param df_settings Dataframe with extracted ROXAS settings data.
 #'
-#' @returns A `QWAmetadata` object with the joined image-level metadata in `$images`.
+#' @returns A [QWAimages] object with the joined image-level metadata.
+#' @seealso [extract_data_structure()], [collect_settings_data()],
+#'   [QWAimages()], [write_QWAimages()]
 #' @export
-combine_rxs_metadata <- function(df_structure,
-                                 df_settings) {
+build_QWAimages <- function(df_structure,
+                            df_settings) {
   # assert the minimal required conditions to create a QWAmetadata$images data frame
   checkmate::assert_data_frame(df_structure,
     any.missing = FALSE, min.rows = 1, .var.name = "df_structure")
@@ -577,8 +584,8 @@ combine_rxs_metadata <- function(df_structure,
   validate_schema(df_rxsmeta, schema = schema_name, roxas_version = rv, warn_only = TRUE)
 
   cli::cli_inform(c(
-    "v" = "Available ROXAS metadata extracted to {.var QWAmetadata} object"
+    "v" = "Available ROXAS metadata extracted to {.var QWAimages} object"
   ))
 
-  new_QWAmetadata(images = df_rxsmeta)
+  new_QWAimages(df_rxsmeta, roxas_version = rv)
 }

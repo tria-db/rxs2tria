@@ -75,6 +75,12 @@ start_server <- function(id, main_session) {
           } else {
             res <- get_from_env(input$input_name, envir = .GlobalEnv)
             source <- glue::glue("object {input$input_name} from current R environment")
+            if (inherits(res, "data.frame")){
+              df <- QWAimages(res) |> complete_QWAimages()
+              validated <- QWAmetadata(images = df) |> complete_QWAmetadata()
+            } else {
+              validated <- as_QWAmetadata(res) |> complete_QWAmetadata()
+            }
           }
         } else if (input$load_type == "file"){
           if (is.null(input$input_file) || is.na(input$input_file) || input$input_file == "") {
@@ -82,9 +88,15 @@ start_server <- function(id, main_session) {
           } else {
             ext <- tools::file_ext(input$input_file$datapath)
             if (ext == "csv"){
-              res <- vroom::vroom(input$input_file$datapath, show_col_types = FALSE)
+              #res <- vroom::vroom(input$input_file$datapath, show_col_types = FALSE)
+              df <- read_QWAimages(input$input_file$datapath, allow_missing_req = FALSE,
+                add_missing_opt = TRUE)
+              validated <- QWAmetadata(images = df) |> complete_QWAmetadata()
             } else {
-              res <- jsonlite::read_json(input$input_file$datapath, simplifyVector = TRUE)
+              #res <- jsonlite::read_json(input$input_file$datapath, simplifyVector = TRUE)
+              res <- read_QWAmetadata(input$input_file$datapath, allow_missing_req = FALSE,
+                add_missing_opt = TRUE)
+              validated <- res |> complete_QWAmetadata()
             }
             source <- glue::glue("read from file {input$input_file$name}")
           }
@@ -93,24 +105,29 @@ start_server <- function(id, main_session) {
           res <- jsonlite::read_json(example_file, simplifyVector = TRUE)
           source <- glue::glue("using example dataset")
         }
-        if (is.data.frame(res)){
-          # single df: assume it's QWAmetadata$images
-          df <- validate_df(res, "images", force_required = TRUE, ignore_colnames = FALSE)
-          input_meta$source <- source
-          input_meta$images <- df
-          input_meta$dataset_tbls <- NULL # reset if necessary
-          input_meta$site_tbls <- NULL # reset if necessary
-        } else {
-          validated <- input_QWAmetadata(res)
-          input_meta$source <- source
-          input_meta$images <- validated$images
-          input_meta$dataset_tbls <- validated |> 
-            purrr::keep_at(c("dataset", "authors", "funding", "related")) |> 
-            purrr::keep(\(x) length(x)>0)
-          input_meta$site_tbls <- validated |> 
-            purrr::keep_at(c("sites", "trees", "woodpieces", "slides")) |> 
-            purrr::keep(\(x) length(x)>0)
-        }
+        input_meta$source <- source
+        input_meta$images <- validated$images
+        input_meta$dataset_tbls <- validated[c("dataset","authors","funding","related")]
+        input_meta$site_tbls <- validated[c("site","tree","woodpiece","slide")]
+
+        # if (is.data.frame(res)){
+        #   # single df: assume it's QWAmetadata$images
+        #   df <- validate_df(res, "images", force_required = TRUE, ignore_colnames = FALSE)
+        #   input_meta$source <- source
+        #   input_meta$images <- df
+        #   input_meta$dataset_tbls <- NULL # reset if necessary
+        #   input_meta$site_tbls <- NULL # reset if necessary
+        # } else {
+        #   validated <- input_QWAmetadata(res)
+        #   input_meta$source <- source
+        #   input_meta$images <- validated$images
+        #   input_meta$dataset_tbls <- validated |> 
+        #     purrr::keep_at(c("dataset", "authors", "funding", "related")) |> 
+        #     purrr::keep(\(x) length(x)>0)
+        #   input_meta$site_tbls <- validated |> 
+        #     purrr::keep_at(c("sites", "trees", "woodpieces", "slides")) |> 
+        #     purrr::keep(\(x) length(x)>0)
+        # }
         #         if (inherits(res, "QWAmetadata")) {
         #   # QWAmetadata object from R environment: unpack directly
         #   input_meta$source <- source
@@ -496,7 +513,7 @@ start_server <- function(id, main_session) {
     })
 
     output$testing <- renderPrint({
-      str(image_data_out())
+      str(input_meta$dataset_tbls)
     })
 
     # return the input meta and val check for use in other tabs

@@ -1,3 +1,60 @@
+# QWAimages I/O ----------------------------------------------------------------
+
+#' Write a QWAimages object to a CSV file
+#'
+#' @param x A [QWAimages] object.
+#' @param file Path to the output `.csv` or `.csv.gz` file.
+#' @param compress If `TRUE`, write compressed `.csv.gz` file. (default `FALSE`)
+#' @param overwrite Allow to overwrite existing files? (default `TRUE`).
+#' @returns The output file path, invisibly.
+#' @seealso [read_QWAimages()], [QWAimages]
+#' @export
+write_QWAimages <- function(x, file, compress = FALSE, overwrite = TRUE) {
+  checkmate::assert_class(x, "QWAimages")
+  ext <- if (compress) ".csv.gz" else ".csv"
+  file_fixed <- paste0(sub("\\.csv(\\.gz)?$", "", file), ext)
+  if (file_fixed != file)
+    cli::cli_warn("Adjusted {.arg file} extension to {.val {ext}}: {.file {file_fixed}}")
+  file <- file_fixed
+  checkmate::assert_path_for_output(file, overwrite = overwrite)
+  vroom::vroom_write(x, file, delim = ",")
+  cli::cli_inform(c("v" = "QWAimages written to {.file {file}}"))
+  invisible(file)
+}
+
+
+#' Read a QWAimages object from a CSV file
+#'
+#' Reads image-level metadata from a (compressed) CSV file written by
+#' [write_QWAimages()] and returns a [QWAimages] object. The `roxas_version`
+#' is inferred from the `software` column of the data.
+#'
+#' @param file Path to a `.csv` or `.csv.gz` file.
+#' @param allow_missing_req If `FALSE` (default), missing required columns raise
+#'   an error; if `TRUE`, they raise a warning and are added as `NA`.
+#' @param add_missing_opt If `FALSE` (default), missing optional columns raise a
+#'   warning only; if `TRUE` they are added as `NA`.
+#' @returns A [QWAimages] object.
+#' @seealso [write_QWAimages()]
+#' @export
+read_QWAimages <- function(file, allow_missing_req = FALSE, add_missing_opt = FALSE) {
+  checkmate::assert_file_exists(file)
+
+  df <- vroom::vroom(file, show_col_types = FALSE)
+
+  rv <- unique(df$software)
+  if (length(rv) != 1 || !(rv %in% c("roxas", "roxas_ai")))
+    cli::cli_abort("Could not establish ROXAS software version from {.var software} column.")
+
+  df <- tibble::as_tibble(df, .name_repair = janitor::make_clean_names)
+  df <- align_df_to_schema(df, "images", rv, allow_missing_req, add_missing_opt)
+  validate_schema(df, "images", rv, warn_only = TRUE, greedy = FALSE)
+  check_structure(df)
+
+  cli::cli_inform(c("v" = "QWAimages read from {.file {file}}"))
+  new_QWAimages(df, roxas_version = rv)
+}
+
 # QWAmetadata I/O --------------------------------------------------------------
 
 #' Write a QWAmetadata object to a JSON file
@@ -33,7 +90,6 @@ write_QWAmetadata <- function(x, file, compress = FALSE, overwrite = TRUE) {
   invisible(file)
 }
 
-
 #' Read a QWAmetadata object from a JSON file
 #'
 #' @param file Path to a `.json` or `.json.gz` file of QWAmetadata.
@@ -53,20 +109,16 @@ read_QWAmetadata <- function(file, roxas_version = NULL, allow_missing_req = FAL
   
   raw <- jsonlite::read_json(file, simplifyVector = TRUE)
 
+  images <- QWAimages(raw$images, roxas_version) # takes care of images validation
+
   preprocess_raw_tbl <- function(df, schema){
     if (is.null(df) || length(df) == 0) {
       return(NULL)
     }
     df_prep <- tibble::as_tibble(df, .name_repair = janitor::make_clean_names)
     # try to read roxas_version from data for images table
-    if (is.null(roxas_version) && schema == "images"){
-      roxas_version <- unique(df_prep$software)
-      if (length(roxas_version) != 1 || !roxas_version %in% c("roxas","roxas_ai")){
-        cli::cli_abort("Could not establish ROXAS software used from data, check data or provide as input.")
-      }
-    }
-    df_prep <- align_df_to_schema(df_prep, schema, roxas_version, allow_missing_req, add_missing_opt) 
-    
+    df_prep <- align_df_to_schema(df_prep, schema, roxas_version, 
+      allow_missing_req, add_missing_opt) 
     validate_schema(df_prep, schema, roxas_version, warn_only = TRUE, greedy = FALSE)
     df_prep
   }
@@ -80,11 +132,9 @@ read_QWAmetadata <- function(file, roxas_version = NULL, allow_missing_req = FAL
     trees = preprocess_raw_tbl(raw$trees, "trees"),
     woodpieces = preprocess_raw_tbl(raw$woodpieces, "woodpieces"),
     slides = preprocess_raw_tbl(raw$slides, "slides"),
-    images = preprocess_raw_tbl(raw$images, "images") # required by def
+    images = images  # required by def
   )
 
-  # minimal requirements: valid hierarchy in the structure columns
-  check_structure(meta$images)
   # TODO: check that structure across tables image - site works
 
   extra_components <- setdiff(names(raw), names(meta))
@@ -101,27 +151,25 @@ read_QWAmetadata <- function(file, roxas_version = NULL, allow_missing_req = FAL
 
 #' Write a QWAdata object to files
 #'
-#' Cells and rings are written as (compressed) CSV files. If the object carries
-#' a `$metadata` slot, the metadata is written as a JSON file alongside.
+#' Cells, rings, and (if present) profiles are written as (compressed) CSV
+#' files. Each profile in the named list is written to a separate file; the
+#' profile name is encoded in the filename (e.g. `_profiles_sector_5.csv.gz`).
 #'
 #' @param x A [QWAdata] object.
-#' @param dir Directory to write to. Files are auto-named using `dataset_name`
-#'   (or the name from `x$metadata$dataset$ds_name`). Mutually exclusive with
-#'   `file_cells`/`file_rings`.
+#' @param dir Directory to write to. Files are auto-named using `dataset_name`.
+#'   Mutually exclusive with `file_cells`/`file_rings`.
 #' @param file_cells,file_rings Explicit output paths for the cells and rings
 #'   CSV files. Both must be provided together. Mutually exclusive with `dir`.
-#' @param file_meta Output path for the metadata JSON when using explicit file
-#'   paths. Ignored when using `dir` (metadata is auto-named). If `NULL` and
-#'   the object has metadata, a warning is issued.
 #' @param dataset_name Name prefix for auto-generated filenames when using
-#'   `dir`. Falls back to `x$metadata$dataset$ds_name` then `"QWAdata"`.
+#'   `dir`. Defaults to `"QWAdata"`.
 #' @param compress If `TRUE` (default), write `.csv.gz` files.
 #' @param overwrite Allow to overwrite existing files? (default `FALSE`).
 #' @returns A named list of written file paths, invisibly.
 #' @seealso [read_QWAdata()]
 #' @export
-write_QWAdata <- function(x, dir = NULL, file_cells = NULL, file_rings = NULL,
-                          file_meta = NULL, dataset_name = NULL,
+write_QWAdata <- function(x, dir = NULL, 
+                          file_cells = NULL, file_rings = NULL, 
+                          dataset_name = NULL,
                           compress = TRUE, overwrite = FALSE) {
   checkmate::assert_class(x, "QWAdata")
   use_dir <- !is.null(dir)
@@ -131,20 +179,16 @@ write_QWAdata <- function(x, dir = NULL, file_cells = NULL, file_rings = NULL,
       "Provide either {.arg dir} or both {.arg file_cells} and {.arg file_rings}.")
   }
 
+  ext <- if (compress) ".csv.gz" else ".csv"
+  fix_ext <- function(path) paste0(sub("\\.csv(\\.gz)?$", "", path), ext)
+
   if (use_dir) {
     checkmate::assert_directory_exists(dir)
-    prefix <- dataset_name %||% x$metadata$dataset$ds_name[1] %||% "QWAdata"
+    prefix <- dataset_name %||% "QWAdata"
     prefix <- gsub("[^[:alnum:]_-]", "_", prefix)
-    ext <- if (compress) ".csv.gz" else ".csv"
     file_cells <- file.path(dir, paste0(prefix, "_cells", ext))
     file_rings <- file.path(dir, paste0(prefix, "_rings", ext))
-    if (!is.null(x$metadata))
-      file_meta <- file.path(dir, paste0(prefix, "_metadata.json"))
   } else {
-    if (!is.null(x$metadata) && is.null(file_meta))
-      cli::cli_warn(c("!" = "Object has {.var $metadata} but {.arg file_meta} was not provided - metadata not written."))
-    ext <- if (compress) ".csv.gz" else ".csv"
-    fix_ext <- function(path) paste0(sub("\\.csv(\\.gz)?$", "", path), ext)
     file_cells_fixed <- fix_ext(file_cells)
     file_rings_fixed <- fix_ext(file_rings)
     if (file_cells_fixed != file_cells) {
@@ -167,32 +211,51 @@ write_QWAdata <- function(x, dir = NULL, file_cells = NULL, file_rings = NULL,
     "v" = "Rings written to {.file {file_rings}}"
   ))
 
-  if (!is.null(x$metadata) && !is.null(file_meta))
-    write_QWAmetadata(x$metadata, file = file_meta, overwrite = overwrite)
+  file_profiles <- list()
+  if (!is.null(x$profiles) && length(x$profiles) > 0) {
+    for (nm in names(x$profiles)) {
+      # TODO: allow also unnamed?
+      if (use_dir) {
+        fp <- file.path(dir, paste0(prefix, "_profiles_", nm, ext))
+      } else {
+        fp <- fix_ext(sub("_cells(\\.csv(\\.gz)?)?$", paste0("_profiles_", nm), file_cells))
+      }
+      checkmate::assert_path_for_output(fp, overwrite = overwrite)
+      vroom::vroom_write(x$profiles[[nm]], fp, delim = ",")
+      cli::cli_inform(c("v" = "Profiles {.field {nm}} written to {.file {fp}}"))
+      file_profiles[[nm]] <- fp
+    }
+  }
 
-  invisible(list(file_cells = file_cells, file_rings = file_rings, file_meta = file_meta))
+  invisible(list(file_cells = file_cells, file_rings = file_rings,
+                 file_profiles = file_profiles))
 }
-
 
 #' Read a QWAdata object from CSV files
 #'
-#' Reads cells and rings from (compressed) CSV files and optionally attaches a
-#' [QWAmetadata] object if a matching JSON file is found or provided.
+#' Reads cells, rings, and optionally profiles from (compressed) CSV files.
+#' Use the `components` argument to load only a subset, e.g. to avoid reading
+#' a large cells file when only rings are needed.
 #'
-#' @param dir Directory to search for cells, rings, and (optionally) metadata
-#'   files. Mutually exclusive with `file_cells`/`file_rings`.
+#' @param dir Directory to search for cells, rings, and profiles files.
+#'   Mutually exclusive with `file_cells`/`file_rings`.
 #' @param file_cells,file_rings Explicit paths to the cells and rings CSV files.
 #'   Both must be provided together. Mutually exclusive with `dir`.
-#' @param file_meta Optional path to a metadata JSON file. If `NULL` and `dir`
-#'   is used, a matching metadata file is auto-detected.
+#' @param file_profiles Optional path(s) to profiles CSV file(s). Can be a
+#'   character vector to load multiple profiles. When using `dir`, all matching
+#'   `_profiles_*.csv` files are loaded automatically.
 #' @param dataset_name Optional string to disambiguate when multiple matching
 #'   files are found in `dir`.
-#' @returns A [QWAdata] object, with `$metadata` attached if a metadata file
-#'   was found/provided.
+#' @param components Character vector of components to read. Any subset of
+#'   `c("cells", "rings", "profiles")`. Defaults to `c("cells", "rings")`.
+#'   Omitted components are `NULL` in the returned [QWAdata] object.
+#' @returns A [QWAdata] object.
 #' @seealso [write_QWAdata()]
 #' @export
 read_QWAdata <- function(dir = NULL, file_cells = NULL, file_rings = NULL,
-                         file_meta = NULL, dataset_name = NULL) {
+                         file_profiles = NULL, dataset_name = NULL,
+                         components = c("cells", "rings")) {
+  components <- match.arg(components, c("cells", "rings", "profiles"), several.ok = TRUE)
   use_dir <- !is.null(dir)
   use_files <- !is.null(file_cells) && !is.null(file_rings)
   if (use_dir == use_files) {
@@ -201,71 +264,65 @@ read_QWAdata <- function(dir = NULL, file_cells = NULL, file_rings = NULL,
   }
   if (use_dir) {
     checkmate::assert_directory_exists(dir)
-    all_files <- fs::dir_ls(
-      fs::path_abs(dir), 
-      type = "file", 
-      regexp = "(\\.csv)|(\\.json)"
-    )
-    csv_files <- grep("\\.csv(\\.gz)?$", all_files, value = TRUE)
+    csv_files <- fs::dir_ls(fs::path_abs(dir), type = "file",
+                            regexp = "\\.csv(\\.gz)?$")
 
-    cell_candidates <- grep("cells", csv_files, value = TRUE)
-    ring_candidates <- grep("rings", csv_files, value = TRUE)
-    if (!is.null(dataset_name)) {
-      cell_candidates <- grep(dataset_name, cell_candidates, value = TRUE)
-      ring_candidates <- grep(dataset_name, ring_candidates, value = TRUE)
+    filter_candidates <- function(pattern) {
+      cands <- grep(pattern, csv_files, value = TRUE)
+      if (!is.null(dataset_name)) cands <- grep(dataset_name, cands, value = TRUE)
+      cands
     }
-    if (length(cell_candidates) != 1)
-      cli::cli_abort("Could not uniquely identify a cells file in {.path {dir}} ({length(cell_candidates)} matches).")
-    if (length(ring_candidates) != 1)
-      cli::cli_abort("Could not uniquely identify a rings file in {.path {dir}} ({length(ring_candidates)} matches).")
 
-    file_cells <- cell_candidates
-    file_rings <- ring_candidates
-
-    if (is.null(file_meta)) {
-      meta_candidates <- grep("metadata.*\\.json$", all_files, value = TRUE)
-      if (!is.null(dataset_name)) meta_candidates <- grep(dataset_name, meta_candidates, value = TRUE)
-      if (length(meta_candidates) == 1) file_meta <- meta_candidates
+    if ("cells" %in% components) {
+      cell_candidates <- filter_candidates("cells")
+      if (length(cell_candidates) != 1)
+        cli::cli_abort("Could not uniquely identify a cells file in {.path {dir}} ({length(cell_candidates)} matches).")
+      file_cells <- cell_candidates
+    }
+    if ("rings" %in% components) {
+      ring_candidates <- filter_candidates("rings")
+      if (length(ring_candidates) != 1)
+        cli::cli_abort("Could not uniquely identify a rings file in {.path {dir}} ({length(ring_candidates)} matches).")
+      file_rings <- ring_candidates
+    }
+    if ("profiles" %in% components && is.null(file_profiles)) {
+      prof_candidates <- filter_candidates("profiles")
+      if (length(prof_candidates) > 0) file_profiles <- prof_candidates
     }
   }
 
-  # TODO: validate / align to schema instead
-  rings <- vroom::vroom(file_rings,
-    col_types = vroom::cols(
-      .default          = vroom::col_double(),
-      tree_label        = vroom::col_character(),
-      woodpiece_label   = vroom::col_character(),
-      slide_label       = vroom::col_character(),
-      image_label       = vroom::col_character(),
-      year              = vroom::col_integer(),
-      cno               = vroom::col_integer(),
-      incomplete_ring   = vroom::col_logical(),
-      missing_ring      = vroom::col_logical(),
-      duplicate_ring    = vroom::col_logical(),
-      exclude_dupl      = vroom::col_logical(),
-      exclude_issues    = vroom::col_logical()
-    ), show_col_types = FALSE)
+  rings <- NULL
+  cells <- NULL
+  profiles <- NULL
 
-  cells <- vroom::vroom(file_cells,
-    col_types = vroom::cols(
-      .default   = vroom::col_double(),
-      image_label = vroom::col_character(),
-      year        = vroom::col_integer(),
-      xpix        = vroom::col_integer(),
-      ypix        = vroom::col_integer(),
-      nbrno       = vroom::col_integer(),
-      nbrid       = vroom::col_integer(),
-      sector100   = vroom::col_integer(),
-      ew_lw       = vroom::col_character()
-    ), show_col_types = FALSE)
+  if ("rings" %in% components) {
+    rings <- vroom::vroom(file_rings, show_col_types = FALSE)
+  }
 
-  metadata <- if (!is.null(file_meta)) {
-    read_QWAmetadata(file = file_meta)
-  } else NULL
+  if ("cells" %in% components) {
+    cells <- vroom::vroom(file_cells, show_col_types = FALSE)
+  }
 
-  cli::cli_inform(c(
-    "v" = "QWAdata read: {nrow(cells)} cells, {nrow(rings)} rings",
-    if (!is.null(metadata)) c("v" = "QWAmetadata attached from {.file {file_meta}}")
-  ))
-  new_QWAdata(cells = cells, rings = rings, metadata = metadata)
+  # TODO: validate / align to schema
+
+  if ("profiles" %in% components && !is.null(file_profiles) && length(file_profiles) > 0) {
+    profiles <- list()
+    for (fp in file_profiles) {
+      # extract profile name from filename: the part between "_profiles_" and ".csv"
+      nm <- sub(".*_profiles_(.+)\\.csv(\\.gz)?$", "\\1", basename(fp))
+      pt <- if (startsWith(nm, "sector")) "sector" else if (startsWith(nm, "band")) "band" else "sector"
+      df_prof <- vroom::vroom(fp, show_col_types = FALSE)
+      profiles[[nm]] <- new_QWAprofile(df_prof, profile_type = pt)
+      # TODO: validate
+      cli::cli_inform(c("v" = paste0("Profiles [", nm, "] read from {.file ", fp, "}")))
+    }
+  }
+
+
+  msgs <- character(0)
+  if (!is.null(cells)) msgs <- c(msgs, "v" = "{nrow(cells)} cells read from {.file {file_cells}}")
+  if (!is.null(rings)) msgs <- c(msgs, "v" = "{nrow(rings)} rings read from {.file {file_rings}}")
+  if (length(msgs) > 0) cli::cli_inform(msgs)
+
+  new_QWAdata(cells = cells, rings = rings, profiles = profiles)
 }

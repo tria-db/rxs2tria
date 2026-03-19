@@ -114,7 +114,7 @@ the same site or species, these can be supplied via the `site_label` and
 ### From the ROXAS files
 
 Extract image EXIF data and ROXAS settings and combine them with the
-data structure into a `QWAmetadata` object.
+data structure into a `QWAimages` object.
 
 *NOTE:* The timestamps in the image EXIF data and the ROXAS settings files
 depend on your locale and/or operating system. To avoid conversion errors,
@@ -136,27 +136,25 @@ df_settings$rxs_created_at <- lubridate::parse_date_time(
   orders = c("%d.%m.%Y %H:%M:%S", "%d/%m/%Y %H:%M"),
   tz = Sys.timezone()
 )
-rxs_meta <- combine_rxs_metadata(df_structure, df_settings)
+rxs_images <- build_QWAimages(df_structure, df_settings)
 rm(df_settings)
 
-rxs_meta  # prints a summary of the metadata
+rxs_images  # prints a summary of the image-level metadata
 ```
 
-`combine_rxs_metadata()` returns a `QWAmetadata` object. Its `$images`
-component holds the per-image metadata (ROXAS file paths, image data,
-and ROXAS settings). The optional components (`$dataset`, `$authors`,
-`$sites`, `$trees`, ...) are empty at this stage and can be provided
-separately for a full TRIA database submission.
+`build_QWAimages()` returns a `QWAimages` object holding the per-image
+metadata (ROXAS file paths, image data, and ROXAS settings).
 
-To save the `QWAmetadata` object to file:
+To save the `QWAimages` object to file for later use:
 ```{r savemeta, eval = FALSE}
-write_QWAmetadata(rxs_meta, "path/to/output_data/QWAmetadata.json")
+write_QWAimages(rxs_images, "path/to/output_data/QWAimages.csv.gz")
 ```
 
 ### Additional metadata (for TRIA submission)
 
 To provide the site-, tree-, and dataset-level metadata required for a
-TRIA submission, use the interactive Shiny app:
+TRIA submission, use the interactive Shiny app. It takes the `QWAimages`
+object as input and yields a full `QWAmetadata` object:
 
 ```{r metaapp, eval = FALSE}
 launch_metadata_app()
@@ -172,7 +170,7 @@ apply the three cleaning steps in order:
 
 ```{r rawdata, eval = FALSE}
 # Read raw cells and rings data from all ROXAS output files
-QWA_data <- collect_raw_data(df_structure)
+QWA_data <- collect_raw_data(rxs_images)
 
 # 1. Replace ROXAS automatic outliers (flagged as negative values) with NA
 QWA_data <- remove_outliers(QWA_data)
@@ -182,8 +180,7 @@ QWA_data <- remove_outliers(QWA_data)
 QWA_data <- complete_cell_measures(QWA_data)
 
 # 3. Validate dating, check for CWT estimates, and flag problematic rings.
-#    Also attaches rxs_meta to the QWAdata object as $metadata.
-QWA_data <- validate_QWA_data(QWA_data, rxs_meta)
+QWA_data <- validate_QWA_data(QWA_data, rxs_images)
 
 QWA_data  # prints an overview including ring flag counts
 ```

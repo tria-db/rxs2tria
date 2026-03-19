@@ -9,7 +9,6 @@ write_QWAdata(
   dir = NULL,
   file_cells = NULL,
   file_rings = NULL,
-  file_meta = NULL,
   dataset_name = NULL,
   compress = TRUE,
   overwrite = FALSE
@@ -18,19 +17,14 @@ write_QWAdata(
 \arguments{
 \item{x}{A \link{QWAdata} object.}
 
-\item{dir}{Directory to write to. Files are auto-named using \code{dataset_name}
-(or the name from \code{x$metadata$dataset$ds_name}). Mutually exclusive with
-\code{file_cells}/\code{file_rings}.}
+\item{dir}{Directory to write to. Files are auto-named using \code{dataset_name}.
+Mutually exclusive with \code{file_cells}/\code{file_rings}.}
 
 \item{file_cells, file_rings}{Explicit output paths for the cells and rings
 CSV files. Both must be provided together. Mutually exclusive with \code{dir}.}
 
-\item{file_meta}{Output path for the metadata JSON when using explicit file
-paths. Ignored when using \code{dir} (metadata is auto-named). If \code{NULL} and
-the object has metadata, a warning is issued.}
-
 \item{dataset_name}{Name prefix for auto-generated filenames when using
-\code{dir}. Falls back to \code{x$metadata$dataset$ds_name} then \code{"QWAdata"}.}
+\code{dir}. Defaults to \code{"QWAdata"}.}
 
 \item{compress}{If \code{TRUE} (default), write \code{.csv.gz} files.}
 
@@ -40,8 +34,9 @@ the object has metadata, a warning is issued.}
 A named list of written file paths, invisibly.
 }
 \description{
-Cells and rings are written as (compressed) CSV files. If the object carries
-a \verb{$metadata} slot, the metadata is written as a JSON file alongside.
+Cells, rings, and (if present) profiles are written as (compressed) CSV
+files. Each profile in the named list is written to a separate file; the
+profile name is encoded in the filename (e.g. \verb{_profiles_sector_5.csv.gz}).
 }
 \seealso{
 \code{\link[=read_QWAdata]{read_QWAdata()}}

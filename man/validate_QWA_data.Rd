@@ -14,12 +14,13 @@ validate_QWA_data(
 \arguments{
 \item{QWA_data}{a \code{QWAdata} object containing the cells and rings dataframes}
 
-\item{rxs_meta}{a \code{QWAmetadata} object whose \verb{$images} dataframe contains the
-image-level metadata (spatial_resolution required for the incomplete innermost ring check)}
+\item{rxs_meta}{a \link{QWAmetadata} or \link{QWAimages} object whose image-level
+metadata provides \code{spatial_resolution} (required for the incomplete
+innermost ring check) and \code{outmost_year}.}
 }
 \value{
-A \code{QWAdata} object with the validated data: cells unchanged, rings with
-added flag columns, and \code{rxs_meta} attached as \verb{$metadata}.
+A \code{QWAdata} object with the validated data: cells unchanged, rings
+with added flag columns.
 }
 \description{
 Initial checks to ensure the quality of the raw QWA data.

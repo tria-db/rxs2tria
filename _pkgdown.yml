@@ -14,7 +14,7 @@ reference:
   - collect_image_info
   - collect_settings_data
   - convert_settings_dates
-  - combine_rxs_metadata
+  - build_QWAimages
 - title: "Reading raw ROXAS output data"
   desc: "Functions for reading and writing ROXAS cells and rings output files."
   contents:

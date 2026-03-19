@@ -19,18 +19,20 @@ An object of class \code{c("QWAprofile", "data.frame")} with a
 \code{profile_type} attribute.
 }
 \description{
-\code{QWAprofile} is a subclass of \code{data.frame} that holds radial profiles of QWA
-measurements across the ring width. Each row represents one position bin,
-typically computed by \code{\link[=calculate_profiles]{calculate_profiles()}}.
+\code{QWAprofile} is a subclass of \code{data.frame} that holds profiles of QWA
+measurements aggregated along the annual rings. Usually elements of the
+\verb{$profiles} slot of a \code{QWAdata} object.
 }
 \details{
 Two profile types are supported, set via the \code{profile_type} attribute:
 \itemize{
 \item \strong{\code{"sector"}}: bins defined by equal relative position sectors across the
-ring width (0–100\%).
+ring width (0–100\%). \code{\link[=calculate_sector_profiles]{calculate_sector_profiles()}}
 \item \strong{\code{"band"}}: bins defined by fixed-width distance bands in microns.
+\code{\link[=calculate_band_profiles]{calculate_band_profiles()}}
 }
 }
 \seealso{
-\code{\link[=QWAdata]{QWAdata()}}, \code{\link[=calculate_profiles]{calculate_profiles()}}, \code{\link[=print.QWAprofile]{print.QWAprofile()}}
+\link{QWAdata}, \code{\link[=calculate_sector_profiles]{calculate_sector_profiles()}}, \code{\link[=calculate_band_profiles]{calculate_band_profiles()}},
+\code{\link[=print.QWAprofile]{print.QWAprofile()}}
 }

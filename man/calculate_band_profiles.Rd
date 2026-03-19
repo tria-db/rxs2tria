@@ -2,7 +2,7 @@
 % Please edit documentation in R/calculate_profiles.R
 \name{calculate_band_profiles}
 \alias{calculate_band_profiles}
-\title{Calculate band-wise cell parameter profiles}
+\title{Calculate band-wise radial profiles}
 \usage{
 calculate_band_profiles(
   QWA_data,
@@ -14,26 +14,36 @@ calculate_band_profiles(
 )
 }
 \arguments{
-\item{QWA_data}{list containing the rings and cells dataframes}
+\item{QWA_data}{A \link{QWAdata} object with non-\code{NULL} \verb{$cells} and \verb{$rings}
+components.}
 
-\item{bandwidth}{the width of the band in microns}
+\item{bandwidth}{Width of each band in microns.}
 
-\item{stepsize}{the step size with which the band is shifted, in microns}
+\item{stepsize}{Step size between band starts in microns.}
 
-\item{sel_cell_params}{character vector with the names of the cell parameters
-to include in the profiles (e.g. c("la", "cwttan"))}
+\item{sel_cell_params}{Character vector of cell parameter column names to
+include in the profiles (e.g. \code{c("la", "cwttan")}).}
 
-\item{quant_probs}{numeric vector with the quantile probabilities to
-calculate (e.g. c(0.25, 0.5, 0.75)). If NULL or empty, no quantiles are
-calculated (i.e. only the mean).}
+\item{quant_probs}{Numeric vector of quantile probabilities to calculate
+(e.g. \code{c(0.25, 0.5, 0.75)}). \code{NULL} or empty → means only.}
+
+\item{band_rebound}{If \code{TRUE} (default), the last band is shifted so its end
+coincides exactly with the ring width (\code{mrw}).}
 }
 \value{
-a dataframe with the sector-wise profiles of the selected cell
-parameters
+The input \link{QWAdata} object with the new profile added to
+\verb{$profiles[["band_\{bandwidth\}_\{stepsize\}"]]}.
 }
 \description{
-This function calculates band-wise profiles of selected cell parameters
-(means and quantiles) from the cells data. A band is a moving window of
-given bandwidth that moves from the start to the end of the ring at the given
-stepsize.
+Computes moving-band profiles of selected cell parameters across the ring
+width. Each band is a window of \code{bandwidth} microns that shifts in steps of
+\code{stepsize} microns from the cambial side to the lumen side of the ring.
+}
+\details{
+The result is stored in \code{QWA_data$profiles} under the auto-generated key
+\code{"band_{bandwidth}_{stepsize}"} (e.g. \code{"band_50_25"}). A warning is issued
+if a profile with that key already exists.
+}
+\seealso{
+\code{\link[=calculate_sector_profiles]{calculate_sector_profiles()}}, \code{\link[=QWAdata]{QWAdata()}}
 }

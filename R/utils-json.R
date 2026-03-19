@@ -113,17 +113,44 @@ get_tbl_props <- function(tbl_schema){
   list(properties = properties, required = required)
 }
 
+#' Create a 0-row skeleton data frame for a named QWAmetadata schema
+#'
+#' Resolves the JSON schema for the given component and returns an empty tibble
+#' with all columns (required and optional) typed according to the schema.
+#' Useful as a template for merging or pre-filling metadata tables.
+#'
+#' @param schema Component name: one of `"dataset"`, `"authors"`, `"funding"`,
+#'   `"related"`, `"sites"`, `"trees"`, `"woodpieces"`, `"slides"`, `"images"`.
+#' @param roxas_version ROXAS version (`"roxas"` or `"roxas_ai"`). Required when
+#'   `schema = "images"`, ignored otherwise.
+#' @returns A 0-row tibble with all schema columns and correct R column types.
+#' @seealso [align_df_to_schema()]
+#' @export
+make_schema_skeleton <- function(schema, roxas_version = NULL, nrows = 0) {
+  checkmate::assert_choice(schema, c("dataset", "authors", "funding", "related",
+                                     "sites", "trees", "woodpieces", "slides", "images"))
+  if (schema == "images")
+    checkmate::assert_subset(roxas_version, c("roxas", "roxas_ai"), empty.ok = FALSE)
+  schema_path <- system.file(schema_rel_path(schema, roxas_version), package = "rxs2tria")
+  schema_obj  <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
+  tbl_schema  <- jsonlite::fromJSON(schema_obj$schema$schema, simplifyDataFrame = FALSE)
+  tbl_schema  <- tbl_schema |> resolve_refs(fs::path_dir(schema_path))
+  tbl_props <- get_tbl_props(tbl_schema)
+  create_empty_df(tbl_props, nrows)
+}
+
+
 #' Create an empty dataframe conforming to a JSON schema
 #'
-#' @param tbl_schema A fully resolved table schema list (i.e. after
-#'   [resolve_refs()] and [resolve_allOfs()]), with `$items$properties`
+#' @param tbl_props The properties from table schema (i.e. after
+#'   [resolve_refs()] and [get_tbl_props()]), with `$properties`
 #'   containing the column definitions.
 #' @param nrows Number of rows to create. If `> 0`, character columns are
 #'   filled with `""` and logical columns with `FALSE`.
 #' @returns A tibble with columns and R types matching the schema, with
 #'   `nrows` rows.
 #' @keywords internal
-create_empty_df <- function(tbl_schema, nrows = 0){
+create_empty_df <- function(tbl_props, nrows = 0){
   # Mapping JSON Schema types to R types
   json_to_r_types <- c(
     string = "c",
@@ -136,7 +163,7 @@ create_empty_df <- function(tbl_schema, nrows = 0){
   )
 
   # extract column names and types from schema
-  cols_info <- tbl_schema$items$properties
+  cols_info <-tbl_props$properties
   col_names <- names(cols_info)
   col_types <- sapply(cols_info, function(x) x$type[1]) # NOTE: leverages that default type is in first position in schema!
 
@@ -220,11 +247,10 @@ align_df_to_schema <- function(df,
   schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
   tbl_schema <- jsonlite::fromJSON(schema_obj$schema$schema, simplifyDataFrame = FALSE)
   tbl_schema <- tbl_schema |> 
-    resolve_refs(fs::path_dir(schema_path)) |> 
-    resolve_allOfs()
-  # TODO: replace resolve_allOfs with new get_tbl_props approach, use tbl_props instead
+    resolve_refs(fs::path_dir(schema_path))
+  tbl_props <- get_tbl_props(tbl_schema)
 
-  target_structure <- create_empty_df(tbl_schema, nrows = 0)
+  target_structure <- create_empty_df(tbl_props, nrows = 0)
   target_cols <- names(target_structure)
 
   aligned_data <- df
@@ -235,23 +261,13 @@ align_df_to_schema <- function(df,
   }
 
   # check for existence, missing (required, optional) and extra columns
-  req_cols <- tbl_schema$items$required
+  req_cols <- tbl_props$required
   source_cols <- names(aligned_data)
   missing_req_cols <- setdiff(req_cols, source_cols)
   missing_opt_cols <- setdiff(target_cols, c(req_cols, source_cols))
   extra_cols <- setdiff(source_cols, target_cols)
   common_cols <- intersect(target_cols, source_cols)
 
-  # TODO: this is a special case for the shiny only? so might call create_empty directly for null components
-  # if (length(common_cols) == 0) {
-  #   msg <- c("x" = glue::glue("No valid columns found in {schema}:"), common_cols)
-  #   if (allow_missing_req) {
-  #     cli::cli_warn(msg)
-  #     return(create_empty_df(tbl_name, nrows = 1))
-  #   } else {
-  #     cli::cli_warn(msg)
-  #   }
-  # }
   msg <- c()
 
   if (length(missing_req_cols) > 0) {

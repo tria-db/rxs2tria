@@ -2,19 +2,22 @@
 % Please edit documentation in R/qwa_class.R
 \name{QWAmetadata}
 \alias{QWAmetadata}
+\alias{as_QWAmetadata}
 \title{Create a QWAmetadata object}
 \usage{
 QWAmetadata(
   dataset = NULL,
   authors = NULL,
   funding = NULL,
-  relresources = NULL,
+  related = NULL,
   sites = NULL,
   trees = NULL,
   woodpieces = NULL,
   slides = NULL,
   images = data.frame()
 )
+
+as_QWAmetadata(x)
 }
 \arguments{
 \item{dataset}{Data frame with dataset-level metadata (optional).}
@@ -23,7 +26,7 @@ QWAmetadata(
 
 \item{funding}{Data frame with funding information (optional).}
 
-\item{relresources}{Data frame with related resources (optional).}
+\item{related}{Data frame with related resources (optional).}
 
 \item{sites}{Data frame with site-level metadata (optional).}
 
@@ -33,8 +36,10 @@ QWAmetadata(
 
 \item{slides}{Data frame with slide-level metadata (optional).}
 
-\item{images}{Data frame with image-level metadata. Required (defaults to
-an empty data frame). Populated automatically by \code{\link[=combine_rxs_metadata]{combine_rxs_metadata()}}.}
+\item{images}{A \link{QWAimages} object or plain data frame with image-level
+metadata. Required. Typically the output of \code{\link[=build_QWAimages]{build_QWAimages()}}.}
+
+\item{x}{A named list with any subset of the \code{\link[=QWAmetadata]{QWAmetadata()}} components.}
 }
 \value{
 An object of class \code{QWAmetadata}.
@@ -42,25 +47,27 @@ An object of class \code{QWAmetadata}.
 \description{
 \code{QWAmetadata} holds the hierarchical metadata associated with a QWA dataset,
 structured by level of organisation:
-}
-\details{
 \itemize{
 \item \strong{\verb{$dataset}}: dataset-level information (name, description, license).
 \item \strong{\verb{$authors}}: author information.
 \item \strong{\verb{$funding}}: funding sources and grant numbers.
-\item \strong{\verb{$relresources}}: related resources (publications, datasets, etc.).
+\item \strong{\verb{$related}}: related resources (publications, datasets, etc.).
 \item \strong{\verb{$sites}}: site-level metadata (location, climate, etc.).
 \item \strong{\verb{$trees}}: tree-level metadata (species, DBH, age, etc.).
 \item \strong{\verb{$woodpieces}}: woodpiece-level metadata (disc, core, etc.).
-\item \strong{\verb{$slides}}: slide-level metadata (preparation date, staining, etc.).
+\item \strong{\verb{$slides}}: slide-level metadata (preparation, staining, etc.).
 \item \strong{\verb{$images}}: image-level metadata, including the ROXAS output file
 paths, EXIF data, and ROXAS settings. This is the only required component
-and is populated automatically by \code{\link[=combine_rxs_metadata]{combine_rxs_metadata()}}.
+and is usually populated automatically by \code{\link[=build_QWAimages]{build_QWAimages()}}.
 }
 
 All components except \code{images} are optional and can be filled in later to
 prepare a complete dataset submission to the TRIA database.
+
+\code{\link[=as_QWAmetadata]{as_QWAmetadata()}} safely constructs a \link{QWAmetadata} object from a named list.
+Component names are matched against the \code{\link[=QWAmetadata]{QWAmetadata()}} constructor parameters;
+unknown names are dropped with a warning.
 }
 \seealso{
-\code{\link[=QWAdata]{QWAdata()}}, \code{\link[=combine_rxs_metadata]{combine_rxs_metadata()}}, \code{\link[=print.QWAmetadata]{print.QWAmetadata()}}
+\code{\link[=QWAdata]{QWAdata()}}, \code{\link[=QWAdata]{QWAdata()}}, \code{\link[=build_QWAimages]{build_QWAimages()}}, \code{\link[=print.QWAmetadata]{print.QWAmetadata()}}
 }

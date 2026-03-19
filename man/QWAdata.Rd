@@ -4,42 +4,40 @@
 \alias{QWAdata}
 \title{Create a QWAdata object}
 \usage{
-QWAdata(cells = NULL, rings = NULL, profiles = NULL, metadata = NULL)
+QWAdata(cells = NULL, rings = NULL, profiles = NULL)
 }
 \arguments{
 \item{cells}{Data frame with cell-level measurements (optional).}
 
 \item{rings}{Data frame with ring-level measurements and flags (optional).}
 
-\item{profiles}{A \link{QWAprofile} object with computed radial profiles (optional).}
-
-\item{metadata}{A \link{QWAmetadata} object (optional).}
+\item{profiles}{A named list of \link{QWAprofile} objects, or a single \link{QWAprofile}
+(auto-wrapped using its \code{profile_type} as name). Optional.}
 }
 \value{
 An object of class \code{QWAdata}.
 }
 \description{
-\code{QWAdata} is the central S3 class of this package. It holds the quantitative
-wood anatomy (QWA) data produced from ROXAS output files, organised into up
-to four components:
+The S3 class \code{QWAdata} holds the quantitative wood anatomy (QWA) measurements
+data produced from ROXAS output files, organised into up
+to three components:
 }
 \details{
 \itemize{
 \item \strong{\verb{$cells}}: cell-level measurements (one row per cell).
-\item \strong{\verb{$rings}}: ring-level measurements and quality flags (one row per annual
-ring per image). Populated progressively: raw measurements are added by
-\code{\link[=collect_raw_data]{collect_raw_data()}}, flags by \code{\link[=validate_QWA_data]{validate_QWA_data()}}.
-\item \strong{\verb{$profiles}}: a \link{QWAprofile} object with radial profiles computed across
-the ring width, e.g. from \code{\link[=calculate_profiles]{calculate_profiles()}}.
-\item \strong{\verb{$metadata}}: a \link{QWAmetadata} object with dataset-, site-, tree-,
-woodpiece-, slide-, and image-level metadata.
+\item \strong{\verb{$rings}}: ring-level measurements, and possibly also quality flags
+(one row per annual ring per image).
+\item \strong{\verb{$profiles}}: a list of \link{QWAprofile} objects with cell measurement profiles
+computed along annual rings, with \code{\link[=calculate_sector_profiles]{calculate_sector_profiles()}} or
+\code{\link[=calculate_band_profiles]{calculate_band_profiles()}}.
 }
 
 At least one component must be provided. The typical workflow builds a
 \code{QWAdata} object incrementally using \code{\link[=collect_raw_data]{collect_raw_data()}},
 \code{\link[=remove_outliers]{remove_outliers()}}, \code{\link[=complete_cell_measures]{complete_cell_measures()}}, and \code{\link[=validate_QWA_data]{validate_QWA_data()}}.
+Metadata is kept separately as a \link{QWAmetadata} or \link{QWAimages} object.
 }
 \seealso{
-\code{\link[=QWAmetadata]{QWAmetadata()}}, \code{\link[=collect_raw_data]{collect_raw_data()}}, \code{\link[=validate_QWA_data]{validate_QWA_data()}},
-\code{\link[=print.QWAdata]{print.QWAdata()}}
+\code{\link[=QWAmetadata]{QWAmetadata()}}, \code{\link[=QWAimages]{QWAimages()}}, \code{\link[=collect_raw_data]{collect_raw_data()}},
+\code{\link[=validate_QWA_data]{validate_QWA_data()}}, \code{\link[=print.QWAdata]{print.QWAdata()}}
 }

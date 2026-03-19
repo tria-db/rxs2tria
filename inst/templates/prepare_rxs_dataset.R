@@ -53,19 +53,23 @@ df_settings$rxs_created_at <- lubridate::parse_date_time(
   tz = Sys.timezone()
 )
 
-rxs_meta <- combine_rxs_metadata(df_structure, df_settings)
+rxs_images <- build_QWAimages(df_structure, df_settings)
 rm(df_settings)
 
-# To save the QWAmetadata object to a file for later, use:
-# write_QWAmetadata(rxs_meta, "path/to/output_data/QWAmetadata.json")
+# To save the QWAimages object to a file for later, use:
+# write_QWAimages(rxs_images, "path/to/output_data/QWAimages.csv.gz")
+
+# and read it in again
+# rxs_images <- read_QWAimages("path/to/output_data/QWAimages.csv.gz")
 
 # ------------------------------------------------------------------------------
 # Step 3b: Additional metadata (for TRIA submission)
 # ------------------------------------------------------------------------------
-# To provide the site-, tree-, ..., and dataset-level metadata required for a
+# To provide the slide-, woodpiece-, ..., and dataset-level metadata required for a
 # TRIA submission, use the interactive Shiny app.
-# If run locally, the app can access objects such as `rxs_meta` from the current
-# environment.
+# The app takes rxs_images as input and yields a full QWAmetadata object.
+# If run locally, the app can access objects such as `rxs_images` from the
+# current environment.
 launch_metadata_app()
 
 
@@ -73,18 +77,15 @@ launch_metadata_app()
 # Step 4: Read and clean the measurement data
 # ------------------------------------------------------------------------------
 
-# if you would like to read rxs_meta data from file:
-# rxs_meta <- read_QWAmetadata('filename')
+# if you would like to read rxs_images data from file:
+# rxs_images <- read_QWAimages("path/to/output_data/QWAimages.csv.gz")
 
-# NOTE: only the structure and filepath columns are required to collect the raw
-# data, so df_structure also works as input for `collect_raw_data()`.
-QWA_data <- collect_raw_data(rxs_meta$images)
+QWA_data <- collect_raw_data(rxs_images)
 QWA_data <- remove_outliers(QWA_data)
 QWA_data <- complete_cell_measures(QWA_data)
 
-# validate_QWA_data checks dating and CWT estimates, adds ring quality flags,
-# and attaches rxs_meta as QWA_data$metadata
-QWA_data <- validate_QWA_data(QWA_data, rxs_meta)
+# validate_QWA_data checks dating and CWT estimates and adds ring quality flags
+QWA_data <- validate_QWA_data(QWA_data, rxs_images)
 
 # Inspect the result:
 # QWA_data
@@ -97,11 +98,4 @@ QWA_data <- validate_QWA_data(QWA_data, rxs_meta)
 path_out     <- "./path/to/output"
 dataset_name <- "my_dataset"
 
-# TODO: write_QWAdata(QWA_data)
-
-write.csv(QWA_data$cells,
-          file.path(path_out, paste0(dataset_name, "_cells.csv")),
-          row.names = FALSE)
-write.csv(QWA_data$rings,
-          file.path(path_out, paste0(dataset_name, "_rings.csv")),
-          row.names = FALSE)
+write_QWAdata(QWA_data, dir = path_out, dataset_name = dataset_name)
