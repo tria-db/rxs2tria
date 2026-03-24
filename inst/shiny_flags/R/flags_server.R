@@ -1043,13 +1043,111 @@ flags_server <- function(id, main_session) {
     }) |> shiny::bindEvent(input$confirm_exit, ignoreNULL = TRUE)
 
 
+    # NEW SAVE -----
+    save_settings <- shiny::reactiveValues(
+      not_set = TRUE,
+      save_to = NULL,
+      filepath = NULL,
+      varname = NULL
+    )
+
+    save_modal <- function(ns) {
+      shiny::modalDialog(
+        title = "Save Settings",
+        shiny::checkboxGroupInput(ns("modal_save_to"), "Save edited rings data to:", 
+        choices = c("a local CSV file" = "file", "a variable in the current R environment" = "env"),
+        selected = "file"),
+        hr(),
+        shiny::textInput(ns("modal_filepath"), "File path", placeholder = "e.g., out/rings_edited.csv", value = save_settings$filepath),
+        shiny::textInput(ns("modal_varname"), "Variable name", placeholder = "e.g., QWA_data$rings or df_rings_edited"),
+        footer = shiny::tagList(
+          shiny::modalButton("Cancel"),
+          shiny::actionButton(ns("save_confirm"), "Confirm and save")
+        )
+      )
+    }
+
+    # open save settings modal when gear icon clicked
+    shiny::observe({
+      shiny::showModal(save_modal(ns))
+    }) |> shiny::bindEvent(input$save_settings_btn)
+
+    # open save settings modal when save button is clicked for the first time
+    # i.e. save_settings$not_set is still TRUE
+    shiny::observe({
+      shiny::req(save_settings$not_set)
+      shiny::showModal(save_modal(ns))
+    }) |> shiny::bindEvent(input$save_btn)
+
+    # conditional logics for the modal UI
+    shiny::observe({
+      shinyjs::toggleState("modal_filepath", condition = "file" %in% input$modal_save_to)
+      shinyjs::toggleState("modal_varname", condition = "env" %in% input$modal_save_to)
+      shinyjs::toggleState("save_confirm", condition = 
+        (("file" %in% input$modal_save_to) && shiny::isTruthy(input$modal_filepath)) ||
+          (("env" %in% input$modal_save_to) && shiny::isTruthy(input$modal_varname))
+      )   
+    }) |> shiny::bindEvent(input$modal_save_to, 
+                           input$modal_filepath, 
+                           input$modal_varname, ignoreNULL = FALSE)
+    
+    # on confirm save in modal, update settings and save data
+    shiny::observe({
+      save_settings$not_set <- FALSE
+      save_settings$save_to <- input$modal_save_to
+      save_settings$filepath <- input$modal_filepath
+      save_settings$varname <- input$modal_varname
+      shiny::removeModal()
+      df_edited <- rings_data_edited()
+      df_org <- input_data$rings_data
+      save_ring_edits(df_edited, df_org, save_settings)
+    }) |> shiny::bindEvent(input$save_confirm)
+
+    shiny::observe({
+      settings_set <- !save_settings$not_set
+      shiny::req(settings_set)
+      df_edited <- rings_data_edited()
+      df_org <- input_data$rings_data
+      save_ring_edits(df_edited, df_org, save_settings)
+    }) |> shiny::bindEvent(input$save_btn)
+    
+    # save block it
+    save_ring_edits <- function(df, df_in, settings) {
+      safe_block({
+        df_out <- prepare_rings_out(df, df_in)
+        if ("env" %in% settings$save_to) {
+          assign(settings$varname, df_out, envir = .GlobalEnv)
+          shiny::showNotification(
+            paste0("Saved to environment variable: ", settings$varname),
+            type = "message"
+          )
+        }
+        if ("file" %in% settings$save_to) {
+          checkmate::assert_path_for_output(settings$filepath, overwrite = TRUE)
+          vroom::vroom_write(df_out, settings$filepath, delim = ",")
+          shiny::showNotification(
+            paste0("Saved to file: ", settings$filepath),
+            type = "message"
+          )
+        }
+      },
+      err_title = "Error saving data",
+      err_message = "",
+      propagate_err = FALSE
+      )
+    }
+    
+  
+
     # DEBUG OUTPUT -------------------------------------------------------------
     output$debug <- renderPrint({
       #sel_subplots()
       print(sample(1:10000, 1))
+      shiny::req(save_settings$initialized)
+      "hi"
       #df <- traces_to_df(input$traces_crn)
       #tail(df)
-      rings_data_org()
+      #rings_data_org()
 
 
     })

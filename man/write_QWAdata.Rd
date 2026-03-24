@@ -34,10 +34,8 @@ CSV files. Both must be provided together. Mutually exclusive with \code{dir}.}
 A named list of written file paths, invisibly.
 }
 \description{
-Cells, rings, and (if present) profiles are written as (compressed) CSV
-files. Each profile in the named list is written to a separate file; the
-profile name is encoded in the filename (e.g. \verb{_profiles_sector_5.csv.gz}).
+Cells and rings are written as (compressed) CSV files.
 }
 \seealso{
-\code{\link[=read_QWAdata]{read_QWAdata()}}
+\code{\link[=read_QWAdata]{read_QWAdata()}}, \code{\link[=write_QWAprofile]{write_QWAprofile()}}
 }

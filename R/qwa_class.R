@@ -60,24 +60,14 @@ new_QWAmetadata <- function(dataset = NULL,
 
 #' @noRd
 new_QWAdata <- function(cells = NULL,
-                        rings = NULL,
-                        profiles = NULL) {
+                        rings = NULL) {
   stopifnot(is.null(cells) || is.data.frame(cells))
   stopifnot(is.null(rings) || is.data.frame(rings))
-  stopifnot(
-    is.null(profiles) || (
-      is.list(profiles) &&
-      # !is.null(names(profiles)) &&
-      # all(nchar(names(profiles)) > 0) &&
-      all(vapply(profiles, inherits, logical(1), "QWAprofile"))
-    )
-  )
 
   structure(
     list(
       cells = cells,
-      rings = rings,
-      profiles = profiles
+      rings = rings
     ),
     class = c("QWAdata", "list")
   )
@@ -90,7 +80,7 @@ new_QWAprofile <- function(data, profile_type) {
 
   structure(
     data,
-    class = c("QWAprofile", "data.frame"),
+    class = c("QWAprofile", class(data)),
     profile_type = profile_type
   )
 }
@@ -342,36 +332,31 @@ complete_QWAmetadata <- function(x) {
 #' Create a QWAdata object
 #'
 #' The S3 class `QWAdata` holds the quantitative wood anatomy (QWA) measurements
-#' data produced from ROXAS output files, organised into up
-#' to three components:
+#' data produced from ROXAS output files, organised into two components:
 #'
 #' - **`$cells`**: cell-level measurements (one row per cell).
-#' - **`$rings`**: ring-level measurements, and possibly also quality flags 
+#' - **`$rings`**: ring-level measurements, and possibly also quality flags
 #'   (one row per annual ring per image).
-#' - **`$profiles`**: a list of [QWAprofile] objects with cell measurement profiles
-#'   computed along annual rings, with [calculate_sector_profiles()] or
-#'   [calculate_band_profiles()].
 #'
 #' At least one component must be provided. The typical workflow builds a
 #' `QWAdata` object incrementally using [collect_raw_data()],
 #' [remove_outliers()], [complete_cell_measures()], and [validate_QWA_data()].
 #' Metadata is kept separately as a [QWAmetadata] or [QWAimages] object.
+#' Radial profiles are computed separately as [QWAprofile] objects using
+#' [calculate_sector_profiles()] or [calculate_band_profiles()].
 #'
 #' @param cells Data frame with cell-level measurements (optional).
 #' @param rings Data frame with ring-level measurements and flags (optional).
-#' @param profiles A named list of [QWAprofile] objects, or a single [QWAprofile]
-#'   (auto-wrapped using its `profile_type` as name). Optional.
 #'
 #' @returns An object of class `QWAdata`.
 #'
-#' @seealso [QWAmetadata()], [QWAimages()], [collect_raw_data()],
+#' @seealso [QWAmetadata()], [QWAimages()], [QWAprofile()], [collect_raw_data()],
 #'   [validate_QWA_data()], [print.QWAdata()]
 #' @export
 QWAdata <- function(cells = NULL,
-                    rings = NULL,
-                    profiles = NULL) {
+                    rings = NULL) {
 
-  if (is.null(cells) && is.null(rings) && is.null(profiles)) {
+  if (is.null(cells) && is.null(rings)) {
     stop("At least one component must be provided")
   }
 
@@ -380,21 +365,7 @@ QWAdata <- function(cells = NULL,
 
   # TODO: add cells and rings component validations
 
-  # accept a single QWAprofile for convenience: wrap in named list using profile_type
-  if (inherits(profiles, "QWAprofile")) {
-    pt <- attr(profiles, "profile_type")
-    profiles <- setNames(list(profiles), pt)
-  }
-  if (!is.null(profiles)) {
-    checkmate::assert_list(profiles)
-    vapply(profiles, \(x) checkmate::assert_class(x, classes = "QWAprofile",
-      .var.name = "profiles_class_checks"),
-    logical(1))
-  }
-  # TODO: just convert to QWAprofile if not already? similar to images in metadata
-  # TODO: profile validation checks
-
-  new_QWAdata(cells, rings, profiles)
+  new_QWAdata(cells, rings)
 }
 
 #' Create a QWAprofile object
@@ -464,15 +435,6 @@ print.QWAdata <- function(x, ...) {
     " " = fmt_comp("cells", x$cells),
     " " = fmt_comp("rings", x$rings)
   ))
-  if (is.null(x$profiles) || length(x$profiles) == 0) {
-    cli::cli_bullets(c(" " = "profiles  : {.emph none}"))
-  } else {
-    for (nm in names(x$profiles)) {
-      p  <- x$profiles[[nm]]
-      pt <- attr(p, "profile_type")
-      cli::cli_bullets(c(" " = "profiles [{.val {nm}}]: {.val {pt}}, {nrow(p)} rows"))
-    }
-  }
 
   # --- Coverage ---
   ref <- if (!is.null(x$rings)) x$rings else x$cells
@@ -574,35 +536,35 @@ summary.QWAmetadata <- function(object, ...) {
 }
 
 
-#' Summary of a QWAprofile object
+#' Summarise a QWAprofile object
 #'
 #' Displays a compact overview of a [QWAprofile] object: the profile type,
 #' the number of position bins, and the coverage (images, rings, year range).
 #'
-#' @param x A `QWAprofile` object.
+#' @param object A `QWAprofile` object.
 #' @param ... Further arguments (currently unused).
 #'
-#' @returns `x`, invisibly.
+#' @returns `object`, invisibly.
 #'
-#' @seealso [QWAprofile()], [summary.QWAprofile()]
+#' @seealso [QWAprofile()]
 #' @export
 summary.QWAprofile <- function(object, ...) {
-  profile_type <- attr(x, "profile_type")
+  profile_type <- attr(object, "profile_type")
   cli::cli_h2("<QWAprofile>")
   cli::cli_bullets(c(
     " " = "type:  {.val {profile_type}}",
-    " " = "size:  {nrow(x)} rows \u00d7 {ncol(x)} cols"
+    " " = "size:  {nrow(object)} rows \u00d7 {ncol(object)} cols"
   ))
-  if ("image_label" %in% names(x)) {
-    bullets <- c(" " = "{length(unique(x$image_label))} image{?s}")
-    if ("year" %in% names(x)) {
-      yr <- range(x$year, na.rm = TRUE)
+  if ("image_label" %in% names(object)) {
+    bullets <- c(" " = "{length(unique(object$image_label))} image{?s}")
+    if ("year" %in% names(object)) {
+      yr <- range(object$year, na.rm = TRUE)
       bullets <- c(bullets, " " = "years: {yr[1]}\u2013{yr[2]}")
     }
     cli::cli_text("{.strong Coverage}")
     cli::cli_bullets(bullets)
   }
-  invisible(x)
+  invisible(object)
 }
 
 
@@ -619,25 +581,25 @@ summary.QWAprofile <- function(object, ...) {
 #' @seealso [QWAimages()]
 #' @export
 summary.QWAimages <- function(object, ...) {
-    rv <- attr(x, "roxas_version")
+  rv <- attr(object, "roxas_version")
   cli::cli_h2("<QWAimages>")
   cli::cli_bullets(c(
     " " = "software: {.val {rv}}",
-    " " = "size:     {nrow(x)} rows \u00d7 {ncol(x)} cols"
+    " " = "size:     {nrow(object)} rows \u00d7 {ncol(object)} cols"
   ))
-  if ("image_label" %in% names(x)) {
+  if ("image_label" %in% names(object)) {
     bullets <- character(0)
-    if ("woodpiece_label" %in% names(x))
-      bullets <- c(bullets, " " = "{length(unique(x$woodpiece_label))} woodpiece{?s}")
-    if ("slide_label" %in% names(x))
-      bullets <- c(bullets, " " = "{length(unique(x$slide_label))} slide{?s}")
-    bullets <- c(bullets, " " = "{length(unique(x$image_label))} image{?s}")
-    if ("outmost_year" %in% names(x)) {
-      yr <- range(x$outmost_year, na.rm = TRUE)
+    if ("woodpiece_label" %in% names(object))
+      bullets <- c(bullets, " " = "{length(unique(object$woodpiece_label))} woodpiece{?s}")
+    if ("slide_label" %in% names(object))
+      bullets <- c(bullets, " " = "{length(unique(object$slide_label))} slide{?s}")
+    bullets <- c(bullets, " " = "{length(unique(object$image_label))} image{?s}")
+    if ("outmost_year" %in% names(object)) {
+      yr <- range(object$outmost_year, na.rm = TRUE)
       bullets <- c(bullets, " " = "outmost years: {yr[1]}\u2013{yr[2]}")
     }
     cli::cli_text("{.strong Coverage}")
     cli::cli_bullets(bullets)
   }
-  invisible(x)
+  invisible(object)
 }

@@ -151,9 +151,7 @@ read_QWAmetadata <- function(file, roxas_version = NULL, allow_missing_req = FAL
 
 #' Write a QWAdata object to files
 #'
-#' Cells, rings, and (if present) profiles are written as (compressed) CSV
-#' files. Each profile in the named list is written to a separate file; the
-#' profile name is encoded in the filename (e.g. `_profiles_sector_5.csv.gz`).
+#' Cells and rings are written as (compressed) CSV files.
 #'
 #' @param x A [QWAdata] object.
 #' @param dir Directory to write to. Files are auto-named using `dataset_name`.
@@ -165,10 +163,10 @@ read_QWAmetadata <- function(file, roxas_version = NULL, allow_missing_req = FAL
 #' @param compress If `TRUE` (default), write `.csv.gz` files.
 #' @param overwrite Allow to overwrite existing files? (default `FALSE`).
 #' @returns A named list of written file paths, invisibly.
-#' @seealso [read_QWAdata()]
+#' @seealso [read_QWAdata()], [write_QWAprofile()]
 #' @export
-write_QWAdata <- function(x, dir = NULL, 
-                          file_cells = NULL, file_rings = NULL, 
+write_QWAdata <- function(x, dir = NULL,
+                          file_cells = NULL, file_rings = NULL,
                           dataset_name = NULL,
                           compress = TRUE, overwrite = FALSE) {
   checkmate::assert_class(x, "QWAdata")
@@ -211,51 +209,31 @@ write_QWAdata <- function(x, dir = NULL,
     "v" = "Rings written to {.file {file_rings}}"
   ))
 
-  file_profiles <- list()
-  if (!is.null(x$profiles) && length(x$profiles) > 0) {
-    for (nm in names(x$profiles)) {
-      # TODO: allow also unnamed?
-      if (use_dir) {
-        fp <- file.path(dir, paste0(prefix, "_profiles_", nm, ext))
-      } else {
-        fp <- fix_ext(sub("_cells(\\.csv(\\.gz)?)?$", paste0("_profiles_", nm), file_cells))
-      }
-      checkmate::assert_path_for_output(fp, overwrite = overwrite)
-      vroom::vroom_write(x$profiles[[nm]], fp, delim = ",")
-      cli::cli_inform(c("v" = "Profiles {.field {nm}} written to {.file {fp}}"))
-      file_profiles[[nm]] <- fp
-    }
-  }
-
-  invisible(list(file_cells = file_cells, file_rings = file_rings,
-                 file_profiles = file_profiles))
+  invisible(list(file_cells = file_cells, file_rings = file_rings))
 }
 
 #' Read a QWAdata object from CSV files
 #'
-#' Reads cells, rings, and optionally profiles from (compressed) CSV files.
+#' Reads cells and rings from (compressed) CSV files.
 #' Use the `components` argument to load only a subset, e.g. to avoid reading
 #' a large cells file when only rings are needed.
 #'
-#' @param dir Directory to search for cells, rings, and profiles files.
+#' @param dir Directory to search for cells and rings files.
 #'   Mutually exclusive with `file_cells`/`file_rings`.
 #' @param file_cells,file_rings Explicit paths to the cells and rings CSV files.
 #'   Both must be provided together. Mutually exclusive with `dir`.
-#' @param file_profiles Optional path(s) to profiles CSV file(s). Can be a
-#'   character vector to load multiple profiles. When using `dir`, all matching
-#'   `_profiles_*.csv` files are loaded automatically.
 #' @param dataset_name Optional string to disambiguate when multiple matching
 #'   files are found in `dir`.
 #' @param components Character vector of components to read. Any subset of
-#'   `c("cells", "rings", "profiles")`. Defaults to `c("cells", "rings")`.
+#'   `c("cells", "rings")`. Defaults to `c("cells", "rings")`.
 #'   Omitted components are `NULL` in the returned [QWAdata] object.
 #' @returns A [QWAdata] object.
-#' @seealso [write_QWAdata()]
+#' @seealso [write_QWAdata()], [read_QWAprofile()]
 #' @export
 read_QWAdata <- function(dir = NULL, file_cells = NULL, file_rings = NULL,
-                         file_profiles = NULL, dataset_name = NULL,
+                         dataset_name = NULL,
                          components = c("cells", "rings")) {
-  components <- match.arg(components, c("cells", "rings", "profiles"), several.ok = TRUE)
+  components <- match.arg(components, c("cells", "rings"), several.ok = TRUE)
   use_dir <- !is.null(dir)
   use_files <- !is.null(file_cells) && !is.null(file_rings)
   if (use_dir == use_files) {
@@ -285,15 +263,10 @@ read_QWAdata <- function(dir = NULL, file_cells = NULL, file_rings = NULL,
         cli::cli_abort("Could not uniquely identify a rings file in {.path {dir}} ({length(ring_candidates)} matches).")
       file_rings <- ring_candidates
     }
-    if ("profiles" %in% components && is.null(file_profiles)) {
-      prof_candidates <- filter_candidates("profiles")
-      if (length(prof_candidates) > 0) file_profiles <- prof_candidates
-    }
   }
 
   rings <- NULL
   cells <- NULL
-  profiles <- NULL
 
   if ("rings" %in% components) {
     rings <- vroom::vroom(file_rings, show_col_types = FALSE)
@@ -305,24 +278,63 @@ read_QWAdata <- function(dir = NULL, file_cells = NULL, file_rings = NULL,
 
   # TODO: validate / align to schema
 
-  if ("profiles" %in% components && !is.null(file_profiles) && length(file_profiles) > 0) {
-    profiles <- list()
-    for (fp in file_profiles) {
-      # extract profile name from filename: the part between "_profiles_" and ".csv"
-      nm <- sub(".*_profiles_(.+)\\.csv(\\.gz)?$", "\\1", basename(fp))
-      pt <- if (startsWith(nm, "sector")) "sector" else if (startsWith(nm, "band")) "band" else "sector"
-      df_prof <- vroom::vroom(fp, show_col_types = FALSE)
-      profiles[[nm]] <- new_QWAprofile(df_prof, profile_type = pt)
-      # TODO: validate
-      cli::cli_inform(c("v" = paste0("Profiles [", nm, "] read from {.file ", fp, "}")))
-    }
-  }
-
-
   msgs <- character(0)
   if (!is.null(cells)) msgs <- c(msgs, "v" = "{nrow(cells)} cells read from {.file {file_cells}}")
   if (!is.null(rings)) msgs <- c(msgs, "v" = "{nrow(rings)} rings read from {.file {file_rings}}")
   if (length(msgs) > 0) cli::cli_inform(msgs)
 
-  new_QWAdata(cells = cells, rings = rings, profiles = profiles)
+  new_QWAdata(cells = cells, rings = rings)
+}
+
+
+# QWAprofile I/O ---------------------------------------------------------------
+
+#' Write a QWAprofile object to a CSV file
+#'
+#' @param x A [QWAprofile] object.
+#' @param file Path to the output `.csv` or `.csv.gz` file.
+#' @param compress If `TRUE`, write a compressed `.csv.gz` file (default `FALSE`).
+#' @param overwrite Allow overwriting existing files? (default `TRUE`).
+#' @returns The output file path, invisibly.
+#' @seealso [read_QWAprofile()], [QWAprofile()]
+#' @export
+write_QWAprofile <- function(x, file, compress = FALSE, overwrite = TRUE) {
+  checkmate::assert_class(x, "QWAprofile")
+  ext <- if (compress) ".csv.gz" else ".csv"
+  file_fixed <- paste0(sub("\\.csv(\\.gz)?$", "", file), ext)
+  if (file_fixed != file)
+    cli::cli_warn("Adjusted {.arg file} extension to {.val {ext}}: {.file {file_fixed}}")
+  file <- file_fixed
+  checkmate::assert_path_for_output(file, overwrite = overwrite)
+  profile_type <- attr(x, "profile_type")
+  vroom::vroom_write(
+    tibble::add_column(tibble::as_tibble(x), .profile_type = profile_type, .before = 1),
+    file, delim = ","
+  )
+  cli::cli_inform(c("v" = "QWAprofile written to {.file {file}}"))
+  invisible(file)
+}
+
+
+#' Read a QWAprofile object from a CSV file
+#'
+#' Reads a profile written by [write_QWAprofile()] and reconstructs the
+#' [QWAprofile] object. The `profile_type` is read from the `.profile_type`
+#' column that [write_QWAprofile()] writes automatically.
+#'
+#' @param file Path to a `.csv` or `.csv.gz` file.
+#' @returns A [QWAprofile] object.
+#' @seealso [write_QWAprofile()]
+#' @export
+read_QWAprofile <- function(file) {
+  checkmate::assert_file_exists(file)
+  df <- vroom::vroom(file, show_col_types = FALSE)
+  if (!".profile_type" %in% names(df))
+    cli::cli_abort("Column {.val .profile_type} not found in {.file {file}}. Was this file written by {.fn write_QWAprofile}?")
+  pt <- unique(df$.profile_type)
+  if (length(pt) != 1 || !(pt %in% c("sector", "band")))
+    cli::cli_abort("Invalid {.val .profile_type} value in {.file {file}}: {.val {pt}}")
+  df$.profile_type <- NULL
+  cli::cli_inform(c("v" = "QWAprofile read from {.file {file}}"))
+  new_QWAprofile(df, profile_type = pt)
 }

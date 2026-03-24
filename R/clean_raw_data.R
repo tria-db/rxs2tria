@@ -51,14 +51,6 @@ remove_outliers <- function(QWA_data){
     ))
   }
 
-  if (!is.null(QWA_data$profiles)) {
-    cli::cli_warn(c(
-      "!" = "Profiles present in {.var QWA_data} will be dropped.",
-      "i" = "Profiles are derived from cells and rings data and must be",
-      "i" = "recomputed after outlier removal."
-    ))
-  }
-
   cells_rm <- QWA_data$cells %>%
     dplyr::mutate(dplyr::across(dplyr::all_of(outl_cols_cells),
                                 ~ dplyr::if_else(.x < 0, NA_real_, .x)))
@@ -100,14 +92,6 @@ max_na_inf <- function(x){
 #' @export
 complete_cell_measures <- function(QWA_data){
   checkmate::assert_class(QWA_data, "QWAdata")
-
-  if (!is.null(QWA_data$profiles)) {
-    cli::cli_warn(c(
-      "!" = "Profiles present in {.var QWA_data} will be dropped.",
-      "i" = "Profiles are derived from cells and rings data and must be",
-      "i" = "recomputed after completing cell measures."
-    ))
-  }
 
   df_cells <- QWA_data$cells %>%
     # need MRW for some calculations
@@ -684,9 +668,7 @@ validate_QWA_data <- function(QWA_data, rxs_meta, verbose_flags = FALSE, exclude
   # message(paste0(capture.output(print(as.data.frame(issue_counts),
   #                               row.names = FALSE)), collapse='\n'))
 
-  # TODO: reset profiles if present and issues corrected? should be recalculated, no?
-  new_QWAdata(cells = QWA_data$cells, rings = df_rings_log,
-              profiles = QWA_data$profiles)
+  new_QWAdata(cells = QWA_data$cells, rings = df_rings_log)
 }
 
 

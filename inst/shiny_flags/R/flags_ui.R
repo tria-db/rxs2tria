@@ -90,14 +90,28 @@ flags_ui <- function(id) {
 
       # button to save and/or download edited data ----
       # TODO: what about saving in between? what about saving if app crashes?
-      shiny::downloadButton(
-        ns("save_data"), "Download new ring data",
-        class = "btn-tert"
-      ),
-      shiny::actionButton(
-        ns("close_app"), "Close app",
-        icon = shiny::icon("xmark"), class = "btn-danger"
-      ),
+      # shiny::downloadButton(
+      #   ns("save_data"), "Download new ring data",
+      #   class = "btn-tert"
+      # ),
+      # shiny::actionButton(
+      #   ns("close_app"), "Close app",
+      #   icon = shiny::icon("xmark"), class = "btn-danger"
+      # ),
+
+      tags$div(
+        style = "display: flex; flex-direction: column;  gap: 4px;",
+                shiny::actionButton(ns("save_btn"), "Save ring flags", icon = shiny::icon("save"), 
+                            class = "btn-tert", width = "100%"),
+        tags$div(
+          style = "display: flex; align-items: center; gap: 4px;",
+          shiny::actionLink(ns("save_settings_btn"), NULL, shiny::icon("gear")),
+          tags$span("Save settings", style = "font-size: 0.8em; ")
+        ),
+
+      )
+      
+      
 
     ), # end of sidebar
 

@@ -4,11 +4,11 @@
 \alias{create_empty_df}
 \title{Create an empty dataframe conforming to a JSON schema}
 \usage{
-create_empty_df(tbl_schema, nrows = 0)
+create_empty_df(tbl_props, nrows = 0)
 }
 \arguments{
-\item{tbl_schema}{A fully resolved table schema list (i.e. after
-\code{\link[=resolve_refs]{resolve_refs()}} and \code{\link[=resolve_allOfs]{resolve_allOfs()}}), with \verb{$items$properties}
+\item{tbl_props}{The properties from table schema (i.e. after
+\code{\link[=resolve_refs]{resolve_refs()}} and \code{\link[=get_tbl_props]{get_tbl_props()}}), with \verb{$properties}
 containing the column definitions.}
 
 \item{nrows}{Number of rows to create. If \verb{> 0}, character columns are

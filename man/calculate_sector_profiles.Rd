@@ -23,19 +23,13 @@ include in the profiles (e.g. \code{c("la", "cwttan")}).}
 (e.g. \code{c(0.25, 0.5, 0.75)}). \code{NULL} or empty → means only.}
 }
 \value{
-The input \link{QWAdata} object with the new profile added to
-\verb{$profiles[["sector_\{n_sectors\}"]]}.
+A \link{QWAprofile} object with \code{profile_type = "sector"}.
 }
 \description{
 Divides each ring into \code{n_sectors} equal-width sectors (by relative radial
 position) and computes per-sector means and optionally quantiles of the
 selected cell parameters.
 }
-\details{
-The result is stored in \code{QWA_data$profiles} under the auto-generated key
-\code{"sector_{n_sectors}"} (e.g. \code{"sector_5"}). A warning is issued if a
-profile with that key already exists.
-}
 \seealso{
-\code{\link[=calculate_band_profiles]{calculate_band_profiles()}}, \code{\link[=QWAdata]{QWAdata()}}
+\code{\link[=calculate_band_profiles]{calculate_band_profiles()}}, \code{\link[=QWAprofile]{QWAprofile()}}
 }

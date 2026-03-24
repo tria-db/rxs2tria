@@ -99,3 +99,19 @@ path_out     <- "./path/to/output"
 dataset_name <- "my_dataset"
 
 write_QWAdata(QWA_data, dir = path_out, dataset_name = dataset_name)
+
+# ------------------------------------------------------------------------------
+# Step 6: Compute radial profiles (optional)
+# ------------------------------------------------------------------------------
+# Profiles are standalone QWAprofile objects, separate from QWAdata.
+
+sector_profiles <- calculate_sector_profiles(QWA_data,
+                                             n_sectors = 5,
+                                             sel_cell_params = c("la", "cwttan"))
+
+# band_profiles <- calculate_band_profiles(QWA_data,
+#                                          bandwidth = 50, stepsize = 25,
+#                                          sel_cell_params = c("la", "cwttan"))
+
+write_QWAprofile(sector_profiles,
+                 file.path(path_out, paste0(dataset_name, "_profiles_sector5.csv.gz")))

@@ -156,6 +156,11 @@
       "type": ["string", "null"],
       "title": "File Settings",
       "description": "Description"
+    },
+    "comment": {
+      "type": ["string", "null"],
+      "title": "Comment",
+      "description": "Description"
     }
   },
   "required": ["image_label", "slide_label", "woodpiece_label", "tree_label", 

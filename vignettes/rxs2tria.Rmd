@@ -211,10 +211,29 @@ launch_coverage_app()
 path_out     <- './path/to/output'
 dataset_name <- 'my_dataset'
 
-write.csv(QWA_data$cells,
-          file.path(path_out, paste0(dataset_name, "_cells.csv")),
-          row.names = FALSE)
-write.csv(QWA_data$rings,
-          file.path(path_out, paste0(dataset_name, "_rings.csv")),
-          row.names = FALSE)
+write_QWAdata(QWA_data, dir = path_out, dataset_name = dataset_name)
+```
+
+## Step 6: Compute radial profiles (optional)
+
+Radial profiles aggregate cell-level measurements into position bins along
+the ring width. They are standalone [QWAprofile] objects, kept separate from
+the `QWAdata` object.
+
+```{r profiles, eval = FALSE}
+# Sector profiles: divide each ring into n equal-width relative-position sectors
+sector_profiles <- calculate_sector_profiles(QWA_data,
+                                             n_sectors = 5,
+                                             sel_cell_params = c("la", "cwttan"))
+
+# Band profiles: sliding window of fixed width in microns
+band_profiles <- calculate_band_profiles(QWA_data,
+                                         bandwidth = 50, stepsize = 25,
+                                         sel_cell_params = c("la", "cwttan"))
+
+# Save and reload profiles
+write_QWAprofile(sector_profiles,
+                 file.path(path_out, paste0(dataset_name, "_profiles_sector5.csv.gz")))
+sector_profiles <- read_QWAprofile(
+  file.path(path_out, paste0(dataset_name, "_profiles_sector5.csv.gz")))
 ```

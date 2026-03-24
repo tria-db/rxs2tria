@@ -31,19 +31,13 @@ include in the profiles (e.g. \code{c("la", "cwttan")}).}
 coincides exactly with the ring width (\code{mrw}).}
 }
 \value{
-The input \link{QWAdata} object with the new profile added to
-\verb{$profiles[["band_\{bandwidth\}_\{stepsize\}"]]}.
+A \link{QWAprofile} object with \code{profile_type = "band"}.
 }
 \description{
 Computes moving-band profiles of selected cell parameters across the ring
 width. Each band is a window of \code{bandwidth} microns that shifts in steps of
 \code{stepsize} microns from the cambial side to the lumen side of the ring.
 }
-\details{
-The result is stored in \code{QWA_data$profiles} under the auto-generated key
-\code{"band_{bandwidth}_{stepsize}"} (e.g. \code{"band_50_25"}). A warning is issued
-if a profile with that key already exists.
-}
 \seealso{
-\code{\link[=calculate_sector_profiles]{calculate_sector_profiles()}}, \code{\link[=QWAdata]{QWAdata()}}
+\code{\link[=calculate_sector_profiles]{calculate_sector_profiles()}}, \code{\link[=QWAprofile]{QWAprofile()}}
 }
