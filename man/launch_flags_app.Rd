@@ -2,10 +2,10 @@
 % Please edit documentation in R/launch_shiny_apps.R
 \name{launch_flags_app}
 \alias{launch_flags_app}
-\title{Launch the yte flags Shiny app}
+\title{Launch the ring flags Shiny app}
 \usage{
 launch_flags_app()
 }
 \description{
-Launch the yte flags Shiny app
+Launch the ring flags Shiny app
 }

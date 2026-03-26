@@ -167,6 +167,10 @@
           "max_cwttan_l": {
             "htType": "numeric",
             "dtColGroup": "cols_settings"
+          },
+          "comment": {
+            "htType": "character",
+            "dtColGroup": "cols_settings"
           }
         }
       }

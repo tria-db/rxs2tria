@@ -39,12 +39,12 @@ input_warning_modal <- function(ns) {
 build_env_inputs <- function(ns) {
   shiny::tagList(
     "Provide the names of the data.frames in the current R environment:",
-    shiny::textInput(ns("name_prf"), "Profile data*",
-                     value = "prf_data"),
+    shiny::textInput(ns("name_prf"), "Profile data",
+                     value = "prf_sector"),
     shiny::textInput(ns("name_rings"), "QWA rings data",
                      value = "QWA_data$rings"),
-    shiny::textInput(ns("name_rxsmeta"), "ROXAS (image) metadata*",
-                     value = "df_rxsmeta")
+    shiny::textInput(ns("name_rxsmeta"), "ROXAS images metadata",
+                     value = "rxs_images")
   )
 }
 build_csv_inputs <- function(ns) {
@@ -167,8 +167,8 @@ load_data_env <- function(name_prf, name_rings, name_rxsmeta,
     rsxmeta_cols <- split(names(specs$rxsmeta_data$opt_cols),
                           specs$rxsmeta_data$opt_cols)
     rxsmeta_data_in <- rxsmeta_data_in |>
-      dplyr::select(dplyr::all_of(names(specs$rxsmeta_data$req_cols)),
-                    dplyr::any_of(names(specs$rxsmeta_data$opt_cols))) |>
+      # dplyr::select(dplyr::all_of(names(specs$rxsmeta_data$req_cols)),
+      #               dplyr::any_of(names(specs$rxsmeta_data$opt_cols))) |>
       dplyr::mutate(
         dplyr::across(dplyr::any_of(rxsmeta_cols[['c']]), as.character),
         dplyr::across(dplyr::any_of(rxsmeta_cols[['i']]), as.integer),
@@ -219,8 +219,8 @@ load_data_csv <- function(path_prf, path_rings, path_rxsmeta,
     rxsmeta_cols <- split(names(specs$rxsmeta_data$opt_cols),
                           specs$rxsmeta_data$opt_cols)
     rxsmeta_data_in <- rxsmeta_data_in |>
-      dplyr::select(dplyr::all_of(names(specs$rxsmeta_data$req_cols)),
-                    dplyr::any_of(names(specs$rxsmeta_data$opt_cols))) |>
+      # dplyr::select(dplyr::all_of(names(specs$rxsmeta_data$req_cols)),
+      #               dplyr::any_of(names(specs$rxsmeta_data$opt_cols))) |>
       dplyr::mutate(
         dplyr::across(dplyr::any_of(rxsmeta_cols[['c']]), as.character),
         dplyr::across(dplyr::any_of(rxsmeta_cols[['i']]), as.integer),
@@ -277,6 +277,7 @@ validate_input_dfs <- function(prf_data_in, rings_data_in, rxsmeta_data_in,
       min.rows = 1, any.missing = FALSE)
 
     # TODO: check that rxsmeta_data (image_label, year) are subset of rings_data (image_label, year)
+    # TODO: check for image filename column?
   }
 
   invisible(TRUE)
@@ -371,6 +372,108 @@ prepare_rings_out <- function(df_edited, rings_data = NULL){
   df
 }
 
+# OUTPUTS 
+# create modal with save settings inputs 
+save_modal <- function(ns, settings, have_comments) {
+  launch_wd <- shiny::getShinyOption("launch_wd", default = getwd())
+  wd_hint <- shiny::tags$span(
+    shiny::tags$i(glue::glue("(Current directory: {launch_wd})")),
+    style = "font-size: 0.8em; margin-top: -12px; margin-bottom: 16px; display: block;"
+  )
+  shiny::modalDialog(
+    title = "Save Settings",
+    shiny::checkboxGroupInput(
+      ns("modal_save_to"), "Save edited rings data to:",
+      choices = c("a local CSV file" = "file", "a variable in the current R environment" = "env"),
+      selected = ifelse(is.null(settings$save_to),"file",settings$save_to)
+    ),
+    shiny::textInput(ns("modal_filepath"), "Rings file path",
+      placeholder = "e.g., out/QWArings_edited.csv", value = settings$filepath),
+    wd_hint,
+    shiny::textInput(ns("modal_varname"), "Rings data.frame variable name",
+      placeholder = "e.g., QWA_data$rings or df_rings_edited", value = settings$varname),
+    
+    if (have_comments) {
+      shiny::tagList(
+        shiny::tags$hr(),
+        shiny::checkboxGroupInput(
+          ns("modal_saveimg_to"), "Save edited images metadata (i.e. handled comments progress) to:",
+          choices = c("a local CSV file" = "file", "a variable in the current R environment" = "env"),
+          selected = ifelse(is.null(settings$save_imgs_to),"file",settings$save_imgs_to)
+        ),
+        shiny::textInput(ns("modal_filepath_imgs"), "Images file path",
+          placeholder = "e.g., out/QWAimages_progress.csv", value = settings$filepath_rxsmeta),
+        wd_hint,
+        shiny::textInput(ns("modal_varname_imgs"), "Images data.frame variable name",
+          placeholder = "e.g., rxs_images or df_imgs_progress", value = settings$varname_rxsmeta)
+      )
+    },
+
+    footer = shiny::tagList(
+      shiny::modalButton("Cancel"),
+      shiny::actionButton(ns("save_confirm"), "Confirm and save")
+    )
+  )
+}
+
+# helper function to safely write edited rings data to env / file
+# rxsmeta: rxsmeta_data data frame (or NULL); handled: named logical vector from
+# handled_comments reactiveVal (or NULL)
+save_ring_edits <- function(df, df_in, settings, rxsmeta = NULL, handled = NULL) {
+  safe_block({
+    launch_wd <- shiny::getShinyOption("launch_wd", default = getwd())
+    df_out <- prepare_rings_out(df, df_in)
+    if ("env" %in% settings$save_to) {
+      assign(settings$varname, df_out, envir = .GlobalEnv)
+      shiny::showNotification(
+        paste0("Saved to environment variable: ", settings$varname),
+        type = "message"
+      )
+    }
+    if ("file" %in% settings$save_to) {
+      filepath <- fs::path_abs(settings$filepath, start = launch_wd)
+      checkmate::assert_path_for_output(filepath, overwrite = TRUE)
+      vroom::vroom_write(df_out, filepath, delim = ",")
+      shiny::showNotification(
+        paste0("Saved to file: ", filepath),
+        type = "message"
+      )
+    }
+    # save rxsmeta with updated comments_handled column
+    if (!is.null(rxsmeta) && !is.null(handled)) {
+      # rxsmeta has comments otherwise hanlded would not exist. but might need to initizalize comment_handled
+      df_rxsmeta_out <- rxsmeta
+      if (!"comment_handled" %in% names(df_rxsmeta_out)) {
+        df_rxsmeta_out$comment_handled <- NA
+      }
+      df_rxsmeta_out <- df_rxsmeta_out |> 
+        dplyr::rows_update(handled[c("image_label","comment_handled")], by = "image_label")
+
+      if ("env" %in% settings$save_imgs_to) {
+        assign(settings$varname_rxsmeta, df_rxsmeta_out, envir = .GlobalEnv)
+        shiny::showNotification(
+          paste0("Saved to environment variable: ", settings$varname_rxsmeta),
+          type = "message"
+        )
+      }
+        
+      if ("file" %in% settings$save_imgs_to) {
+        filepath_rxsmeta <- fs::path_abs(settings$filepath_rxsmeta, start = launch_wd)
+        checkmate::assert_path_for_output(filepath_rxsmeta, overwrite = TRUE)
+        vroom::vroom_write(df_rxsmeta_out, filepath_rxsmeta, delim = ",")
+        shiny::showNotification(
+          paste0("Image metadata saved to: ", filepath_rxsmeta),
+          type = "message"
+        )
+      }
+
+    }
+  },
+  err_title = "Error saving data",
+  err_message = "",
+  propagate_err = FALSE
+  )
+}
 
 # # helper function to update the ring editor card inputs (radiobuttons and
 # # checkboxes of the current ring flags) given selected ring data

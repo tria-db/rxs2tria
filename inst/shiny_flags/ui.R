@@ -34,6 +34,15 @@ ui <- bslib::page_fluid(
 
     ), # end of tab
 
+    # TAB: Comment progress overview -------------------------------------------
+
+    bslib::nav_panel(
+        title = shiny::uiOutput("comments-tab_title"),
+        value = "comments_panel",
+        icon = shiny::icon("circle-check"),
+        comments_ui('comments')
+    ), # end of tab
+
     # # TAB: running RBT ---------------------------------------------------------
     # bslib::nav_panel(
     #

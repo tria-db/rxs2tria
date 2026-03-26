@@ -101,8 +101,8 @@ flags_ui <- function(id) {
 
       tags$div(
         style = "display: flex; flex-direction: column;  gap: 4px;",
-                shiny::actionButton(ns("save_btn"), "Save ring flags", icon = shiny::icon("save"), 
-                            class = "btn-tert", width = "100%"),
+        shiny::actionButton(ns("save_btn"), "Save ring flags", icon = shiny::icon("save"), 
+                    class = "btn-tert", width = "100%"),
         tags$div(
           style = "display: flex; align-items: center; gap: 4px;",
           shiny::actionLink(ns("save_settings_btn"), NULL, shiny::icon("gear")),
@@ -141,14 +141,30 @@ flags_ui <- function(id) {
         style = "background-color: #CCE0E0",
         shiny::uiOutput(ns("selimg")), # reactive output (selimg title)
         shiny::div(
-          shiny::actionButton(ns("show_image"), "",
-                              icon = shiny::icon("image")),
-          shiny::actionButton(ns("prev_ring"), "",
-                              icon = shiny::icon("arrow-left")),
-          shiny::actionButton(ns("next_ring"), "",
-                              icon = shiny::icon("arrow-right")),
-          shiny::actionLink(ns("tbl_settings"), "",
-                            icon = shiny::icon("gear"))
+          style = "display: flex; align-items: center; gap: 10px;",
+          bslib::tooltip(
+            shiny::actionLink(ns("prev_img"), NULL, icon = shiny::icon("angles-left")),
+            "Go to earlier image"
+          ),
+          bslib::tooltip(
+            shiny::actionLink(ns("prev_ring"), NULL, icon = shiny::icon("angle-left")),
+            "Go to earlier ring"
+          ),
+          bslib::tooltip(
+            shiny::actionLink(ns("next_ring"), NULL, icon = shiny::icon("angle-right")),
+            "Go to next ring"
+          ),
+          bslib::tooltip(
+            shiny::actionLink(ns("next_img"), NULL, icon = shiny::icon("angles-right")),
+            "Go to next image"
+          ),
+          shiny::tags$span(style = "color: #aaa;", "|"),
+          bslib::tooltip(
+            shiny::actionLink(ns("show_image"), NULL, icon = shiny::icon("image")),
+            "Open image file"
+          ),
+          shiny::tags$span(style = "color: #aaa;", "|"),
+          shiny::actionLink(ns("tbl_settings"), NULL, icon = shiny::icon("gear"))
         )
       ),
       bslib::card_body(class = "p-0",

@@ -463,6 +463,26 @@ draw_sel_marker <- function(plot_obj, marker, traces, sel_subpl) {
   plot_obj
 }
 
+# clear marker(s) from plot
+clear_sel_marker <- function(plot_obj, traces, sel_subpl){
+  selm_trace_exists <- "sel_marker_wp" %in% names(traces)
+  if (selm_trace_exists) {
+    selm_curveNumber <- traces[['sel_marker_wp']]$curveNumber
+
+    if ("cov" %in% sel_subpl) {
+      selm_trace_cov_exists <- "sel_marker_cov" %in% names(traces)
+      if (selm_trace_cov_exists) {
+        selm_curveNumber <- c(selm_curveNumber, traces[['sel_marker_cov']]$curveNumber)
+      }
+    }
+
+    plot_obj <- plot_obj %>% 
+      plotly::plotlyProxyInvoke("deleteTraces", selm_curveNumber)
+  }
+
+  plot_obj
+}
+
 # create shifted marker
 resolve_shift_marker <- function(sel_wp, current_year, shift_dir, df_data, sel_param){
   adj_years <- df_data |>

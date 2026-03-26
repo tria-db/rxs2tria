@@ -152,9 +152,8 @@ input_specs <- list(
   rxsmeta_data = list(
     req_cols = c(image_label = "c"),
     opt_cols = c(woodpiece_label = "c",
-                 species_code = "c", site_label = "c", comments = "c",
-                 fname_image = "c", fname_annotated = "c",
-                 fname_annotated_twin = "c")
+                 species_code = "c", site_label = "c", comment = "c", comment_handled = "l",
+                 fname_image = "c", fname_annotated = "c", fname_annotated_twin = "c")
   )
 )
 
@@ -162,20 +161,20 @@ input_specs <- list(
 label_with_pop <- function(label_text, popover_text,
                            icon_name = "info-circle", icon_title = "Info",
                            popover_title = NULL){
-span(
-  label_text,
-  bslib::popover(
-    bsicons::bs_icon(icon_name, title = icon_title),
-    title = popover_title,
-    popover_text
+  shiny::span(
+    label_text,
+    bslib::popover(
+      bsicons::bs_icon(icon_name, title = icon_title),
+      title = popover_title,
+      popover_text
+    )
   )
-)
 }
 
 # wrapper for an error message
 show_error_modal <- function(title, message) {
   if (shiny::isRunning()) {
-    showModal(modalDialog(
+    shiny::showModal(shiny::modalDialog(
       title = title,
       message,
       easyClose = TRUE,

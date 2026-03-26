@@ -108,7 +108,7 @@ new_QWAprofile <- function(data, profile_type) {
 #' @returns An object of class `c("QWAimages", "data.frame")` with a
 #'   `roxas_version` attribute.
 #'
-#' @seealso [QWAmetadata()], [build_QWAimages()], [print.QWAimages()]
+#' @seealso [QWAmetadata()], [build_QWAimages()]
 #' @export
 QWAimages <- function(data, roxas_version = NULL) {
   checkmate::assert_data_frame(data)
@@ -389,8 +389,7 @@ QWAdata <- function(cells = NULL,
 #' @returns An object of class `c("QWAprofile", "data.frame")` with a
 #'   `profile_type` attribute.
 #'
-#' @seealso [QWAdata], [calculate_sector_profiles()], [calculate_band_profiles()],
-#'   [print.QWAprofile()]
+#' @seealso [QWAdata], [calculate_sector_profiles()], [calculate_band_profiles()]
 #' @export
 QWAprofile <- function(data, profile_type = c("sector", "band")) {
   checkmate::assert_data_frame(data)
