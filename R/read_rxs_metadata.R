@@ -5,13 +5,18 @@
 #' within (including subdirectories).
 #'
 #' @param path_in path of the input directory.
+#' @param roxas_version which ROXAS version was used to create the files (classic
+#'   `"roxas"` or new AI version `"roxas_ai"`).
+#' @param exclude_dirs directory names / keywords that should be ignored ignored
+#'   when searching for ROXAS files (e.g., "unused_files", optional)
 #' @returns A list of lists containing filepaths of images and ROXAS output
 #'          files (cells, rings, settings).
 #' @export
-get_roxas_files <- function(path_in, roxas_version = c("roxas", "roxas_ai")) {
+get_roxas_files <- function(path_in, roxas_version,
+                            exclude_dirs = NULL) {
   checkmate::assert_directory_exists(path_in)
-
-  roxas_version <- match.arg(roxas_version)
+  checkmate::assert_choice(roxas_version, c("roxas","roxas_ai"))
+  checkmate::assert_character(exclude_dirs, null.ok = TRUE)
   
   # regex patterns to be matched by the different ROXAS files
   # might include annotated images, etc., these are filtered out with keywords
@@ -54,6 +59,14 @@ get_roxas_files <- function(path_in, roxas_version = c("roxas", "roxas_ai")) {
   if (!is.null(pattern_excl_keywords)) {
     files_images <- files_images |>
       stringr::str_subset(pattern = pattern_excl_keywords, negate = TRUE)
+  }
+
+  if (!is.null(exclude_dirs)) {
+    excl_dirs_pattern <- paste0("/(", paste(exclude_dirs, collapse = "|"), ")(/|$)")
+    files_cells <- stringr::str_subset(files_cells, excl_dirs_pattern, negate = TRUE)
+    files_rings <- stringr::str_subset(files_rings, excl_dirs_pattern, negate = TRUE)
+    files_settings <- stringr::str_subset(files_settings, excl_dirs_pattern, negate = TRUE)
+    files_images <- stringr::str_subset(files_images, excl_dirs_pattern, negate = TRUE)
   }
 
   # check: if the patterns are removed, the four file lists should match
