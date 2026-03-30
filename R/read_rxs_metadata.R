@@ -5,40 +5,69 @@
 #' within (including subdirectories).
 #'
 #' @param path_in path of the input directory.
-#'
+#' @param roxas_version which ROXAS version was used to create the files (classic
+#'   `"roxas"` or new AI version `"roxas_ai"`).
+#' @param exclude_dirs directory names / keywords that should be ignored ignored
+#'   when searching for ROXAS files (e.g., "unused_files", optional)
 #' @returns A list of lists containing filepaths of images and ROXAS output
 #'          files (cells, rings, settings).
 #' @export
-get_roxas_files <- function(path_in) {
+get_roxas_files <- function(path_in, roxas_version,
+                            exclude_dirs = NULL) {
   checkmate::assert_directory_exists(path_in)
-
+  checkmate::assert_choice(roxas_version, c("roxas","roxas_ai"))
+  checkmate::assert_character(exclude_dirs, null.ok = TRUE)
+  
   # regex patterns to be matched by the different ROXAS files
   # might include annotated images, etc., these are filtered out with keywords
-  pattern_cell_files = "_Output_Cells\\.txt$"
-  pattern_ring_files = "_Output_Rings\\.txt$"
-  pattern_settings_files = "_ROXAS_Settings\\.txt$"
-  pattern_orgimg_files = "\\.(jpg|jpeg)$" # "\\.(jpg|jpeg|png|gif|bmp|tiff)$"
-  imgfiles_exclude_keywords = c("annotated", "ReferenceSeries", "Preview")
-  pattern_excl_keywords <- paste(imgfiles_exclude_keywords, collapse = "|")
-
-  # use fs rather than base list.files, much faster for network shares
+  if (roxas_version == "roxas"){
+    pattern_cell_files <- "_Output_Cells\\.txt$"
+    pattern_ring_files <- "_Output_Rings\\.txt$"
+    pattern_settings_files <- "_ROXAS_Settings\\.txt$"
+    pattern_orgimg_files <- "\\.(jpg|jpeg)$" # "\\.(jpg|jpeg|png|gif|bmp|tiff)$"
+    imgfiles_exclude_keywords <- c("annotated", "ReferenceSeries", "Preview")
+    pattern_excl_keywords <- paste(imgfiles_exclude_keywords, collapse = "|")
+  } else {
+    pattern_cell_files <- "\\.cells_table\\.csv$"
+    pattern_ring_files <- "\\.rings_table\\.csv$"
+    pattern_settings_files <- "\\.metadata\\.json$"
+    pattern_orgimg_files <- "\\.scan\\.(jpg|jpeg)$" # rxs? "\\.(jpg|jpeg|png|gif|bmp|tiff)$"
+    pattern_excl_keywords <- NULL
+  }
+  
+  # NOTE: use fs rather than base list.files, much faster for network shares
   files_cells <- fs::dir_ls(
     fs::path_abs(path_in),
+    type = "file",
     regexp = pattern_cell_files,
     recurse = TRUE)
   files_rings <- fs::dir_ls(
     fs::path_abs(path_in),
+    type = "file",
     regexp = pattern_ring_files,
     recurse = TRUE)
   files_settings <- fs::dir_ls(
     fs::path_abs(path_in),
+    type = "file",
     regexp = pattern_settings_files,
     recurse = TRUE)
   files_images <- fs::dir_ls(
     fs::path_abs(path_in),
+    type = "file",
     regexp = pattern_orgimg_files,
-    recurse = TRUE) |>
-    stringr::str_subset(pattern = pattern_excl_keywords, negate = TRUE)
+    recurse = TRUE) 
+  if (!is.null(pattern_excl_keywords)) {
+    files_images <- files_images |>
+      stringr::str_subset(pattern = pattern_excl_keywords, negate = TRUE)
+  }
+
+  if (!is.null(exclude_dirs)) {
+    excl_dirs_pattern <- paste0("/(", paste(exclude_dirs, collapse = "|"), ")(/|$)")
+    files_cells <- stringr::str_subset(files_cells, excl_dirs_pattern, negate = TRUE)
+    files_rings <- stringr::str_subset(files_rings, excl_dirs_pattern, negate = TRUE)
+    files_settings <- stringr::str_subset(files_settings, excl_dirs_pattern, negate = TRUE)
+    files_images <- stringr::str_subset(files_images, excl_dirs_pattern, negate = TRUE)
+  }
 
   # check: if the patterns are removed, the four file lists should match
   l_files <- list(
@@ -52,7 +81,7 @@ get_roxas_files <- function(path_in) {
   # stop if there are no ROXAS files at all
   if (length(all_fnames) == 0) {
     cli::cli_abort(c(
-      "Can't find any ROXAS files under {.var path_in}",
+      "Did not find any ROXAS files under {.var path_in}",
       "i" = "Please ensure path {.file path_in} points to the correct directory."
     ))
   }
@@ -80,7 +109,7 @@ get_roxas_files <- function(path_in) {
 
   # TODO: sorting as hotfix to ensure matching order, better to match based on extracted pattern?
   list(
-    fname_image = sort(files_images), # TODO: does this always make sure that the corresponding files are in the exact same order?
+    fname_image = sort(files_images),
     fname_cells = sort(files_cells),
     fname_rings = sort(files_rings),
     fname_settings = sort(files_settings)
@@ -157,7 +186,7 @@ get_roxas_files <- function(path_in) {
 #'    site_label = "SITEA", species_code = "PISY")
 get_structure_from_filenames <- function(
     filenames,
-    pattern = "(?<site>[[:alnum:]]+)_(?<species>[[:alnum:]]+)_(?<tree>[[:alnum:].]+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)", #"(?<site>[:alnum:]+)_(?<species>[:alnum:]+)_(?<tree>[:alnum:][:alnum:])(?<woodpiece>[:alnum:]*)_(?<slide>[:alnum:]+)_(?<image>[:alnum:]+)",
+    pattern = "(?<site>[:alnum:]+)_(?<species>[:alnum:]+)_(?<tree>[:alnum:][:alnum:])(?<woodpiece>[:alnum:]*)_(?<slide>[:alnum:]+)_(?<image>[:alnum:]+)",
     site_label = NULL, species_code = NULL){
   checkmate::assert_character(filenames, any.missing = FALSE, min.len = 1)
   checkmate::assert_string(pattern)
@@ -203,9 +232,17 @@ get_structure_from_filenames <- function(
   }
 
   # extract the matched pattern groups and collect info into df
-  df_structure <- as.data.frame(stringr::str_match(fnames,pattern)) |>
-    dplyr::rename(org_img_name = V1) # original pattern is in column 1
-
+  # add org_img_name as the base filename (no path, no extension)
+  # what if org_img_name needs part of path to be identifiable?
+  # potential fix: count nr of dir levels included in pattern, not robust to cross platform specifications?
+  # incl_supdirs <- stringr::str_count(pattern, "/") 
+  # org_img_names <- fs::path_ext_remove(
+  #   fs::path_select_components(filenames,1+incl_supdirs, "end"))
+  df_structure <- as.data.frame(stringr::str_match(fnames, pattern)) |>
+    dplyr::select(-V1) |>
+    dplyr::mutate(org_img_name = as.character(fs::path_ext_remove(fs::path_file(filenames))),
+                  .before = 1)
+  
   df_structure <- tibble::tibble(
     org_img_name = character(0),
     site = character(0),
@@ -260,8 +297,8 @@ extract_data_structure <- function(
                                                pattern,
                                                site_label,
                                                species_code)
-
-  df_structure <- dplyr::bind_cols(df_structure, files) # bind filename columns
+  files_fs <- files |> purrr::map(\(x) fs::path(x)) # normalize to fs paths if not already
+  df_structure <- dplyr::bind_cols(df_structure, files_fs) # bind filename columns
 
   cli::cli_inform(c(
     "v" = "Data structure extracted from ROXAS filenames",
@@ -275,18 +312,18 @@ extract_data_structure <- function(
 
 #' Read and combine image exif data
 #'
-#' Collect the exif data from all image files
+#' Collect the exif data from all image files. Used preliminarily for data generated
+#' with classic ROXAS, for ROXAS AI the image exif inormation is already stored in the 
+#' settings files.
 #'
 #' @param files_images Vector/list of image filenames
-#'
+#' @param batch_size Nr of images to read exif data from at a time. 
+#'   Note that [exifr::read_exif()] is vectorized, so the only purpose for the 
+#'   batching is to generate a progress bar. Increase for more speed.
 #' @returns A dataframe containing the extracted data.
 #' @export
-# TODO: check this works on Windows? (exifr requires PERL)
-# TODO: is it robust for different image types? (the exif tags)
-# TODO: can get date as well if we have original images? error handling for missing tags?
 collect_image_info <- function(files_images, batch_size = 50) {
-  checkmate::assert(
-    all(fs::file_exists(files_images)))
+  checkmate::assert(all(fs::file_exists(files_images)))
 
   # split into batches for progress bar
   # (big batches are faster since read_exif is already vecotrized)
@@ -298,13 +335,33 @@ collect_image_info <- function(files_images, batch_size = 50) {
       # read exif data for each batch
       exifr::read_exif(batches[[i]],
                        tags = c("FileType", "FileSize",
-                                "ImageWidth", "ImageHeight"))
+                                "ImageWidth", "ImageHeight",
+                                "Software",
+                                "DateTimeOriginal", "DateCreated", # potential date tags
+                                "DateTimeDigitized", "CreateDate"))
   })
 
   df_image_meta <- dplyr::bind_rows(results)
+  df_image_meta[setdiff(c("Software","DateTimeOriginal", "DateCreated",
+                          "DateTimeDigitized", "CreateDate"),
+                        names(df_image_meta))] <- NA_character_
+
+  df_image_meta <- df_image_meta |>
+    dplyr::mutate(
+      img_created_at = pmin( # TODO: what if format is day first?
+        dplyr::coalesce(DateTimeOriginal, DateCreated),
+        dplyr::coalesce(DateTimeDigitized, CreateDate),
+        na.rm = TRUE
+      ),
+      .keep = "unused" # remove the original date cols
+    ) 
+  # |> 
+  #   dplyr::mutate(
+  #     scan_mode = NA_character_ # TODO: infer somehow?
+  #   )
 
   cli::cli_inform(c(
-    "v" = glue::glue("Image metadata extracted for {length(files_images)} images")
+    "v" = glue::glue("Image metadata extracted from {length(files_images)} images")
   ))
 
   df_image_meta |>
@@ -312,7 +369,9 @@ collect_image_info <- function(files_images, batch_size = 50) {
                   img_filetype = FileType,
                   img_size = FileSize,
                   img_width = ImageWidth,
-                  img_height = ImageHeight)
+                  img_height = ImageHeight,
+                  img_software = Software
+                )
 }
 
 #' Extract data from a ROXAS settings file
@@ -321,29 +380,26 @@ collect_image_info <- function(files_images, batch_size = 50) {
 #' settings file
 #'
 #' @param file_settings The file to be read.
-#' @param roxas_version The version of ROXAS used to create the file (classic, AI)
+#' @param roxas_version The version of ROXAS used to create the file
 #'
 #' @returns A dataframe containing the extracted data.
 #' @keywords internal
 # TODO: check that this works for all old versions of ROXAS
 #       it looks like it works for ROXAS versions
-#       3.0.285, 3.0.575, 3.0.590, 3.0.608, 3.0.620, 3.0.634, 3.0.655 (different date formats)
-# TODO: add support for ROXAS AI
+#       3.0.285, 3.0.575, 3.0.590, 3.0.608, 3.0.620, 3.0.634, 3.0.655
+# TODO: finalize support for ROXAS AI
 extract_roxas_settings <- function(file_settings,
-                                   roxas_version = "classic") {
-  if (roxas_version == "classic"){
+                                   roxas_version = c("roxas", "roxas_ai")) {
+  roxas_version <- match.arg(roxas_version)
+  if (roxas_version == "roxas"){
     # read from a single settings file
-    # df_settings <- readr::read_delim(file_settings,
-    #                                  delim = "\t",
-    #                                  col_types = readr::cols(.default = "c", RNUM = "d"),
-    #                                  progress = FALSE)
     df_settings <- vroom::vroom(file_settings,
                                 delim = "\t",
                                 col_types = c(.default = "c", RNUM = "d"),
                                 progress = FALSE)
 
     # NOTE: this relies heavily on the consistent layout of the settings file
-    # in particular, we need tab delimiters, columns RNUM, SETTING, DESCRIPTION
+    # in particular, we need tab delimiters, columns RNUM and SETTING,
     # and the right values in the rows 8,9,10,12,13,17,20,31,33,166,203:208!
     df_settings <- df_settings |>
       dplyr::filter(RNUM %in% c(8,9,10,
@@ -353,7 +409,7 @@ extract_roxas_settings <- function(file_settings,
                                 203,204,205,206,207,208
                                 )) |>
       dplyr::mutate(new_names = c(
-        "configuration_file", "created_at", "sw_version",
+        "configuration_file", "rxs_created_at", "sw_version",
         "spatial_resolution", "origin_calibrated",
         "meas_geometry", "circ_lower_limit", "circ_upper_limit", "outmost_year",
         "min_cell_area", "max_cell_area", "dbl_cwt_threshold",
@@ -365,61 +421,50 @@ extract_roxas_settings <- function(file_settings,
       dplyr::mutate(
         meas_geometry = dplyr::if_else(meas_geometry==1, "linear", "circular"),
         fname_settings = file_settings,
-        software = "ROXAS") |>
+        software = "roxas") |>
       tidyr::separate(origin_calibrated,
                       into = c("origin_calibrated_x", "origin_calibrated_y"),
                       sep = "[ ]*/[ ]*", remove = TRUE, convert = TRUE) |>
       dplyr::relocate(fname_settings, software, sw_version)
-  } else if (roxas_version == "man"){
-    # read from a single settings file
-    # df_settings <- readr::read_delim(file_settings,
-    #                                  delim = "\t",
-    #                                  col_types = readr::cols(.default = "c", RNUM = "d"),
-    #                                  progress = FALSE)
-    df_settings <- vroom::vroom(file_settings,
-                                delim = "\t",
-                                col_types = c(.default = "c", RNUM = "d"),
-                                progress = FALSE)
+  } else {
+    cli::cli_warn("ROXAS AI support is still under development.")
 
-    # NOTE: this relies heavily on the consistent layout of the settings file
-    # in particular, we need tab delimiters, columns RNUM, SETTING, DESCRIPTION
-    # and the right values in the rows 8,9,10,12,13,17,20,31,33,166,203:208!
-    df_settings <- df_settings |>
-      dplyr::filter(RNUM %in% c(8,9,10,
-                                12,13,
-                                17,18,19,20,
-                                31,33,166,
-                                203,204,205,206,207,208,
-                                246
-      )) |>
-      dplyr::mutate(new_names = c(
-        "configuration_file", "created_at", "sw_version",
-        "spatial_resolution", "origin_calibrated",
-        "meas_geometry", "circ_lower_limit", "circ_upper_limit", "outmost_year",
-        "min_cell_area", "max_cell_area", "dbl_cwt_threshold",
-        "max_cwtrad_s", "max_cwtrad_l", "relwidth_cwt_window", "maxrel_opp_cwt",
-        "max_cwttan_s", "max_cwttan_l",
-        "annotated_image"
-      )) |>
-      dplyr::select(SETTING, new_names) |>
-      tidyr::pivot_wider(names_from = new_names, values_from = SETTING) |>
-      dplyr::mutate(
-        meas_geometry = dplyr::if_else(meas_geometry==1, "linear", "circular"),
-        annotated_image = dplyr::case_when(
-          annotated_image == 0 ~ "none",
-          annotated_image == 1 ~ "outlines",
-          annotated_image == 3 ~ "filled",
-          TRUE ~ NA
-        ),
-        fname_settings = file_settings,
-        software = "ROXAS") |>
-      tidyr::separate(origin_calibrated,
-                      into = c("origin_calibrated_x", "origin_calibrated_y"),
-                      sep = "[ ]*/[ ]*", remove = TRUE, convert = TRUE) |>
-      dplyr::relocate(fname_settings, software, sw_version)
-  }
-  else {
-    cli::cli_abort("Only classical ROXAS supported atm.")
+    raw <- jsonlite::read_json(file_settings, simplifyVector = TRUE)
+    df_settings <- raw |> 
+      purrr::map(\(x) ifelse(length(x)>1, list(x), x)) |> 
+      tibble::as_tibble() |> 
+      tidyr::unnest_wider(col = scan_size, names_sep = "_") |> 
+      tidyr::unnest_wider(col = scan_exif) |> 
+      dplyr::select(-scan_info) |> # not needed?
+      dplyr::rename(c(
+        # config files: rings_segmentation_model, cells_segmentation_model,
+        # analysis created at: rings_segmentation_datetime, cells_segmentation_datetime (both? choose? measurements?)
+        # TODO: need ROXAS AI version???
+        # sample_type: new, provide by user for classic?
+        "spatial_resolution" = "sample_scale",
+        # no calibrated origin anymore (?)
+        "meas_geometry" = "sample_geometry",
+        "outmost_year" = "rings_outmost_complete_year",
+        # model filter settings?
+        "img_filetype" = "scan_format", # TODO: what about img_size?
+        "img_width" = "scan_size_1", # get from here or from file?
+        "img_height" = "scan_size_2", 
+        "img_software" = "Software" #, scan_mode -> add to classic version from exif if possible?
+        #DateTimeOriginal, DateTimeDigitized -> use min as img_created_at?
+      ))  |>
+      dplyr::mutate(fname_settings = file_settings, software = "roxas_ai", 
+        sw_version = NA_character_, rxs_created_at = NA_character_, img_size = NA_integer_) |>
+      dplyr::select(
+        dplyr::any_of(c(
+          "fname_settings", "sample_type", "meas_geometry", 
+          "img_filetype", "img_width", "img_height", "img_size", "img_software", "scan_mode",
+          "DateTimeOriginal", "DateTimeDigitized", 
+          "spatial_resolution",
+          "software", "sw_version", "rxs_created_at", "outmost_year",
+          "rings_segmentation_model", "cells_segmentation_model",
+          "rings_segmentation_datetime", "cells_segmentation_datetime"
+        ))
+      )
   }
 
   df_settings
@@ -428,106 +473,132 @@ extract_roxas_settings <- function(file_settings,
 
 #' Read and combine ROXAS settings data
 #'
-#' Collect the settings data from all ROXAS settings files
+#' Collect the settings data from all ROXAS settings files.
 #'
-#' @param files_settings Vector/list of ROXAS settings filenames
-#' @param roxas_version The version of ROXAS used to create the files (classic, AI)
+#' For `roxas_version = "roxas"`, image EXIF metadata is collected from the
+#' image files via [collect_image_info()] and joined to the settings data.
+#' `files_images` is required in this case and must be in the same order as
+#' `files_settings`.
+#'
+#' For `roxas_version = "roxas_ai"`, image metadata is already embedded in
+#' the settings JSON files; `files_images` is not needed.
+#'
+#' @param files_settings Vector/list of ROXAS settings filenames.
+#' @param files_images Vector/list of image filenames in the same order as
+#'   `files_settings`. Required when `roxas_version = "roxas"`.
+#' @param roxas_version The version of ROXAS used to create the files.
 #'
 #' @returns A dataframe containing the extracted data.
 #' @export
 collect_settings_data <- function(files_settings,
-                                  roxas_version = 'classic') {
+                                  files_images = NULL,
+                                  roxas_version = c('roxas', "roxas_ai")) {
   checkmate::assert(all(fs::file_exists(files_settings)))
-  checkmate::assert_subset(roxas_version, c("classic","man"))
-
+  roxas_version <- match.arg(roxas_version)
+  if (roxas_version == "roxas"){
+    checkmate::assert_vector(files_images, any.missing = FALSE) # files checked in collect_image_info
+  }
+  
   results <- files_settings |>
     purrr::map(\(x) extract_roxas_settings(x, roxas_version = roxas_version),
                .progress = list(name = "Reading ROXAS settings files...", clear = TRUE))
   df_settings_all <- purrr::list_rbind(results)
 
-  # convert columns to numeric and integer
-  df_settings_all <- df_settings_all |>
-    dplyr::mutate(dplyr::across(c(spatial_resolution,
-                                  dbl_cwt_threshold:max_cwttan_l), as.numeric),
-                  dplyr::across(circ_lower_limit:max_cell_area, as.integer))
+  if (roxas_version == "roxas"){
+    # convert columns to numeric and integer
+    df_settings_all <- df_settings_all |>
+      dplyr::mutate(dplyr::across(c(spatial_resolution,
+                                    dbl_cwt_threshold:max_cwttan_l), as.numeric),
+                    dplyr::across(circ_lower_limit:max_cell_area, as.integer)
+                    #sample_type = NA_character_ # TODO: as input?
+                  )
+    # collect image EXIF metadata and bind alongside settings columns
+    # NOTE: files_images and files_settings need to be in the same order
+    df_images <- collect_image_info(files_images)
+    df_settings_all <- dplyr::bind_cols(df_settings_all,
+                                        dplyr::select(df_images, -fname_image))
+  } else {
+    cli::cli_warn("ROXAS AI support is still under development.")
+
+    df_settings_all <- df_settings_all |>
+      dplyr::mutate(dplyr::across(c(spatial_resolution), as.numeric),
+                    dplyr::across(c(img_width, img_height, outmost_year), as.integer)) |>
+      dplyr::mutate(
+        img_created_at = pmin(DateTimeOriginal, DateTimeDigitized, na.rm = TRUE),
+        .keep = "unused", .after = "scan_mode"
+      )
+  }
 
   cli::cli_inform(c(
-    "v" = glue::glue("ROXAS settings data have been extracted for {nrow(df_settings_all)} files")
+    "v" = glue::glue("ROXAS settings and image data extracted from {nrow(df_settings_all)} files")
   ))
   df_settings_all
 }
 
-#' Handle date conversion for ROXAS settings created at dates
+
+#' Build a QWAimages object from raw ROXAS metadata
 #'
-#' The Date created field in the raw ROXAS settings files may have different
-#' formats depending on the ROXAS version and user locale.
+#' Combines the extracted ROXAS filenames plus data structure (from
+#' [extract_data_structure()]) and ROXAS settings and image exif data (from
+#' [collect_settings_data()]) into a [QWAimages] object.
 #'
-#' @param date_strings Vector of date strings to be converted.
-#' @param orders One or more date formats to be used for parsing,
-#' see [lubridate::parse_date_time()].
-#' @param tz Timezone for the converted dates (default: system timezone).
-#' @param exact Whether to enforce exact matching of the provided format(s), or
-#' allow lubridate some flexibility to guess.
-#'
-#' @returns A vector of POSIXct dates.
-#' @export
-convert_settings_dates <- function(date_strings,
-                                  orders = c("%d.%m.%Y %H:%M:%S", "%d/%m/%Y %H:%M"),
-                                  tz = Sys.timezone(),
-                                  exact = TRUE) {
-  checkmate::assert_character(date_strings, any.missing = FALSE)
-  checkmate::assert_character(orders, any.missing = FALSE)
-  checkmate::assert_string(tz)
-
-  conv_dates <- date_strings %>%
-    lubridate::parse_date_time(., orders = orders, tz=tz)
-
-  # plausibility checks: no NAs and not in future
-  check_dates <- any(is.na(conv_dates)) || any(conv_dates > Sys.time())
-  if (check_dates){
-    cli::cli_abort(c(
-      "Error converting dates from the ROXAS settings files",
-      "x" = "Please check the format of the Date created field in the raw files."
-    ))
-  }
-
-  conv_dates
-}
-
-
-#' Combine raw ROXAS metadata
-#'
-#' Combine the extracted ROXAS filenames plus data structures (from
-#' [extract_data_structure()]), image exif data (from [collect_image_info()]),
-#' and ROXAS settings data (with converted dates, cf. [collect_settings_data()]
-#' and [convert_settings_dates()]) into one raw metadata dataframe.
+#' This is the typical starting point of the `prepare_rxs_dataset` workflow.
+#' The resulting [QWAimages] can be passed directly to [collect_raw_data()] and
+#' to the metadata Shiny app ([launch_metadata_app()]), which enriches it with
+#' site-, tree-, and dataset-level metadata to produce a full [QWAmetadata].
 #'
 #' @param df_structure Dataframe with all input filenames and data structure.
-#' @param df_images Dataframe with extracted image exif data.
 #' @param df_settings Dataframe with extracted ROXAS settings data.
 #'
-#' @returns A single dataframe consisting of the joined input dataframes.
+#' @returns A [QWAimages] object with the joined image-level metadata.
+#' @seealso [extract_data_structure()], [collect_settings_data()],
+#'   [QWAimages()], [write_QWAimages()]
 #' @export
-combine_rxs_metadata <- function(df_structure,
-                                 df_images,
-                                 df_settings) {
-  checkmate::assert_data_frame(df_structure)
+build_QWAimages <- function(df_structure,
+                            df_settings) {
+  # assert the minimal required conditions to create a QWAmetadata$images data frame
+  checkmate::assert_data_frame(df_structure,
+    any.missing = FALSE, min.rows = 1, .var.name = "df_structure")
   checkmate::assert_subset(
-    c('fname_image','fname_cells','fname_rings','fname_settings'),
+    c("image_label", "slide_label", "woodpiece_label", "tree_label", "site_label",  
+      "fname_image",'fname_cells','fname_rings','fname_settings'),
     colnames(df_structure))
-  checkmate::assert_data_frame(df_images)
-  checkmate::assert_subset(c('fname_image'), colnames(df_images))
   checkmate::assert_data_frame(df_settings)
   checkmate::assert_subset(c('fname_settings'), colnames(df_settings))
+  checkmate::assert_permutation(
+    df_structure$fname_settings,
+    df_settings$fname_settings, na.ok = FALSE)
+  # custom check of the hierarchy defined by the structure columns
+  check_structure(df_structure)
 
   df_rxsmeta <- df_structure |>
-    dplyr::left_join(df_images, by='fname_image') |>
-    dplyr::left_join(df_settings, by='fname_settings') |>
-    dplyr::relocate(dplyr::starts_with('fname'), .after = dplyr::last_col())
+    dplyr::left_join(df_settings, by = 'fname_settings') 
+  # |> 
+  #   dplyr::mutate( # initialize the missing user-input columns (empty, cannot be read from files)
+  #     band_width = NA_character_,
+  #     only_ew = NA
+  #   )
+
+  # auto-detect schema version from the software column
+  schema_name <- "images"
+  rv <- unique(df_rxsmeta$software)
+  if (length(rv) != 1 || !(rv %in% c("roxas", "roxas_ai"))){
+    cli::cli_abort("The column `df_settings$software` needs to be 'roxas' or 'roxas_ai'.")
+  }
+
+  # align columns and types to schema (coerce with warnings)
+  df_rxsmeta <- align_df_to_schema(df_rxsmeta, 
+    schema_name, roxas_version = rv, 
+    allow_missing_req = FALSE, add_missing_opt = FALSE,
+    mute_info = TRUE) # silent mode except for important warnings
+
+  # validate against the base schema, but warn only. user may want to fix
+  # things manually in the metadata app
+  validate_schema(df_rxsmeta, schema = schema_name, roxas_version = rv, warn_only = TRUE)
 
   cli::cli_inform(c(
-    "v" = "Available ROXAS metadata extracted to {.var df_rxsmeta}"
+    "v" = "Available ROXAS metadata extracted to {.var QWAimages} object"
   ))
 
-  df_rxsmeta
+  new_QWAimages(df_rxsmeta, roxas_version = rv)
 }

@@ -1,5 +1,5 @@
 # SERVER -----------------------------------------------------------------------
-site_server <- function(id, main_session, roxas_data_in, site_tbls_in, countries_list) {
+site_server <- function(id, main_session, images_in, site_tbls_in, countries_list) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
@@ -25,13 +25,13 @@ site_server <- function(id, main_session, roxas_data_in, site_tbls_in, countries
     # NOTE: this purposefully overwrites/resets any updates via hot edit or
     # file upload if the underlying df_meta is changed
     observeEvent({
-      list(roxas_data_in(), site_tbls_in())}, {
-        req(roxas_data_in())
+      list(images_in(), site_tbls_in())}, {
+        req(images_in())
 
-        df_meta <- roxas_data_in()
+        df_meta <- images_in()
 
         # site
-        df_site <- create_empty_df("site_data", nrows=0)
+        df_site <- create_empty_df("sites", nrows=0)
         df_site <- df_meta %>%
           dplyr::group_by(site_label) %>%
           dplyr::summarise(n = dplyr::n_distinct(tree_label)) %>%
@@ -41,7 +41,7 @@ site_server <- function(id, main_session, roxas_data_in, site_tbls_in, countries
         site_data_in(df_site)
 
         # tree
-        df_tree <- create_empty_df("tree_data", nrows=0)
+        df_tree <- create_empty_df("trees", nrows=0)
         df_tree <- df_meta %>%
           dplyr::group_by(site_label, species_code, tree_label) %>%
           dplyr::summarise(n = dplyr::n_distinct(woodpiece_label), .groups = 'keep') %>%
@@ -60,7 +60,7 @@ site_server <- function(id, main_session, roxas_data_in, site_tbls_in, countries
         tree_data_in(df_tree)
 
         # woodpiece
-        df_wp <- create_empty_df("woodpiece_data", nrows=0)
+        df_wp <- create_empty_df("woodpieces", nrows=0)
         df_wp <- df_meta %>%
           dplyr::group_by(tree_label, woodpiece_label) %>%
           dplyr::summarise(n = dplyr::n_distinct(slide_label), .groups = 'keep') %>%
@@ -71,7 +71,7 @@ site_server <- function(id, main_session, roxas_data_in, site_tbls_in, countries
         wp_data_in(df_wp)
 
         # slide
-        df_slide <- create_empty_df("slide_data", nrows=0)
+        df_slide <- create_empty_df("slides", nrows=0)
         df_slide <- df_meta %>%
           dplyr::group_by(woodpiece_label, slide_label) %>%
           dplyr::summarise(n = dplyr::n_distinct(image_label), .groups = 'keep') %>%
@@ -83,27 +83,27 @@ site_server <- function(id, main_session, roxas_data_in, site_tbls_in, countries
 
         if (!is.null(site_tbls_in())) {
 
-          if (!is.null(site_tbls_in()$site_data)) {
-            df_site <- create_empty_df("site_data", nrows=0)
-            df_site <- dplyr::bind_rows(df_site, site_tbls_in()$site_data)
+          if (!is.null(site_tbls_in()$sites)) {
+            df_site <- create_empty_df("sites", nrows=0)
+            df_site <- dplyr::bind_rows(df_site, site_tbls_in()$sites)
             site_data_in(df_site)
           }
 
-          if (!is.null(site_tbls_in()$tree_data)) {
-            df_tree <- create_empty_df("tree_data", nrows=0)
-            df_tree <- dplyr::bind_rows(df_tree, site_tbls_in()$tree_data)
+          if (!is.null(site_tbls_in()$trees)) {
+            df_tree <- create_empty_df("trees", nrows=0)
+            df_tree <- dplyr::bind_rows(df_tree, site_tbls_in()$trees)
             tree_data_in(df_tree)
           }
 
-          if (!is.null(site_tbls_in()$woodpiece_data)) {
-            df_wp <- create_empty_df("woodpiece_data", nrows=0)
-            df_wp <- dplyr::bind_rows(df_wp, site_tbls_in()$woodpiece_data)
+          if (!is.null(site_tbls_in()$woodpieces)) {
+            df_wp <- create_empty_df("woodpieces", nrows=0)
+            df_wp <- dplyr::bind_rows(df_wp, site_tbls_in()$woodpieces)
             wp_data_in(df_wp)
           }
 
-          if (!is.null(site_tbls_in()$slide_data)) {
-            df_slide <- create_empty_df("slide_data", nrows=0)
-            df_slide <- dplyr::bind_rows(df_slide, site_tbls_in()$slide_data)
+          if (!is.null(site_tbls_in()$slides)) {
+            df_slide <- create_empty_df("slides", nrows=0)
+            df_slide <- dplyr::bind_rows(df_slide, site_tbls_in()$slides)
             slide_data_in(df_slide)
           }
         }
@@ -667,10 +667,10 @@ site_server <- function(id, main_session, roxas_data_in, site_tbls_in, countries
     return(
       list(
         site_tbls = list(
-          site_data = site_data_out,
-          tree_data = tree_data_out,
-          woodpiece_data = wp_data_out,
-          slide_data = slide_data_out
+          sites = site_data_out,
+          trees = tree_data_out,
+          woodpieces = wp_data_out,
+          slides = slide_data_out
         ),
         val_check = validation_checks
       )

@@ -4,14 +4,15 @@
 #' in cell (and ring?) measures by their negative value. This function replaces
 #' these 'negatives' with NA.
 #'
-#' @param QWA_data a list containing the cells and rings dataframes
-#' @returns QWA_data with the 'negative' outliers replaced by NAs
+#' @param QWA_data a `QWAdata` object containing the cells and rings dataframes
+#' @returns A `QWAdata` object with the 'negative' outliers replaced by NAs
 #'
 #' @export
 # TODO: finalize: sel cols, warn about how many are replaced? sure that these cols cannot have neg values?
 remove_outliers <- function(QWA_data){
-  checkmate::assert_list(QWA_data, types = "data.frame", len = 2)
-  checkmate::check_subset(names(QWA_data), c("cells", "rings"))
+  checkmate::assert_class(QWA_data, "QWAdata")
+  checkmate::assert_data_frame(QWA_data$cells)
+  checkmate::assert_data_frame(QWA_data$rings)
 
   outl_cols_cells <- c("raddistr", "rraddistr", "nbrno", "nbrid", "la", "asp",
                        "majax", "kh", "cwtpi", "cwtba", "cwtle", "cwtri",
@@ -50,11 +51,10 @@ remove_outliers <- function(QWA_data){
     ))
   }
 
-  QWA_data_rm <- list()
-  QWA_data_rm$cells <- QWA_data$cells %>%
+  cells_rm <- QWA_data$cells %>%
     dplyr::mutate(dplyr::across(dplyr::all_of(outl_cols_cells),
                                 ~ dplyr::if_else(.x < 0, NA_real_, .x)))
-  QWA_data_rm$rings <- QWA_data$rings %>%
+  rings_rm <- QWA_data$rings %>%
     dplyr::mutate(dplyr::across(dplyr::all_of(outl_cols_rings),
                                 ~ dplyr::if_else(.x < 0, NA_real_, .x)))
 
@@ -62,22 +62,36 @@ remove_outliers <- function(QWA_data){
     "v" = "Outliers (negative values) have been replaced with NA"
   ))
 
-  QWA_data_rm
+  new_QWAdata(cells = cells_rm, rings = rings_rm)
 }
 
 
-#' Complete cell measures
-#'
-#' Some additional cell measures are calculated based on the existing data.
+
 #' @keywords internal
 max_na_inf <- function(x){
   x_na <- is.na(x)
   if(all(x_na)) -Inf else max(x[!x_na])
 }
 
-# calculate additional measures (see rxs complete)
-# TODO: finalize
+#' Complete QWA measures
+#'
+#' Some additional cell measures are calculated based on the existing data:
+#' - tca: la + cwa
+#' - rwd2: cwtrad/drad
+#' - dcwt
+#' - raddistr.st: raddistr standardized by mrw
+#' - cwtall.adj
+#' - cdrad, cdtan, cdratio
+#' - sector100
+#' - ew_lw: indicates if it is an EW or LW cell (based on Mork index <1)
+#' And for the rings, we add
+#' - eww and lww estimates  (based on Mork index <1)
+#'
+#' @param QWA_data a `QWAdata` object containing the cells and rings dataframes
+#' @return a `QWAdata` object with the updated cells and rings dataframes with the new measures
+#' @export
 complete_cell_measures <- function(QWA_data){
+  checkmate::assert_class(QWA_data, "QWAdata")
 
   df_cells <- QWA_data$cells %>%
     # need MRW for some calculations
@@ -142,7 +156,7 @@ complete_cell_measures <- function(QWA_data){
       # the boundary is set at the highest sector with a rolling mean below mork
       # TODO: check edge cases
       max_EW_sector = max_na_inf(sector100[ROLLMEAN <= mork]),
-      eww = ifelse(max_EW_sector >=0, max_EW_sector*mrw/100, 0),
+      eww = ifelse(max_EW_sector >= 0, max_EW_sector*mrw/100, 0),
       lww = mrw - eww, .groups = 'drop'
     )
 
@@ -160,11 +174,7 @@ complete_cell_measures <- function(QWA_data){
     "v" = "Added additional cell measures and EW / LW estimation."
   ))
 
-  return(
-    stats::setNames(
-      list(df_cells, df_rings),
-      c('cells','rings')
-    ))
+  new_QWAdata(cells = df_cells, rings = df_rings)
 }
 
 
@@ -283,33 +293,41 @@ check_dating <- function(df_rings_log, df_meta){
     )
 
   dating_issues <- df_rings_dating |>
-    dplyr::filter(missing_year|dupl_year|undated|in_future|after_outmost) |>
+    dplyr::filter(missing_year | dupl_year | undated | in_future| after_outmost) |>
+    dplyr::group_by(image_label) |>
+    dplyr::summarise(
+      dplyr::across(c(missing_year, dupl_year, undated, in_future, after_outmost),
+                    \(x) sum(x, na.rm = TRUE)), .groups = "drop") |> 
     dplyr::mutate(
-      missing_year = dplyr::if_else(missing_year, "missing", NA_character_),
-      dupl_year = dplyr::if_else(dupl_year, "duplicate", NA_character_),
-      undated = dplyr::if_else(undated, "undated", NA_character_),
-      in_future = dplyr::if_else(in_future, "in future", NA_character_),
-      after_outmost = dplyr::if_else(after_outmost, "after outmost", NA_character_),
+      missing_year = dplyr::if_else(missing_year > 0, glue::glue("{missing_year} missing"), NA_character_),
+      dupl_year = dplyr::if_else(dupl_year > 0, glue::glue("{dupl_year} duplicates"), NA_character_),
+      undated = dplyr::if_else(undated > 0, glue::glue("{undated} undated"), NA_character_),
+      in_future = dplyr::if_else(in_future > 0, glue::glue("{in_future} in future"), NA_character_),
+      after_outmost = dplyr::if_else(after_outmost > 0, glue::glue("{after_outmost} after outmost"), NA_character_)
     ) |>
-    tidyr::unite("issues",
-                 missing_year, dupl_year, undated, in_future, after_outmost,
+    tidyr::unite("issues", missing_year, dupl_year,  undated, in_future, after_outmost,
                  na.rm = TRUE, sep = ", ") |>
-    glue::glue_data("{image_label}, {year}: {issues}")
+    glue::glue_data("{image_label}: {issues}")
 
   if (length(dating_issues) > 0){
     img_labels <- dating_issues[1:min(9, length(dating_issues))]
     if (length(dating_issues) > 9) {img_labels <- c(img_labels, '...')}
     cli::cli_abort(c(
       "x" = "Dating issues detected in rings data",
-      "i" = "The following images/years have problems with the dating:",
+      "i" = "The following images have problems with the dating:",
       img_labels
-    ))
-    return(FALSE)
+    ),
+    class = "rxs2tria_val_error",
+    issues = dating_issues)
   }
 
   TRUE
 }
-
+# to access the issues:
+# result <- tryCatch(
+#   check_dating(df_rings_log, df_meta),
+#   rxs2tria_val_error = function(e) e   # returns the condition object
+# )
 
 
 #' Helper function to check if an innermost ring is incomplete
@@ -543,15 +561,16 @@ flag_duplicate_rings <- function(df_rings_log){
 #' number of cells for each overlap is the one that would then usually be
 #' selected for further analysis when building chronologies.
 #'
-#' @param QWA_data a list containing the cells and rings dataframes
-#' @param df_meta a dataframe containing the metadata for the images
-#' (spatial_resolution required for the incomplete innermost ring check)
-#' @returns validated QWA_data (no changes to cells df, but added minimum required ring flag columns to rings df).
+#' @param QWA_data a `QWAdata` object containing the cells and rings dataframes
+#' @param rxs_meta a [QWAmetadata] or [QWAimages] object whose image-level
+#'   metadata provides `spatial_resolution` (required for the incomplete
+#'   innermost ring check) and `outmost_year`.
+#' @returns A `QWAdata` object with the validated data: cells unchanged, rings
+#'   with added flag columns.
 #' @export
 #'
-validate_QWA_data <- function(QWA_data, df_meta, verbose_flags = FALSE, exclude_mode = c("incomplete_only", "missing_only", "either", "both")){
-  checkmate::assert_list(QWA_data, types = "data.frame", len = 2)
-  checkmate::check_subset(names(QWA_data), c("cells", "rings"))
+validate_QWA_data <- function(QWA_data, rxs_meta, verbose_flags = FALSE, exclude_mode = c("incomplete_only", "missing_only", "either")){
+  checkmate::assert_class(QWA_data, "QWAdata")
   checkmate::assert_subset(
     c('image_label','year','cwttan'),
     names(QWA_data$cells)
@@ -561,7 +580,8 @@ validate_QWA_data <- function(QWA_data, df_meta, verbose_flags = FALSE, exclude_
     names(QWA_data$rings)
   )
 
-  checkmate::assert_data_frame(df_meta)
+  checkmate::assert_class(rxs_meta, "QWAimages")
+  df_meta <- rxs_meta
   checkmate::assert_subset(
     c('image_label','spatial_resolution','outmost_year'),
     names(df_meta)
@@ -598,7 +618,7 @@ validate_QWA_data <- function(QWA_data, df_meta, verbose_flags = FALSE, exclude_
   df_rings_log <- df_rings_log |> dplyr::mutate(
     mrw = dplyr::if_else(missing_ring & is.na(mrw) & cno < 5, 0, mrw),
     ra = dplyr::if_else(missing_ring & is.na(ra) & cno < 5, 0, ra),
-    eww = dplyr::if_else(missing_ring & is.na(eww) & cno < 5, 0, eww),
+    eww = dplyr::if_else(missing_ring & is.na(eww) & cno < 5, 0, eww), # TODO: requires ew/lw estimation - make flexible?
     lww = dplyr::if_else(missing_ring & is.na(lww) & cno < 5, 0, lww),
   )
 
@@ -606,7 +626,6 @@ validate_QWA_data <- function(QWA_data, df_meta, verbose_flags = FALSE, exclude_
     dplyr::mutate(
       exclude_issues = switch(
         mode,
-        "both" = incomplete_ring & missing_ring,
         "either" = incomplete_ring | missing_ring,
         "incomplete_only" = incomplete_ring,
         "missing_only" = missing_ring
@@ -615,7 +634,7 @@ validate_QWA_data <- function(QWA_data, df_meta, verbose_flags = FALSE, exclude_
 
   # TODO: finalize after checking, can already remove unnecessary cols in functions
   # remove unwanted columns
-  if (!verbose_flags){
+  if (!verbose_flags) {
     df_rings_log <- df_rings_log |>
       dplyr::select(-dplyr::any_of(c(
         'innermost_ring','outermost_ring',
@@ -648,11 +667,7 @@ validate_QWA_data <- function(QWA_data, df_meta, verbose_flags = FALSE, exclude_
   # message(paste0(capture.output(print(as.data.frame(issue_counts),
   #                               row.names = FALSE)), collapse='\n'))
 
-  return(
-    stats::setNames(
-      list(QWA_data$cells, df_rings_log),
-      c('cells','rings'))
-  )
+  new_QWAdata(cells = QWA_data$cells, rings = df_rings_log)
 }
 
 

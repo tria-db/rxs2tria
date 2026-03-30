@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "TODO:addurltoTRIAschema",
+  "title": "image_data",
+  "description": "Reference only, common properties for ROXAS and ROXAS AI schemata",
+  "type": "object",
+  "properties": {
+    "image_label": {
+      "type": "string",
+      "minLength": 1,
+      "readOnly": true,
+      "title": "Image",
+      "description": "Description"
+    },
+    "slide_label": {
+      "type": "string",
+      "minLength": 1,
+      "readOnly": true,
+      "title": "Slide",
+      "description": "Description"
+    },
+    "woodpiece_label": {
+      "type": "string",
+      "minLength": 1,
+      "readOnly": true,
+      "title": "Woodpiece",
+      "description": "Description"
+    },
+    "tree_label": {
+      "type": "string",
+      "minLength": 1,
+      "title": "Tree",
+      "readOnly": true,
+      "description": "Description"
+    },
+    "species_code": {
+      "type": ["string", "null"],
+      "readOnly": true,
+      "title": "Species",
+      "description": "Description (change in sites tab if required)"
+    },
+    "site_label": {
+      "type": "string",
+      "minLength": 1,
+      "readOnly": true,
+      "title": "Site",
+      "description": "Site identifier"
+    },
+    "band_width": {
+      "type": ["number", "null"],
+      "minimum": 0,
+      "title": "Bandwidth",
+      "description": "Description"
+    },
+    "only_ew": {
+      "type": ["boolean", "null"],
+      "title": "Only EW",
+      "description": "Description"
+    },
+    "spatial_resolution": {
+      "type": ["number", "null"],
+      "title": "Spatial resolution",
+      "description": "Description"
+    },
+    "meas_geometry": {
+      "type": ["string", "null"],
+      "enum": ["", "linear", "circular"],
+      "title": "Geometry",
+      "description": "Description"
+    },
+    "org_img_name": {
+      "type": "string",
+      "minLength": 1,
+      "title": "Original name",
+      "description": "Description"
+    },
+    "img_filetype": {
+      "type": ["string", "null"],
+      "title": "Filetype",
+      "description": "Description"
+    },
+    "img_size": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "title": "Size",
+      "description": "Description"
+    },
+    "img_width": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "title": "Width",
+      "description": "Description"
+    },
+    "img_height": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "title": "Height",
+      "description": "Description"
+    },
+    "img_created_at": {
+      "type": ["string","null"],
+      "format": "date-time",
+      "title": "Image created",
+      "description": "Description"
+    },
+    "img_software": {
+      "type": ["string", "null"],
+      "title": "Scanner software",
+      "description": "Software used to scan the image"
+    },
+    "scan_mode": {
+      "type": ["string", "null"],
+      "enum": ["", "RGB", "other"],
+      "title": "Scan mode",
+      "description": "Description"
+    },
+    "software": {
+      "type": "string",
+      "minLength": 1,
+      "enum": ["roxas", "roxas_ai"],
+      "title": "Analysis sw",
+      "description": "Description"
+    },
+    "sw_version": {
+      "type": ["string", "null"],
+      "title": "SW version",
+      "description": "Description"
+    },
+    "rxs_created_at": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "title": "ROXAS created",
+      "description": "Description"
+    },
+    "outmost_year": {
+      "type": ["integer", "null"],
+      "title": "Outmost year",
+      "description": "Description"
+    },
+    "fname_image": {
+      "type": ["string", "null"],
+      "title": "File image",
+      "description": "Description"
+    },
+    "fname_cells": {
+      "type": ["string", "null"],
+      "title": "File cells",
+      "description": "Description"
+    },
+    "fname_rings": {
+      "type": ["string", "null"],
+      "title": "File rings",
+      "description": "Description"
+    },
+    "fname_settings": {
+      "type": ["string", "null"],
+      "title": "File Settings",
+      "description": "Description"
+    },
+    "comment": {
+      "type": ["string", "null"],
+      "title": "Comment",
+      "description": "Description"
+    }
+  },
+  "required": ["image_label", "slide_label", "woodpiece_label", "tree_label", 
+    "site_label", "org_img_name", "software"]
+}

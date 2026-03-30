@@ -4,10 +4,16 @@
 \alias{get_roxas_files}
 \title{Identify ROXAS data files}
 \usage{
-get_roxas_files(path_in)
+get_roxas_files(path_in, roxas_version, exclude_dirs = NULL)
 }
 \arguments{
 \item{path_in}{path of the input directory.}
+
+\item{roxas_version}{which ROXAS version was used to create the files (classic
+\code{"roxas"} or new AI version \code{"roxas_ai"}).}
+
+\item{exclude_dirs}{directory names / keywords that should be ignored ignored
+when searching for ROXAS files (e.g., "unused_files", optional)}
 }
 \value{
 A list of lists containing filepaths of images and ROXAS output

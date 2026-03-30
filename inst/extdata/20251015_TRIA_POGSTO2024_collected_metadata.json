@@ -1,6 +1,6 @@
 {
     "$schema": "/Users/maranaegelin/Documents/code/Rcode/rxs2xcell/inst/extdata/json_schema/base_schema/20251007_tria_metadata_schema.json",
-    "ds_data":
+    "dataset":
     [
         {
             "ds_name": "POGSTO1955",
@@ -12,7 +12,7 @@
         }
 
     ],
-    "author_data":
+    "authors":
     [
         {
             "author_nr": 1,
@@ -60,7 +60,7 @@
             "contact_person": false
         }
     ],
-    "funding_data":
+    "funding":
     [
         {
             "org_name": "Swiss Federal Institute for Forest, Snow and Landscape Research",
@@ -70,14 +70,14 @@
             "grant_nr": "unknown"
         }
     ],
-    "relresource_data":
+    "relresources":
     [
         {
             "citation": "von Arx, G., Crivellaro, A., Prendin, A. L., Čufar, K., & Carrer, M. (2016). Quantitative Wood Anatomy—Practical Guidelines. Frontiers in Plant Science, 7. https://doi.org/10.3389/fpls.2016.00781",
             "doi": "10.3389/fpls.2016.00781"
         }
     ],
-    "site_data":
+    "sites":
     [
         {
             "site_label": "POG",
@@ -107,7 +107,7 @@
             "stand_composition": ""
         }
     ],
-    "tree_data":
+    "trees":
     [
         {
             "tree_label": "POG_PISY_02",
@@ -158,7 +158,7 @@
             "wood_origin": "living"
         }
     ],
-    "woodpiece_data":
+    "woodpieces":
     [
         {
             "woodpiece_label": "POG_PISY_02_B",
@@ -190,7 +190,7 @@
             "sample_archived": true
         }
     ],
-    "slide_data":
+    "slides":
     [
         {
             "slide_label": "POG_PISY_02_B_1",
@@ -349,7 +349,7 @@
             "data_structure": "tracheid-full"
         }
     ],
-     "roxas_data":
+     "images":
     [
         {
             "image_label": "POG_PISY_02_B_1_1",
@@ -366,7 +366,7 @@
             "software": "ROXAS",
             "sw_version": "3.0.608",
             "configuration_file": "Pinus_sylvestris_RNF_Alberto_2.267574",
-            "created_at": "2021-04-09 15:03:00",
+            "rxs_created_at": "2021-04-09 15:03:00",
             "spatial_resolution": 2.2675,
             "origin_calibrated_x": 2500,
             "origin_calibrated_y": -150000,
@@ -383,10 +383,10 @@
             "maxrel_opp_cwt": 1.5,
             "max_cwttan_s": 10,
             "max_cwttan_l": 4,
-            "fname_image": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_1_1.jpg",
-            "fname_cells": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_1_1_Output_Cells.txt",
-            "fname_rings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_1_1_Output_Rings.txt",
-            "fname_settings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_1_1_ROXAS_Settings.txt"
+            "fname_image": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_1_1.jpg",
+            "fname_cells": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_1_1_Output_Cells.txt",
+            "fname_rings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_1_1_Output_Rings.txt",
+            "fname_settings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_1_1_ROXAS_Settings.txt"
         },
         {
             "image_label": "POG_PISY_02_B_1_2",
@@ -403,7 +403,7 @@
             "software": "ROXAS",
             "sw_version": "3.0.608",
             "configuration_file": "Pinus_sylvestris_RNF_Alberto_2.57102",
-            "created_at": "2021-10-11 20:00:00",
+            "rxs_created_at": "2021-10-11 20:00:00",
             "spatial_resolution": 2.2675,
             "origin_calibrated_x": 2500,
             "origin_calibrated_y": -150000,
@@ -420,10 +420,10 @@
             "maxrel_opp_cwt": 1.5,
             "max_cwttan_s": 10,
             "max_cwttan_l": 4,
-            "fname_image": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_1_2.jpg",
-            "fname_cells": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_1_2_Output_Cells.txt",
-            "fname_rings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_1_2_Output_Rings.txt",
-            "fname_settings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_1_2_ROXAS_Settings.txt"
+            "fname_image": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_1_2.jpg",
+            "fname_cells": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_1_2_Output_Cells.txt",
+            "fname_rings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_1_2_Output_Rings.txt",
+            "fname_settings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_1_2_ROXAS_Settings.txt"
         },
         {
             "image_label": "POG_PISY_02_B_1_3",
@@ -440,7 +440,7 @@
             "software": "ROXAS",
             "sw_version": "3.0.608",
             "configuration_file": "Pinus_sylvestris_RNF_Alberto_2.267574",
-            "created_at": "2021-04-09 15:06:00",
+            "rxs_created_at": "2021-04-09 15:06:00",
             "spatial_resolution": 2.2675,
             "origin_calibrated_x": 2500,
             "origin_calibrated_y": -150000,
@@ -457,10 +457,10 @@
             "maxrel_opp_cwt": 1.5,
             "max_cwttan_s": 10,
             "max_cwttan_l": 4,
-            "fname_image": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_1_3.jpg",
-            "fname_cells": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_1_3_Output_Cells.txt",
-            "fname_rings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_1_3_Output_Rings.txt",
-            "fname_settings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_1_3_ROXAS_Settings.txt"
+            "fname_image": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_1_3.jpg",
+            "fname_cells": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_1_3_Output_Cells.txt",
+            "fname_rings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_1_3_Output_Rings.txt",
+            "fname_settings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_1_3_ROXAS_Settings.txt"
         },
         {
             "image_label": "POG_PISY_02_B_2_1",
@@ -477,7 +477,7 @@
             "software": "ROXAS",
             "sw_version": "3.0.608",
             "configuration_file": "Pinus_sylvestris_RNF_Alberto_2.267574",
-            "created_at": "2021-10-11 18:45:00",
+            "rxs_created_at": "2021-10-11 18:45:00",
             "spatial_resolution": 2.2675,
             "origin_calibrated_x": 2500,
             "origin_calibrated_y": -150000,
@@ -494,10 +494,10 @@
             "maxrel_opp_cwt": 1.5,
             "max_cwttan_s": 10,
             "max_cwttan_l": 4,
-            "fname_image": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_2_1.jpg",
-            "fname_cells": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_2_1_Output_Cells.txt",
-            "fname_rings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_2_1_Output_Rings.txt",
-            "fname_settings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_2_1_ROXAS_Settings.txt"
+            "fname_image": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_2_1.jpg",
+            "fname_cells": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_2_1_Output_Cells.txt",
+            "fname_rings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_2_1_Output_Rings.txt",
+            "fname_settings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_2_1_ROXAS_Settings.txt"
         },
         {
             "image_label": "POG_PISY_02_B_2_2",
@@ -514,7 +514,7 @@
             "software": "ROXAS",
             "sw_version": "3.0.608",
             "configuration_file": "Pinus_sylvestris_RNF_Alberto_2.267574",
-            "created_at": "2021-10-11 18:53:00",
+            "rxs_created_at": "2021-10-11 18:53:00",
             "spatial_resolution": 2.2675,
             "origin_calibrated_x": 2500,
             "origin_calibrated_y": -150000,
@@ -531,10 +531,10 @@
             "maxrel_opp_cwt": 1.5,
             "max_cwttan_s": 10,
             "max_cwttan_l": 4,
-            "fname_image": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_2_2.jpg",
-            "fname_cells": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_2_2_Output_Cells.txt",
-            "fname_rings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_2_2_Output_Rings.txt",
-            "fname_settings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_2_2_ROXAS_Settings.txt"
+            "fname_image": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_2_2.jpg",
+            "fname_cells": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_2_2_Output_Cells.txt",
+            "fname_rings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_2_2_Output_Rings.txt",
+            "fname_settings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_2_2_ROXAS_Settings.txt"
         },
         {
             "image_label": "POG_PISY_02_B_2_3",
@@ -551,7 +551,7 @@
             "software": "ROXAS",
             "sw_version": "3.0.608",
             "configuration_file": "Pinus_sylvestris_RNF_Alberto_2.267574",
-            "created_at": "2021-10-11 19:03:00",
+            "rxs_created_at": "2021-10-11 19:03:00",
             "spatial_resolution": 2.2675,
             "origin_calibrated_x": 2500,
             "origin_calibrated_y": -150000,
@@ -568,10 +568,10 @@
             "maxrel_opp_cwt": 1.5,
             "max_cwttan_s": 10,
             "max_cwttan_l": 4,
-            "fname_image": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_2_3.jpg",
-            "fname_cells": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_2_3_Output_Cells.txt",
-            "fname_rings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_2_3_Output_Rings.txt",
-            "fname_settings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_2_3_ROXAS_Settings.txt"
+            "fname_image": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_2_3.jpg",
+            "fname_cells": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_2_3_Output_Cells.txt",
+            "fname_rings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_2_3_Output_Rings.txt",
+            "fname_settings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_2_3_ROXAS_Settings.txt"
         },
         {
             "image_label": "POG_PISY_02_B_3_1",
@@ -588,7 +588,7 @@
             "software": "ROXAS",
             "sw_version": "3.0.608",
             "configuration_file": "Pinus_sylvestris_RNF_Alberto_2.267574",
-            "created_at": "2021-10-11 19:11:00",
+            "rxs_created_at": "2021-10-11 19:11:00",
             "spatial_resolution": 2.2675,
             "origin_calibrated_x": 2500,
             "origin_calibrated_y": -150000,
@@ -605,10 +605,10 @@
             "maxrel_opp_cwt": 1.5,
             "max_cwttan_s": 10,
             "max_cwttan_l": 4,
-            "fname_image": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_3_1.jpg",
-            "fname_cells": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_3_1_Output_Cells.txt",
-            "fname_rings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_3_1_Output_Rings.txt",
-            "fname_settings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_3_1_ROXAS_Settings.txt"
+            "fname_image": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_3_1.jpg",
+            "fname_cells": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_3_1_Output_Cells.txt",
+            "fname_rings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_3_1_Output_Rings.txt",
+            "fname_settings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_3_1_ROXAS_Settings.txt"
         },
         {
             "image_label": "POG_PISY_02_B_3_2",
@@ -625,7 +625,7 @@
             "software": "ROXAS",
             "sw_version": "3.0.608",
             "configuration_file": "Pinus_sylvestris_RNF_Alberto_2.267574",
-            "created_at": "2021-10-11 19:24:00",
+            "rxs_created_at": "2021-10-11 19:24:00",
             "spatial_resolution": 2.2675,
             "origin_calibrated_x": 2500,
             "origin_calibrated_y": -150000,
@@ -642,10 +642,10 @@
             "maxrel_opp_cwt": 1.5,
             "max_cwttan_s": 10,
             "max_cwttan_l": 4,
-            "fname_image": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_3_2.jpg",
-            "fname_cells": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_3_2_Output_Cells.txt",
-            "fname_rings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_3_2_Output_Rings.txt",
-            "fname_settings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_3_2_ROXAS_Settings.txt"
+            "fname_image": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_3_2.jpg",
+            "fname_cells": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_3_2_Output_Cells.txt",
+            "fname_rings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_3_2_Output_Rings.txt",
+            "fname_settings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_3_2_ROXAS_Settings.txt"
         },
         {
             "image_label": "POG_PISY_02_B_3_3",
@@ -662,7 +662,7 @@
             "software": "ROXAS",
             "sw_version": "3.0.608",
             "configuration_file": "Pinus_sylvestris_RNF_Alberto_2.267574",
-            "created_at": "2021-10-11 19:28:00",
+            "rxs_created_at": "2021-10-11 19:28:00",
             "spatial_resolution": 2.2675,
             "origin_calibrated_x": 2500,
             "origin_calibrated_y": -150000,
@@ -679,10 +679,10 @@
             "maxrel_opp_cwt": 1.5,
             "max_cwttan_s": 10,
             "max_cwttan_l": 4,
-            "fname_image": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_3_3.jpg",
-            "fname_cells": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_3_3_Output_Cells.txt",
-            "fname_rings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_3_3_Output_Rings.txt",
-            "fname_settings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_3_3_ROXAS_Settings.txt"
+            "fname_image": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_3_3.jpg",
+            "fname_cells": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_3_3_Output_Cells.txt",
+            "fname_rings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_3_3_Output_Rings.txt",
+            "fname_settings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_3_3_ROXAS_Settings.txt"
         },
         {
             "image_label": "POG_PISY_02_B_4_1",
@@ -699,7 +699,7 @@
             "software": "ROXAS",
             "sw_version": "3.0.608",
             "configuration_file": "Pinus_sylvestris_RNF_Alberto_2.267574",
-            "created_at": "2021-10-11 19:36:00",
+            "rxs_created_at": "2021-10-11 19:36:00",
             "spatial_resolution": 2.2675,
             "origin_calibrated_x": 2500,
             "origin_calibrated_y": -150000,
@@ -716,10 +716,10 @@
             "maxrel_opp_cwt": 1.5,
             "max_cwttan_s": 10,
             "max_cwttan_l": 4,
-            "fname_image": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_4_1.jpg",
-            "fname_cells": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_4_1_Output_Cells.txt",
-            "fname_rings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_4_1_Output_Rings.txt",
-            "fname_settings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_4_1_ROXAS_Settings.txt"
+            "fname_image": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_4_1.jpg",
+            "fname_cells": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_4_1_Output_Cells.txt",
+            "fname_rings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_4_1_Output_Rings.txt",
+            "fname_settings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_4_1_ROXAS_Settings.txt"
         },
         {
             "image_label": "POG_PISY_02_B_4_2",
@@ -736,7 +736,7 @@
             "software": "ROXAS",
             "sw_version": "3.0.608",
             "configuration_file": "Pinus_sylvestris_RNF_Alberto_2.267574",
-            "created_at": "2021-10-11 19:44:00",
+            "rxs_created_at": "2021-10-11 19:44:00",
             "spatial_resolution": 2.2675,
             "origin_calibrated_x": 2500,
             "origin_calibrated_y": -150000,
@@ -753,10 +753,10 @@
             "maxrel_opp_cwt": 1.5,
             "max_cwttan_s": 10,
             "max_cwttan_l": 4,
-            "fname_image": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_4_2.jpg",
-            "fname_cells": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_4_2_Output_Cells.txt",
-            "fname_rings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_4_2_Output_Rings.txt",
-            "fname_settings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_02B/POG_PISY_02B_4_2_ROXAS_Settings.txt"
+            "fname_image": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_4_2.jpg",
+            "fname_cells": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_4_2_Output_Cells.txt",
+            "fname_rings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_4_2_Output_Rings.txt",
+            "fname_settings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_02B/POG_PISY_02B_4_2_ROXAS_Settings.txt"
         },
         {
             "image_label": "POG_PISY_08_B_1_1",
@@ -773,7 +773,7 @@
             "software": "ROXAS",
             "sw_version": "3.0.608",
             "configuration_file": "Pinus_sylvestris_RNF_Alberto_2.267574",
-            "created_at": "2021-04-09 18:42:00",
+            "rxs_created_at": "2021-04-09 18:42:00",
             "spatial_resolution": 2.2675,
             "origin_calibrated_x": 2500,
             "origin_calibrated_y": -150000,
@@ -790,10 +790,10 @@
             "maxrel_opp_cwt": 1.5,
             "max_cwttan_s": 10,
             "max_cwttan_l": 4,
-            "fname_image": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_1_1.jpg",
-            "fname_cells": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_1_1_Output_Cells.txt",
-            "fname_rings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_1_1_Output_Rings.txt",
-            "fname_settings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_1_1_ROXAS_Settings.txt"
+            "fname_image": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_1_1.jpg",
+            "fname_cells": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_1_1_Output_Cells.txt",
+            "fname_rings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_1_1_Output_Rings.txt",
+            "fname_settings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_1_1_ROXAS_Settings.txt"
         },
         {
             "image_label": "POG_PISY_08_B_1_2",
@@ -810,7 +810,7 @@
             "software": "ROXAS",
             "sw_version": "3.0.608",
             "configuration_file": "Pinus_sylvestris_RNF_Alberto_2.267574",
-            "created_at": "2021-04-09 18:49:00",
+            "rxs_created_at": "2021-04-09 18:49:00",
             "spatial_resolution": 2.2675,
             "origin_calibrated_x": 2500,
             "origin_calibrated_y": -150000,
@@ -827,10 +827,10 @@
             "maxrel_opp_cwt": 1.5,
             "max_cwttan_s": 10,
             "max_cwttan_l": 4,
-            "fname_image": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_1_2.jpg",
-            "fname_cells": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_1_2_Output_Cells.txt",
-            "fname_rings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_1_2_Output_Rings.txt",
-            "fname_settings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_1_2_ROXAS_Settings.txt"
+            "fname_image": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_1_2.jpg",
+            "fname_cells": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_1_2_Output_Cells.txt",
+            "fname_rings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_1_2_Output_Rings.txt",
+            "fname_settings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_1_2_ROXAS_Settings.txt"
         },
         {
             "image_label": "POG_PISY_08_B_1_3",
@@ -847,7 +847,7 @@
             "software": "ROXAS",
             "sw_version": "3.0.608",
             "configuration_file": "Pinus_sylvestris_RNF_Alberto_2.267574",
-            "created_at": "2021-04-09 18:52:00",
+            "rxs_created_at": "2021-04-09 18:52:00",
             "spatial_resolution": 2.2675,
             "origin_calibrated_x": 2500,
             "origin_calibrated_y": -150000,
@@ -864,10 +864,10 @@
             "maxrel_opp_cwt": 1.5,
             "max_cwttan_s": 10,
             "max_cwttan_l": 4,
-            "fname_image": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_1_3.jpg",
-            "fname_cells": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_1_3_Output_Cells.txt",
-            "fname_rings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_1_3_Output_Rings.txt",
-            "fname_settings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_1_3_ROXAS_Settings.txt"
+            "fname_image": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_1_3.jpg",
+            "fname_cells": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_1_3_Output_Cells.txt",
+            "fname_rings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_1_3_Output_Rings.txt",
+            "fname_settings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_1_3_ROXAS_Settings.txt"
         },
         {
             "image_label": "POG_PISY_08_B_2_1",
@@ -884,7 +884,7 @@
             "software": "ROXAS",
             "sw_version": "3.0.608",
             "configuration_file": "Pinus_sylvestris_RNF_Alberto_2.267574",
-            "created_at": "2021-04-09 18:57:00",
+            "rxs_created_at": "2021-04-09 18:57:00",
             "spatial_resolution": 2.2675,
             "origin_calibrated_x": 2500,
             "origin_calibrated_y": -150000,
@@ -901,10 +901,10 @@
             "maxrel_opp_cwt": 1.5,
             "max_cwttan_s": 10,
             "max_cwttan_l": 4,
-            "fname_image": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_2_1.jpg",
-            "fname_cells": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_2_1_Output_Cells.txt",
-            "fname_rings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_2_1_Output_Rings.txt",
-            "fname_settings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_2_1_ROXAS_Settings.txt"
+            "fname_image": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_2_1.jpg",
+            "fname_cells": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_2_1_Output_Cells.txt",
+            "fname_rings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_2_1_Output_Rings.txt",
+            "fname_settings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_2_1_ROXAS_Settings.txt"
         },
         {
             "image_label": "POG_PISY_08_B_2_2",
@@ -921,7 +921,7 @@
             "software": "ROXAS",
             "sw_version": "3.0.608",
             "configuration_file": "Pinus_sylvestris_RNF_Alberto_2.267574",
-            "created_at": "2021-04-09 19:04:00",
+            "rxs_created_at": "2021-04-09 19:04:00",
             "spatial_resolution": 2.2675,
             "origin_calibrated_x": 2500,
             "origin_calibrated_y": -150000,
@@ -938,10 +938,10 @@
             "maxrel_opp_cwt": 1.5,
             "max_cwttan_s": 10,
             "max_cwttan_l": 4,
-            "fname_image": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_2_2.jpg",
-            "fname_cells": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_2_2_Output_Cells.txt",
-            "fname_rings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_2_2_Output_Rings.txt",
-            "fname_settings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_2_2_ROXAS_Settings.txt"
+            "fname_image": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_2_2.jpg",
+            "fname_cells": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_2_2_Output_Cells.txt",
+            "fname_rings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_2_2_Output_Rings.txt",
+            "fname_settings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_2_2_ROXAS_Settings.txt"
         },
         {
             "image_label": "POG_PISY_08_B_2_3",
@@ -958,7 +958,7 @@
             "software": "ROXAS",
             "sw_version": "3.0.608",
             "configuration_file": "Pinus_sylvestris_RNF_Alberto_2.267574",
-            "created_at": "2021-04-09 19:10:00",
+            "rxs_created_at": "2021-04-09 19:10:00",
             "spatial_resolution": 2.2675,
             "origin_calibrated_x": 2500,
             "origin_calibrated_y": -150000,
@@ -975,10 +975,10 @@
             "maxrel_opp_cwt": 1.5,
             "max_cwttan_s": 10,
             "max_cwttan_l": 4,
-            "fname_image": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_2_3.jpg",
-            "fname_cells": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_2_3_Output_Cells.txt",
-            "fname_rings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_2_3_Output_Rings.txt",
-            "fname_settings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_2_3_ROXAS_Settings.txt"
+            "fname_image": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_2_3.jpg",
+            "fname_cells": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_2_3_Output_Cells.txt",
+            "fname_rings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_2_3_Output_Rings.txt",
+            "fname_settings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_2_3_ROXAS_Settings.txt"
         },
         {
             "image_label": "POG_PISY_08_B_3_1",
@@ -995,7 +995,7 @@
             "software": "ROXAS",
             "sw_version": "3.0.608",
             "configuration_file": "Pinus_sylvestris_RNF_Alberto_2.267574",
-            "created_at": "2021-04-09 19:16:00",
+            "rxs_created_at": "2021-04-09 19:16:00",
             "spatial_resolution": 2.2675,
             "origin_calibrated_x": 2500,
             "origin_calibrated_y": -150000,
@@ -1012,10 +1012,10 @@
             "maxrel_opp_cwt": 1.5,
             "max_cwttan_s": 10,
             "max_cwttan_l": 4,
-            "fname_image": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_3_1.jpg",
-            "fname_cells": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_3_1_Output_Cells.txt",
-            "fname_rings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_3_1_Output_Rings.txt",
-            "fname_settings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_3_1_ROXAS_Settings.txt"
+            "fname_image": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_3_1.jpg",
+            "fname_cells": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_3_1_Output_Cells.txt",
+            "fname_rings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_3_1_Output_Rings.txt",
+            "fname_settings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_3_1_ROXAS_Settings.txt"
         },
         {
             "image_label": "POG_PISY_08_B_3_2",
@@ -1032,7 +1032,7 @@
             "software": "ROXAS",
             "sw_version": "3.0.608",
             "configuration_file": "Pinus_sylvestris_RNF_Alberto_2.267574",
-            "created_at": "2021-04-09 19:23:00",
+            "rxs_created_at": "2021-04-09 19:23:00",
             "spatial_resolution": 2.2675,
             "origin_calibrated_x": 2500,
             "origin_calibrated_y": -150000,
@@ -1049,10 +1049,10 @@
             "maxrel_opp_cwt": 1.5,
             "max_cwttan_s": 10,
             "max_cwttan_l": 4,
-            "fname_image": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_3_2.jpg",
-            "fname_cells": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_3_2_Output_Cells.txt",
-            "fname_rings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_3_2_Output_Rings.txt",
-            "fname_settings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_3_2_ROXAS_Settings.txt"
+            "fname_image": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_3_2.jpg",
+            "fname_cells": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_3_2_Output_Cells.txt",
+            "fname_rings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_3_2_Output_Rings.txt",
+            "fname_settings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_3_2_ROXAS_Settings.txt"
         },
         {
             "image_label": "POG_PISY_08_B_3_3",
@@ -1069,7 +1069,7 @@
             "software": "ROXAS",
             "sw_version": "3.0.608",
             "configuration_file": "Pinus_sylvestris_RNF_Alberto_2.267574",
-            "created_at": "2021-04-09 19:26:00",
+            "rxs_created_at": "2021-04-09 19:26:00",
             "spatial_resolution": 2.2675,
             "origin_calibrated_x": 2500,
             "origin_calibrated_y": -150000,
@@ -1086,10 +1086,10 @@
             "maxrel_opp_cwt": 1.5,
             "max_cwttan_s": 10,
             "max_cwttan_l": 4,
-            "fname_image": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_3_3.jpg",
-            "fname_cells": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_3_3_Output_Cells.txt",
-            "fname_rings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_3_3_Output_Rings.txt",
-            "fname_settings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_3_3_ROXAS_Settings.txt"
+            "fname_image": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_3_3.jpg",
+            "fname_cells": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_3_3_Output_Cells.txt",
+            "fname_rings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_3_3_Output_Rings.txt",
+            "fname_settings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_3_3_ROXAS_Settings.txt"
         },
         {
             "image_label": "POG_PISY_08_B_4_1",
@@ -1106,7 +1106,7 @@
             "software": "ROXAS",
             "sw_version": "3.0.608",
             "configuration_file": "Pinus_sylvestris_RNF_Alberto_2.267574",
-            "created_at": "2021-04-09 19:33:00",
+            "rxs_created_at": "2021-04-09 19:33:00",
             "spatial_resolution": 2.2675,
             "origin_calibrated_x": 2500,
             "origin_calibrated_y": -150000,
@@ -1123,10 +1123,10 @@
             "maxrel_opp_cwt": 1.5,
             "max_cwttan_s": 10,
             "max_cwttan_l": 4,
-            "fname_image": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_4_1.jpg",
-            "fname_cells": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_4_1_Output_Cells.txt",
-            "fname_rings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_4_1_Output_Rings.txt",
-            "fname_settings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_4_1_ROXAS_Settings.txt"
+            "fname_image": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_4_1.jpg",
+            "fname_cells": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_4_1_Output_Cells.txt",
+            "fname_rings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_4_1_Output_Rings.txt",
+            "fname_settings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_4_1_ROXAS_Settings.txt"
         },
         {
             "image_label": "POG_PISY_08_B_4_2",
@@ -1143,7 +1143,7 @@
             "software": "ROXAS",
             "sw_version": "3.0.608",
             "configuration_file": "Pinus_sylvestris_RNF_Alberto_2.267574",
-            "created_at": "2021-04-09 19:39:00",
+            "rxs_created_at": "2021-04-09 19:39:00",
             "spatial_resolution": 2.2675,
             "origin_calibrated_x": 2500,
             "origin_calibrated_y": -150000,
@@ -1160,10 +1160,10 @@
             "maxrel_opp_cwt": 1.5,
             "max_cwttan_s": 10,
             "max_cwttan_l": 4,
-            "fname_image": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_4_2.jpg",
-            "fname_cells": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_4_2_Output_Cells.txt",
-            "fname_rings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_4_2_Output_Rings.txt",
-            "fname_settings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_4_2_ROXAS_Settings.txt"
+            "fname_image": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_4_2.jpg",
+            "fname_cells": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_4_2_Output_Cells.txt",
+            "fname_rings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_4_2_Output_Rings.txt",
+            "fname_settings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_4_2_ROXAS_Settings.txt"
         },
         {
             "image_label": "POG_PISY_08_B_4_3",
@@ -1180,7 +1180,7 @@
             "software": "ROXAS",
             "sw_version": "3.0.608",
             "configuration_file": "Pinus_sylvestris_RNF_Alberto_2.267574",
-            "created_at": "2021-04-09 19:43:00",
+            "rxs_created_at": "2021-04-09 19:43:00",
             "spatial_resolution": 2.2675,
             "origin_calibrated_x": 2500,
             "origin_calibrated_y": -150000,
@@ -1197,10 +1197,10 @@
             "maxrel_opp_cwt": 1.5,
             "max_cwttan_s": 10,
             "max_cwttan_l": 4,
-            "fname_image": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_4_3.jpg",
-            "fname_cells": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_4_3_Output_Cells.txt",
-            "fname_rings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_4_3_Output_Rings.txt",
-            "fname_settings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_4_3_ROXAS_Settings.txt"
+            "fname_image": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_4_3.jpg",
+            "fname_cells": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_4_3_Output_Cells.txt",
+            "fname_rings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_4_3_Output_Rings.txt",
+            "fname_settings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_4_3_ROXAS_Settings.txt"
         },
         {
             "image_label": "POG_PISY_08_B_5_1",
@@ -1217,7 +1217,7 @@
             "software": "ROXAS",
             "sw_version": "3.0.608",
             "configuration_file": "2.57102",
-            "created_at": "2021-10-04 10:52:00",
+            "rxs_created_at": "2021-10-04 10:52:00",
             "spatial_resolution": 2.571,
             "origin_calibrated_x": 4000,
             "origin_calibrated_y": -230000,
@@ -1234,10 +1234,10 @@
             "maxrel_opp_cwt": 1.5,
             "max_cwttan_s": 10,
             "max_cwttan_l": 4,
-            "fname_image": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_5_1.jpeg",
-            "fname_cells": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_5_1_Output_Cells.txt",
-            "fname_rings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_5_1_Output_Rings.txt",
-            "fname_settings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_5_1_ROXAS_Settings.txt"
+            "fname_image": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_5_1.jpeg",
+            "fname_cells": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_5_1_Output_Cells.txt",
+            "fname_rings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_5_1_Output_Rings.txt",
+            "fname_settings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_5_1_ROXAS_Settings.txt"
         },
         {
             "image_label": "POG_PISY_08_B_5_2",
@@ -1254,7 +1254,7 @@
             "software": "ROXAS",
             "sw_version": "3.0.608",
             "configuration_file": "2.57102",
-            "created_at": "2021-10-04 11:03:00",
+            "rxs_created_at": "2021-10-04 11:03:00",
             "spatial_resolution": 2.571,
             "origin_calibrated_x": 4000,
             "origin_calibrated_y": -230000,
@@ -1271,10 +1271,10 @@
             "maxrel_opp_cwt": 1.5,
             "max_cwttan_s": 10,
             "max_cwttan_l": 4,
-            "fname_image": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_5_2.jpeg",
-            "fname_cells": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_5_2_Output_Cells.txt",
-            "fname_rings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_5_2_Output_Rings.txt",
-            "fname_settings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_5_2_ROXAS_Settings.txt"
+            "fname_image": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_5_2.jpeg",
+            "fname_cells": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_5_2_Output_Cells.txt",
+            "fname_rings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_5_2_Output_Rings.txt",
+            "fname_settings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_5_2_ROXAS_Settings.txt"
         },
         {
             "image_label": "POG_PISY_08_B_5_3",
@@ -1291,7 +1291,7 @@
             "software": "ROXAS",
             "sw_version": "3.0.608",
             "configuration_file": "2.57102",
-            "created_at": "2021-10-04 11:14:00",
+            "rxs_created_at": "2021-10-04 11:14:00",
             "spatial_resolution": 2.571,
             "origin_calibrated_x": 4000,
             "origin_calibrated_y": -230000,
@@ -1308,10 +1308,10 @@
             "maxrel_opp_cwt": 1.5,
             "max_cwttan_s": 10,
             "max_cwttan_l": 4,
-            "fname_image": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_5_3.jpeg",
-            "fname_cells": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_5_3_Output_Cells.txt",
-            "fname_rings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_5_3_Output_Rings.txt",
-            "fname_settings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_5_3_ROXAS_Settings.txt"
+            "fname_image": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_5_3.jpeg",
+            "fname_cells": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_5_3_Output_Cells.txt",
+            "fname_rings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_5_3_Output_Rings.txt",
+            "fname_settings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_5_3_ROXAS_Settings.txt"
         },
         {
             "image_label": "POG_PISY_08_B_6_1",
@@ -1328,7 +1328,7 @@
             "software": "ROXAS",
             "sw_version": "3.0.608",
             "configuration_file": "Pinus_sylvestris_RNF_Alberto_2.57102",
-            "created_at": "2021-10-02 17:24:00",
+            "rxs_created_at": "2021-10-02 17:24:00",
             "spatial_resolution": 2.2675,
             "origin_calibrated_x": 4000,
             "origin_calibrated_y": -230000,
@@ -1345,10 +1345,10 @@
             "maxrel_opp_cwt": 1.5,
             "max_cwttan_s": 10,
             "max_cwttan_l": 4,
-            "fname_image": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_6_1.jpeg",
-            "fname_cells": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_6_1_Output_Cells.txt",
-            "fname_rings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_6_1_Output_Rings.txt",
-            "fname_settings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_6_1_ROXAS_Settings.txt"
+            "fname_image": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_6_1.jpeg",
+            "fname_cells": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_6_1_Output_Cells.txt",
+            "fname_rings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_6_1_Output_Rings.txt",
+            "fname_settings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_6_1_ROXAS_Settings.txt"
         },
         {
             "image_label": "POG_PISY_08_B_6_2",
@@ -1365,7 +1365,7 @@
             "software": "ROXAS",
             "sw_version": "3.0.608",
             "configuration_file": "Pinus_sylvestris_RNF_Alberto_2.57102",
-            "created_at": "2021-10-04 11:26:00",
+            "rxs_created_at": "2021-10-04 11:26:00",
             "spatial_resolution": 2.2675,
             "origin_calibrated_x": 4000,
             "origin_calibrated_y": -230000,
@@ -1382,10 +1382,10 @@
             "maxrel_opp_cwt": 1.5,
             "max_cwttan_s": 10,
             "max_cwttan_l": 4,
-            "fname_image": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_6_2.jpeg",
-            "fname_cells": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_6_2_Output_Cells.txt",
-            "fname_rings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_6_2_Output_Rings.txt",
-            "fname_settings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/POG/POG_08/POG_PISY_08B_6_2_ROXAS_Settings.txt"
+            "fname_image": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_6_2.jpeg",
+            "fname_cells": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_6_2_Output_Cells.txt",
+            "fname_rings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_6_2_Output_Rings.txt",
+            "fname_settings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/POG/POG_08/POG_PISY_08B_6_2_ROXAS_Settings.txt"
         },
         {
             "image_label": "STO_PISY_20_1_1",
@@ -1402,7 +1402,7 @@
             "software": "ROXAS",
             "sw_version": "3.0.608",
             "configuration_file": "Pinus_sylvestris_RNF_Alberto_2.267574",
-            "created_at": "2021-04-13 23:52:00",
+            "rxs_created_at": "2021-04-13 23:52:00",
             "spatial_resolution": 2.2675,
             "origin_calibrated_x": 2500,
             "origin_calibrated_y": -150000,
@@ -1419,10 +1419,10 @@
             "maxrel_opp_cwt": 1.5,
             "max_cwttan_s": 10,
             "max_cwttan_l": 4,
-            "fname_image": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/STO/STO_20/STO_PISY_20_1_1.jpg",
-            "fname_cells": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/STO/STO_20/STO_PISY_20_1_1_Output_Cells.txt",
-            "fname_rings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/STO/STO_20/STO_PISY_20_1_1_Output_Rings.txt",
-            "fname_settings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/STO/STO_20/STO_PISY_20_1_1_ROXAS_Settings.txt"
+            "fname_image": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/STO/STO_20/STO_PISY_20_1_1.jpg",
+            "fname_cells": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/STO/STO_20/STO_PISY_20_1_1_Output_Cells.txt",
+            "fname_rings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/STO/STO_20/STO_PISY_20_1_1_Output_Rings.txt",
+            "fname_settings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/STO/STO_20/STO_PISY_20_1_1_ROXAS_Settings.txt"
         },
         {
             "image_label": "STO_PISY_20_1_2",
@@ -1439,7 +1439,7 @@
             "software": "ROXAS",
             "sw_version": "3.0.608",
             "configuration_file": "Pinus_sylvestris_RNF_Alberto_2.267574",
-            "created_at": "2021-04-14 00:00:00",
+            "rxs_created_at": "2021-04-14 00:00:00",
             "spatial_resolution": 2.2675,
             "origin_calibrated_x": 2500,
             "origin_calibrated_y": -150000,
@@ -1456,10 +1456,10 @@
             "maxrel_opp_cwt": 1.5,
             "max_cwttan_s": 10,
             "max_cwttan_l": 4,
-            "fname_image": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/STO/STO_20/STO_PISY_20_1_2.jpg",
-            "fname_cells": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/STO/STO_20/STO_PISY_20_1_2_Output_Cells.txt",
-            "fname_rings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/STO/STO_20/STO_PISY_20_1_2_Output_Rings.txt",
-            "fname_settings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/STO/STO_20/STO_PISY_20_1_2_ROXAS_Settings.txt"
+            "fname_image": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/STO/STO_20/STO_PISY_20_1_2.jpg",
+            "fname_cells": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/STO/STO_20/STO_PISY_20_1_2_Output_Cells.txt",
+            "fname_rings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/STO/STO_20/STO_PISY_20_1_2_Output_Rings.txt",
+            "fname_settings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/STO/STO_20/STO_PISY_20_1_2_ROXAS_Settings.txt"
         },
         {
             "image_label": "STO_PISY_20_1_3",
@@ -1476,7 +1476,7 @@
             "software": "ROXAS",
             "sw_version": "3.0.608",
             "configuration_file": "Pinus_sylvestris_RNF_Alberto_2.267574",
-            "created_at": "2021-04-14 00:02:00",
+            "rxs_created_at": "2021-04-14 00:02:00",
             "spatial_resolution": 2.2675,
             "origin_calibrated_x": 2500,
             "origin_calibrated_y": -150000,
@@ -1493,10 +1493,10 @@
             "maxrel_opp_cwt": 1.5,
             "max_cwttan_s": 10,
             "max_cwttan_l": 4,
-            "fname_image": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/STO/STO_20/STO_PISY_20_1_3.jpg",
-            "fname_cells": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/STO/STO_20/STO_PISY_20_1_3_Output_Cells.txt",
-            "fname_rings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/STO/STO_20/STO_PISY_20_1_3_Output_Rings.txt",
-            "fname_settings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/STO/STO_20/STO_PISY_20_1_3_ROXAS_Settings.txt"
+            "fname_image": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/STO/STO_20/STO_PISY_20_1_3.jpg",
+            "fname_cells": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/STO/STO_20/STO_PISY_20_1_3_Output_Cells.txt",
+            "fname_rings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/STO/STO_20/STO_PISY_20_1_3_Output_Rings.txt",
+            "fname_settings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/STO/STO_20/STO_PISY_20_1_3_ROXAS_Settings.txt"
         },
         {
             "image_label": "STO_PISY_20_2_1",
@@ -1513,7 +1513,7 @@
             "software": "ROXAS",
             "sw_version": "3.0.608",
             "configuration_file": "Pinus_sylvestris_RNF_Alberto_2.267574",
-            "created_at": "2021-04-14 00:08:00",
+            "rxs_created_at": "2021-04-14 00:08:00",
             "spatial_resolution": 2.2675,
             "origin_calibrated_x": 2500,
             "origin_calibrated_y": -150000,
@@ -1530,10 +1530,10 @@
             "maxrel_opp_cwt": 1.5,
             "max_cwttan_s": 10,
             "max_cwttan_l": 4,
-            "fname_image": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/STO/STO_20/STO_PISY_20_2_1.jpg",
-            "fname_cells": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/STO/STO_20/STO_PISY_20_2_1_Output_Cells.txt",
-            "fname_rings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/STO/STO_20/STO_PISY_20_2_1_Output_Rings.txt",
-            "fname_settings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/STO/STO_20/STO_PISY_20_2_1_ROXAS_Settings.txt"
+            "fname_image": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/STO/STO_20/STO_PISY_20_2_1.jpg",
+            "fname_cells": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/STO/STO_20/STO_PISY_20_2_1_Output_Cells.txt",
+            "fname_rings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/STO/STO_20/STO_PISY_20_2_1_Output_Rings.txt",
+            "fname_settings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/STO/STO_20/STO_PISY_20_2_1_ROXAS_Settings.txt"
         },
         {
             "image_label": "STO_PISY_20_2_2",
@@ -1550,7 +1550,7 @@
             "software": "ROXAS",
             "sw_version": "3.0.608",
             "configuration_file": "Pinus_sylvestris_RNF_Alberto_2.267574",
-            "created_at": "2021-04-14 00:17:00",
+            "rxs_created_at": "2021-04-14 00:17:00",
             "spatial_resolution": 2.2675,
             "origin_calibrated_x": 2500,
             "origin_calibrated_y": -150000,
@@ -1567,10 +1567,10 @@
             "maxrel_opp_cwt": 1.5,
             "max_cwttan_s": 10,
             "max_cwttan_l": 4,
-            "fname_image": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/STO/STO_20/STO_PISY_20_2_2.jpg",
-            "fname_cells": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/STO/STO_20/STO_PISY_20_2_2_Output_Cells.txt",
-            "fname_rings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/STO/STO_20/STO_PISY_20_2_2_Output_Rings.txt",
-            "fname_settings": "/Users/maranaegelin/Library/CloudStorage/OneDrive-Eidg.ForschungsanstaltWSL/Xcell/coding/QWA_Arzac2024/STO/STO_20/STO_PISY_20_2_2_ROXAS_Settings.txt"
+            "fname_image": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/STO/STO_20/STO_PISY_20_2_2.jpg",
+            "fname_cells": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/STO/STO_20/STO_PISY_20_2_2_Output_Cells.txt",
+            "fname_rings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/STO/STO_20/STO_PISY_20_2_2_Output_Rings.txt",
+            "fname_settings": "/Users/maranaegelin/Documents/QWAdata/QWA_Arzac2024/rxs_out/STO/STO_20/STO_PISY_20_2_2_ROXAS_Settings.txt"
         }
     ]
 }

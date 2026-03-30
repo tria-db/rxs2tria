@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "TODO:addurltoTRIAschema",
+  "title": "roxas_ai_data",
+  "description": "Schema for ROXAS AI image and analysis-level metadata",
+  "type": "array",
+  "minItems": 1,
+  "items": {
+    "type": "object",
+    "allOf": [
+      { "$ref": "20260313_tria_image_data_schema.json"},
+      {
+        "properties": {
+          "rings_segmentation_model": {
+            "type": ["string", "null"],
+            "dtColGroup": "cols_settings"
+          },
+          "cells_segmentation_model": {
+            "type": ["string", "null"],
+            "dtColGroup": "cols_settings"
+          },
+          "rings_segmentation_datetime": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "dtColGroup": "cols_settings"
+          },
+          "cells_segmentation_datetime": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "dtColGroup": "cols_settings"
+          },
+          "sample_type": {
+            "type": ["string", "null"],
+            "enum": ["", "conifer", "angiosperm"],
+            "title": "Sample type",
+            "description": "Description"
+          }
+        },
+        "required": ["rings_segmentation_model", "cells_segmentation_model"]
+      }
+    ],
+    "unevaluatedProperties": false
+  }
+}
+

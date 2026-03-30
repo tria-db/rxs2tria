@@ -1,5 +1,44 @@
 # Utility functions for handling input dataframes and aligning them to JSON schema
 
+#' Read an object from the global environment by name
+#'
+#' Supports plain names (`my_df`), list element access (`obj$element`),
+#' and bracket notation (`obj[['element']]`).
+#'
+#' @param var_name Character string identifying the object
+#' @param envir Environment of the object (default: .GlobalEnv)
+#' @return The object itself
+get_from_env <- function(var_name, envir = .GlobalEnv) {
+  var_name <- trimws(var_name)
+
+  # plain name
+  # may contain letters, numbers, . and _, but not starting with _ or number
+  if (grepl("^[a-zA-Z.][a-zA-Z0-9._]*$", var_name)) {
+    return(get(var_name, envir = envir))
+  }
+
+  # obj$element format
+  # valid name + '$' + valid name (same rules as above)
+  pattern1 <- "^([a-zA-Z.][a-zA-Z0-9._]*)\\$([a-zA-Z.][a-zA-Z0-9._]*)$"
+  if (grepl(pattern1, var_name)) {
+    obj_name <- sub(pattern1, "\\1", var_name)
+    element_name <- sub(pattern1, "\\2", var_name)
+    return(get(obj_name, envir = envir)[[element_name]])
+  }
+
+  # obj[['element']] or obj[["element"]] format
+  # valid name + '[[' + quote (single or double) + valid name + same quote + ']]'
+  # \\2 is backreference to the quote type (second group)
+  pattern2 <- "^([a-zA-Z.][a-zA-Z0-9._]*)\\[\\[(['\"])([a-zA-Z.][a-zA-Z0-9._]*)\\2\\]\\]$"
+  if (grepl(pattern2, var_name)) {
+    obj_name <- sub(pattern2, "\\1", var_name)
+    element_name <- sub(pattern2, "\\3", var_name)
+    return(get(obj_name, envir = envir)[[element_name]])
+  }
+
+  stop("Unrecognized variable name format: ", var_name)
+}
+
 #' Create an empty dataframe based on the provided JSON schema
 #' @param tbl_name The JSON schema defining the structure of the table.
 #' @param nrows Number of rows to create (default 0).
@@ -196,8 +235,8 @@ validate_json <- function(raw_json_data){
     input_tbls <- input_tbls[!grepl("^\\$", input_tbls)] # ignore any schema keywords
     common_tbls <- intersect(all_tbls, input_tbls)
 
-    if (!'roxas_data' %in% common_tbls) {
-      stop("The required 'roxas_data' table is missing in the input file.")
+    if (!'images' %in% common_tbls) {
+      stop("The required 'images' table is missing in the input file.")
       return(NULL)
     }
     if (length(common_tbls) < length(all_tbls)) {
@@ -209,7 +248,7 @@ validate_json <- function(raw_json_data){
     converted <- list()
     for (tbl_name in common_tbls) {
       tbl_data <- raw_json_data[[tbl_name]]
-      force_required <- tbl_name == "roxas_data" # only force required for the roxas data table
+      force_required <- tbl_name == "images" # only force required for the images table
       converted[[tbl_name]] <- validate_df(tbl_data, tbl_name, force_required = force_required)
     }
 
@@ -236,4 +275,56 @@ generate_desc_template <- function(df_rxsmeta){
      Study design: [ADD INFO on sampling design, methods, etc.]
    ")
    desc
+}
+
+
+#' Coerce a named list to a QWAmetadata object for use in the Shiny app
+#'
+#' Similar to [rxs2tria::as_QWAmetadata()] but with Shiny-specific behaviour:
+#' all optional columns are initialised as `NA` (`add_missing_opt = TRUE`) and
+#' `validate_schema` is skipped (validation is performed on the hot tables in
+#' the app directly).
+#'
+#' @param x A named list with any subset of the QWAmetadata components.
+#' @returns A `QWAmetadata` object.
+input_QWAmetadata <- function(x) {
+  checkmate::assert_list(x, names = "named")
+
+  # auto-detect roxas_version from images$software
+  roxas_version <- NULL
+  if (!is.null(x$images) && is.data.frame(x$images) && "software" %in% names(x$images)) {
+    rv <- unique(x$images$software)
+    if (length(rv) == 1 && rv %in% c("roxas", "roxas_ai"))
+      roxas_version <- rv
+  }
+  if (is.null(roxas_version))
+    cli::cli_abort("Could not establish ROXAS software version from {.var images$software}.")
+
+  align <- function(df, schema, rv = NULL) {
+    if (is.null(df) || (is.data.frame(df) && nrow(df) == 0)) return(df)
+    df_prep <- tibble::as_tibble(df, .name_repair = janitor::make_clean_names)
+    align_df_to_schema(df_prep, schema, rv,
+                       allow_missing_req = FALSE, add_missing_opt = TRUE)
+  }
+
+  valid_names <- c("dataset", "authors", "funding", "related",
+                   "sites", "trees", "woodpieces", "slides", "images")
+  extra <- setdiff(names(x), valid_names)
+  if (length(extra) > 0)
+    cli::cli_warn(c("i" = "Extra components in the JSON are ignored: {.val {extra}}"))
+
+  images <- align(x$images, "images", roxas_version)
+  check_structure(images)
+
+  new_QWAmetadata(
+    dataset    = align(x$dataset,    "dataset"),
+    authors    = align(x$authors,    "authors"),
+    funding    = align(x$funding,    "funding"),
+    related    = align(x$related,    "related"),
+    sites      = align(x$sites,      "sites"),
+    trees      = align(x$trees,      "trees"),
+    woodpieces = align(x$woodpieces, "woodpieces"),
+    slides     = align(x$slides,     "slides"),
+    images     = images
+  )
 }

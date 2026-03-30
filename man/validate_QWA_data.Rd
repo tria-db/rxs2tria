@@ -6,19 +6,21 @@
 \usage{
 validate_QWA_data(
   QWA_data,
-  df_meta,
+  rxs_meta,
   verbose_flags = FALSE,
-  exclude_mode = c("incomplete_only", "missing_only", "either", "both")
+  exclude_mode = c("incomplete_only", "missing_only", "either")
 )
 }
 \arguments{
-\item{QWA_data}{a list containing the cells and rings dataframes}
+\item{QWA_data}{a \code{QWAdata} object containing the cells and rings dataframes}
 
-\item{df_meta}{a dataframe containing the metadata for the images
-(spatial_resolution required for the incomplete innermost ring check)}
+\item{rxs_meta}{a \link{QWAmetadata} or \link{QWAimages} object whose image-level
+metadata provides \code{spatial_resolution} (required for the incomplete
+innermost ring check) and \code{outmost_year}.}
 }
 \value{
-validated QWA_data (no changes to cells df, but added minimum required ring flag columns to rings df).
+A \code{QWAdata} object with the validated data: cells unchanged, rings
+with added flag columns.
 }
 \description{
 Initial checks to ensure the quality of the raw QWA data.

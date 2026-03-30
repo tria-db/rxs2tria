@@ -14,7 +14,7 @@ reference:
   - collect_image_info
   - collect_settings_data
   - convert_settings_dates
-  - combine_rxs_metadata
+  - build_QWAimages
 - title: "Reading raw ROXAS output data"
   desc: "Functions for reading and writing ROXAS cells and rings output files."
   contents:
@@ -25,6 +25,7 @@ reference:
   desc: "Other utility functions."
   contents:
   - read_QWAdata
+  - complete_cell_measures
   - launch_coverage_app
   - launch_metadata_app
   - resolve_schema
@@ -32,5 +33,10 @@ reference:
   - create_coverage_plots
   - remove_outliers
   - validate_QWA_data
+  - calculate_band_profiles
+  - calculate_profiles
+  - create_rwl
+  - launch_flags_app
+  - update_QWAdata
 
 

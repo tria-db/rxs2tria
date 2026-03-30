@@ -1,4 +1,4 @@
-flags_server <- function(id, main_session) {
+flags_server <- function(id, main_session, comments_out) {
   shiny::moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
@@ -9,12 +9,17 @@ flags_server <- function(id, main_session) {
       rings_data = NULL,
       rxsmeta_data = NULL
     )
+
     # reactive containers for rings data
     # NOTE: rings_data_org is the basis for the plot, rings_data_edited tracks
     # edits of the flag inputs for selected rings. edits are then propagated back
     # to rings_data_org when the save / update btn is clicked
     rings_data_org <- shiny::reactiveVal(NULL)
     rings_data_edited <- shiny::reactiveVal(NULL)
+
+    # reactive container for image data
+    # NOTE: if rxs images with comments provided, save progress on handled comments to this
+    images_edited <- shiny::reactiveVal(NULL)
 
     # reactive containers for currently selected trace / image / year in the
     # plot(s) and table
@@ -26,6 +31,7 @@ flags_server <- function(id, main_session) {
     sel_subplots <- shiny::reactiveVal(c("sd","cov")) # default: show optional subplots
     awaiting_restoration <- shiny::reactiveVal(FALSE)
     shift_ring <- shiny::reactiveVal(NULL)
+    shift_image <- shiny::reactiveVal(NULL)
 
     # reactive containers for table settings and data
     sel_hot_cols <- shiny::reactiveVal(list(
@@ -37,6 +43,16 @@ flags_server <- function(id, main_session) {
     excl_flags <- shiny::reactiveVal(NULL)
     current_hot_image <- shiny::reactiveVal(NULL)
 
+    # reactive containers for saving edited rings data
+    save_settings <- shiny::reactiveValues(
+      not_set = TRUE,
+      save_to = NULL,
+      filepath = NULL,
+      varname = NULL,
+      save_imgs_to = NULL,
+      filepath_rxsmeta = NULL,
+      varname_rxsmeta = NULL,
+    )
 
     # LOAD INPUT DATA ----------------------------------------------------------
     # open input modal when button open_input_modal is clicked
@@ -109,7 +125,7 @@ flags_server <- function(id, main_session) {
       )
     }) |> shiny::bindEvent(input$confirm_input)
 
-    # initialize rings_data_out with input rings data
+    # initialize rings_data_org with input rings data
     shiny::observe({
       df_rings <- input_data$rings_data |>
         init_flag_columns(all_flags) |>
@@ -124,10 +140,45 @@ flags_server <- function(id, main_session) {
       rings_data_org(df_rings)
     }) |> shiny::bindEvent(input_data$rings_data)
 
-    # initialize editable copy of rings_data_out
+    # initialize editable copy of rings_data_org
     shiny::observe({
       rings_data_edited(rings_data_org())
     }) |> shiny::bindEvent(rings_data_org())
+
+    # if there are comments to handle, initialize images_edited with input rxsmeta data
+    # and show the progress tab, else hide it
+    shiny::observe({
+      bslib::nav_hide("tabs", target = "comments_panel", session = main_session)
+
+      shiny::req(input_data$rxsmeta_data)
+      df_comments <- input_data$rxsmeta_data
+      
+      # check for comments
+      if (!"comment" %in% names(df_comments)) {
+        df_comments$comment <- NA
+      }
+      df_comments <- df_comments |>
+        dplyr::filter(!is.na(comment) & comment != "")
+      
+      if (nrow(df_comments)>0){
+        # initialize/validate comment_handled column
+        if (!"comment_handled" %in% names(df_comments)){
+          df_comments$comment_handled <- FALSE
+        }
+        df_comments$comment_handled[is.na(df_comments$comment_handled)] <- FALSE
+
+        df_comments <- df_comments |> 
+          dplyr::select(
+            dplyr::any_of(c("site_label", "species_code", "tree_label", "woodpiece_label", "slide_label")),
+            image_label, comment, comment_handled
+          )
+        images_edited(df_comments)
+        bslib::nav_show("tabs", target = "comments_panel", session = main_session)
+      } else {
+        bslib::nav_hide("tabs", target = "comments_panel", session = main_session)
+      }
+    }) |> shiny::bindEvent(input_data$rxsmeta_data, ignoreNULL = FALSE)
+
 
     # UI CHANGES GIVEN INPUT DATA:
     # update sidebar UI based on loaded input data
@@ -470,6 +521,8 @@ flags_server <- function(id, main_session) {
           sel_marker(NULL)
           sel_image(NULL)
         }
+      } else {
+        cat("... no sel marker(s) to draw\n")
       }
 
       cat("... redrawing excluded markers\n")
@@ -578,9 +631,8 @@ flags_server <- function(id, main_session) {
       new_marker <- resolve_shift_marker(sel_wp, current_year, direction,
                                          df_selwp(), input$sel_param)
       if (is.null(new_marker)) {
-        shiny::showNotification(sprintf(
-          "No %s year available for this woodpiece in current plot.",
-          if (direction == "prev") "earlier" else "later"),
+        shiny::showNotification(
+          glue::glue("No {ifelse(direction=='next','later','earlier')} year available for this woodpiece."),
           type = "warning")
         return(NULL)
       }
@@ -596,6 +648,52 @@ flags_server <- function(id, main_session) {
       draw_sel_marker(p, new_marker, input$traces_crn, sel_subplots())
 
     }) |> shiny::bindEvent(shift_ring(), ignoreNULL = TRUE, ignoreInit = TRUE)
+
+
+    ## image shifts -------------------------------------------------------------
+    # capture and track directions of image shift
+    shiny::observe({
+      cat(".   shift image next\n")
+      shift_image(list(
+        dir = "next",
+        nonce = sample(1e6, 1)
+      ))
+    }) |> shiny::bindEvent(input$next_img)
+
+    shiny::observe({
+      cat(".   shift image prev\n")
+      shift_image(list(
+        dir = "prev",
+        nonce = sample(1e6, 1)
+      ))
+    }) |> shiny::bindEvent(input$prev_img)
+
+    # update the selected image after shift
+    shiny::observe({
+      shiny::req(sel_image())
+      direction <- shift_image()$dir
+
+      img_order <- df_selwp() |> 
+        dplyr::slice_min(year, n=1, by = "image_label", with_ties = FALSE) |> 
+        dplyr::arrange(year) |> dplyr::pull(image_label)
+      idx_current <- match(sel_image(), img_order)
+      idx_new <- if (direction == "next") idx_current + 1L else idx_current - 1L
+
+      if (is.na(idx_new) || idx_new < 1L || idx_new > length(img_order)) {
+        shiny::showNotification(
+          glue::glue("No {ifelse(direction=='next','later','earlier')} image available for this woodpiece."),
+          type = "warning"
+        )
+        return(NULL)
+      }
+
+      # update sel_image, reset sel_marker and remove marker from plot
+      sel_image(img_order[[idx_new]])
+      sel_marker(NULL)
+      p <- plotly::plotlyProxy("main_plot", session)
+      clear_sel_marker(p, input$traces_crn, sel_subplots())
+
+    }) |> shiny::bindEvent(shift_image(), ignoreNULL = TRUE, ignoreInit = TRUE)
 
 
     ## hot row changes ---------------------------------------------------------
@@ -741,19 +839,35 @@ flags_server <- function(id, main_session) {
       df_img <- input_data$rxsmeta_data
       card_title <- strong(glue::glue("Selected image: {sel_img}"))
 
-      if ("comments" %in% names(df_img)) {
-        img_comment <- df_img |>
-          dplyr::filter(image_label == sel_img) |>
-          dplyr::pull(comments)
-        if (!is.na(img_comment) && img_comment != "") {
+      # add image comment if availble
+      if (shiny::isTruthy(images_edited())) {
+        img_comment <- images_edited() |>
+          dplyr::filter(image_label == sel_img)
+
+        if (nrow(img_comment) > 0){
+          is_handled <- img_comment$comment_handled
           card_title <- tagList(
             card_title,
-            em(glue::glue("Comment: {img_comment}"))
+            shiny::div(
+              style = "display: flex; align-items: center; gap: 8px; margin-top: 2px;",
+              shiny::em(glue::glue("Comment: {img_comment$comment}")),
+              shiny::checkboxInput(ns("comment_handled"), "handled", value = is_handled)
+            )
           )
         }
       }
       card_title
     })
+
+    # update images_edited()$comment_handled when user clicks the checkbox
+    shiny::observe({
+      shiny::req(images_edited(), sel_image())
+      df <- images_edited()
+      img <- sel_image()
+      df[df$image_label == img,"comment_handled"] <- input$comment_handled
+      images_edited(df)
+    }) |> shiny::bindEvent(input$comment_handled, ignoreInit = TRUE, ignoreNULL = TRUE)
+
 
     # UI: show modal when clicking on table settings
     shiny::observe({
@@ -801,7 +915,12 @@ flags_server <- function(id, main_session) {
       df_rings <- df_rings_hot()
 
       current_hot_image(sel_image())
-      selring_idx <- which(rownames(df_rings) == sel_marker()$year) - 1
+      if (shiny::isTruthy(sel_marker())){
+        selring_idx <- which(rownames(df_rings) == sel_marker()$year) - 1 
+      } else {
+        selring_idx <- -1
+      }
+      
 
       ro_ids_dupl <- which(rep(TRUE, nrow(df_rings))) - 1
       ro_ids_excldupl <- which(!df_rings$duplicate_ring) - 1
@@ -919,7 +1038,7 @@ flags_server <- function(id, main_session) {
       rings_data_edited(df_rings_new)
     }) |> shiny::bindEvent(flags_out(), ignoreInit = TRUE, ignoreNULL = TRUE)
 
-
+  
     ## enter key to select cell ------------------------------------------------
     shiny::observe({
       shiny::req(sel_marker(), flags_out())
@@ -949,6 +1068,30 @@ flags_server <- function(id, main_session) {
       shiny::req(rings_data_edited())
       rings_data_org(rings_data_edited())
     }) |> shiny::bindEvent(input$apply_changes)
+
+
+    # GOTO IMG FROM COMMENTS TAB -----------------------------------------------
+    shiny::observe({
+      shiny::req(comments_out$goto_img())
+      clicked_img <- comments_out$goto_img()
+      prev_img <- sel_image()
+
+      if (prev_img != clicked_img$image){
+        sel_image(clicked_img$image)
+        crn_x_axes(NULL)
+        sel_marker(NULL)
+
+        prev_wp <- sel_woodpiece()
+        if (prev_wp != clicked_img$woodpiece) {
+          # causes plot rerender
+          shiny::updateSelectInput(session, "sel_wp_trace", selected = clicked_img$woodpiece)
+        } else {
+          p <- plotly::plotlyProxy("main_plot", session)
+          clear_sel_marker(p, input$traces_crn, sel_subplots())
+        }
+      }
+     
+    }) |> shiny::bindEvent(comments_out$goto_img())
 
 
     # OPEN IMAGES --------------------------------------------------------------
@@ -1004,55 +1147,83 @@ flags_server <- function(id, main_session) {
     }) |> shiny::bindEvent(sel_image(), ignoreNULL = TRUE)
 
 
-    # SAVE RESULTS -------------------------------------------------------------
-    ## save to file ---
-    output$save_data <- shiny::downloadHandler(
-      filename = function() {
-        glue::glue("{format(Sys.Date(), '%Y%m%d')}_TRIA_DSNAME_rings_edited.csv")
-      },
-      content = function(con) {
-        df_edited <- rings_data_edited()
-        df_org <- input_data$rings_data
-        df_out <- prepare_rings_out(df_edited, df_org)
-        readr::write_csv(df_out, con)
-      }
-    )
-
-    # close app: confirm with modal
+    # SAVING DATA -----------------------------------------------------------
+    # open save settings modal when gear icon clicked
     shiny::observe({
-      showModal(modalDialog(
-        title = "Confirm exit",
-        "If you have completed your editing and saved your results, you can exit the application.
-        The edited rings dataframe will also be available in the R global environment under df_rings_edited if returning
-        to a local R session.",
-        easyClose = TRUE,
-        footer = tagList(
-          modalButton("Cancel"),
-          actionButton(ns("confirm_exit"), "Exit")
-        )
-      ))
-    }) |> bindEvent(input$close_app, ignoreNULL = TRUE)
+      shiny::req(input_data$rings_data)
+      have_comments <- shiny::isTruthy(images_edited())
+      shiny::showModal(save_modal(ns, save_settings, have_comments))
+    }) |> shiny::bindEvent(input$save_settings_btn)
 
-    # save edited data to global environment and exit app when confirmed
+    # open save settings modal when save button is clicked for the first time
+    # i.e. save_settings$not_set is still TRUE
     shiny::observe({
+      shiny::req(save_settings$not_set, input_data$rings_data)
+      have_comments <- shiny::isTruthy(images_edited())
+      shiny::showModal(save_modal(ns, save_settings, have_comments))
+    }) |> shiny::bindEvent(input$save_btn)
+
+    # conditional logics for the modal UI
+    shiny::observe({
+      is_file <- "file" %in% input$modal_save_to
+      shinyjs::toggleState("modal_filepath", condition = is_file)
+      shinyjs::toggleState("modal_varname", condition = "env" %in% input$modal_save_to)
+      shinyjs::toggleState("save_confirm", condition =
+        (is_file && shiny::isTruthy(input$modal_filepath)) ||
+          (("env" %in% input$modal_save_to) && shiny::isTruthy(input$modal_varname))
+      )
+    }) |> shiny::bindEvent(input$modal_save_to,
+                           input$modal_filepath,
+                           input$modal_varname, ignoreNULL = FALSE)
+    
+    # on confirm save in modal, update settings and save data
+    shiny::observe({
+      save_settings$not_set <- FALSE
+      save_settings$save_to <- input$modal_save_to
+      save_settings$filepath <- input$modal_filepath
+      save_settings$varname <- input$modal_varname
+      save_settings$save_imgs_to <- input$modal_saveimg_to
+      save_settings$filepath_rxsmeta <- input$modal_filepath_imgs
+      save_settings$varname_rxsmeta <- input$modal_varname_imgs
+      shiny::removeModal()
+      shiny::req(rings_data_edited())
       df_edited <- rings_data_edited()
       df_org <- input_data$rings_data
-      df_out <- prepare_rings_out(df_edited, df_org)
-      df_rings_edited <<- df_out
-      shiny::stopApp()
-    }) |> shiny::bindEvent(input$confirm_exit, ignoreNULL = TRUE)
+      save_ring_edits(df_edited, df_org, save_settings,
+                      rxsmeta = input_data$rxsmeta_data,
+                      handled = images_edited())
+    }) |> shiny::bindEvent(input$save_confirm)
 
+    shiny::observe({
+      settings_set <- !save_settings$not_set
+      shiny::req(settings_set, rings_data_edited())
+      df_edited <- rings_data_edited()
+      df_org <- input_data$rings_data
+      save_ring_edits(df_edited, df_org, save_settings,
+                      rxsmeta = input_data$rxsmeta_data,
+                      handled = images_edited())
+    }) |> shiny::bindEvent(input$save_btn)
+      
 
     # DEBUG OUTPUT -------------------------------------------------------------
     output$debug <- renderPrint({
       #sel_subplots()
       print(sample(1:10000, 1))
+      #shiny::req(save_settings$initialized)
+      #images_edited()
+      comments_out$goto_img()
       #df <- traces_to_df(input$traces_crn)
       #tail(df)
-      rings_data_org()
+      #rings_data_org()
 
 
     })
+
+
+    # return module exports
+    list(
+      images_edited = images_edited
+    )
 
   })
 }

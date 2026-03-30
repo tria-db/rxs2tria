@@ -1,0 +1,37 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "TODO:addurltoTRIAschema",
+    "title": "TRIA metadata schema",
+    "description": "Schema for ...",
+    "$comment": "use htType for ht renderers (add to all? or infer via type?), use otherChecks for extra/complex validations (implement)",
+    "type": "object",
+    "properties":
+    {
+        "dataset": { "$ref": "20251007_tria_ds_data_schema.json" },
+        "authors": { "$ref": "20251007_tria_author_data_schema.json" },
+        "funding": { "$ref": "20251007_tria_funding_data_schema.json" },
+        "relresources": { "$ref": "20251007_tria_relresource_data_schema.json" },
+        "sites": { "$ref": "20251007_tria_site_data_schema.json" },
+        "trees": { "$ref": "20251007_tria_tree_data_schema.json" },
+        "woodpieces": { "$ref": "20251007_tria_woodpiece_data_schema.json" },
+        "slides": { "$ref": "20251007_tria_slide_data_schema.json" },
+        "images": { 
+          "anyOf": [
+            { "$ref": "20260313_tria_roxas_data_schema.json" },
+            { "$ref": "20260313_tria_roxasai_data_schema.json" }
+          ]
+        }
+    },
+    "required":
+    [
+        "dataset",
+        "authors",
+        "funding",
+        "sites",
+        "trees",
+        "woodpieces",
+        "slides",
+        "images"
+    ],
+    "additionalProperties": true
+}

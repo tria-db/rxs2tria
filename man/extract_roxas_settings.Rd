@@ -4,12 +4,12 @@
 \alias{extract_roxas_settings}
 \title{Extract data from a ROXAS settings file}
 \usage{
-extract_roxas_settings(file_settings, roxas_version = "classic")
+extract_roxas_settings(file_settings, roxas_version = c("roxas", "roxas_ai"))
 }
 \arguments{
 \item{file_settings}{The file to be read.}
 
-\item{roxas_version}{The version of ROXAS used to create the file (classic, AI)}
+\item{roxas_version}{The version of ROXAS used to create the file}
 }
 \value{
 A dataframe containing the extracted data.

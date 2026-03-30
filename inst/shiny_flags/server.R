@@ -1,6 +1,7 @@
 server <- function(input, output, session) {
-  flags_server('flags', session)
+  flags_out <- flags_server('flags', session, comments_out)
 
+  comments_out <- comments_server('comments', session, flags_out)
 
   # footer ---------------------------------------------------------------------
   # open contact information modal on click

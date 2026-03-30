@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "TODO:addurltoTRIAschema",
+  "title": "roxas_data",
+  "description": "Schema for ...",
+  "type": "array",
+  "minItems": 1,
+  "items": {
+    "type": "object",
+    "allOf": [
+      { "$ref": "20260313_tria_image_data_schema.json"},
+      {
+        "properties": {
+          "configuration_file": {
+            "type": ["string", "null"],
+            "title": "Configuration",
+            "description": "Configuration"
+          },
+          "origin_calibrated_x": {
+            "type": ["integer", "null"],
+            "title": "Calibr. X",
+            "description": "Description"
+          },
+          "origin_calibrated_y": {
+            "type": ["integer", "null"],
+            "title": "Calibr. Y",
+            "description": "Description"
+          },
+          "circ_lower_limit": {
+            "type": ["integer", "null"],
+            "minimum": 0,
+            "title": "circ_lower_limit",
+            "description": "Description"
+          },
+          "circ_upper_limit": {
+            "type": ["integer", "null"],
+            "minimum": 0,
+            "title": "circ_upper_limit",
+            "description": "Description"
+          },
+          "min_cell_area": {
+            "type": ["integer", "null"],
+            "minimum": 0,
+            "title": "min_cell_area",
+            "description": "Description"
+          },
+          "max_cell_area": {
+            "type": ["integer", "null"],
+            "minimum": 0,
+            "title": "max_cell_area",
+            "description": "Description"
+          },
+          "dbl_cwt_threshold": {
+            "type": ["number", "null"],
+            "minimum": 0,
+            "title": "dbl_cwt_threshold",
+            "description": "Description"
+          },
+          "max_cwtrad_s": {
+            "type": ["integer", "null"],
+            "minimum": 0,
+            "title": "max_cwtrad_s",
+            "description": "Description"
+          },
+          "max_cwtrad_l": {
+            "type": ["integer", "null"],
+            "minimum": 0,
+            "title": "max_cwtrad_l",
+            "description": "Description"
+          },
+          "relwidth_cwt_window": {
+            "type": ["number", "null"],
+            "minimum": 0,
+            "title": "relwidth_cwt_window",
+            "description": "Description"
+          },
+          "maxrel_opp_cwt": {
+            "type": ["number", "null"],
+            "minimum": 0,
+            "title": "maxrel_opp_cwt",
+            "description": "Description"
+          },
+          "max_cwttan_s": {
+            "type": ["number", "null"],
+            "minimum": 0,
+            "title": "max_cwttan_s",
+            "description": "Description"
+          },
+          "max_cwttan_l": {
+            "type": ["number", "null"],
+            "minimum": 0,
+            "title": "max_cwttan_l",
+            "description": "Description"
+          }
+        },
+        "required": ["configuration_file"]
+      }
+    ],
+    "unevaluatedProperties": false
+  }
+}

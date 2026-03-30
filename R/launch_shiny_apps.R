@@ -1,16 +1,3 @@
-#' Launch the coverage Shiny app
-#' @export
-# dependencies:
-# full: shiny, bslib,
-# explicit: plotly, DT, dplyr, tidyr, ggplot2, stringr, shinyalert, sass, shinyjs
-launch_coverage_app <- function() {
-  app_dir <- system.file("shiny_YTE", package = "rxs2tria")
-  if (app_dir == "") {
-    stop("Could not find the Shiny app directory. Reinstall the package.")
-  }
-  shiny::runApp(app_dir)
-}
-
 #' Launch the metadata Shiny app
 #' @param server_run Logical, if TRUE, runs the app in server mode (for hosting on shiny server).
 #' @export
@@ -27,12 +14,13 @@ launch_metadata_app <- function(server_run = FALSE) {
 }
 
 
-#' Launch the yte flags Shiny app
+#' Launch the ring flags Shiny app
 #' @export
 launch_flags_app <- function() {
   app_dir <- system.file("shiny_flags", package = "rxs2tria")
   if (app_dir == "") {
     stop("Could not find the Shiny app directory. Reinstall the package.")
   }
+  shiny::shinyOptions(launch_wd = getwd())
   shiny::runApp(app_dir)
 }

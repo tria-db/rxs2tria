@@ -10,8 +10,8 @@ collect_raw_data(df_structure)
 \item{df_structure}{Dataframe containing filenames and data structure.}
 }
 \value{
-\code{QWA_data}, i.e. a named list containing the combined raw data
-for cells and rings in two dataframes under \verb{$cells} and \verb{$rings}, respectively.
+A \code{QWAdata} object containing the combined raw data for cells and
+rings in \verb{$cells} and \verb{$rings}, respectively.
 }
 \description{
 Read and combine data from all cells and ring output files

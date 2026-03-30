@@ -68,6 +68,11 @@
         "type": ["number", "null"],
         "dtColGroup": "cols_images"
       },
+      "img_created_at": {
+        "type": ["string","null"],
+        "format": "date-time",
+        "dtColGroup": "cols_images"
+      },
       "software": {
         "type": "string",
         "minLength": 1,
@@ -82,7 +87,7 @@
         "type": ["string", "null"],
         "dtColGroup": "cols_settings"
       },
-      "created_at": {
+      "rxs_created_at": {
         "type": "string",
         "format": "date-time",
         "dtColGroup": "cols_settings"
@@ -170,7 +175,7 @@
       }
     },
     "required": ["image_label", "slide_label", "woodpiece_label", "tree_label", 
-      "site_label", "org_img_name", "software","created_at"],
+      "site_label", "org_img_name", "software", "rxs_created_at"],
     "additionalProperties": false
   }
 }

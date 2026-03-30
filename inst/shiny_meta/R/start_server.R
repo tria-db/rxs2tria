@@ -1,34 +1,34 @@
 # MODULE SERVER ----------------------------------------------------------------
 start_server <- function(id, main_session) {
-  moduleServer(id, function(input, output, session) {
+  shiny::moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
     # reactive container for input data
-    input_meta <- reactiveValues(
+    input_meta <- shiny::reactiveValues(
       source = "Please select input source and load data",
-      roxas_data = NULL,
+      images = NULL,
       dataset_tbls = NULL,
       site_tbls = NULL
     )
 
     # next button
     # toggle: enable only if we have input data and check_raw is checked
-    observe({
+    shiny::observe({
       shinyjs::toggleState(
-        id = "btn_next", condition = !is.null(input_meta$roxas_data))
+        id = "btn_next", condition = !is.null(input_meta$images))
     })
     # functionality: switch to next tab
-    observeEvent(input$btn_next, {
-      nav_select(id = 'tabs', selected = tab_general, session = main_session)
+    shiny::observeEvent(input$btn_next, {
+      bslib::nav_select(id = 'tabs', selected = tab_general, session = main_session)
     })
 
 
     # LOAD INPUT DATA ----------------------------------------------------------
-    observeEvent(input$btn_input, {
+    shiny::observeEvent(input$btn_input, {
       # warn before overwriting existing data
-      if (!is.null(input_meta$roxas_data)) {
-        showModal(
-          modalDialog(
+      if (!is.null(input_meta$images)) {
+        shiny::showModal(
+          shiny::modalDialog(
             title = "Warning",
             "This action overwrites any existing inputs provided in the app,
             including any data already provided in the other tabs.
@@ -46,23 +46,22 @@ start_server <- function(id, main_session) {
     })
 
     # if overwrite confirmed, also show input source modal
-    observeEvent(input$confirm_overwrite, {
-      removeModal()
+    shiny::observeEvent(input$confirm_overwrite, {
+      shiny::removeModal()
       show_input_modal(ns)
     })
 
     # ui to provide input data based on selected option
-    output$load_details_ui <- renderUI({
-      req(input$load_type)
-      if (input$load_type == "fresh") {
-        tagList(
-          fileInput(ns("csv_file"), "Load CSV containing raw metadata", accept = c(".csv")),
-          if (!server_run){
-            textInput(ns("df_name"), "Or provide name of data.frame in current R environment", value = "")
-          } else NULL
-        )
-      } else if (input$load_type == "continue") {
-        fileInput(ns("json_file"), "Load JSON with partially completed submission", accept = c(".json"))
+    output$load_details_ui <- shiny::renderUI({
+      shiny::req(input$load_type)
+      if (input$load_type == "env"){
+        if (!server_run){
+          shiny::textInput(ns("input_name"), "Provide the name of the object in your current R environment", value = "rxs_meta")
+        } else {
+          shiny::tags$i("Only possible for local runs.")
+        }
+      } else if (input$load_type == "file") {
+        shiny::fileInput(ns("input_file"), "Load data from file (.json, .csv)", accept = c(".json", ".csv"))
       } else { # example
         NULL
       }
@@ -70,58 +69,80 @@ start_server <- function(id, main_session) {
 
     observeEvent(input$confirm_input, {
       safe_block({
-        # new submission: load df from env or file
-        if (input$load_type == "fresh") {
-          if (!is.null(input$df_name) && input$df_name != "") {
-            df <- get(input$df_name, envir = .GlobalEnv)
-            source <- glue::glue("data.frame {input$df_name} from current R environment")
-          } else if (!is.null(input$csv_file)) {
-            df <- vroom::vroom(input$csv_file$datapath, show_col_types = FALSE)
-            source <- glue::glue("read from file {input$csv_file$name}")
-          } else {
+        if (input$load_type == "env") {
+          if (is.null(input$input_name) || is.na(input$input_name) || input$input_name == "") {
             stop("Please provide input source.")
+          } else {
+            res <- get_from_env(input$input_name, envir = .GlobalEnv)
+            source <- glue::glue("object {input$input_name} from current R environment")
+            if (inherits(res, "data.frame")){
+              df <- QWAimages(res) |> complete_QWAimages()
+              validated <- QWAmetadata(images = df) |> complete_QWAmetadata()
+            } else {
+              validated <- as_QWAmetadata(res) |> complete_QWAmetadata()
+            }
           }
-          # validate input table and update reactive
-          df <- validate_df(df, "roxas", force_required = TRUE, ignore_colnames = FALSE)
-          input_meta$source <- source
-          input_meta$roxas_data <- df
-          input_meta$dataset_tbls <- NULL # reset if necessary
-          input_meta$site_tbls <- NULL # reset if necessary
-        # existing submission: load data from json
-        } else if (input$load_type == "continue") {
-          if (!is.null(input$json_file)) {
-            imported <- jsonlite::read_json(input$json_file$datapath, simplifyVector = TRUE)
-            source <- glue::glue("read from file {input$json_file$name}")
-            # validate json and update reactive
-            validated <- validate_json(imported)
-            input_meta$source <- source
-            input_meta$roxas_data <- validated$roxas_data
-            input_meta$dataset_tbls <- validated[names(validated) %in% c("ds_data","author_data", "funding_data", "relresource_data")]
-            input_meta$site_tbls <- validated[names(validated) %in% c("site_data","tree_data", "woodpiece_data", "slide_data")]
+        } else if (input$load_type == "file"){
+          if (is.null(input$input_file) || is.na(input$input_file) || input$input_file == "") {
+            stop("Please provide input source.")
+          } else {
+            ext <- tools::file_ext(input$input_file$datapath)
+            if (ext == "csv"){
+              #res <- vroom::vroom(input$input_file$datapath, show_col_types = FALSE)
+              df <- read_QWAimages(input$input_file$datapath, allow_missing_req = FALSE,
+                add_missing_opt = TRUE)
+              validated <- QWAmetadata(images = df) |> complete_QWAmetadata()
+            } else {
+              #res <- jsonlite::read_json(input$input_file$datapath, simplifyVector = TRUE)
+              res <- read_QWAmetadata(input$input_file$datapath, allow_missing_req = FALSE,
+                add_missing_opt = TRUE)
+              validated <- res |> complete_QWAmetadata()
+            }
+            source <- glue::glue("read from file {input$input_file$name}")
           }
-        # example run: load example data
         } else {
           example_file <- system.file("extdata", "20251015_TRIA_POGSTO2024_collected_metadata.json", package = "rxs2tria")
-          imported <- jsonlite::read_json(example_file, simplifyVector = TRUE)
+          res <- jsonlite::read_json(example_file, simplifyVector = TRUE)
           source <- glue::glue("using example dataset")
-          # validate json and update reactive
-          validated <- validate_json(imported) # should always pass
-          input_meta$source <- source
-          input_meta$roxas_data <- validated$roxas_data
-          input_meta$dataset_tbls <- validated[names(validated) %in% c("ds_data","author_data", "funding_data", "relresource_data")]
-          input_meta$site_tbls <- validated[names(validated) %in% c("site_data","tree_data", "woodpiece_data", "slide_data")]
         }
+        input_meta$source <- source
+        input_meta$images <- validated$images
+        input_meta$dataset_tbls <- validated[c("dataset","authors","funding","related")]
+        input_meta$site_tbls <- validated[c("site","tree","woodpiece","slide")]
+
+        # if (is.data.frame(res)){
+        #   # single df: assume it's QWAmetadata$images
+        #   df <- validate_df(res, "images", force_required = TRUE, ignore_colnames = FALSE)
+        #   input_meta$source <- source
+        #   input_meta$images <- df
+        #   input_meta$dataset_tbls <- NULL # reset if necessary
+        #   input_meta$site_tbls <- NULL # reset if necessary
+        # } else {
+        #   validated <- input_QWAmetadata(res)
+        #   input_meta$source <- source
+        #   input_meta$images <- validated$images
+        #   input_meta$dataset_tbls <- validated |> 
+        #     purrr::keep_at(c("dataset", "authors", "funding", "related")) |> 
+        #     purrr::keep(\(x) length(x)>0)
+        #   input_meta$site_tbls <- validated |> 
+        #     purrr::keep_at(c("sites", "trees", "woodpieces", "slides")) |> 
+        #     purrr::keep(\(x) length(x)>0)
+        # }
+        #         if (inherits(res, "QWAmetadata")) {
+        #   # QWAmetadata object from R environment: unpack directly
+        #   input_meta$source <- source
+        #   print(source)
+        #   input_meta$images <- validate_df(res$images, "images", force_required = TRUE)
+        #   input_meta$dataset_tbls <- res[c("dataset", "authors", "funding", "related")]
+        #   input_meta$site_tbls <- res[c("sites", "trees", "woodpieces", "slides")]
+        # } else 
         removeModal()
       }, propagate_err = FALSE)
     })
 
-
-
-
-
     # output with source of input data
     output$file_status <- renderUI({
-      if (is.null(input_meta$roxas_data)) {
+      if (is.null(input_meta$images)) {
         code(input_meta$source,
              class = 'code-output', style = 'color: #da292e;') # bs-danger color
       } else {
@@ -133,9 +154,9 @@ start_server <- function(id, main_session) {
     # RENDER SHINYTREE ---------------------------------------------------------
     # create data.tree and shinyTree compatible JSON of data structure
     dtree_json <- reactive({
-      req(input_meta$roxas_data)
+      req(input_meta$images)
 
-      df_dtree <- input_meta$roxas_data %>% dplyr::select(site_label, species_code, tree_label, woodpiece_label, slide_label, image_label, org_img_name)
+      df_dtree <- input_meta$images %>% dplyr::select(site_label, species_code, tree_label, woodpiece_label, slide_label, image_label, org_img_name)
       df_dtree <- df_dtree |>
         dplyr::mutate(
           tree = stringr::str_remove(tree_label, glue::glue("({site_label}_)*({species_code}_)*")),
@@ -182,243 +203,243 @@ start_server <- function(id, main_session) {
     })
 
     output$tree <- shinyTree::renderTree({
-      validate(need(!is.null(input_meta$roxas_data), "No data to show"))
+      validate(need(!is.null(input_meta$images), "No data to show"))
 
       dtree_json()
       })
 
 
     # RENDER DATATABLE ---------------------------------------------------------
-    roxas_data_out <- reactiveVal(NULL)
+    # images_out <- reactiveVal(NULL)
+    # 
+    # observeEvent(input_meta$images, {
+    #   images_out(input_meta$images)
+    # })
+    # 
+    # # for the conditional panel with the column selection
+    # output$roxas_data_available <- reactive({
+    #   !is.null(input_meta$images)
+    # })
+    # outputOptions(output, "roxas_data_available", suspendWhenHidden = FALSE)
+    # 
+    # # callbacks for DT
+    # autofill_callback <- c(
+    #   "var tbl = $(table.table().node());",
+    #   "var id = tbl.closest('.datatables').attr('id');",
+    #
+    #   "delete $.fn.dataTable.AutoFill.actions.increment;",
+    #   "delete $.fn.dataTable.AutoFill.actions.decrement;",
+    # 
+    #   "table.on('autoFill', function(e, datatable, cells){",
+    #   "  var out = [];",
+    #   "  for(var i = 0; i < cells.length; ++i){",
+    #   "    var c = cells[i][0];",
+    #   "    var value = c.set === null ? 'FALSE' : c.set;",
+    #   "    var rowData = table.row(c.index.row).data();",
+    #   "    var actualRow = rowData[rowData.length - 1];",
+    #   "    out.push({",
+    #   "      row: actualRow,",
+    #   "      col: c.index.column,",
+    #   "      value: value",
+    #   "    });",
+    #   "  }",
+    #   "  Shiny.setInputValue(id + '_cells_filled:DT.cellInfo', out);",
+    #   "  table.rows().invalidate();",
+    #   "});"
+    # )
+    # keys_callback <- c(
+    #   "table.on('key', function(e, datatable, key, cell, originalEvent){",
+    #   "  var targetName = originalEvent.target.localName;",
+    #   "  if(key == 13 && targetName == 'body'){",
+    #   "    $(cell.node()).trigger('dblclick.dt');",
+    #   "  }",
+    #   "});",
+    #   "table.on('keydown', function(e){",
+    #   "  var keys = [9,13,37,38,39,40];",
+    #   "  if(e.target.localName == 'input' && keys.indexOf(e.keyCode) > -1){",
+    #   "    $(e.target).trigger('blur');",
+    #   "  }",
+    #   "});",
+    #   "table.on('key-focus', function(e, datatable, cell, originalEvent){",
+    #   "  var targetName = originalEvent.target.localName;",
+    #   "  var type = originalEvent.type;",
+    #   "  if(type == 'keydown' && targetName == 'input'){",
+    #   "    if([9,37,38,39,40].indexOf(originalEvent.keyCode) > -1){",
+    #   "      $(cell.node()).trigger('dblclick.dt');",
+    #   "    }",
+    #   "  }",
+    #   "});"
+    # )
+    # checkbox_callback <- c(
+    #   "table.on('click', '.editor-checkbox', function(e){",
+    #   "  var cell = table.cell($(this).closest('td'));",
+    #   "  var rowData = table.row(cell.index().row).data();",
+    #   "  var actualRow = rowData[rowData.length - 1];",
+    #   "  var col = cell.index().column;",
+    #   "  var newValue = $(this).prop('checked') ? 'TRUE' : 'FALSE';",
+    #   "  ",
+    #   "  var tbl = $(table.table().node());",
+    #   "  var id = tbl.closest('.datatables').attr('id');",
+    #   "  ",
+    #   "  Shiny.setInputValue(id + '_cell_edit:DT.cellInfo', [{",
+    #   "    row: actualRow,",
+    #   "    col: col,",
+    #   "    value: newValue",
+    #   "  }]);",
+    #   "});"
+    # )
+    # DT_callbacks <- c(autofill_callback, keys_callback, checkbox_callback)
 
-    observeEvent(input_meta$roxas_data, {
-      roxas_data_out(input_meta$roxas_data)
-    })
+    # # render DT
+    # output$roxas_table <- DT::renderDT({
+    #   validate(need(!is.null(input_meta$images), "No data to show"))
 
-    # for the conditional panel with the column selection
-    output$roxas_data_available <- reactive({
-      !is.null(input_meta$roxas_data)
-    })
-    outputOptions(output, "roxas_data_available", suspendWhenHidden = FALSE)
+    #   df <- input_meta$images # render initially based on input_meta$images
 
-    # callbacks for DT
-    autofill_callback <- c(
-      "var tbl = $(table.table().node());",
-      "var id = tbl.closest('.datatables').attr('id');",
+    #   # get ready for display
+    #   df$.DT_RowIndex <- seq_len(nrow(df))
 
-      "delete $.fn.dataTable.AutoFill.actions.increment;",
-      "delete $.fn.dataTable.AutoFill.actions.decrement;",
+    #   # get the index of all columns except the ones named "band_width" and "only_ew"
+    #   cb_col <- "only_ew"
+    #   df[[cb_col]] <- as.character(df[[cb_col]])
+    #   df$only_ew[is.na(df$only_ew)] <- "FALSE"
 
-      "table.on('autoFill', function(e, datatable, cells){",
-      "  var out = [];",
-      "  for(var i = 0; i < cells.length; ++i){",
-      "    var c = cells[i][0];",
-      "    var value = c.set === null ? 'FALSE' : c.set;",
-      "    var rowData = table.row(c.index.row).data();",
-      "    var actualRow = rowData[rowData.length - 1];",
-      "    out.push({",
-      "      row: actualRow,",
-      "      col: c.index.column,",
-      "      value: value",
-      "    });",
-      "  }",
-      "  Shiny.setInputValue(id + '_cells_filled:DT.cellInfo', out);",
-      "  table.rows().invalidate();",
-      "});"
-    )
-    keys_callback <- c(
-      "table.on('key', function(e, datatable, key, cell, originalEvent){",
-      "  var targetName = originalEvent.target.localName;",
-      "  if(key == 13 && targetName == 'body'){",
-      "    $(cell.node()).trigger('dblclick.dt');",
-      "  }",
-      "});",
-      "table.on('keydown', function(e){",
-      "  var keys = [9,13,37,38,39,40];",
-      "  if(e.target.localName == 'input' && keys.indexOf(e.keyCode) > -1){",
-      "    $(e.target).trigger('blur');",
-      "  }",
-      "});",
-      "table.on('key-focus', function(e, datatable, cell, originalEvent){",
-      "  var targetName = originalEvent.target.localName;",
-      "  var type = originalEvent.type;",
-      "  if(type == 'keydown' && targetName == 'input'){",
-      "    if([9,37,38,39,40].indexOf(originalEvent.keyCode) > -1){",
-      "      $(cell.node()).trigger('dblclick.dt');",
-      "    }",
-      "  }",
-      "});"
-    )
-    checkbox_callback <- c(
-      "table.on('click', '.editor-checkbox', function(e){",
-      "  var cell = table.cell($(this).closest('td'));",
-      "  var rowData = table.row(cell.index().row).data();",
-      "  var actualRow = rowData[rowData.length - 1];",
-      "  var col = cell.index().column;",
-      "  var newValue = $(this).prop('checked') ? 'TRUE' : 'FALSE';",
-      "  ",
-      "  var tbl = $(table.table().node());",
-      "  var id = tbl.closest('.datatables').attr('id');",
-      "  ",
-      "  Shiny.setInputValue(id + '_cell_edit:DT.cellInfo', [{",
-      "    row: actualRow,",
-      "    col: col,",
-      "    value: newValue",
-      "  }]);",
-      "});"
-    )
-    DT_callbacks <- c(autofill_callback, keys_callback, checkbox_callback)
+    #   # TODO: get idxs of hidden cols from input$cols_meta and add to columnDefs visible = FALSE
+    #   # from schema dtColGroup
+    #   obj <- get_schema('images')
+    #   tbl_schema <- jsonlite::fromJSON(obj$schema$schema)
+    #   extracted_groups <- sapply(tbl_schema$items$properties, function(x) x$dtColGroup)
+    #   col_groups <- split(names(extracted_groups), extracted_groups)
 
-    # render DT
-    output$roxas_table <- DT::renderDT({
-      validate(need(!is.null(input_meta$roxas_data), "No data to show"))
+    #   locked_cols_idx <- which(!(names(df) %in% col_groups[["cols_userinput"]])) - 1
+    #   edit_cols_idx <- which(names(df) %in% col_groups[["cols_userinput"]]) - 1
+    #   cb_col_idx <- which(names(df) == cb_col) - 1
 
-      df <- input_meta$roxas_data # render initially based on input_meta$roxas_data
-
-      # get ready for display
-      df$.DT_RowIndex <- seq_len(nrow(df))
-
-      # get the index of all columns except the ones named "band_width" and "only_ew"
-      cb_col <- "only_ew"
-      df[[cb_col]] <- as.character(df[[cb_col]])
-      df$only_ew[is.na(df$only_ew)] <- "FALSE"
-
-      # TODO: get idxs of hidden cols from input$cols_meta and add to columnDefs visible = FALSE
-      # from schema dtColGroup
-      obj <- get_schema('roxas_data')
-      tbl_schema <- jsonlite::fromJSON(obj$schema$schema)
-      extracted_groups <- sapply(tbl_schema$items$properties, function(x) x$dtColGroup)
-      col_groups <- split(names(extracted_groups), extracted_groups)
-
-      locked_cols_idx <- which(!(names(df) %in% col_groups[["cols_userinput"]])) - 1
-      edit_cols_idx <- which(names(df) %in% col_groups[["cols_userinput"]]) - 1
-      cb_col_idx <- which(names(df) == cb_col) - 1
-
-      selected_groups <- isolate(input$cols_meta)
-      visible_cols <- unlist(col_groups[names(col_groups) %in% selected_groups])
-      visible_cols <- union(c("image_label", col_groups[["cols_userinput"]]), visible_cols) # always show (note: cannot hide cols_userinput)
-      hidden_cols <- setdiff(names(df), visible_cols)
-      hidden_cols_idx <- which(names(df) %in% hidden_cols) - 1
+    #   selected_groups <- isolate(input$cols_meta)
+    #   visible_cols <- unlist(col_groups[names(col_groups) %in% selected_groups])
+    #   visible_cols <- union(c("image_label", col_groups[["cols_userinput"]]), visible_cols) # always show (note: cannot hide cols_userinput)
+    #   hidden_cols <- setdiff(names(df), visible_cols)
+    #   hidden_cols_idx <- which(names(df) %in% hidden_cols) - 1
 
 
-      DT::datatable(
-        df,
-        style = 'default',
-        rownames = FALSE,
-        selection = 'none',
-        extensions = c("FixedColumns", "KeyTable", "AutoFill"),
-        editable = list(
-          target = 'cell', disable = list(columns = locked_cols_idx)
-        ),
-        options = list(
-          scrollX = TRUE,
-          fixedColumns = list(leftColumns = 1),
-          autoFill = list(columns = edit_cols_idx,
-                          alwaysAsk = FALSE,
-                          vertical = TRUE,
-                          horizontal = FALSE),
-          keys = TRUE,
-          columnDefs = list(
-            list(targets = hidden_cols_idx, visible = FALSE),
-            list(className = 'dt-center', targets = cb_col_idx),
-            list(
-              targets = cb_col_idx,
-              render = DT::JS(
-                "function(data, type, row, meta) {",
-                "  if(type === 'display'){",
-                "    var checked = data === 'TRUE' ? 'checked' : '';",
-                "    return '<input type=\"checkbox\" class=\"editor-checkbox\" ' + checked + '>';",
-                "  }",
-                "  return data;",
-                "}"
-              )
-            )
-          )
-        ),
-        callback = DT::JS(DT_callbacks),
-        class = "inputDT"
-      ) |>
-      DT::formatStyle(
-        columns = 1,
-        backgroundColor = sec_col_grad[5]
-      ) |>
-      DT::formatStyle(
-        columns = setdiff(locked_cols_idx, c(0))+1,
-        backgroundColor = "#e5e5e5"
-      )
-    })
+    #   DT::datatable(
+    #     df,
+    #     style = 'default',
+    #     rownames = FALSE,
+    #     selection = 'none',
+    #     extensions = c("FixedColumns", "KeyTable", "AutoFill"),
+    #     editable = list(
+    #       target = 'cell', disable = list(columns = locked_cols_idx)
+    #     ),
+    #     options = list(
+    #       scrollX = TRUE,
+    #       fixedColumns = list(leftColumns = 1),
+    #       autoFill = list(columns = edit_cols_idx,
+    #                       alwaysAsk = FALSE,
+    #                       vertical = TRUE,
+    #                       horizontal = FALSE),
+    #       keys = TRUE,
+    #       columnDefs = list(
+    #         list(targets = hidden_cols_idx, visible = FALSE),
+    #         list(className = 'dt-center', targets = cb_col_idx),
+    #         list(
+    #           targets = cb_col_idx,
+    #           render = DT::JS(
+    #             "function(data, type, row, meta) {",
+    #             "  if(type === 'display'){",
+    #             "    var checked = data === 'TRUE' ? 'checked' : '';",
+    #             "    return '<input type=\"checkbox\" class=\"editor-checkbox\" ' + checked + '>';",
+    #             "  }",
+    #             "  return data;",
+    #             "}"
+    #           )
+    #         )
+    #       )
+    #     ),
+    #     callback = DT::JS(DT_callbacks),
+    #     class = "inputDT"
+    #   ) |>
+    #   DT::formatStyle(
+    #     columns = 1,
+    #     backgroundColor = sec_col_grad[5]
+    #   ) |>
+    #   DT::formatStyle(
+    #     columns = setdiff(locked_cols_idx, c(0))+1,
+    #     backgroundColor = "#e5e5e5"
+    #   )
+    # })
 
-    # handle updates and edits via proxy
-    roxas_proxy <- DT::dataTableProxy("roxas_table")
+    # # handle updates and edits via proxy
+    # roxas_proxy <- DT::dataTableProxy("roxas_table")
 
-    # update visible columns
-    observeEvent(input$cols_meta, {
-      req(roxas_proxy)
+    # # update visible columns
+    # observeEvent(input$cols_meta, {
+    #   req(roxas_proxy)
 
-      df <- roxas_data_out()
+    #   df <- images_out()
 
-      # Determine which columns to show (note: .DT_RowIndex is not in df, but always last and always hidden)
-      selected_groups <- input$cols_meta
+    #   # Determine which columns to show (note: .DT_RowIndex is not in df, but always last and always hidden)
+    #   selected_groups <- input$cols_meta
 
-      obj <- get_schema('roxas_data')
-      tbl_schema <- jsonlite::fromJSON(obj$schema$schema)
-      extracted_groups <- sapply(tbl_schema$items$properties, function(x) x$dtColGroup)
-      col_groups <- split(names(extracted_groups), extracted_groups)
+    #   obj <- get_schema('images')
+    #   tbl_schema <- jsonlite::fromJSON(obj$schema$schema)
+    #   extracted_groups <- sapply(tbl_schema$items$properties, function(x) x$dtColGroup)
+    #   col_groups <- split(names(extracted_groups), extracted_groups)
 
-      visible_cols <- unlist(col_groups[names(col_groups) %in% selected_groups])
-      visible_cols <- union(c("image_label", col_groups[["cols_userinput"]]), visible_cols) # always show (note: cannot hide cols_userinput)
-      visible_cols_idx <- which(names(df) %in% visible_cols) - 1
-      hidden_cols <- setdiff(names(df), visible_cols)
-      hidden_cols_idx <- which(names(df) %in% hidden_cols) - 1
+    #   visible_cols <- unlist(col_groups[names(col_groups) %in% selected_groups])
+    #   visible_cols <- union(c("image_label", col_groups[["cols_userinput"]]), visible_cols) # always show (note: cannot hide cols_userinput)
+    #   visible_cols_idx <- which(names(df) %in% visible_cols) - 1
+    #   hidden_cols <- setdiff(names(df), visible_cols)
+    #   hidden_cols_idx <- which(names(df) %in% hidden_cols) - 1
 
-      # Show/hide columns via proxy
-      for (idx in visible_cols_idx) {
-        DT::showCols(roxas_proxy, idx)
-      }
-      for (idx in hidden_cols_idx) {
-        DT::hideCols(roxas_proxy, idx)
-      }
+    #   # Show/hide columns via proxy
+    #   for (idx in visible_cols_idx) {
+    #     DT::showCols(roxas_proxy, idx)
+    #   }
+    #   for (idx in hidden_cols_idx) {
+    #     DT::hideCols(roxas_proxy, idx)
+    #   }
 
-    }, ignoreInit = TRUE, ignoreNULL = FALSE) # Init via isolate above, also trigger if all groups are deselected
+    # }, ignoreInit = TRUE, ignoreNULL = FALSE) # Init via isolate above, also trigger if all groups are deselected
 
-    # Store pending edits in a reactiveVal
-    pending_edits <- reactiveVal(NULL)
+    # # Store pending edits in a reactiveVal
+    # pending_edits <- reactiveVal(NULL)
 
-    # Capture edits from autofill and cell edit events
-    observeEvent(input$roxas_table_cells_filled, {
-      info <- input[["roxas_table_cells_filled"]]
-      if(!is.null(info)){
-        pending_edits(info)
-      }
-    })
+    # # Capture edits from autofill and cell edit events
+    # observeEvent(input$roxas_table_cells_filled, {
+    #   info <- input[["roxas_table_cells_filled"]]
+    #   if(!is.null(info)){
+    #     pending_edits(info)
+    #   }
+    # })
 
-    observeEvent(input[["roxas_table_cell_edit"]], {
-      info <- input[["roxas_table_cell_edit"]]
-      if(!is.null(info)){
-        pending_edits(info)
-      }
-    })
+    # observeEvent(input[["roxas_table_cell_edit"]], {
+    #   info <- input[["roxas_table_cell_edit"]]
+    #   if(!is.null(info)){
+    #     pending_edits(info)
+    #   }
+    # })
 
-    observeEvent(pending_edits(), {
-      safe_block({
-        info <- pending_edits()
-        if(!is.null(info)){
-          info$value[info$value == ""] <- NA
-          info$value[info$value == "TRUE"] <- TRUE
-          info$value[info$value == "FALSE"] <- FALSE
-          # update reactive
-          updated_data <- DT::editData(roxas_data_out(), info, rownames = FALSE)
-          roxas_data_out(updated_data)
+    # observeEvent(pending_edits(), {
+    #   safe_block({
+    #     info <- pending_edits()
+    #     if(!is.null(info)){
+    #       info$value[info$value == ""] <- NA
+    #       info$value[info$value == "TRUE"] <- TRUE
+    #       info$value[info$value == "FALSE"] <- FALSE
+    #       # update reactive
+    #       updated_data <- DT::editData(images_out(), info, rownames = FALSE)
+    #       images_out(updated_data)
 
-          # adaptions for display
-          cb_col <- "only_ew"
-          updated_data[[cb_col]] <- as.character(updated_data[[cb_col]])
-          updated_data$only_ew[is.na(updated_data$only_ew)] <- "FALSE"
-          updated_data$.DT_RowIndex <- seq_len(nrow(updated_data))
-          DT::replaceData(roxas_proxy, updated_data, resetPaging = FALSE, rownames = FALSE)
-        }
-      }, propagate_err = FALSE)
-    })
+    #       # adaptions for display
+    #       cb_col <- "only_ew"
+    #       updated_data[[cb_col]] <- as.character(updated_data[[cb_col]])
+    #       updated_data$only_ew[is.na(updated_data$only_ew)] <- "FALSE"
+    #       updated_data$.DT_RowIndex <- seq_len(nrow(updated_data))
+    #       DT::replaceData(roxas_proxy, updated_data, resetPaging = FALSE, rownames = FALSE)
+    #     }
+    #   }, propagate_err = FALSE)
+    # })
 
 
     # VALIDATION CHECKS --------------------------------------------------------
@@ -439,15 +460,66 @@ start_server <- function(id, main_session) {
     #
     # })
 
+    image_data_in <- reactiveVal(NULL)
+    
+    observeEvent(input_meta$images, {
+      df <- input_meta$images |> 
+        dplyr::mutate(rxs_created_at = as.character(rxs_created_at),
+                      img_created_at = as.character(img_created_at)
+      )
+      image_data_in(df)
+    })
 
-    # output$testing <- renderPrint({
-    #   input$cols_meta
-    # })
+    output$image_table <- rhandsontable::renderRHandsontable({
+      validate(need(!is.null(image_data_in()), "No data to show"))
+
+      schema_path <- system.file("extdata", "json_schema/20260313_tria_roxas_ext_schema.json", package = "rxs2tria")
+      schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
+      tbl_schema <- jsonlite::fromJSON(schema_obj$schema$schema, simplifyDataFrame = FALSE)
+      tbl_schema <- tbl_schema |> 
+        resolve_refs(fs::path_dir(schema_path)) 
+      tbl_props <- get_tbl_props(tbl_schema)$properties
+
+      colHeaders <- sapply(tbl_props, function(x) x$title)
+      colHeaders <- colHeaders[names(image_data_in())] # ensure correct order
+      tippies <- sapply(tbl_props, function(x) x$description)
+
+      n_rows <- nrow(image_data_in())
+      ht_height <- min(max(n_rows * ht_row_height, ht_min_height), ht_max_height)
+
+      rhandsontable::rhandsontable(
+        image_data_in(),
+        rowHeaders = TRUE,
+        contextMenu = FALSE,
+        stretchH = "all",
+        height = ht_height,
+        colHeaders = unname(colHeaders),
+        afterGetColHeader = tippy_renderer(tippies)) %>%
+        rhandsontable::hot_cols(fixedColumnsLeft = 1) %>%
+        purrr::reduce(
+          names(colHeaders), # names in df
+          function(ht, col) {
+            config <- tbl_props[[col]]
+            colName <- colHeaders[col] # name in ht
+            hot_col_wrapper(ht, colName, config)
+          },
+          .init = .
+        )
+    })
+
+    # create dataframe reactive to hot updates
+    image_data_out <- reactive({
+      rhandsontable::hot_to_r(input$image_table)
+    })
+
+    output$testing <- renderPrint({
+      str(input_meta$dataset_tbls)
+    })
 
     # return the input meta and val check for use in other tabs
     return(
       list(
-        roxas_data = roxas_data_out,
+        images = image_data_out,
         dataset_tbls = reactive(input_meta$dataset_tbls),
         site_tbls = reactive(input_meta$site_tbls)
         #val_checks = validation_checks

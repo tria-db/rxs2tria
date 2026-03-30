@@ -1,5 +1,5 @@
 start_ui <- function(id) {
-  ns <- NS(id)
+  ns <- shiny::NS(id)
 
   bslib::layout_sidebar(
 
@@ -120,6 +120,7 @@ start_ui <- function(id) {
 
     ), # end of accordion
 
+    rhandsontable::rHandsontableOutput(ns("image_table")),
     verbatimTextOutput(ns("testing")),
     br()
   ) # end of layout_sidebar
