@@ -13,3 +13,5 @@ docs
 inst/doc
 .RDataTmp
 logs_MN.R
+scripts_MAN.R
+example_workflow.R

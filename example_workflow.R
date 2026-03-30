@@ -133,6 +133,8 @@ write_QWAprofile(prf_sector,
 
 
 # launch the shiny app to explore data and flag rings
+rxs_images$comment <- "a comment"
+#rxs_images$comment[sample(1:nrow(rxs_images), 10)]
 launch_flags_app()
 
 

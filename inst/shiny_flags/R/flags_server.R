@@ -704,7 +704,7 @@ flags_server <- function(id, main_session, comments_out) {
       sel_img <- sel_image()
       new_year <- as.integer(rownames(flags_out())[input$sel_hot_row])
 
-      if (sel_marker()$year == new_year) {
+      if (shiny::isTruthy(sel_marker()) && sel_marker()$year == new_year) {
         return(NULL) # same row
       }
 
@@ -1076,7 +1076,7 @@ flags_server <- function(id, main_session, comments_out) {
       clicked_img <- comments_out$goto_img()
       prev_img <- sel_image()
 
-      if (prev_img != clicked_img$image){
+      if (!shiny::isTruthy(prev_img) || prev_img != clicked_img$image){
         sel_image(clicked_img$image)
         crn_x_axes(NULL)
         sel_marker(NULL)
