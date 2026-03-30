@@ -8,7 +8,7 @@ validate_QWA_data(
   QWA_data,
   rxs_meta,
   verbose_flags = FALSE,
-  exclude_mode = c("incomplete_only", "missing_only", "either", "both")
+  exclude_mode = c("incomplete_only", "missing_only", "either")
 )
 }
 \arguments{

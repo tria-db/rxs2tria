@@ -14,8 +14,7 @@ A \link{QWAprofile} object.
 }
 \description{
 Reads a profile written by \code{\link[=write_QWAprofile]{write_QWAprofile()}} and reconstructs the
-\link{QWAprofile} object. The \code{profile_type} is read from the \code{.profile_type}
-column that \code{\link[=write_QWAprofile]{write_QWAprofile()}} writes automatically.
+\link{QWAprofile} object. The \code{profile_type} is inferred from the available columns.
 }
 \seealso{
 \code{\link[=write_QWAprofile]{write_QWAprofile()}}

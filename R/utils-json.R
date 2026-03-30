@@ -107,6 +107,7 @@ extract_properties <- function(x) {
   purrr::reduce(all_props, merge_props, .init = list())
 }
 
+#' Helper to extract specific column definitions from a imported schema
 #' @keywords internal
 get_tbl_props <- function(tbl_schema){
   required <- tbl_schema |> extract_required() |> unlist()

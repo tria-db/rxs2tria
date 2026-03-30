@@ -277,6 +277,7 @@ read_QWAdata <- function(dir = NULL, file_cells = NULL, file_rings = NULL,
   }
 
   # TODO: validate / align to schema
+  # check structures match / can be joined
 
   msgs <- character(0)
   if (!is.null(cells)) msgs <- c(msgs, "v" = "{nrow(cells)} cells read from {.file {file_cells}}")
@@ -306,12 +307,9 @@ write_QWAprofile <- function(x, file, compress = FALSE, overwrite = TRUE) {
     cli::cli_warn("Adjusted {.arg file} extension to {.val {ext}}: {.file {file_fixed}}")
   file <- file_fixed
   checkmate::assert_path_for_output(file, overwrite = overwrite)
-  profile_type <- attr(x, "profile_type")
-  vroom::vroom_write(
-    tibble::add_column(tibble::as_tibble(x), .profile_type = profile_type, .before = 1),
-    file, delim = ","
-  )
+  vroom::vroom_write(x, file, delim = ",")
   cli::cli_inform(c("v" = "QWAprofile written to {.file {file}}"))
+  
   invisible(file)
 }
 
@@ -319,8 +317,7 @@ write_QWAprofile <- function(x, file, compress = FALSE, overwrite = TRUE) {
 #' Read a QWAprofile object from a CSV file
 #'
 #' Reads a profile written by [write_QWAprofile()] and reconstructs the
-#' [QWAprofile] object. The `profile_type` is read from the `.profile_type`
-#' column that [write_QWAprofile()] writes automatically.
+#' [QWAprofile] object. The `profile_type` is inferred from the available columns.
 #'
 #' @param file Path to a `.csv` or `.csv.gz` file.
 #' @returns A [QWAprofile] object.
@@ -329,12 +326,20 @@ write_QWAprofile <- function(x, file, compress = FALSE, overwrite = TRUE) {
 read_QWAprofile <- function(file) {
   checkmate::assert_file_exists(file)
   df <- vroom::vroom(file, show_col_types = FALSE)
-  if (!".profile_type" %in% names(df))
-    cli::cli_abort("Column {.val .profile_type} not found in {.file {file}}. Was this file written by {.fn write_QWAprofile}?")
-  pt <- unique(df$.profile_type)
-  if (length(pt) != 1 || !(pt %in% c("sector", "band")))
-    cli::cli_abort("Invalid {.val .profile_type} value in {.file {file}}: {.val {pt}}")
-  df$.profile_type <- NULL
+
+  if ("sector_n" %in% names(df)) {
+    pt <- "sector"
+  } else if (all(c("start","end") %in% names(df))) {
+    pt <- "band"
+  } else { 
+    cli::cli_abort("Profile type could not be established in {.file {file}}. Is it a {.val QWAprofile}?")
+  }
+
+  # TODO: validate profile data
+  # - image_label, year available and complete,
+  # - valid measurement and count cols
+  # - sectors: n sectors no NA, consistent
+  # - bands: start, end, bandwith no NA, consistent
   cli::cli_inform(c("v" = "QWAprofile read from {.file {file}}"))
   new_QWAprofile(df, profile_type = pt)
 }

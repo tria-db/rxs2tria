@@ -9,7 +9,7 @@
 #' @param sel_cell_params Character vector of cell parameter column names to
 #'   include in the profiles (e.g. `c("la", "cwttan")`).
 #' @param quant_probs Numeric vector of quantile probabilities to calculate
-#'   (e.g. `c(0.25, 0.5, 0.75)`). `NULL` or empty → means only.
+#'   (e.g. `c(0.25, 0.5, 0.75)`). `NULL` or empty -> means only.
 #' @returns A [QWAprofile] object with `profile_type = "sector"`.
 #' @seealso [calculate_band_profiles()], [QWAprofile()]
 #' @export

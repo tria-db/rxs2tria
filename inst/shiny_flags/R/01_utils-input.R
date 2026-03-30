@@ -391,7 +391,7 @@ save_modal <- function(ns, settings, have_comments) {
       placeholder = "e.g., out/QWArings_edited.csv", value = settings$filepath),
     wd_hint,
     shiny::textInput(ns("modal_varname"), "Rings data.frame variable name",
-      placeholder = "e.g., QWA_data$rings or df_rings_edited", value = settings$varname),
+      placeholder = "e.g., df_rings_edited", value = settings$varname),
     
     if (have_comments) {
       shiny::tagList(

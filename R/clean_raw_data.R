@@ -569,7 +569,7 @@ flag_duplicate_rings <- function(df_rings_log){
 #'   with added flag columns.
 #' @export
 #'
-validate_QWA_data <- function(QWA_data, rxs_meta, verbose_flags = FALSE, exclude_mode = c("incomplete_only", "missing_only", "either", "both")){
+validate_QWA_data <- function(QWA_data, rxs_meta, verbose_flags = FALSE, exclude_mode = c("incomplete_only", "missing_only", "either")){
   checkmate::assert_class(QWA_data, "QWAdata")
   checkmate::assert_subset(
     c('image_label','year','cwttan'),
@@ -626,7 +626,6 @@ validate_QWA_data <- function(QWA_data, rxs_meta, verbose_flags = FALSE, exclude
     dplyr::mutate(
       exclude_issues = switch(
         mode,
-        "both" = incomplete_ring & missing_ring,
         "either" = incomplete_ring | missing_ring,
         "incomplete_only" = incomplete_ring,
         "missing_only" = missing_ring

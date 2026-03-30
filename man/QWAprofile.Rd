@@ -33,6 +33,5 @@ ring width (0–100\%). \code{\link[=calculate_sector_profiles]{calculate_sector
 }
 }
 \seealso{
-\link{QWAdata}, \code{\link[=calculate_sector_profiles]{calculate_sector_profiles()}}, \code{\link[=calculate_band_profiles]{calculate_band_profiles()}},
-\code{\link[=print.QWAprofile]{print.QWAprofile()}}
+\link{QWAdata}, \code{\link[=calculate_sector_profiles]{calculate_sector_profiles()}}, \code{\link[=calculate_band_profiles]{calculate_band_profiles()}}
 }

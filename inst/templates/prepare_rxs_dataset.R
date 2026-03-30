@@ -10,7 +10,7 @@ library(rxs2tria)
 # ------------------------------------------------------------------------------
 
 path_in <- "./path/to/ROXAS_data"
-files <- get_roxas_files(path_in)
+files <- get_roxas_files(path_in, roxas_version = "roxas", exclude_dirs = c("test", "unused"))
 
 # ------------------------------------------------------------------------------
 # Step 2: Extract the data structure from file names
@@ -87,31 +87,36 @@ QWA_data <- complete_cell_measures(QWA_data)
 # validate_QWA_data checks dating and CWT estimates and adds ring quality flags
 QWA_data <- validate_QWA_data(QWA_data, rxs_images)
 
-# Inspect the result:
-# QWA_data
-# launch_coverage_app()
-
 # ------------------------------------------------------------------------------
 # Step 5: Save the results
 # ------------------------------------------------------------------------------
 
-path_out     <- "./path/to/output"
+path_out <- "./path/to/output"
 dataset_name <- "my_dataset"
 
 write_QWAdata(QWA_data, dir = path_out, dataset_name = dataset_name)
 
 # ------------------------------------------------------------------------------
-# Step 6: Compute radial profiles (optional)
+# Step 6a: Compute radial profiles (optional)
 # ------------------------------------------------------------------------------
 # Profiles are standalone QWAprofile objects, separate from QWAdata.
 
-sector_profiles <- calculate_sector_profiles(QWA_data,
-                                             n_sectors = 5,
-                                             sel_cell_params = c("la", "cwttan"))
+prf_sector <- calculate_sector_profiles(QWA_data,
+                                        n_sectors = 5,
+                                        sel_cell_params = c("la", "cwttan"),
+                                        quant_probs = c(0.1, 0.5, 0.9)
+                                       )
 
 # band_profiles <- calculate_band_profiles(QWA_data,
 #                                          bandwidth = 50, stepsize = 25,
 #                                          sel_cell_params = c("la", "cwttan"))
 
-write_QWAprofile(sector_profiles,
+write_QWAprofile(prf_sector,
                  file.path(path_out, paste0(dataset_name, "_profiles_sector5.csv.gz")))
+
+
+# ------------------------------------------------------------------------------
+# Step 6b: Assess data quality of annual rings
+# ------------------------------------------------------------------------------
+# can also be run from just ring measurements, without sector profiles
+launch_flags_app()

@@ -31,5 +31,5 @@ The \code{roxas_version} attribute records whether the data were produced by
 classic ROXAS (\code{"roxas"}) or ROXAS AI (\code{"roxas_ai"}).
 }
 \seealso{
-\code{\link[=QWAmetadata]{QWAmetadata()}}, \code{\link[=build_QWAimages]{build_QWAimages()}}, \code{\link[=print.QWAimages]{print.QWAimages()}}
+\code{\link[=QWAmetadata]{QWAmetadata()}}, \code{\link[=build_QWAimages]{build_QWAimages()}}
 }
