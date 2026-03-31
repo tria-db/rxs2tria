@@ -123,11 +123,16 @@ read_QWAmetadata <- function(file, roxas_version = NULL, allow_missing_req = FAL
     df_prep
   }
 
+  resources <- if (!is.null(raw$resources) && length(raw$resources) > 0) {
+    tibble::as_tibble(raw$resources, .name_repair = janitor::make_clean_names)
+  } else NULL
+
   meta <- new_QWAmetadata(
     dataset = preprocess_raw_tbl(raw$dataset, "dataset"),
     authors = preprocess_raw_tbl(raw$authors, "authors"),
     funding = preprocess_raw_tbl(raw$funding, "funding"),
     related = preprocess_raw_tbl(raw$related, "related"),
+    resources = resources, # TODO: preporcess resources
     sites = preprocess_raw_tbl(raw$sites, "sites"),
     trees = preprocess_raw_tbl(raw$trees, "trees"),
     woodpieces = preprocess_raw_tbl(raw$woodpieces, "woodpieces"),
@@ -156,7 +161,7 @@ read_QWAmetadata <- function(file, roxas_version = NULL, allow_missing_req = FAL
 #' @param x A [QWAdata] object.
 #' @param dir Directory to write to. Files are auto-named using `dataset_name`.
 #'   Mutually exclusive with `file_cells`/`file_rings`.
-#' @param file_cells,file_rings Explicit output paths for the cells and rings
+#' @param file_cells, file_rings Explicit output paths for the cells and rings
 #'   CSV files. Both must be provided together. Mutually exclusive with `dir`.
 #' @param dataset_name Name prefix for auto-generated filenames when using
 #'   `dir`. Defaults to `"QWAdata"`.

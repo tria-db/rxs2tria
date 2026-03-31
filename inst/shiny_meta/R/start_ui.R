@@ -106,21 +106,17 @@ start_ui <- function(id) {
               "Image metadata columns " = "cols_images",
               "Settings metadata columns " = "cols_settings",
               "Local file path columns" = "cols_paths"),
-            selected = c("cols_structure", "cols_images", "cols_settings", "cols_paths"),
+            selected = c("cols_structure", "cols_images", "cols_settings"),
             inline = TRUE
           ),
           ns=NS(id)),
 
-        # radioButtons(ns("str_cols"), "Choose how to display structure columns:",
-        #              choices = c("Extracted base identifiers" = "base",
-        #                          "Generated labels" = "labels"),
-        #              selected = "base"),
-        DT::DTOutput(ns("roxas_table"))
+        rhandsontable::rHandsontableOutput(ns("image_table")),
       )
 
     ), # end of accordion
 
-    rhandsontable::rHandsontableOutput(ns("image_table")),
+    
     verbatimTextOutput(ns("testing")),
     br()
   ) # end of layout_sidebar

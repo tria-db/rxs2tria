@@ -56,7 +56,7 @@ start_server <- function(id, main_session) {
       shiny::req(input$load_type)
       if (input$load_type == "env"){
         if (!server_run){
-          shiny::textInput(ns("input_name"), "Provide the name of the object in your current R environment", value = "rxs_meta")
+          shiny::textInput(ns("input_name"), "Provide the name of the object in your current R environment", value = "rxs_images")
         } else {
           shiny::tags$i("Only possible for local runs.")
         }
@@ -207,6 +207,119 @@ start_server <- function(id, main_session) {
 
       dtree_json()
       })
+
+
+    # HANDSONTABLE IMAGES ----------------------------------------------------- 
+    # for the conditional panel with the column selection
+    output$roxas_data_available <- reactive({
+      !is.null(input_meta$images)
+    })
+    outputOptions(output, "roxas_data_available", suspendWhenHidden = FALSE)
+
+    image_data_in <- reactiveVal(NULL)
+
+    # TODO: move to globals?
+    schema_path <- system.file("extdata/json_schema/20260313_tria_roxas_ext_schema.json", package = "rxs2tria")
+    schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
+    tbl_schema <- jsonlite::fromJSON(schema_obj$schema$schema, simplifyDataFrame = FALSE)
+    tbl_schema <- tbl_schema |> 
+      resolve_refs(fs::path_dir(schema_path)) 
+    tbl_props <- get_tbl_props(tbl_schema)$properties
+    
+    df_hot <- shiny::reactive({
+      shiny::req(image_data_in())
+      col_groups <- purrr::map_chr(tbl_props, "dtColGroup")
+      sel_colgroups <- input$cols_meta
+      sel_cols <- col_groups[col_groups %in% sel_colgroups] |> names()
+      sel_cols <- union("image_label", sel_cols)
+
+      image_data_in() |> dplyr::select(dplyr::any_of(sel_cols))
+      # TODO: missing columns? read only cols?
+    })
+    
+    observeEvent(input_meta$images, {
+      df <- input_meta$images |> 
+        dplyr::mutate(rxs_created_at = as.character(rxs_created_at),
+                      img_created_at = as.character(img_created_at)
+      )
+      image_data_in(df)
+    })
+
+    output$image_table <- rhandsontable::renderRHandsontable({
+      validate(need(!is.null(image_data_in()), "No data to show"))
+
+      colHeaders <- sapply(tbl_props, function(x) x$title)
+      colHeaders <- colHeaders[names(df_hot())] # ensure correct order
+      tippies <- sapply(tbl_props, function(x) x$description)
+
+      n_rows <- nrow(image_data_in())
+      ht_height <- min(max(n_rows * ht_row_height, ht_min_height), ht_max_height)
+
+      rhandsontable::rhandsontable(
+        df_hot(),
+        rowHeaders = TRUE,
+        contextMenu = FALSE,
+        stretchH = "all",
+        height = ht_height,
+        colHeaders = unname(colHeaders),
+        afterGetColHeader = tippy_renderer(tippies)) %>%
+        rhandsontable::hot_cols(fixedColumnsLeft = 1) %>%
+        purrr::reduce(
+          names(colHeaders), # names in df
+          function(ht, col) {
+            config <- tbl_props[[col]]
+            colName <- colHeaders[col] # name in ht
+            hot_col_wrapper(ht, colName, config)
+          },
+          .init = .
+        )
+    })
+
+    # create dataframe reactive to hot update
+    # TODO: join with img_data_in for full columns
+    image_data_out <- reactive({
+      shiny::req(input$image_table)
+      df_out <- rhandsontable::hot_to_r(input$image_table)
+      df_in <- image_data_in()
+      df_in |> dplyr::rows_update(df_out, by = "image_label")
+    })
+
+    output$testing <- renderPrint({
+      image_data_out()
+    })
+
+    # return the input meta and val check for use in other tabs
+    return(
+      list(
+        images = image_data_out,
+        dataset_tbls = reactive(input_meta$dataset_tbls),
+        site_tbls = reactive(input_meta$site_tbls)
+        #val_checks = validation_checks
+      )
+    )
+
+  }) # end of moduleServer
+}
+
+    # VALIDATION CHECKS --------------------------------------------------------
+    # TODO: any checks on band_witdh and only_ew?
+    # validation_checks <- reactive({
+    #   df_results <- data.frame(topic = character(0), field = character(0),
+    #                            type = character(0), message = character(0))
+    #   if (!input$check_raw) {
+    #     df_results <- dplyr::bind_rows(
+    #       df_results,
+    #      data.frame(topic = "Raw input data",
+    #                 field = "Inferred structure",
+    #                 type = "error",
+    #                 message = "Not confirmed"))
+    #   }
+    #
+    #   df_results
+    #
+    # })
+
+
 
 
     # RENDER DATATABLE ---------------------------------------------------------
@@ -440,95 +553,6 @@ start_server <- function(id, main_session) {
     #     }
     #   }, propagate_err = FALSE)
     # })
-
-
-    # VALIDATION CHECKS --------------------------------------------------------
-    # TODO: any checks on band_witdh and only_ew?
-    # validation_checks <- reactive({
-    #   df_results <- data.frame(topic = character(0), field = character(0),
-    #                            type = character(0), message = character(0))
-    #   if (!input$check_raw) {
-    #     df_results <- dplyr::bind_rows(
-    #       df_results,
-    #      data.frame(topic = "Raw input data",
-    #                 field = "Inferred structure",
-    #                 type = "error",
-    #                 message = "Not confirmed"))
-    #   }
-    #
-    #   df_results
-    #
-    # })
-
-    image_data_in <- reactiveVal(NULL)
-    
-    observeEvent(input_meta$images, {
-      df <- input_meta$images |> 
-        dplyr::mutate(rxs_created_at = as.character(rxs_created_at),
-                      img_created_at = as.character(img_created_at)
-      )
-      image_data_in(df)
-    })
-
-    output$image_table <- rhandsontable::renderRHandsontable({
-      validate(need(!is.null(image_data_in()), "No data to show"))
-
-      schema_path <- system.file("extdata", "json_schema/20260313_tria_roxas_ext_schema.json", package = "rxs2tria")
-      schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
-      tbl_schema <- jsonlite::fromJSON(schema_obj$schema$schema, simplifyDataFrame = FALSE)
-      tbl_schema <- tbl_schema |> 
-        resolve_refs(fs::path_dir(schema_path)) 
-      tbl_props <- get_tbl_props(tbl_schema)$properties
-
-      colHeaders <- sapply(tbl_props, function(x) x$title)
-      colHeaders <- colHeaders[names(image_data_in())] # ensure correct order
-      tippies <- sapply(tbl_props, function(x) x$description)
-
-      n_rows <- nrow(image_data_in())
-      ht_height <- min(max(n_rows * ht_row_height, ht_min_height), ht_max_height)
-
-      rhandsontable::rhandsontable(
-        image_data_in(),
-        rowHeaders = TRUE,
-        contextMenu = FALSE,
-        stretchH = "all",
-        height = ht_height,
-        colHeaders = unname(colHeaders),
-        afterGetColHeader = tippy_renderer(tippies)) %>%
-        rhandsontable::hot_cols(fixedColumnsLeft = 1) %>%
-        purrr::reduce(
-          names(colHeaders), # names in df
-          function(ht, col) {
-            config <- tbl_props[[col]]
-            colName <- colHeaders[col] # name in ht
-            hot_col_wrapper(ht, colName, config)
-          },
-          .init = .
-        )
-    })
-
-    # create dataframe reactive to hot updates
-    image_data_out <- reactive({
-      rhandsontable::hot_to_r(input$image_table)
-    })
-
-    output$testing <- renderPrint({
-      str(input_meta$dataset_tbls)
-    })
-
-    # return the input meta and val check for use in other tabs
-    return(
-      list(
-        images = image_data_out,
-        dataset_tbls = reactive(input_meta$dataset_tbls),
-        site_tbls = reactive(input_meta$site_tbls)
-        #val_checks = validation_checks
-      )
-    )
-
-  }) # end of moduleServer
-}
-
 
 # BUTTONS ------------------------------------------------------------------
 # # file input buttons
