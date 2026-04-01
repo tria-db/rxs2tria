@@ -190,10 +190,6 @@ infer_resource_type <- function(filename) {
   "other"
 }
 
-#' @internal
-get_linked_info <- function() {
-
-}
 
 #' Collect resource file information from a directory
 #'
@@ -304,10 +300,13 @@ collect_resources <- function(path, append_to = NULL, df_structure = NULL,
 #'
 #' @seealso [collect_resources()], [QWAmetadata()]
 #' @export
-add_resources <- function(x, resources) {
+add_resources <- function(x, path, recursive = FALSE, include_unmatched = FALSE) {
   checkmate::assert_class(x, "QWAmetadata")
   checkmate::assert_data_frame(resources)
-  x$resources <- resources
+  x$resources <- collect_resources(
+    path = path, append_to = x$resources, df_structure = x$images,
+    recursive = recursive, include_unmatched = include_unmatched
+  )
   x
 }
 

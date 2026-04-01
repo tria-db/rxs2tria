@@ -8,7 +8,7 @@ make_schema_skeleton(schema, roxas_version = NULL, nrows = 0)
 }
 \arguments{
 \item{schema}{Component name: one of \code{"dataset"}, \code{"authors"}, \code{"funding"},
-\code{"related"}, \code{"sites"}, \code{"trees"}, \code{"woodpieces"}, \code{"slides"}, \code{"images"}.}
+\code{"related"}, \code{"resources"}, \code{"sites"}, \code{"trees"}, \code{"woodpieces"}, \code{"slides"}, \code{"images"}.}
 
 \item{roxas_version}{ROXAS version (\code{"roxas"} or \code{"roxas_ai"}). Required when
 \code{schema = "images"}, ignored otherwise.}

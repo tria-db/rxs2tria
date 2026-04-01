@@ -10,6 +10,7 @@ QWAmetadata(
   authors = NULL,
   funding = NULL,
   related = NULL,
+  resources = NULL,
   sites = NULL,
   trees = NULL,
   woodpieces = NULL,
@@ -20,21 +21,32 @@ QWAmetadata(
 as_QWAmetadata(x)
 }
 \arguments{
-\item{dataset}{Data frame with dataset-level metadata (optional).}
+\item{dataset}{Data frame with dataset-level metadata. Typically provided via
+metadata Shiny app (\code{\link[=launch_metadata_app]{launch_metadata_app()}}).}
 
-\item{authors}{Data frame with author information (optional).}
+\item{authors}{Data frame with author information. Typically provided via
+metadata Shiny app (\code{\link[=launch_metadata_app]{launch_metadata_app()}}).}
 
-\item{funding}{Data frame with funding information (optional).}
+\item{funding}{Data frame with funding information. Typically provided via
+metadata Shiny app (\code{\link[=launch_metadata_app]{launch_metadata_app()}}).}
 
-\item{related}{Data frame with related resources (optional).}
+\item{related}{Data frame with related publications or datasets. Typically
+provided via metadata Shiny app (\code{\link[=launch_metadata_app]{launch_metadata_app()}}).}
 
-\item{sites}{Data frame with site-level metadata (optional).}
+\item{resources}{Data frame listing all raw data files to be submitted as
+part of the dataset. Typically created by \code{\link[=collect_resources]{collect_resources()}}.}
 
-\item{trees}{Data frame with tree-level metadata (optional).}
+\item{sites}{Data frame with site-level metadata. Typically provided via
+metadata Shiny app (\code{\link[=launch_metadata_app]{launch_metadata_app()}}).}
 
-\item{woodpieces}{Data frame with woodpiece-level metadata (optional).}
+\item{trees}{Data frame with tree-level metadata. Typically provided via
+metadata Shiny app (\code{\link[=launch_metadata_app]{launch_metadata_app()}}).}
 
-\item{slides}{Data frame with slide-level metadata (optional).}
+\item{woodpieces}{Data frame with woodpiece-level metadata. Typically
+provided via metadata Shiny app (\code{\link[=launch_metadata_app]{launch_metadata_app()}}).}
+
+\item{slides}{Data frame with slide-level metadata. Typically provided via
+metadata Shiny app (\code{\link[=launch_metadata_app]{launch_metadata_app()}}).}
 
 \item{images}{A \link{QWAimages} object or plain data frame with image-level
 metadata. Required. Typically the output of \code{\link[=build_QWAimages]{build_QWAimages()}}.}
@@ -51,7 +63,8 @@ structured by level of organisation:
 \item \strong{\verb{$dataset}}: dataset-level information (name, description, license).
 \item \strong{\verb{$authors}}: author information.
 \item \strong{\verb{$funding}}: funding sources and grant numbers.
-\item \strong{\verb{$related}}: related resources (publications, datasets, etc.).
+\item \strong{\verb{$related}}: related objects (publications, datasets, etc.).
+\item \strong{\verb{$resources}}: included resources (data files)
 \item \strong{\verb{$sites}}: site-level metadata (location, climate, etc.).
 \item \strong{\verb{$trees}}: tree-level metadata (species, DBH, age, etc.).
 \item \strong{\verb{$woodpieces}}: woodpiece-level metadata (disc, core, etc.).
