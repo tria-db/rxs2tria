@@ -115,6 +115,11 @@ extract_properties <- function(x) {
 get_tbl_props <- function(tbl_schema){
   required <- tbl_schema |> extract_required() |> unlist()
   properties <- tbl_schema |> extract_properties()
+  prop_names <- names(properties)
+  properties <- lapply(prop_names, function(nm) {
+    c(properties[[nm]], list(required = nm %in% required))
+  })
+  names(properties) <- prop_names
   list(properties = properties, required = required)
 }
 
@@ -168,7 +173,7 @@ create_empty_df <- function(tbl_props, nrows = 0){
   )
 
   # extract column names and types from schema
-  cols_info <-tbl_props$properties
+  cols_info <- tbl_props$properties
   col_names <- names(cols_info)
   col_types <- sapply(cols_info, function(x) x$type[1]) # NOTE: leverages that default type is in first position in schema!
 

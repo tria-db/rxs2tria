@@ -19,12 +19,12 @@ new_QWAmetadata <- function(dataset = NULL,
                             authors = NULL,
                             funding = NULL,
                             related = NULL,
+                            resources = NULL,
                             sites = NULL,
                             trees = NULL,
                             woodpieces = NULL,
                             slides = NULL,
-                            images = new_QWAimages(data.frame(), "roxas"),
-                            resources = NULL) {
+                            images = new_QWAimages(data.frame(), "roxas")) {
   stopifnot(is.null(dataset) || is.data.frame(dataset))
   stopifnot(is.null(authors) || is.data.frame(authors))
   stopifnot(is.null(funding) || is.data.frame(funding))
@@ -34,16 +34,8 @@ new_QWAmetadata <- function(dataset = NULL,
   stopifnot(is.null(trees) || is.data.frame(trees))
   stopifnot(is.null(woodpieces) || is.data.frame(woodpieces))
   stopifnot(is.null(slides) || is.data.frame(slides))
-  stopifnot(is.data.frame(images))
-  # auto-promote a plain data.frame to QWAimages
-  # TODO: make more strict and fail otherwise?
-  if (!inherits(images, "QWAimages")) {
-    rv <- if (nrow(images) > 0 && "software" %in% names(images)) {
-      unique(images$software)[1]
-    } else "roxas"
-    images <- new_QWAimages(images, roxas_version = rv)
-  }
-
+  stopifnot(inherits(images, "QWAimages"))
+ 
   structure(
     list(
       dataset = dataset,
@@ -338,6 +330,9 @@ complete_QWAmetadata <- function(x) {
   # create or complete the other tables
   dataset <- complete_tbl(x$dataset, "dataset")
   authors <- complete_tbl(x$authors, "authors")
+  if (all(is.na(authors$author_nr))) {
+    authors$author_nr <- 1:nrow(authors)
+  }
   funding <- complete_tbl(x$funding, "funding")
   related <- complete_tbl(x$related, "related")
 

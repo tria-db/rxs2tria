@@ -24,17 +24,18 @@ summary_server <- function(id, main_session, start_out, dataset_out, site_out) {
 
     })
 
-    data_combined <- reactive({
+    data_combined <- shiny::reactive({
+      images <- QWAimages(start_out$images())
       new_QWAmetadata(
-        dataset     = dataset_out$dataset_tbls$dataset(),
-        authors     = dataset_out$dataset_tbls$authors(),
-        funding     = dataset_out$dataset_tbls$funding(),
+        dataset = dataset_out$dataset_tbls$dataset(),
+        authors = dataset_out$dataset_tbls$authors(),
+        funding = dataset_out$dataset_tbls$funding(),
         related = dataset_out$dataset_tbls$related(),
-        sites       = site_out$site_tbls$sites(),
-        trees       = site_out$site_tbls$trees(),
-        woodpieces  = site_out$site_tbls$woodpieces(),
-        slides      = site_out$site_tbls$slides(),
-        images      = start_out$images()
+        sites = site_out$site_tbls$sites(),
+        trees = site_out$site_tbls$trees(),
+        woodpieces = site_out$site_tbls$woodpieces(),
+        slides = site_out$site_tbls$slides(),
+        images = images
       )
     })
 

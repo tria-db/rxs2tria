@@ -1,152 +1,33 @@
 # SERVER -----------------------------------------------------------------------
 site_server <- function(id, main_session, images_in, site_tbls_in, countries_list) {
-  moduleServer(id, function(input, output, session) {
+  shiny::moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
     # mock event to close map tab on start of app
-    observeEvent(1,{
-      accordion_panel_close(id = 'map_acc', values = TRUE)
-    }, ignoreNULL = FALSE) # to fire the event at startup
+    shiny::observe({
+      bslib::accordion_panel_close(id = 'map_acc', values = TRUE)
+    }) |> shiny::bindEvent(1) # to fire the event once at startup
 
+    # TODO: remove once table import properly implemented
     shinyjs::disable(id = "file_sites")
     shinyjs::disable(id = "file_trees")
     shinyjs::disable(id = "file_wps")
     shinyjs::disable(id = "file_slides")
 
+    # initialize reactiveVals (responding to changes in input data)
+    site_data_in <- shiny::reactiveVal(NULL)
+    tree_data_in <- shiny::reactiveVal(NULL)
+    wp_data_in <- shiny::reactiveVal(NULL)
+    slide_data_in <- shiny::reactiveVal(NULL)
 
+    shiny::observe({
+      site_data_in(site_tbls_in()$sites)
+      tree_data_in(site_tbls_in()$trees)
+      wp_data_in(site_tbls_in()$woodpieces)
+      slide_data_in(site_tbls_in()$slides)
+    }) |> shiny::bindEvent(site_tbls_in())
 
-    # initialize reactiveVals (responding to changes in df_meta, file upload)
-    site_data_in <- reactiveVal(NULL)
-    tree_data_in <- reactiveVal(NULL)
-    wp_data_in <- reactiveVal(NULL)
-    slide_data_in <- reactiveVal(NULL)
-
-    # observe changes in df_meta to (re-)initialize these dataframes
-    # NOTE: this purposefully overwrites/resets any updates via hot edit or
-    # file upload if the underlying df_meta is changed
-    observeEvent({
-      list(images_in(), site_tbls_in())}, {
-        req(images_in())
-
-        df_meta <- images_in()
-
-        # site
-        df_site <- create_empty_df("sites", nrows=0)
-        df_site <- df_meta %>%
-          dplyr::group_by(site_label) %>%
-          dplyr::summarise(n = dplyr::n_distinct(tree_label)) %>%
-          dplyr::rename(n_trees = n) %>%
-          dplyr::left_join(df_site, by = c('site_label', 'n_trees'))
-
-        site_data_in(df_site)
-
-        # tree
-        df_tree <- create_empty_df("trees", nrows=0)
-        df_tree <- df_meta %>%
-          dplyr::group_by(site_label, species_code, tree_label) %>%
-          dplyr::summarise(n = dplyr::n_distinct(woodpiece_label), .groups = 'keep') %>%
-          dplyr::rename(n_woodpieces = n) %>%
-          dplyr::left_join(df_tree, by = c('tree_label', 'site_label', 'species_code', 'n_woodpieces')) %>%
-          dplyr::select(colnames(df_tree))
-        # add species information
-        df_tree <- df_tree %>%
-          dplyr::left_join(species_info, by = c('species_code' = 'itrdb_species_code'), suffix = c("",".lookup")) %>%
-          dplyr::mutate(species_name = species_name.lookup,
-                        phylogenetic_group = phylogenetic_group.lookup,
-                        leaf_habit = leaf_habit.lookup,
-                        tree_ring_structure = tree_ring_structure.lookup) %>%
-          dplyr::select(-dplyr::ends_with(".lookup"))
-
-        tree_data_in(df_tree)
-
-        # woodpiece
-        df_wp <- create_empty_df("woodpieces", nrows=0)
-        df_wp <- df_meta %>%
-          dplyr::group_by(tree_label, woodpiece_label) %>%
-          dplyr::summarise(n = dplyr::n_distinct(slide_label), .groups = 'keep') %>%
-          dplyr::rename(n_slides = n) %>%
-          dplyr::left_join(df_wp, by = c('woodpiece_label', 'tree_label', 'n_slides')) %>%
-          dplyr::select(colnames(df_wp))
-
-        wp_data_in(df_wp)
-
-        # slide
-        df_slide <- create_empty_df("slides", nrows=0)
-        df_slide <- df_meta %>%
-          dplyr::group_by(woodpiece_label, slide_label) %>%
-          dplyr::summarise(n = dplyr::n_distinct(image_label), .groups = 'keep') %>%
-          dplyr::rename(n_images = n) %>%
-          dplyr::left_join(df_slide, by = c('slide_label', 'woodpiece_label', 'n_images')) %>%
-          dplyr::select(colnames(df_slide))
-
-        slide_data_in(df_slide)
-
-        if (!is.null(site_tbls_in())) {
-
-          if (!is.null(site_tbls_in()$sites)) {
-            df_site <- create_empty_df("sites", nrows=0)
-            df_site <- dplyr::bind_rows(df_site, site_tbls_in()$sites)
-            site_data_in(df_site)
-          }
-
-          if (!is.null(site_tbls_in()$trees)) {
-            df_tree <- create_empty_df("trees", nrows=0)
-            df_tree <- dplyr::bind_rows(df_tree, site_tbls_in()$trees)
-            tree_data_in(df_tree)
-          }
-
-          if (!is.null(site_tbls_in()$woodpieces)) {
-            df_wp <- create_empty_df("woodpieces", nrows=0)
-            df_wp <- dplyr::bind_rows(df_wp, site_tbls_in()$woodpieces)
-            wp_data_in(df_wp)
-          }
-
-          if (!is.null(site_tbls_in()$slides)) {
-            df_slide <- create_empty_df("slides", nrows=0)
-            df_slide <- dplyr::bind_rows(df_slide, site_tbls_in()$slides)
-            slide_data_in(df_slide)
-          }
-        }
-    })
-
-    # TODO: observe file upload button: merge file input with site_data_out and update site_data_in
-    # add only info for valid sitecodes / colnames?
-    # observeEvent(input$file_sites, {
-    #   # try to load the file
-    #   imported_data <- tryCatch({
-    #     read.csv(input$file_sites$datapath, stringsAsFactors = FALSE, encoding = 'UTF-8')
-    #   }, error = function(e) {
-    #     showModal(modalDialog(
-    #       title = "Error importing file",
-    #       paste("An error occurred while reading the file:", e$message),
-    #       easyClose = TRUE,
-    #       footer = NULL
-    #     ))
-    #     return(NULL)
-    #   })
-    #   # try to convert data to right structure
-    #   converted_data <- tryCatch({
-    #     align_to_structure(site_tbl_str, imported_data)
-    #   }, error = function(e) {
-    #     showModal(modalDialog(
-    #       title = "Error loading data",
-    #       paste("Data could not be aligned with required structure:", e$message),
-    #       easyClose = TRUE,
-    #       footer = NULL
-    #     ))
-    #     return(NULL)
-    #   })
-    #   # updated input data, report any missing columns
-    #   site_data$df_in <- converted_data$data
-    #   if (length(converted_data$missing_cols) > 0) {
-    #     showNotification(
-    #       paste("Missing columns filled with NA:",
-    #             paste(converted_data$missing_cols, collapse = ", ")),
-    #       type = "message")
-    #   }
-    # })
-
-
+ 
     # SITE MAP -----------------------------------------------------------------
     # site coordinates reactiveVal, updates IFF coord cols in site_data_out change
     site_coordinates <- reactiveVal(NULL)
@@ -196,9 +77,6 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
 
       sitemap
     })
-
-
-
 
     # SITE TABLE ---------------------------------------------------------------
     # render editable table
@@ -267,8 +145,6 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
 
     }, ignoreInit = TRUE)
 
-
-
     # import data from file: show modal for confirmation
     observeEvent(input$file_sites,{
       show_ht_import_modal(ns, 'import_site_data')
@@ -309,7 +185,7 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
     })
 
 
-    # site networks ---
+  # site networks ---
   # TODO: reset site networks if data is reloaded / df_meta or site_data_in are changed
     observeEvent(input$btn_add_nws, {
       site_labels <- site_data_out() %>% dplyr::pull(site_label)

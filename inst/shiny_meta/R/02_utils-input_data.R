@@ -266,15 +266,17 @@ generate_desc_template <- function(df_rxsmeta){
     glue::glue_data("{species_counts} collected at site {site_label}") |>
     and_collapse(oxford_comma = TRUE)
 
-   desc <- glue::glue("
-     This dataset contains data from {site_species_counts}, covering the period [ADD INFO].
-     [ADD INFO on site locations, characteristics].
+  desc <- glue::glue("
+  This dataset contains data from {site_species_counts}, 
+  covering the period from YYYY to YYYY [ADD INFO].
 
-     Study purpose: [ADD INFO on research questions and goals]
-
-     Study design: [ADD INFO on sampling design, methods, etc.]
-   ")
-   desc
+  [ADD INFO on site locations, characteristics].
+  
+  Study purpose: [ADD INFO on research questions and goals]
+  
+  Study design: [ADD INFO on sampling design, methods, etc.]
+  ")
+  desc
 }
 
 

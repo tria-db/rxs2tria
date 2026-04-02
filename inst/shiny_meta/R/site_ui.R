@@ -1,7 +1,7 @@
 site_ui <- function(id) {
-  ns <- NS(id)
+  ns <- shiny::NS(id)
 
-  layout_sidebar(
+  bslib::layout_sidebar(
 
     # sidebar
     sidebar = sidebar(

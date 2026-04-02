@@ -75,25 +75,23 @@ start_server <- function(id, main_session) {
           } else {
             res <- get_from_env(input$input_name, envir = .GlobalEnv)
             source <- glue::glue("object {input$input_name} from current R environment")
-            if (inherits(res, "data.frame")){
+            if (inherits(res, "data.frame")) {
               df <- QWAimages(res) |> complete_QWAimages()
               validated <- QWAmetadata(images = df) |> complete_QWAmetadata()
-            } else {
+            } else { # assume list/QWAmetadata object
               validated <- as_QWAmetadata(res) |> complete_QWAmetadata()
             }
           }
         } else if (input$load_type == "file"){
-          if (is.null(input$input_file) || is.na(input$input_file) || input$input_file == "") {
+          if (!shiny::isTruthy(input$input_file)) {
             stop("Please provide input source.")
           } else {
             ext <- tools::file_ext(input$input_file$datapath)
             if (ext == "csv"){
-              #res <- vroom::vroom(input$input_file$datapath, show_col_types = FALSE)
               df <- read_QWAimages(input$input_file$datapath, allow_missing_req = FALSE,
                 add_missing_opt = TRUE)
               validated <- QWAmetadata(images = df) |> complete_QWAmetadata()
             } else {
-              #res <- jsonlite::read_json(input$input_file$datapath, simplifyVector = TRUE)
               res <- read_QWAmetadata(input$input_file$datapath, allow_missing_req = FALSE,
                 add_missing_opt = TRUE)
               validated <- res |> complete_QWAmetadata()
@@ -105,39 +103,19 @@ start_server <- function(id, main_session) {
           res <- jsonlite::read_json(example_file, simplifyVector = TRUE)
           source <- glue::glue("using example dataset")
         }
+        # generate dataset description template if empty
+        if (!shiny::isTruthy(validated$dataset$description)) {
+          template <- generate_desc_template(validated$images)
+          validated$dataset$description <- template
+        }
+        # store in reactive containers 
         input_meta$source <- source
         input_meta$images <- validated$images
-        input_meta$dataset_tbls <- validated[c("dataset","authors","funding","related")]
-        input_meta$site_tbls <- validated[c("site","tree","woodpiece","slide")]
+        input_meta$dataset_tbls <- validated[c("dataset","authors","funding","related","resources")]
+        input_meta$site_tbls <- validated[c("sites","trees","woodpieces","slides")]
 
-        # if (is.data.frame(res)){
-        #   # single df: assume it's QWAmetadata$images
-        #   df <- validate_df(res, "images", force_required = TRUE, ignore_colnames = FALSE)
-        #   input_meta$source <- source
-        #   input_meta$images <- df
-        #   input_meta$dataset_tbls <- NULL # reset if necessary
-        #   input_meta$site_tbls <- NULL # reset if necessary
-        # } else {
-        #   validated <- input_QWAmetadata(res)
-        #   input_meta$source <- source
-        #   input_meta$images <- validated$images
-        #   input_meta$dataset_tbls <- validated |> 
-        #     purrr::keep_at(c("dataset", "authors", "funding", "related")) |> 
-        #     purrr::keep(\(x) length(x)>0)
-        #   input_meta$site_tbls <- validated |> 
-        #     purrr::keep_at(c("sites", "trees", "woodpieces", "slides")) |> 
-        #     purrr::keep(\(x) length(x)>0)
-        # }
-        #         if (inherits(res, "QWAmetadata")) {
-        #   # QWAmetadata object from R environment: unpack directly
-        #   input_meta$source <- source
-        #   print(source)
-        #   input_meta$images <- validate_df(res$images, "images", force_required = TRUE)
-        #   input_meta$dataset_tbls <- res[c("dataset", "authors", "funding", "related")]
-        #   input_meta$site_tbls <- res[c("sites", "trees", "woodpieces", "slides")]
-        # } else 
         removeModal()
-      }, propagate_err = FALSE)
+      }, err_title = "Error reading data", propagate_err = FALSE)
     })
 
     # output with source of input data
@@ -153,10 +131,11 @@ start_server <- function(id, main_session) {
 
     # RENDER SHINYTREE ---------------------------------------------------------
     # create data.tree and shinyTree compatible JSON of data structure
-    dtree_json <- reactive({
-      req(input_meta$images)
+    dtree_json <- shiny::reactive({
+      shiny::req(input_meta$images)
 
-      df_dtree <- input_meta$images %>% dplyr::select(site_label, species_code, tree_label, woodpiece_label, slide_label, image_label, org_img_name)
+      df_dtree <- input_meta$images |> 
+        dplyr::select(site_label, species_code, tree_label, woodpiece_label, slide_label, image_label, org_img_name)
       df_dtree <- df_dtree |>
         dplyr::mutate(
           tree = stringr::str_remove(tree_label, glue::glue("({site_label}_)*({species_code}_)*")),
@@ -203,7 +182,7 @@ start_server <- function(id, main_session) {
     })
 
     output$tree <- shinyTree::renderTree({
-      validate(need(!is.null(input_meta$images), "No data to show"))
+      shiny::validate(shiny::need(!is.null(input_meta$images), "No data to show"))
 
       dtree_json()
       })
@@ -211,21 +190,16 @@ start_server <- function(id, main_session) {
 
     # HANDSONTABLE IMAGES ----------------------------------------------------- 
     # for the conditional panel with the column selection
-    output$roxas_data_available <- reactive({
+    output$roxas_data_available <- shiny::reactive({
       !is.null(input_meta$images)
     })
     outputOptions(output, "roxas_data_available", suspendWhenHidden = FALSE)
 
     image_data_in <- reactiveVal(NULL)
 
-    # TODO: move to globals?
-    schema_path <- system.file("extdata/json_schema/20260313_tria_roxas_ext_schema.json", package = "rxs2tria")
-    schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
-    tbl_schema <- jsonlite::fromJSON(schema_obj$schema$schema, simplifyDataFrame = FALSE)
-    tbl_schema <- tbl_schema |> 
-      resolve_refs(fs::path_dir(schema_path)) 
-    tbl_props <- get_tbl_props(tbl_schema)$properties
-    
+    # TODO: the first one here is the roxas schema, adapt to work also for roxas ai
+    tbl_props <- rxs2tria:::get_tbl_props(full_schema$properties$images$anyOf[[1]])$properties
+
     df_hot <- shiny::reactive({
       shiny::req(image_data_in())
       col_groups <- purrr::map_chr(tbl_props, "dtColGroup")
@@ -277,7 +251,7 @@ start_server <- function(id, main_session) {
 
     # create dataframe reactive to hot update
     # TODO: join with img_data_in for full columns
-    image_data_out <- reactive({
+    image_data_out <- shiny::reactive({
       shiny::req(input$image_table)
       df_out <- rhandsontable::hot_to_r(input$image_table)
       df_in <- image_data_in()

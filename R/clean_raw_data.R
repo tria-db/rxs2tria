@@ -68,7 +68,7 @@ remove_outliers <- function(QWA_data){
 
 
 #' @keywords internal
-max_na_inf <- function(x){
+max_na_inf <- function(x) {
   x_na <- is.na(x)
   if(all(x_na)) -Inf else max(x[!x_na])
 }

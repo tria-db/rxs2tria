@@ -3,7 +3,7 @@
 
 # SERVER -----------------------------------------------------------------------
 dataset_server <- function(id, main_session, dataset_tbls_in) {
-  moduleServer(id, function(input, output, session) {
+  shiny::moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
     shinyjs::disable(id = "file_authors")
@@ -11,66 +11,63 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
     shinyjs::disable(id = "file_relres")
 
     # mock event to close ROR tab on start of app
-    observeEvent(1,{
-      accordion_panel_close(id = 'search_tools', values = TRUE)
-      accordion_panel_close(id = 'doi_search_tool', values = TRUE)
-    }, ignoreNULL = FALSE) # to fire the event at startup
+    shiny::observe({
+      bslib::accordion_panel_close(id = 'search_tools', values = TRUE)
+      bslib::accordion_panel_close(id = 'doi_search_tool', values = TRUE)
+    }) |> shiny::bindEvent(1) # to fire the event at startup
 
 
     # observe changes (i.e. loading) of dataset input tables and fill fields and containers
-    observeEvent(dataset_tbls_in(),{
-      tbls <- dataset_tbls_in()
+    shiny::observe({
+      safe_block({
+        ds_data <- dataset_tbls_in()$dataset
+      
+        if (nrow(ds_data) != 1) {
+          cli::cli_abort("Dataset table has {nrow(ds_data)} rows")
+        }
 
-      # Update dataset fields if available and possible
-      if (!is.null(tbls$dataset)){
-        updateTextInput(
-          session, "ds_name",
-          value = ifelse(isTruthy(tbls$dataset$ds_name), tbls$dataset$ds_name, ""))
-        updateTextAreaInput(
-          session, "acknowledgements",
-          value = ifelse(isTruthy(tbls$dataset$acknowledgements), tbls$dataset$acknowledgements, ""))
-        safe_block({
-          if (isTruthy(tbls$dataset$ds_access)) {
-            updateRadioButtons(session, "ds_access", selected = tbls$dataset$ds_access)
-            if (tbls$dataset$ds_access == "public"){
-              updateSelectizeInput(
-                session, "ds_license",
-                selected = ifelse(isTruthy(tbls$dataset$ds_license), tbls$dataset$ds_license, "CC BY 4.0"))
-            } else if (tbls$dataset$ds_access == "restricted"){
-              updateDateInput(
-                session, "embargoed_until",
-                value = ifelse(isTruthy(tbls$dataset$embargoed_until), as.Date(tbls$dataset$embargoed_until), Sys.Date() + 365))
-            }
-          }
-          if (isTruthy(tbls$dataset$description)) {
-            updateTextAreaInput(
-              session, "description",
-              value = tbls$dataset$description)
+        if (shiny::isTruthy(ds_data$ds_name)) {
+          shiny::updateTextInput(session, "ds_name", value = ds_data$ds_name)
+        }
+        if (shiny::isTruthy(ds_data$acknowledgements)) {
+          shiny::updateTextAreaInput(
+            session, "acknowledgements", value = ds_data$acknowledgements
+          )
+        }
+        if (shiny::isTruthy(ds_data$ds_access)) {
+          if (ds_data$ds_access %in% c("public", "restricted")) {
+            shiny::updateRadioButtons(session, "ds_access", selected = ds_data$ds_access)
           } else {
-            template <- generate_desc_template(tbls$images)
-            updateTextAreaInput(
-              session, "description",
-              value = template)
+            cli::cli_abort("Invalid access option {ds_data$ds_access}")
           }
-        }, err_message = "Some dataset fields could not be updated", propagate_err = FALSE)
-      }
+        }
 
-      # Update authors if available
-      if(!is.null(tbls$authors)) {
-        author_data_in(tbls$authors)
-      }
+        if (shiny::isTruthy(ds_data$ds_license)) {
+          shiny::updateSelectizeInput(session, "ds_license", ds_data$ds_license)
+        }
 
-      # Update funding if available
-      if(!is.null(tbls$funding)) {
-        funding_data_in(tbls$funding)
-      }
+        if (shiny::isTruthy(ds_data$embargoed_until)) {
+          if (ds_data$ds_access == "restricted") {
+            shiny::updateDateInput(
+              session, "embargoed_until", as.Date(ds_data$embargoed_until)
+            )
+          } else {
+            cli::cli_warn("Embargo date applies only to restricted datasets.")
+          }
+        } 
 
-      # Update relresources if available
-      if(!is.null(tbls$related)) {
-        relres_data_in(tbls$related)
-      }
+        if (shiny::isTruthy(ds_data$description)) {
+          shiny::updateTextAreaInput(
+            session, "description", value = ds_data$description
+          ) 
+        }
+      }, err_message = "Some dataset fields could not be updated", propagate_err = FALSE)
+   
+      author_data_in(dataset_tbls_in()$authors)
+      funding_data_in(dataset_tbls_in()$funding)
+      relres_data_in(dataset_tbls_in()$related)
 
-    })
+    }) |> shiny::bindEvent(dataset_tbls_in())
 
 
     # DATASET INPUT ------------------------------------------------------------
@@ -96,8 +93,8 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
     })
 
     # ror_df: a reactive updated only in the event of the search button being clicked
-    ror_df <- eventReactive(input$btn_ror_search, {
-      req(input$ror_search_country, input$ror_search_string)
+    ror_df <- shiny::eventReactive(input$btn_ror_search, {
+      shiny::req(input$ror_search_country, input$ror_search_string)
 
       # run the ROR API request with the input search string
       ror_api_request(search_string = input$ror_search_string,
@@ -105,23 +102,25 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
     })
 
     # render instructions
-    output$ror_instr <- renderUI({
+    output$ror_instr <- shiny::renderUI({
       if (is.null(ror_df())) {
-        tags$i("Run ROR search first...")
+        shiny::tags$i("Run ROR search first...")
       } else {
-        tags$i("Click on a row to select and transfer the ROR data to the tables below.")
+        shiny::tags$i("Click on a row to select and transfer the ROR data to the tables below.")
       }
     })
 
     # render ROR DT
     output$ror_results <- DT::renderDT({
-      validate(need(!is.null(ror_df()), "No data to show"))
-      DT::datatable(ror_df() %>% dplyr::select(Link, RORID, Name, Location),
-                    style = 'default',
-                    rownames = FALSE,
-                    selection = "single",
-                    escape = FALSE,
-                    options = list(pageLength = 5))
+      shiny::validate(shiny::need(!is.null(ror_df()), "No data to show"))
+      DT::datatable(
+        ror_df() %>% dplyr::select(Link, RORID, Name, Location),
+        style = 'default',
+        rownames = FALSE,
+        selection = "single",
+        escape = FALSE,
+        options = list(pageLength = 5)
+      )
     })
 
     # observe ROR row selection: open modal
@@ -296,7 +295,7 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
         if (input$sel_author_orc == "new"){
           row <- nrow(current_df) + 1
           current_df[row,] <- create_empty_df("author_data", nrows=1)
-          current_df[row, "author_nr"] <- as.integer(max(current_df$author_nr, na.rm = TRUE) + 1)
+          current_df[row, "author_nr"] <- nrow(current_df) + 1
         } else {
           row <- input$sel_author_orc
         }
@@ -321,24 +320,28 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
 
     # AUTHOR RHANDSONTABLE -----------------------------------------------------
     # initialize reactiveVal (responding to add/delete row, ror/orcid transfer, file upload)
-    author_data_in <- reactiveVal(create_empty_df("author_data", nrows=1) |>
-                                    dplyr::mutate(author_nr = as.integer(1)))
+    author_data_in <- reactiveVal()
 
     # render editable table
     output$author_table <- rhandsontable::renderRHandsontable({
-      schema_path <- system.file("extdata", "json_schema/20251007_tria_author_ext_schema.json", package = "rxs2tria")
-      tbl_props <- load_extended_schema(schema_path)
+      shiny::req(author_data_in())
+      #schema_path <- system.file("extdata", "json_schema/20251007_tria_author_ext_schema.json", package = "rxs2tria")
+      #tbl_props <- load_extended_schema(schema_path)
+      tbl_props <- rxs2tria:::get_tbl_props(full_schema$properties$authors)$properties
 
       colHeaders <- sapply(tbl_props, function(x) x$title)
       colHeaders <- colHeaders[names(author_data_in())] # ensure correct order
       tippies <- sapply(tbl_props, function(x) x$description)
+
+      n_rows <- nrow(author_data_in())
+      ht_height <- min(max(n_rows * ht_row_height, ht_min_height), ht_max_height)
 
       rhandsontable::rhandsontable(
         author_data_in(),
         rowHeaders = TRUE,
         contextMenu = FALSE,
         stretchH = "all",
-        #height = 150,
+        height = ht_height,
         colHeaders = unname(colHeaders),
         afterGetColHeader = tippy_renderer(tippies)
       ) %>%
@@ -374,13 +377,12 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
     observeEvent(input$btn_del_author, {
       req(nrow(author_data_out()) > 1)
       current_df <- author_data_out()
-      current_df <- current_df[-nrow(current_df),]
+      current_df <- current_df[-nrow(current_df), ]
       author_data_in(current_df)
     })
 
-    # TODO:
-    # import data from file
-    observeEvent(input$file_authors,{
+    # TODO: import data from file
+    observeEvent(input$file_authors, {
       show_ht_import_modal(ns, 'import_aut_data')
     })
 
@@ -396,10 +398,11 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
 
     # FUNDING RHANDSONTABLE ----------------------------------------------------
     # initialize reactiveVal (responding to add/delete row, ror transfer, file upload)
-    funding_data_in <- reactiveVal(create_empty_df("funding_data", nrows=1))
+    funding_data_in <- reactiveVal()
 
     # Render editable table
     output$funding_table <- rhandsontable::renderRHandsontable({
+      shiny::req(funding_data_in())
       schema_path <- system.file("extdata", "json_schema/20251007_tria_funding_ext_schema.json", package = "rxs2tria")
       tbl_props <- load_extended_schema(schema_path)
 
@@ -407,12 +410,16 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
       colHeaders <- colHeaders[names(funding_data_in())] # ensure correct order
       tippies <- sapply(tbl_props, function(x) x$description)
 
+      n_rows <- nrow(funding_data_in())
+      ht_height <- min(max(n_rows * ht_row_height, ht_min_height), ht_max_height)
+
+
       rhandsontable::rhandsontable(
         funding_data_in(),
         rowHeaders = TRUE,
         contextMenu = FALSE,
         stretchH = "all",
-        #height = 150,
+        height = ht_height,
         colHeaders = unname(colHeaders),
         afterGetColHeader = tippy_renderer(tippies)
       ) %>%
@@ -463,11 +470,6 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
       #                               force_required = FALSE, col_names = input$col_names, skip = input$skip)
       # funding_data_in(imported)
     })
-
-
-
-
-
 
 
     # DOI SEARCH ---------------------------------------------------------------
@@ -530,10 +532,11 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
 
     # REL RESOURCE RHANDSONTABLE -----------------------------------------------
     # initialize reactiveVal (responding to add/delete item, DT cell edits)
-    relres_data_in <- reactiveVal(create_empty_df("relresource_data", nrows=0))
+    relres_data_in <- reactiveVal()
 
     # Render editable table
     output$relres_table <- rhandsontable::renderRHandsontable({
+      shiny::req(relres_data_in())
       schema_path <- system.file("extdata", "json_schema/20251007_tria_relresource_ext_schema.json", package = "rxs2tria")
       tbl_props <- load_extended_schema(schema_path)
 
@@ -541,12 +544,16 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
       colHeaders <- colHeaders[names(relres_data_in())] # ensure correct order
       tippies <- sapply(tbl_props, function(x) x$description)
 
+      n_rows <- nrow(relres_data_in())
+      ht_height <- min(max(n_rows * ht_row_height, ht_min_height), ht_max_height)
+
+
       rhandsontable::rhandsontable(
         relres_data_in(),
         rowHeaders = TRUE,
         contextMenu = FALSE,
         stretchH = "all",
-        #height = 150,
+        height = ht_height,
         colHeaders = unname(colHeaders),
         afterGetColHeader = tippy_renderer(tippies)
       ) %>%
@@ -677,22 +684,10 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
       }
     })
 
-    # TODO:
-    # Observe save button
+    # TODO: Observe save button ?
     # observeEvent(input$btn_save_aut, {
     #   data <- author_data$df_out
-    #
-    #   # TODO: file download rather than predefined file?
-    #   # Save to CSV
-    #   write.csv(data, file = "author_data.csv", row.names = FALSE)
-    #   showModal(modalDialog(
-    #     title = "Success",
-    #     "Data saved successfully!",
-    #     easyClose = TRUE,
-    #     footer = NULL
-    #   ))
     # })
-
 
 
     # Next button
@@ -715,21 +710,25 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
     # more details on validation errors (nr characters, pattern, etc.)
     # orcid transfer: what if names don't match?
 
+    ds_data_out <- shiny::reactive({
+      tibble::tibble(
+        ds_name = input$ds_name,
+        description = input$description,
+        ds_access = input$ds_access,
+        ds_license = input$ds_license,
+        embargoed_until = ifelse(input$ds_access == "restricted", input$embargoed_until, ""),
+        acknowledgements = input$acknowledgements
+      )
+    })
 
     return(
       list(
         dataset_tbls  = list(
-          dataset = reactive(data.frame(
-            ds_name = input$ds_name,
-            description = input$description,
-            ds_access = input$ds_access,
-            ds_license = input$ds_license,
-            embargoed_until = ifelse(input$ds_access == "restricted", input$embargoed_until, ""),
-            acknowledgements = input$acknowledgements
-          )),
+          dataset = ds_data_out,
           authors = author_data_out,
           funding = funding_data_out,
-          related = relres_data_out
+          related = relres_data_out,
+          resources = shiny::reactive(dataset_tbls_in()$resources)
         ),
         val_check = validation_checks
       )
@@ -741,94 +740,5 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
 
 
 
-# # RELATED RESOURCES --------------------------------------------------------
-# # TODO: HERE: update to hot
-# # toggle add button: only enable if we have a DOI or citation to add
-# observe({
-#   shinyjs::toggleState(id = "btn_add_pub",
-#                        condition = (input$doi != "" || input$citation != ""))
-# })
-#
-# # initialize reactiveVal (responding to add/delete item, DT cell edits)
-# doi_data_in <- reactiveVal(create_empty_tbl(doi_tbl, nrows=0))
-#
-# # render DT
-# output$rel_resources <- DT::renderDT({
-#   # a DT with a column of delete buttons
-#   colHeaders <- get_tbl_colHeaders(doi_tbl)
-#   deleteButtonColumn(doi_data_in(), 'delbtn', ns, colHeaders)
-# })
-#
-#
-# # observe delete row events
-# observeEvent(input$deletePressed, {
-#   rowNum <- parseDeleteEvent(input$deletePressed)
-#   # Delete the row from the data frame
-#   current_df <- doi_data_in()
-#   current_df <- current_df[-rowNum,]
-#   if (nrow(current_df) > 0) {
-#     rownames(current_df) <- 1:nrow(current_df) # update rownames
-#   }
-#   doi_data_in(current_df)
-# })
-#
-# # observe add item events
-# observeEvent(input$btn_add_pub,{
-#   # TODO: logic if both are provided? (disable add button?)
-#   # TODO: what about XCELL datasets (without DOI)?
-#   # EITHER run DOI API request
-#   if (!is.null(input$doi) && input$doi != "") {
-#     res_df <- doi_api_request(input$doi)
-#     if (!is.null(res_df)) {
-#       current_df <- doi_data_in()
-#       current_df <- current_df |> dplyr::bind_rows(res_df)
-#       doi_data_in(current_df)
-#       updateTextInput(session, "doi", value = "")
-#     }
-#
-#   # OR copy citation text directly to table
-#   } else  if (!is.null(input$citation) && input$citation != "") {
-#     current_df <- doi_data_in()
-#     nrows <- nrow(current_df)
-#     current_df[nrows+1,'citation'] <- input$citation
-#     doi_data_in(current_df)
-#     # clear input field
-#     updateTextInput(session, "citation", value = "")
-#   }
-# })
-#
-# # observe DT cell edits
-# observeEvent(input$rel_resources_cell_edit, {
-#   info <- input$rel_resources_cell_edit
-#   # update the data frame with the new value (-1 due to del button col)
-#   current_df <- doi_data_in()
-#   current_df[info$row, info$col-1] <- info$value
-#   doi_data_in(current_df)
-# })
 
-# observeEvent(start_info$input_meta$meta_json,{
-#   # TODO: add validity checks before updating values?
-#   # req(start_info$input_meta$meta_json)
-#   if (!is.null(start_info$input_meta$meta_json)){
-#     meta_json <- start_info$input_meta$meta_json
-#     if (!is.null(meta_json$ds_data)){
-#       # if it is not null, it has been aligned to structure, so can expect a 1-row df with all required columns
-#       ds_data <- meta_json$ds_data
-#       updateTextInput(session, "ds_name", value = ifelse(is.na(ds_data$ds_name), "", ds_data$ds_name))
-#       updateTextAreaInput(session, "acknowledgements", value = ifelse(is.na(ds_data$acknowledgements), "", ds_data$acknowledgements))
-#       if (!is.na(ds_data$ds_access)){
-#         updateRadioButtons(session, "ds_access", selected = ds_data$ds_access)
-#         if (ds_data$ds_access == "public"){
-#           updateSelectizeInput(session, "ds_license", selected = ifelse(is.na(ds_data$ds_license), "CC BY 4.0", ds_data$ds_license))
-#         } else if (ds_data$ds_access == "restricted"){
-#           safe_block({
-#             updateDateInput(session, "embargoed_until", value = ifelse(is.na(ds_data$embargoed_until), Sys.Date() + 365, as.Date(ds_data$embargoed_until)))
-#           }, err_message = "Embargo date could not be updated", err_propagate = FALSE)
-#         }
-#       }
-#     }
-#     if (!is.null(meta_json$author_data)) {author_data_in(meta_json$author_data)}
-#     if (!is.null(meta_json$funding_data)) {funding_data_in(meta_json$funding_data)}
-#     if (!is.null(meta_json$doi_data)) {doi_data_in(meta_json$doi_data)}
-#   }
-# })
+
