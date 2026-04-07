@@ -34,11 +34,11 @@
           },
           "band_width": {
             "htType": "numeric",
-            "dtColGroup": "cols_userinput"
+            "dtColGroup": "cols_settings"
           },
           "only_ew": {
             "htType": "checkbox",
-            "dtColGroup": "cols_userinput"
+            "dtColGroup": "cols_settings"
           },
           "spatial_resolution": {
             "htType": "character",

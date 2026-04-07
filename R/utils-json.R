@@ -322,7 +322,7 @@ align_df_to_schema <- function(df,
   if (length(msg)>0){
     cli::cli_warn(c("!" = "{.field {schema}} data frame aligned to schema with {length(msg)%/%2} warning{?s}", msg))
   } else if (!mute_info) {
-    cli::cli_inform(c("i" = "{.field {schema}} date frame in line with  schema."))
+    cli::cli_inform(c("i" = "{.field {schema}} data frame in line with  schema."))
   }
   
   # bind to target_structure to ensure all / required+common columns are present

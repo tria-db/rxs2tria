@@ -43,13 +43,13 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
         }
 
         if (shiny::isTruthy(ds_data$ds_license)) {
-          shiny::updateSelectizeInput(session, "ds_license", ds_data$ds_license)
+          shiny::updateSelectizeInput(session, "ds_license", selected = ds_data$ds_license)
         }
 
         if (shiny::isTruthy(ds_data$embargoed_until)) {
           if (ds_data$ds_access == "restricted") {
             shiny::updateDateInput(
-              session, "embargoed_until", as.Date(ds_data$embargoed_until)
+              session, "embargoed_until", value = as.Date(ds_data$embargoed_until)
             )
           } else {
             cli::cli_warn("Embargo date applies only to restricted datasets.")
