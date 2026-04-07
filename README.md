@@ -27,14 +27,19 @@ You can install the development version of `rxs2tria` from
 [GitHub](https://github.com/) with:
 
 ``` r
-# install.packages("pak")
-pak::pak("tria-db/rxs2tria")
-
-# or:
-remotes::install_github('tria-db/rxs2tria')
+pak::pak("tria-db/rxs2tria") # or pak::pak("tria-db/rxs2tria@develop") for the even more experimental develop branch
 ```
 
 ## Getting started
+
+The easiest way to follow the `rxs2tria` worklow defined in template
+file. The following makes a copy of the template and saves it your
+current working directory:
+
+``` r
+library(rxs2tria)
+file.copy(system.file("templates/prepare_rxs_dataset.R", package = "rxs2tria"), ".")
+```
 
 See the
 [vignette](https://tria-db.github.io/rxs2tria/articles/rxs2tria.html)
