@@ -163,10 +163,13 @@ prf_sector <- calculate_sector_profiles(QWA_data,
 # information.
 launch_flags_app()
 
-# to read in and update the edited rings data from file
+# to read in and update the edited rings data from file or a data frame in the env
 # QWA_data$rings <- read_QWAdata(
 #   file_rings = "path/to/output_data/example_dataset_edited_QWAdata_rings.csv",
 #   components = "rings")
+# QWA_data$rings <- df_rings_edited
+# save the edits to files
+# write_QWAdata(QWA_data, dir = path_out, dataset_name = dataset_name)
 
 # ------------------------------------------------------------------------------
 # Step 7: Compile resources information
@@ -179,4 +182,4 @@ launch_flags_app()
 QWA_metadata <- read_QWAmetadata("path/to/output_data/example_dataset_QWAmetadata.json")
 QWA_metadata <- add_resources(QWA_metadata, dir = "path/to/submission_files")
 
-write_QWAmetadata("path/to/output_data/example_dataset_QWAmetadata.json")
+write_QWAmetadata(QWA_metadata, "path/to/output_data/example_dataset_QWAmetadata.json")

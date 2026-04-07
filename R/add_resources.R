@@ -254,15 +254,15 @@ collect_resources <- function(path, append_to = NULL, df_structure = NULL,
 
   if (!is.null(df_structure)) {
     checkmate::assert_names(names(df_structure),
-                            must.include = c("org_image_name", "image_label"))
+                            must.include = c("org_img_name", "image_label"))
 
     to_match <- df$linked_level %in% c("analysis", "image") & is.na(df$linked_label)
 
     if (any(to_match)) {
-      # Strip image extensions from org_image_name to obtain base label pattern.
+      # Strip image extensions from org_img_name to obtain base label pattern.
       # Handles classic ROXAS (.jpg) and ROXAS AI (.scan.jpg).
       img_bases <- sub("(\\.scan)?\\.(jpg|jpeg|png|tif|tiff)$", "",
-                       df_structure$org_image_name, ignore.case = TRUE)
+                       df_structure$org_img_name, ignore.case = TRUE)
 
       df$linked_label[to_match] <- vapply(
         as.character(df$resource_name[to_match]),
