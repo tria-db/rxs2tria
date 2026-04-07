@@ -68,7 +68,7 @@ remove_outliers <- function(QWA_data){
 
 
 #' @keywords internal
-max_na_inf <- function(x){
+max_na_inf <- function(x) {
   x_na <- is.na(x)
   if(all(x_na)) -Inf else max(x[!x_na])
 }
@@ -565,11 +565,17 @@ flag_duplicate_rings <- function(df_rings_log){
 #' @param rxs_meta a [QWAmetadata] or [QWAimages] object whose image-level
 #'   metadata provides `spatial_resolution` (required for the incomplete
 #'   innermost ring check) and `outmost_year`.
+#' @param exclude_mode how should the exclude_issues column be initialized, to
+#'   exclude any incomplete or missing rings (`"either"`, default) or only the 
+#'   incomplete rings (i.e. not flagging missing/wedging rings for exclusion
+#'   from analyses, `"incomplete_only"`).
 #' @returns A `QWAdata` object with the validated data: cells unchanged, rings
 #'   with added flag columns.
 #' @export
 #'
-validate_QWA_data <- function(QWA_data, rxs_meta, verbose_flags = FALSE, exclude_mode = c("incomplete_only", "missing_only", "either")){
+validate_QWA_data <- function(QWA_data, rxs_meta, 
+                              exclude_mode = c("either", "incomplete_only"),
+                              verbose_flags = FALSE) { # for debugging only
   checkmate::assert_class(QWA_data, "QWAdata")
   checkmate::assert_subset(
     c('image_label','year','cwttan'),
@@ -586,7 +592,7 @@ validate_QWA_data <- function(QWA_data, rxs_meta, verbose_flags = FALSE, exclude
     c('image_label','spatial_resolution','outmost_year'),
     names(df_meta)
   )
-  checkmate::assert_logical(verbose_flags, len = 1)
+  checkmate::assert_flag(verbose_flags)
 
   # get a complete list of all the annual rings (years) in rings AND cells data
   # with the ring measurements and additional cell count per ring and mean cwttan
@@ -627,8 +633,7 @@ validate_QWA_data <- function(QWA_data, rxs_meta, verbose_flags = FALSE, exclude
       exclude_issues = switch(
         mode,
         "either" = incomplete_ring | missing_ring,
-        "incomplete_only" = incomplete_ring,
-        "missing_only" = missing_ring
+        "incomplete_only" = incomplete_ring
       )
     )
 
@@ -658,226 +663,5 @@ validate_QWA_data <- function(QWA_data, rxs_meta, verbose_flags = FALSE, exclude
     "v" = "QWA data have been validated!"
   ))
 
-  # issue_counts <-  df_rings_log %>%
-  #   dplyr::summarise(dplyr::across(c(incomplete_ring:duplicate_ring),
-  #                                  ~sum(.x,na.rm=TRUE))) %>%
-  #   dplyr::select(incomplete_ring, missing_ring, duplicate_ring)
-  # message('QWA data have been validated successfully!\n',
-  #         'The following issues were found:')
-  # message(paste0(capture.output(print(as.data.frame(issue_counts),
-  #                               row.names = FALSE)), collapse='\n'))
-
   new_QWAdata(cells = QWA_data$cells, rings = df_rings_log)
 }
-
-
-
-
-
-# # Manual flags
-# # TODO: finalize
-# add_user_flags <- function(QWA_data, years_to_flag){
-#   df_rings_log <- QWA_data$rings %>%
-#     dplyr::left_join(years_to_flag %>% dplyr::mutate(manual_flag = TRUE),
-#                     by = c('image_label','year')) %>%
-#     dplyr::mutate(manual_flag = ifelse(is.na(manual_flag), FALSE, manual_flag))
-#
-#   return(
-#     stats::setNames(
-#       list(QWA_data$cells, df_rings_log),
-#       c('cells','rings')
-#     ))
-# }
-#
-#
-# finalize_flags <- function(QWA_data){
-#   df_rings <- QWA_data$rings
-#   if (!('other_issues' %in% colnames(df_rings))){
-#     df_rings$other_issues <- FALSE
-#   }
-#   # TODO: fix the duplicate flags
-#   # TODO: set incomplete rings measures to 0
-#   # TODO: check missing ring has no cell data
-#
-#   return(
-#     stats::setNames(
-#       list(QWA_data$cells, df_rings_log),
-#       c('cells','rings')
-#     ))
-# }
-
-
-
-
-
-
-# tbl_rxs_hmgz <- tbl_rxs_v3 %>%
-# dplyr::group_by(image_label, YEAR) %>%
-#   dplyr::mutate(
-#     # Add SECTORS100
-#     # TO.SECTORS = as.numeric(cut(RADDISTR.ST, b=seq(from= 0, to=100, by= 100/(NSECTOR[1])), labels=1:(NSECTOR[1]))),
-#     SECTOR100 = as.numeric(cut(RRADDISTR,
-#                                b = seq(from=0, to=100, by= 1),
-#                                labels = 1:100,
-#                                include.lowest = T)))  %>%
-#   dplyr::ungroup() %>%
-#
-#   # round for data just above the RRADDISTR of class 100 otherwise just leave NA
-#   dplyr::mutate(SECTOR100 = if_else(RRADDISTR > 100 & RRADDISTR <= 101, 100, SECTOR100))
-
-# tbl_YEAR <- tbl_rxs_hmgz %>%
-#   dplyr::filter(!is.na(RTSR)) %>%  # remove cells that do not have a measured CWT
-#   dplyr::group_by(plot_treecode, YEAR, slide, SECTOR100) %>%
-#   dplyr::summarise(RTSR.MEAN = mean(RTSR, na.rm = TRUE),
-#                    MRW = mean(MRW, na.rm = TRUE), .groups = 'drop') %>%
-#   dplyr::group_by(plot_treecode, YEAR, slide) %>%
-#   dplyr::mutate(ROLLMEAN = zoo::rollmean(RTSR.MEAN, 9, fill = c(NA, NA, 10)),
-#                 TO.EWLW = ifelse(SECTOR100 <= max_na_inf(SECTOR100[ROLLMEAN <= mork]), "EW", "LW")) %>%
-#   # filter(plot_treecode=="YAM_2756", YEAR ==1940) %>%
-#   # ggplot(aes(x=SECTOR100,y=ROLLMEAN, group = paste0(plot_treecode,YEAR), colour= TO.EWLW)) + geom_line()
-#   dplyr::group_by(plot_treecode, YEAR, slide) %>%
-#   dplyr::summarise(MRW = mean(MRW),
-#                    EWW = ifelse(any(TO.EWLW == "EW", na.rm = TRUE),
-#                                 max_na_inf(SECTOR100[TO.EWLW == "EW"] * MRW/100),
-#                                 0),
-#                    LWW = MRW - EWW, .groups = 'drop')
-
-# tbl_out <- tbl_rxs_hmgz %>%
-#   dplyr::left_join(tbl_YEAR %>% select(-MRW),  by = c("plot_treecode", "YEAR", "slide")) %>%
-#   dplyr::mutate(TO.EWLW = ifelse(RADDISTR.ST >= EWW, "LW", "EW"))
-
-
-# TODO: set raddist and rraddist to NA for incomplete rings (are only already NA for outermost incomplete rings)
-
-
-# TODO: add EW/LW estimation (standard implementation)
-
-# Add SECTOR100
-# TODO: does this work with the duplicates / flags?
-# TODO: should be as.numeric(as.character()) ???
-# dplyr::group_by(woodpiece_label, YEAR) %>%
-#   dplyr::mutate(
-#     # TO.SECTORS = as.numeric(cut(RADDISTR.ST, b=seq(from= 0, to=100, by= 100/(NSECTOR[1])), labels=1:(NSECTOR[1]))),
-#     SECTOR100 = as.numeric(cut(RRADDISTR,
-#                                b = seq(from=0, to=100, by= 1),
-#                                labels = 1:100,
-#                                include.lowest = T)))  %>%
-#   dplyr::ungroup() %>%
-#   # round for data just above the RRADDISTR of class 100 otherwise just leave NA
-#   dplyr::mutate(SECTOR100 = if_else(RRADDISTR > 100 & RRADDISTR <= 101, 100, SECTOR100)) %>%
-
-# tbl_YEAR <- tbl_rxs_hmgz %>%
-#   dplyr::filter(!is.na(RTSR)) %>%  # remove cells that do not have a measured CWT
-#   dplyr::group_by(plot_treecode, YEAR, slide, SECTOR100) %>%
-#   dplyr::summarise(RTSR.MEAN = mean(RTSR, na.rm = TRUE),
-#                    MRW = mean(MRW, na.rm = TRUE), .groups = 'drop') %>%
-#   dplyr::group_by(plot_treecode, YEAR, slide) %>%
-#   dplyr::mutate(ROLLMEAN = zoo::rollmean(RTSR.MEAN, 9, fill = c(NA, NA, 10)),
-#                 TO.EWLW = ifelse(SECTOR100 <= max_na_inf(SECTOR100[ROLLMEAN <= mork]), "EW", "LW")) %>%
-#   # filter(plot_treecode=="YAM_2756", YEAR ==1940) %>%
-#   # ggplot(aes(x=SECTOR100,y=ROLLMEAN, group = paste0(plot_treecode,YEAR), colour= TO.EWLW)) + geom_line()
-#   dplyr::group_by(plot_treecode, YEAR, slide) %>%
-#   dplyr::summarise(MRW = mean(MRW),
-#                    EWW = ifelse(any(TO.EWLW == "EW", na.rm = TRUE),
-#                                 max_na_inf(SECTOR100[TO.EWLW == "EW"] * MRW/100),
-#                                 0),
-#                    LWW = MRW - EWW, .groups = 'drop')
-#
-# tbl_out <- tbl_rxs_hmgz %>%
-#   dplyr::left_join(tbl_YEAR %>% select(-MRW),  by = c("plot_treecode", "YEAR", "slide")) %>%
-#   dplyr::mutate(TO.EWLW = ifelse(RADDISTR.ST >= EWW, "LW", "EW"))
-
-
-
-
-# TODO: what to do with the faulty data: remove? flag only? tell to restart? allow for dating manually?
-# saxor / homogenizer remove only the cells with no rings or na years (but should not exist anyway)
-# warn about no dates, no CWT, ask to start over with updated output files or remove from sel treecodes for future steps
-# homogenzier later removes any flagged cells
-# track with flags in diagnostics table on a yearly basis
-
-
-
-# in theory, after this, data could be uploaded
-# however, we might want to add EWLW estimation based measures from Profile()
-# additional Diagnostics, and manual YTE
-
-
-# # find the max per overlap group (without missing, incomplete), flag only the others
-# overlap_old <- function(df_rings_log){
-#   df_rings_log <- df_rings_log %>%
-#     dplyr::group_by(woodpiece_label, year) %>%
-#     dplyr::mutate(overlap = dplyr::n() > 1) %>%
-#     dplyr::ungroup()
-#
-#   df_overlap <- df_rings_log %>%
-#     dplyr::filter(overlap) %>%
-#     dplyr::arrange(woodpiece_label, year, desc(cno))
-#
-#   # find the duplicate rings with the max number of cells (while excluding
-#   # incomplete or missing rings from possible candidates)
-#   # TODO: if there are no max candidates (e.g all incomplete), then all are
-#   # flagged as duplicates atm - is this the desired behavior?
-#   df_overlap_max <- df_overlap %>%
-#     dplyr::filter(!incomplete_ring, !missing_ring)  %>%
-#     dplyr::group_by(woodpiece_label, year) %>%
-#     dplyr::slice(1) %>%
-#     dplyr::ungroup() %>%
-#     dplyr::mutate(duplicate_max_ncell = TRUE) %>%
-#     dplyr::select(image_label, year, duplicate_max_ncell)
-#
-#   # the other duplicate rings are flagged as duplicates
-#   df_overlap <- df_overlap %>%
-#     dplyr::left_join(df_overlap_max, by = c('image_label', 'year')) %>%
-#     dplyr::mutate(duplicate_ring = ifelse(is.na(duplicate_max_ncell), TRUE, FALSE)) %>%
-#     dplyr::select(image_label, year, duplicate_max_ncell, duplicate_ring)
-#
-#   df_rings_log <- df_rings_log %>%
-#     dplyr::left_join(df_overlap, by = c("image_label", "year")) %>%
-#     dplyr::mutate(duplicate_ring = ifelse(is.na(duplicate_ring), FALSE, duplicate_ring))
-#
-#   return(df_rings_log)
-# }
-
-
-#-------------------------------------------------------------------------------
-# # check that YEAR is consecutive sequence within each image
-# # TODO: these checks are probably be overkill, since these issues should not arise
-# # in ROXAS normally. BUT keep for now and see if we find any in existing datasets
-# # TODO: should we arrange by year here? and also generally in QWA_data?
-# additional_year_check <- function(df_rings_log){
-#   df_rings_log <- df_rings_log %>%
-#     dplyr::arrange(image_label, year) %>%
-#     dplyr::group_by(image_label) %>%
-#     dplyr::mutate(year_diff = year - dplyr::lag(year),
-#                   year_diff = tidyr::replace_na(year_diff, 1)) %>%
-#     dplyr::ungroup()
-#
-#   # any duplicated years in the rings files?
-#   if (any(df_rings_log$year_diff == 0)) {
-#     beepr::beep(sound = 2, expr = NULL)
-#     stop('The following images have duplicate years:\n',
-#          paste0(unique(df_rings_log[df_rings_log$year_diff == 0, 'image_label']), collapse=', '),
-#          '\nPlease ensure that all included samples are properly dated, then restart the process.')
-#   }
-#
-#   # any gaps in the dating?
-#   if (any(df_rings_log$year_diff > 1)) {
-#     # fill in missing years
-#     df_rings_log <- df_rings_log %>%
-#       dplyr::group_by(image_label) %>%
-#       tidyr::complete(year = tidyr::full_seq(year, 1),
-#                       fill = list(cno = 0, missing_ring = TRUE, incomplete_ring = FALSE), explicit = FALSE) %>%
-#       tidyr::fill(tree_label, woodpiece_label, slide_label, .direction = 'downup') |>
-#       dplyr::ungroup()
-#     beepr::beep(sound = 2, expr = NULL)
-#     warning('The following images have gaps in the dating, missing years were added:\n',
-#             paste0(unique(df_rings_log[df_rings_log$year_diff > 1, 'image_label']), collapse=', '))
-#   }
-#
-#   df_rings_log <- df_rings_log %>% dplyr::select(-year_diff)
-#
-#   return(df_rings_log)
-# }
-
-

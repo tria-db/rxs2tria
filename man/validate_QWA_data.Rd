@@ -7,8 +7,8 @@
 validate_QWA_data(
   QWA_data,
   rxs_meta,
-  verbose_flags = FALSE,
-  exclude_mode = c("incomplete_only", "missing_only", "either")
+  exclude_mode = c("either", "incomplete_only"),
+  verbose_flags = FALSE
 )
 }
 \arguments{
@@ -17,6 +17,11 @@ validate_QWA_data(
 \item{rxs_meta}{a \link{QWAmetadata} or \link{QWAimages} object whose image-level
 metadata provides \code{spatial_resolution} (required for the incomplete
 innermost ring check) and \code{outmost_year}.}
+
+\item{exclude_mode}{how should the exclude_issues column be initialized, to
+exclude any incomplete or missing rings (\code{"either"}, default) or only the
+incomplete rings (i.e. not flagging missing/wedging rings for exclusion
+from analyses, \code{"incomplete_only"}).}
 }
 \value{
 A \code{QWAdata} object with the validated data: cells unchanged, rings

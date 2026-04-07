@@ -81,7 +81,7 @@ write_QWAimages(rxs_images, file.path(path_out, paste0(dataset_name, "_QWAimages
 
 ################################################################################
 # complete the required metadata form via the Shiny app
-# launch_metadata_app()
+launch_metadata_app()
 # save the json metadata file from the app output once completed
 
 

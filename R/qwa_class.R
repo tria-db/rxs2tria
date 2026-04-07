@@ -19,6 +19,7 @@ new_QWAmetadata <- function(dataset = NULL,
                             authors = NULL,
                             funding = NULL,
                             related = NULL,
+                            resources = NULL,
                             sites = NULL,
                             trees = NULL,
                             woodpieces = NULL,
@@ -28,31 +29,25 @@ new_QWAmetadata <- function(dataset = NULL,
   stopifnot(is.null(authors) || is.data.frame(authors))
   stopifnot(is.null(funding) || is.data.frame(funding))
   stopifnot(is.null(related) || is.data.frame(related))
+  stopifnot(is.null(resources) || is.data.frame(resources))
   stopifnot(is.null(sites) || is.data.frame(sites))
   stopifnot(is.null(trees) || is.data.frame(trees))
   stopifnot(is.null(woodpieces) || is.data.frame(woodpieces))
   stopifnot(is.null(slides) || is.data.frame(slides))
-  stopifnot(is.data.frame(images))
-  # auto-promote a plain data.frame to QWAimages
-  # TODO: make more strict and fail otherwise?
-  if (!inherits(images, "QWAimages")) {
-    rv <- if (nrow(images) > 0 && "software" %in% names(images)) {
-      unique(images$software)[1]
-    } else "roxas"
-    images <- new_QWAimages(images, roxas_version = rv)
-  }
-
+  stopifnot(inherits(images, "QWAimages"))
+ 
   structure(
     list(
       dataset = dataset,
       authors = authors,
       funding = funding,
       related = related,
+      resources = resources,
       sites = sites,
-      trees = trees, 
-      woodpieces = woodpieces, 
-      slides = slides, 
-      images = images 
+      trees = trees,
+      woodpieces = woodpieces,
+      slides = slides,
+      images = images
     ),
     class = c("QWAmetadata", "list")
   )
@@ -137,7 +132,8 @@ QWAimages <- function(data, roxas_version = NULL) {
 #' - **`$dataset`**: dataset-level information (name, description, license).
 #' - **`$authors`**: author information.
 #' - **`$funding`**: funding sources and grant numbers.
-#' - **`$related`**: related resources (publications, datasets, etc.).
+#' - **`$related`**: related objects (publications, datasets, etc.).
+#' - **`$resources`**: included resources (data files)
 #' - **`$sites`**: site-level metadata (location, climate, etc.).
 #' - **`$trees`**: tree-level metadata (species, DBH, age, etc.).
 #' - **`$woodpieces`**: woodpiece-level metadata (disc, core, etc.).
@@ -153,14 +149,24 @@ QWAimages <- function(data, roxas_version = NULL) {
 #' Component names are matched against the [QWAmetadata()] constructor parameters;
 #' unknown names are dropped with a warning.
 #'
-#' @param dataset Data frame with dataset-level metadata (optional).
-#' @param authors Data frame with author information (optional).
-#' @param funding Data frame with funding information (optional).
-#' @param related Data frame with related resources (optional).
-#' @param sites Data frame with site-level metadata (optional).
-#' @param trees Data frame with tree-level metadata (optional).
-#' @param woodpieces Data frame with woodpiece-level metadata (optional).
-#' @param slides Data frame with slide-level metadata (optional).
+#' @param dataset Data frame with dataset-level metadata. Typically provided via
+#'   metadata Shiny app ([launch_metadata_app()]).
+#' @param authors Data frame with author information. Typically provided via
+#'   metadata Shiny app ([launch_metadata_app()]).
+#' @param funding Data frame with funding information. Typically provided via
+#'   metadata Shiny app ([launch_metadata_app()]).
+#' @param related Data frame with related publications or datasets. Typically 
+#'   provided via metadata Shiny app ([launch_metadata_app()]).
+#' @param resources Data frame listing all raw data files to be submitted as
+#'   part of the dataset. Typically created by [collect_resources()].
+#' @param sites Data frame with site-level metadata. Typically provided via
+#'   metadata Shiny app ([launch_metadata_app()]).
+#' @param trees Data frame with tree-level metadata. Typically provided via
+#'   metadata Shiny app ([launch_metadata_app()]).
+#' @param woodpieces Data frame with woodpiece-level metadata. Typically 
+#'   provided via metadata Shiny app ([launch_metadata_app()]).
+#' @param slides Data frame with slide-level metadata. Typically provided via
+#'   metadata Shiny app ([launch_metadata_app()]).
 #' @param images A [QWAimages] object or plain data frame with image-level
 #'   metadata. Required. Typically the output of [build_QWAimages()].
 #'
@@ -172,12 +178,14 @@ QWAmetadata <- function(dataset = NULL,
                         authors = NULL,
                         funding = NULL,
                         related = NULL,
+                        resources = NULL,
                         sites = NULL,
                         trees = NULL,
                         woodpieces = NULL,
                         slides = NULL,
                         images = data.frame()) {
   stopifnot(is.data.frame(images))
+  checkmate::assert_data_frame(resources, null.ok = TRUE)
 
   validate_component <- function(df, schema, roxas_version = NULL) {
     if (is.null(df) || nrow(df) == 0) return(df)
@@ -196,12 +204,13 @@ QWAmetadata <- function(dataset = NULL,
   authors <- validate_component(authors, "authors")
   funding <- validate_component(funding, "funding")
   related <- validate_component(related, "related")
+  # TODO: validate resources
   sites <- validate_component(sites, "sites")
   trees <- validate_component(trees, "trees")
   woodpieces <- validate_component(woodpieces, "woodpieces")
   slides <- validate_component(slides, "slides")
 
-  new_QWAmetadata(dataset, authors, funding, related, sites, trees,
+  new_QWAmetadata(dataset, authors, funding, related, resources, sites, trees,
                   woodpieces, slides, images)
 }
 
@@ -321,10 +330,13 @@ complete_QWAmetadata <- function(x) {
   # create or complete the other tables
   dataset <- complete_tbl(x$dataset, "dataset")
   authors <- complete_tbl(x$authors, "authors")
+  if (all(is.na(authors$author_nr))) {
+    authors$author_nr <- 1:nrow(authors)
+  }
   funding <- complete_tbl(x$funding, "funding")
   related <- complete_tbl(x$related, "related")
 
-  new_QWAmetadata(dataset, authors, funding, related,
+  new_QWAmetadata(dataset, authors, funding, related, resources = x$resources,
                   sites, trees, woodpieces, slides, images)
 }
 
@@ -522,6 +534,14 @@ print.QWAmetadata <- function(x, ...) {
     } else {
       cli::cli_bullets(c(" " = paste0("{.emph ", format(comp, width = 12), "} (not provided)")))
     }
+  }
+
+  # --- Resources ---
+  if (!is.null(x$resources)) {
+    cli::cli_bullets(c("v" = paste0(format("resources", width = 12),
+                                    " ({nrow(x$resources)} file{?s})")))
+  } else {
+    cli::cli_bullets(c(" " = paste0("{.emph ", format("resources", width = 12), "} (not provided)")))
   }
 
   invisible(x)

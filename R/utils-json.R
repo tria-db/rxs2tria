@@ -1,3 +1,5 @@
+
+
 #' Map a QWAmetadata slot name to its package-relative schema file path
 #'
 #' @param schema QWAmetadata slot name.
@@ -13,6 +15,7 @@ schema_rel_path <- function(schema, roxas_version = NULL) {
     "authors" = "extdata/json_schema/base_schema/20251007_tria_author_data_schema.json",
     "funding" = "extdata/json_schema/base_schema/20251007_tria_funding_data_schema.json",
     "related" = "extdata/json_schema/base_schema/20251007_tria_relresource_data_schema.json",
+    "resources" = "extdata/json_schema/base_schema/20260331_tria_resource_data_schema.json",
     "sites" = "extdata/json_schema/base_schema/20251007_tria_site_data_schema.json",
     "trees" = "extdata/json_schema/base_schema/20251007_tria_tree_data_schema.json",
     "woodpieces" = "extdata/json_schema/base_schema/20251007_tria_woodpiece_data_schema.json",
@@ -43,31 +46,31 @@ resolve_refs <- function(x, base_path){
   purrr::map(x, resolve_refs, base_path = base_path)
 }
 
-#' Merge all `allOf` compositions in a JSON schema list
-#'
-#' Recursively walks the schema list and merges every `allOf` array into a
-#' single object. Properties are merged with [modifyList()] (i.e., later entries
-#' override earlier ones - but in the `rxs2tria` schemata, components should be distinct by definition).
-#' `required` arrays are combined so that required fields from all subschemas are preserved.
-#'
-#' @param x A schema as a nested R list, typically after [resolve_refs()].
-#' @returns A copy of `x` with all `allOf` arrays merged into their parent objects.
-#' @keywords internal
-resolve_allOfs <- function(x){
-  if (!is.list(x)) return(x)
-  if (!is.null(x[["allOf"]])) {
-    combined <- x$allOf[[1]]
-    for (k in seq_along(x[["allOf"]])[-1]){
-      sublist <- x$allOf[[k]]
-      combined$required <- union(combined$required %||% character(0),
-                                 sublist$required %||% character(0))
-      sublist$required <- NULL
-      combined <- modifyList(combined, sublist) # TODO: better merge logic?
-    }
-    return(resolve_allOfs(combined))
-  }
-  purrr::map(x, resolve_allOfs)
-}
+# #' Merge all `allOf` compositions in a JSON schema list
+# #'
+# #' Recursively walks the schema list and merges every `allOf` array into a
+# #' single object. Properties are merged with [modifyList()] (i.e., later entries
+# #' override earlier ones - but in the `rxs2tria` schemata, components should be distinct by definition).
+# #' `required` arrays are combined so that required fields from all subschemas are preserved.
+# #'
+# #' @param x A schema as a nested R list, typically after [resolve_refs()].
+# #' @returns A copy of `x` with all `allOf` arrays merged into their parent objects.
+# #' @keywords internal
+# resolve_allOfs <- function(x){
+#   if (!is.list(x)) return(x)
+#   if (!is.null(x[["allOf"]])) {
+#     combined <- x$allOf[[1]]
+#     for (k in seq_along(x[["allOf"]])[-1]){
+#       sublist <- x$allOf[[k]]
+#       combined$required <- union(combined$required %||% character(0),
+#                                  sublist$required %||% character(0))
+#       sublist$required <- NULL
+#       combined <- modifyList(combined, sublist) # TODO: better merge logic?
+#     }
+#     return(resolve_allOfs(combined))
+#   }
+#   purrr::map(x, resolve_allOfs)
+# }
 
 #' @keywords internal
 extract_required <- function(x) {
@@ -112,6 +115,11 @@ extract_properties <- function(x) {
 get_tbl_props <- function(tbl_schema){
   required <- tbl_schema |> extract_required() |> unlist()
   properties <- tbl_schema |> extract_properties()
+  prop_names <- names(properties)
+  properties <- lapply(prop_names, function(nm) {
+    c(properties[[nm]], list(required = nm %in% required))
+  })
+  names(properties) <- prop_names
   list(properties = properties, required = required)
 }
 
@@ -122,14 +130,14 @@ get_tbl_props <- function(tbl_schema){
 #' Useful as a template for merging or pre-filling metadata tables.
 #'
 #' @param schema Component name: one of `"dataset"`, `"authors"`, `"funding"`,
-#'   `"related"`, `"sites"`, `"trees"`, `"woodpieces"`, `"slides"`, `"images"`.
+#'   `"related"`, `"resources"`, `"sites"`, `"trees"`, `"woodpieces"`, `"slides"`, `"images"`.
 #' @param roxas_version ROXAS version (`"roxas"` or `"roxas_ai"`). Required when
 #'   `schema = "images"`, ignored otherwise.
 #' @returns A 0-row tibble with all schema columns and correct R column types.
 #' @seealso [align_df_to_schema()]
 #' @export
 make_schema_skeleton <- function(schema, roxas_version = NULL, nrows = 0) {
-  checkmate::assert_choice(schema, c("dataset", "authors", "funding", "related",
+  checkmate::assert_choice(schema, c("dataset", "authors", "funding", "related", "resources",
                                      "sites", "trees", "woodpieces", "slides", "images"))
   if (schema == "images")
     checkmate::assert_subset(roxas_version, c("roxas", "roxas_ai"), empty.ok = FALSE)
@@ -165,7 +173,7 @@ create_empty_df <- function(tbl_props, nrows = 0){
   )
 
   # extract column names and types from schema
-  cols_info <-tbl_props$properties
+  cols_info <- tbl_props$properties
   col_names <- names(cols_info)
   col_types <- sapply(cols_info, function(x) x$type[1]) # NOTE: leverages that default type is in first position in schema!
 
@@ -237,7 +245,7 @@ align_df_to_schema <- function(df,
                                ignore_colnames = FALSE
                               ) {
   checkmate::assert_data_frame(df)
-  checkmate::assert_choice(schema, c("dataset", "authors", "funding", "related",
+  checkmate::assert_choice(schema, c("dataset", "authors", "funding", "related", "resources",
                                      "sites", "trees", "woodpieces", "slides", "images"))
   if (schema == "images"){
     checkmate::assert_subset(roxas_version, c("roxas", "roxas_ai"), empty.ok = FALSE)
@@ -345,12 +353,13 @@ validate_schema <- function(df, schema,
                             roxas_version = NULL,
                             warn_only = TRUE, greedy = TRUE){
   checkmate::assert_data_frame(df)
-  checkmate::assert_choice(schema, c("dataset", "authors", "funding", "related",
+  checkmate::assert_choice(schema, c("dataset", "authors", "funding", "related", "resources",
                                      "sites", "trees", "woodpieces", "slides", "images"))
   if (schema == "images"){
     checkmate::assert_subset(roxas_version, c("roxas", "roxas_ai"), empty.ok = FALSE)
   } 
-  checkmate::assert_logical(c(warn_only, greedy))
+  checkmate::assert_flag(warn_only)
+  checkmate::assert_flag(greedy)
 
   schema_path <- system.file(schema_rel_path(schema, roxas_version), package = "rxs2tria")
   schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")

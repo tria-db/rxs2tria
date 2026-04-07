@@ -921,7 +921,6 @@ flags_server <- function(id, main_session, comments_out) {
         selring_idx <- -1
       }
       
-
       ro_ids_dupl <- which(rep(TRUE, nrow(df_rings))) - 1
       ro_ids_excldupl <- which(!df_rings$duplicate_ring) - 1
       warn_col_ids <- which(names(df_rings) %in% disqual_issues) - 1

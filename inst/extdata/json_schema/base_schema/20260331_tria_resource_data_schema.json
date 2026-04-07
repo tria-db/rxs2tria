@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "TODO:addurltoTRIAschema",
+  "title": "TRIA resources metadata schema",
+  "description": "Schema for ...",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "resource_name": {
+        "type": "string",
+        "minLength": 1,
+        "title": "Resource name",
+        "description": ""
+      },
+      "description": {
+        "type": ["string", "null"],
+        "title": "Description",
+        "description": "Optional description of the resource (e.g. how it relates to the dataset)"
+      },
+      "resource_type": {
+        "type": "string",
+        "title": "Resource type",
+        "description": "What kind of resource is it (original image, cells measurements, ...)"
+      },
+      "linked_level": {
+        "type": ["string", "null"], 
+        "title": "Linked level",
+        "description": "",
+        "$comment": "TODO: add check of possible values?"
+      },
+      "linked_label": {
+        "type": ["string", "null"], 
+        "title": "Linked label",
+        "description": "",
+        "$comment": "TODO: add validty check of values?"
+      },
+      "fname_resource": {
+        "type": ["string", "null"], 
+        "title": "File path / name of the resource",
+        "description": "",
+        "$comment": "TODO: add validty check of values?"
+      }
+    },
+    "required": ["resource_name", "resource_type"],
+    "additionalProperties": false
+  }
+}

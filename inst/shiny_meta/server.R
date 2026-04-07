@@ -42,7 +42,7 @@ server <- function(input, output, session) {
 
   # footer ---------------------------------------------------------------------
   # open contact information modal on click
-  observeEvent(input$contact_link, {
+  shiny::observeEvent(input$contact_link, {
     showModal(modalDialog(
       title = "Publisher and contact information",
       "Swiss Federal Institute for Forest, Snow and Landscape Research WSL",

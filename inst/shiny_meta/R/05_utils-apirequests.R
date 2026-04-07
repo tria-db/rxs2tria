@@ -55,12 +55,12 @@ ror_api_request <- function(search_string, country_code){
       return(res_df)
 
     } else {
-      showNotification("No ROR results found. Try again.", type = "message")
+      shiny::showNotification("No ROR results found. Try again.", type = "message")
       return(NULL)
     }
 
   } else {
-    showNotification("ROR API request failed. Try again.", type = "error")
+    shiny::showNotification("ROR API request failed. Try again.", type = "error")
     return(NULL)
   }
 }
@@ -130,12 +130,12 @@ orcid_api_request <- function(search_string = NULL, last_name = NULL, first_name
       return(orcid_data)
 
     } else {
-      showNotification("No ORCID results found. Try again.", type = "message")
+      shiny::showNotification("No ORCID results found. Try again.", type = "message")
       return(NULL)
     }
 
   } else {
-    showNotification("ORCID API request failed. Try again.", type = "error")
+    shiny::showNotification("ORCID API request failed. Try again.", type = "error")
     return(NULL)
   }
 

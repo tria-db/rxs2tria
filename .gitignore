@@ -4,6 +4,7 @@
 .httr-oauth
 .DS_Store
 .quarto
+.env
 .vscode/*
 archive/*
 explorations/*
