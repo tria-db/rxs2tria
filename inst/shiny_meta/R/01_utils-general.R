@@ -96,6 +96,26 @@ get_species_info <- function(){
 }
 species_info <- get_species_info()
 
+# convert ISO codes to combined display values (e.g. "CH" -> "Switzerland  (CH)")
+iso_to_combined <- function(x) {
+  result <- dplyr::left_join(
+    data.frame(country_iso_code = x, stringsAsFactors = FALSE),
+    countries_info[, c("country_iso_code", "combined")],
+    by = "country_iso_code"
+  )$combined
+  dplyr::coalesce(result, x)
+}
+
+# convert combined display values back to ISO codes (e.g. "Switzerland  (CH)" -> "CH")
+combined_to_iso <- function(x) {
+  result <- dplyr::left_join(
+    data.frame(combined = x, stringsAsFactors = FALSE),
+    countries_info[, c("country_iso_code", "combined")],
+    by = "combined"
+  )$country_iso_code
+  dplyr::coalesce(result, x)
+}
+
 # wrapper to get country or species info for the autocomplete/dropdowns etc
 get_options <- function(options){
   if (is.list(options)) { # or by length?

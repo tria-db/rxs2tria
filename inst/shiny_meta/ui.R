@@ -102,20 +102,30 @@ ui <- bslib::page_fluid(
     bslib::nav_panel(
       title = tab_summary,
       summary_ui('summary')
+    ),
+    
+    footer = bslib::card_body(
+        class = "wsl-footer",
+        fill = TRUE,
+        tags$img(src = "WSL_Logo_neg.png",
+                height = "30px", style = "vertical-align:middle; margin-right: 5px;"),
+        actionLink("contact_link", "Contact",
+                  style = "color: white; margin-left: 5px; text-decoration: none;")
+      
     )
 
   ), # end of tabs
 
-  verbatimTextOutput("debug"), # for debugging
+  #verbatimTextOutput("debug"), # for debugging,
 
   # FOOTER ---------------------------------------------------------------------
-  tags$footer(
-    class = "wsl-footer",
-    tags$img(src = "WSL_Logo_neg.png",
-             height = "30px", style = "vertical-align:middle; margin-right: 10px;"),
-    actionLink("contact_link", "Contact",
-               style = "color: white; margin-left: 20px; text-decoration: none;"),
-  ),
+  # tags$footer(
+  #   class = "wsl-footer",
+  #   tags$img(src = "WSL_Logo_neg.png",
+  #            height = "30px", style = "vertical-align:middle; margin-right: 10px;"),
+  #   actionLink("contact_link", "Contact",
+  #              style = "color: white; margin-left: 20px; text-decoration: none;"),
+  # ),
 
 ) # end of ui
 

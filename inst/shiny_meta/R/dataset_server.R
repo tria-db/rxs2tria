@@ -63,8 +63,16 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
         }
       }, err_message = "Some dataset fields could not be updated", propagate_err = FALSE)
    
-      author_data_in(dataset_tbls_in()$authors)
-      funding_data_in(dataset_tbls_in()$funding)
+      authors_in <- dataset_tbls_in()$authors
+      if (!is.null(authors_in$org_country)) {
+        authors_in$org_country <- iso_to_combined(authors_in$org_country)
+      }
+      author_data_in(authors_in)
+      funding_in <- dataset_tbls_in()$funding
+      if (!is.null(funding_in$org_country)) {
+        funding_in$org_country <- iso_to_combined(funding_in$org_country)
+      }
+      funding_data_in(funding_in)
       relres_data_in(dataset_tbls_in()$related)
 
     }) |> shiny::bindEvent(dataset_tbls_in())
@@ -155,7 +163,7 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
         # get the ROR data of the selected row (NOTE that only 1 row can be selected)
         selected_ror_data <- ror_df()[input$ror_results_rows_selected, c("RORID", "Name", "city", "country_code")]
         selected_ror_data$Name <- gsub('\n','<br>',stringr::str_wrap(selected_ror_data$Name, width = 50))
-        selected_ror_data$country_code <- countries_info |> dplyr::filter(country_iso_code == selected_ror_data$country_code) |> dplyr::pull(combined)
+        selected_ror_data$country_code <- iso_to_combined(selected_ror_data$country_code)
         # update the author data table for the selected authors
         current_df <- author_data_out()
         current_df[input$selected_authors, c("rorid", "org_name", "aff_city", "org_country")] <- selected_ror_data
@@ -167,7 +175,7 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
         # get the ROR data of the selected row (NOTE that only 1 row can be selected)
         selected_ror_data <- ror_df()[input$ror_results_rows_selected, c("RORID", "Name", "country_code")]
         # selected_ror_data$Name <- gsub('\n','<br>',stringr::str_wrap(selected_ror_data$Name, width = 50))
-        selected_ror_data$country_code <- countries_info |> dplyr::filter(country_iso_code == selected_ror_data$country_code) |> dplyr::pull(combined)
+        selected_ror_data$country_code <- iso_to_combined(selected_ror_data$country_code)
         # update in the funding data table for the selected funders
         current_df <- funding_data_out()
         current_df[input$selected_funders, c("rorid", "org_name", "org_country")] <- selected_ror_data
@@ -359,9 +367,18 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
     })
 
 
-    # create dataframe reactive to hot updates
+    # create dataframe reactive to hot updates (keeps combined country values for display)
     author_data_out <- reactive({
       rhandsontable::hot_to_r(input$author_table)
+    })
+
+    # output-only reactive: converts org_country from combined display value to ISO code
+    author_data_export <- reactive({
+      df <- author_data_out()
+      if (!is.null(df$org_country)) {
+        df$org_country <- combined_to_iso(df$org_country)
+      }
+      df
     })
 
     # observe add row button
@@ -438,6 +455,14 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
     # create dataframe reactive to hot updates
     funding_data_out <- reactive({
       rhandsontable::hot_to_r(input$funding_table)
+    })
+
+    funding_data_export <- reactive({
+      df <- funding_data_out()
+      if (!is.null(df$org_country)) {
+        df$org_country <- combined_to_iso(df$org_country)
+      }
+      df
     })
 
     # observe add row button
@@ -710,13 +735,17 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
     # more details on validation errors (nr characters, pattern, etc.)
     # orcid transfer: what if names don't match?
 
+    output$testing <- shiny::renderPrint({
+      ds_data_out()
+    })
+
     ds_data_out <- shiny::reactive({
       tibble::tibble(
         ds_name = input$ds_name,
         description = input$description,
         ds_access = input$ds_access,
         ds_license = input$ds_license,
-        embargoed_until = ifelse(input$ds_access == "restricted", input$embargoed_until, ""),
+        embargoed_until = if (input$ds_access == "restricted") input$embargoed_until else "",
         acknowledgements = input$acknowledgements
       )
     })
@@ -725,8 +754,8 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
       list(
         dataset_tbls  = list(
           dataset = ds_data_out,
-          authors = author_data_out,
-          funding = funding_data_out,
+          authors = author_data_export,
+          funding = funding_data_export,
           related = relres_data_out,
           resources = shiny::reactive(dataset_tbls_in()$resources)
         ),

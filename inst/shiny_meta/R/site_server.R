@@ -21,7 +21,11 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
     slide_data_in <- shiny::reactiveVal(NULL)
 
     shiny::observe({
-      site_data_in(site_tbls_in()$sites)
+      sites_in <- site_tbls_in()$sites
+      if (!is.null(sites_in$country_code)) {
+        sites_in$country_code <- iso_to_combined(sites_in$country_code)
+      }
+      site_data_in(sites_in)
       tree_data_in(site_tbls_in()$trees)
       wp_data_in(site_tbls_in()$woodpieces)
       slide_data_in(site_tbls_in()$slides)
@@ -118,6 +122,14 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
     # create dataframe reactive to hot updates
     site_data_out <- reactive({
       rhandsontable::hot_to_r(input$site_table)
+    })
+
+    site_data_export <- reactive({
+      df <- site_data_out()
+      if (!is.null(df$country_code)) {
+        df$country_code <- combined_to_iso(df$country_code)
+      }
+      df
     })
 
     # update country column in site data based on coordinates
@@ -543,7 +555,7 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
     return(
       list(
         site_tbls = list(
-          sites = site_data_out,
+          sites = site_data_export,
           trees = tree_data_out,
           woodpieces = wp_data_out,
           slides = slide_data_out
