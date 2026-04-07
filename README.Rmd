@@ -33,6 +33,14 @@ pak::pak("tria-db/rxs2tria") # or pak::pak("tria-db/rxs2tria@develop") for the e
 
 ## Getting started
 
+The easiest way to follow the `rxs2tria` worklow defined in template file.
+The following makes a copy of the template and saves it your current working directory:
+```{r, eval = FALSE}
+library(rxs2tria)
+file.copy(system.file("templates/prepare_rxs_dataset.R", package = "rxs2tria"), ".")
+```
+
+
 See the [vignette](https://tria-db.github.io/rxs2tria/articles/rxs2tria.html) for a detailed introduction and example workflow. You can access it locally with:
 ```{r, eval = FALSE}
 vignette("rxs2tria")
