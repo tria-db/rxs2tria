@@ -109,19 +109,30 @@ read_QWAmetadata <- function(file, roxas_version = NULL, allow_missing_req = FAL
   
   raw <- jsonlite::read_json(file, simplifyVector = TRUE)
 
-  images <- QWAimages(raw$images, roxas_version) # takes care of images validation
+  checkmate::assert_data_frame(raw$images, min.rows = 1) # images component is required
 
   preprocess_raw_tbl <- function(df, schema){
     if (is.null(df) || length(df) == 0) {
       return(NULL)
     }
     df_prep <- tibble::as_tibble(df, .name_repair = janitor::make_clean_names)
-    # try to read roxas_version from data for images table
     df_prep <- align_df_to_schema(df_prep, schema, roxas_version, 
       allow_missing_req, add_missing_opt) 
     validate_schema(df_prep, schema, roxas_version, warn_only = TRUE, greedy = FALSE)
     df_prep
   }
+
+  # infer roxas version if not given
+  if (is.null(roxas_version)) {
+    rv <- unique(raw$images$software)
+    if (length(rv) != 1 || !(rv %in% c("roxas", "roxas_ai")))
+      cli::cli_abort("Could not infer {.arg roxas_version} from {.var data$images$software}. Provide it explicitly.")
+    roxas_version <- rv
+  }
+
+  df_images <- preprocess_raw_tbl(raw$images, "images")
+  check_structure(df_images)
+  images <- new_QWAimages(df_images, roxas_version = roxas_version)
 
   resources <- if (!is.null(raw$resources) && length(raw$resources) > 0) {
     tibble::as_tibble(raw$resources, .name_repair = janitor::make_clean_names)
@@ -137,7 +148,7 @@ read_QWAmetadata <- function(file, roxas_version = NULL, allow_missing_req = FAL
     trees = preprocess_raw_tbl(raw$trees, "trees"),
     woodpieces = preprocess_raw_tbl(raw$woodpieces, "woodpieces"),
     slides = preprocess_raw_tbl(raw$slides, "slides"),
-    images = images  # required by def
+    images = images
   )
 
   # TODO: check that structure across tables image - site works
