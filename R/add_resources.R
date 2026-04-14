@@ -71,6 +71,7 @@
   roxas_cal                      = "analysis",
   roxas_AOI                      = "analysis",
   roxas_AOE                      = "analysis",
+  roxas_AOEClass                 = "analysis",
   roxas_CWT                      = "analysis",
   roxas_junkobjects              = "analysis",
   roxas_proj                     = "analysis",
@@ -164,6 +165,7 @@ infer_resource_type <- function(filename) {
   if (grepl("_JunkObjects\\.scl$",              fn)) return("roxas_junkobjects")
   if (grepl("_AOI\\.out$",                      fn)) return("roxas_AOI")
   if (grepl("_AOE\\.out$",                      fn)) return("roxas_AOE")
+  if (grepl("_AOEClass\\.txt$",                 fn)) return("roxas_AOEClass")
   if (grepl("_CellWallThickness\\.out$",        fn)) return("roxas_CWT")
   if (grepl("\\.cal$",                          fn, ignore.case = TRUE)) return("roxas_cal")
   if (grepl("_proj\\.rpf$",                  fn, ignore.case = TRUE)) return("roxas_proj")
@@ -176,7 +178,7 @@ infer_resource_type <- function(filename) {
   if (grepl("_annotated_cells\\.(jpg|jpeg)$",   fn, ignore.case = TRUE)) return("roxas_image_annotated_cells")
   if (grepl("_annotated_twin\\.(jpg|jpeg)$",    fn, ignore.case = TRUE)) return("roxas_image_annotated_twin")
   if (grepl("_annotated\\.(jpg|jpeg)$",         fn, ignore.case = TRUE)) return("roxas_image_annotated")
-  if (grepl("_ReferenceSeries\\.(jpg|jpeg)$",   fn)) return("image_refseries")
+  if (grepl("_ReferenceSeries\\.(jpg|jpeg|gif)$",   fn)) return("image_refseries")
   if (grepl("_Preview.*\\.(jpg|jpeg)$",         fn, ignore.case = TRUE)) return("image_preview")
 
   # --- Generic image files ---------------------------------------------------
@@ -234,6 +236,13 @@ collect_resources <- function(path, append_to = NULL, df_structure = NULL,
   }
 
   files <- fs::dir_ls(path, recurse = recursive, type = "file")
+
+  # Exclude backup files and known junk files
+  exclude <- grepl(
+    "_annotated\\.cal$|_Vessels_bu\\.scl$|_Ringtraces_bu\\.txt$|^Thumbs\\.db$|^~\\$",
+    fs::path_file(files)
+  )
+  files <- files[!exclude]
 
   if (length(files) == 0) {
     cli::cli_alert_info("No files found in {.path {path}}")
