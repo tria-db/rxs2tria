@@ -292,22 +292,25 @@ flags_server <- function(id, main_session, comments_out) {
     # UI: Plot card header with dynamic woodpiece selection input
     output$selwp <- shiny::renderUI({
       shiny::req(input$filt_wp)
-      card_title <- strong(glue::glue("Selected woodpiece: "))
       wp_choices_filt <- input$filt_wp
-      shiny::div(
-        card_title,
-        shiny::selectInput(
-          ns("sel_wp_trace"), NULL,
-          choices = wp_choices_filt,
-          selected = wp_choices_filt[1],
-          selectize = TRUE, multiple = FALSE
-        )
+      shiny::selectInput(
+        ns("sel_wp_trace"), NULL,
+        choices = wp_choices_filt,
+        selected = wp_choices_filt[1],
+        selectize = TRUE, multiple = FALSE,
+        width = "auto"
       )
     })
 
-    # choosing a different woodpiece via the input
+    # choosing a different woodpiece via the input: reset marker and image
+    # guard: if sel_woodpiece is already set to this value, it came from a plot
+    # click (which set sel_woodpiece directly), so skip the reset
     shiny::observe({
-      sel_woodpiece(input$sel_wp_trace)
+      if (!identical(sel_woodpiece(), input$sel_wp_trace)) {
+        sel_woodpiece(input$sel_wp_trace)
+        sel_marker(NULL)
+        sel_image(NULL)
+      }
     }) |> shiny::bindEvent(input$sel_wp_trace,
                            ignoreInit = TRUE, ignoreNULL = TRUE)
 
@@ -326,9 +329,10 @@ flags_server <- function(id, main_session, comments_out) {
 
     # variable height for the plot depending on shown subplots
     output$main_plot_ui <- shiny::renderUI({
-      min_height <- compute_plot_height(sel_subplots())
+      shiny::req(df_selwp())
+      height <- compute_plot_height(sel_subplots())
       shiny::div(
-        style = paste0("min-height: ", min_height, "; max-height: ", plot_max_height),
+        style = paste0("height: ", height),
         plotly::plotlyOutput(ns("main_plot"), height = "100%")
       )
     })
@@ -596,9 +600,10 @@ flags_server <- function(id, main_session, comments_out) {
 
       sel_marker(new_marker)
       sel_image(new_marker$ycov_val)
+      sel_woodpiece(new_marker$wp_label)
+      # tirggers plot rerender via sel_woodpiece() > df_selwp(), df_otherwps() > plot
 
-      # trigger updates of plot, markers, table indirectly:
-      # input$sel_wp_trace > sel_woodpiece() > df_selwp(), df_otherwps() > plot rerender
+      # sync the UI input without triggering the sel_wp_trace observer's reset logic
       shiny::updateSelectInput(session, "sel_wp_trace", selected = new_marker$wp_label)
 
     }) |> shiny::bindEvent(input$confirm_wp)
@@ -732,7 +737,6 @@ flags_server <- function(id, main_session, comments_out) {
 
     shiny::observe({
       relayout <- crn_change_axes()
-      #x_axes <- crn_x_axes()
 
       # ignore events that don't affect the x-axis (e.g. yaxis changes)
       x_autorange <- !is.null(relayout[["xaxis.autorange"]])
@@ -748,27 +752,8 @@ flags_server <- function(id, main_session, comments_out) {
         )
       }
 
-      # if (!is.null(relayout[["xaxis.range[0]"]])) {
-      #   x_axes$x_min <- relayout[["xaxis.range[0]"]]
-      # }
-      # if (!is.null(relayout[["xaxis.range[1]"]])) {
-      #   x_axes$x_max <- relayout[["xaxis.range[1]"]]
-      # }
-      # if (!is.null(relayout[["xaxis.autorange"]])) {
-      #   x_axes$x_min <- NULL
-      #   x_axes$x_max <- NULL
-      # }
-
       crn_x_axes(x_axes)
     }) |> shiny::bindEvent(crn_change_axes())
-
-    # crn_x_axes <- shiny::reactive({
-    #   shiny::req(df_selwp())
-    #   relayout <- plotly::event_data("plotly_relayout", source = "crn_plot")
-    #   shiny::req(relayout)
-    #
-
-    # })
 
 
     ## excluded rings markers --------------------------------------------------
@@ -821,6 +806,16 @@ flags_server <- function(id, main_session, comments_out) {
       p
     }) |> shiny::bindEvent(input$show_mean, input$sel_mean)
 
+    ## correlation info in card footer -----------------------------------------
+    output$corr_info_ui <- shiny::renderUI({
+      # compute and display correlation between selected woodpiece trace
+      # and the (selected) mean, within the current x-axis range
+      msg <- calculate_correlation(df_selwp(), df_crn(), crn_x_axes(), input$sel_mean)
+      shiny::HTML(msg)
+    })
+
+
+    # FLAGS TABLE --------------------------------------------------------------
     # load js callbacks as strings
     js_escape <- readLines("www/js/escape_keybinding.js") |>
       paste(collapse = "\n")
@@ -829,34 +824,27 @@ flags_server <- function(id, main_session, comments_out) {
       paste(collapse = "\n")
 
      # add selected row tracking to hot
-
-
-    # FLAGS TABLE --------------------------------------------------------------
-    # UI: plot card header with dynamic selected image and comment
+    
+    # UI: hot card header title with dynamic selected image
     output$selimg <- shiny::renderUI({
       shiny::req(sel_image())
-      sel_img <- sel_image()
-      df_img <- input_data$rxsmeta_data
-      card_title <- strong(glue::glue("Selected image: {sel_img}"))
+      shiny::strong(sel_image())
+    })
 
-      # add image comment if availble
-      if (shiny::isTruthy(images_edited())) {
-        img_comment <- images_edited() |>
-          dplyr::filter(image_label == sel_img)
+    # centered comment + handled checkbox in hot card header, if comment exists
+    output$selcomment <- shiny::renderUI({
+      shiny::req(sel_image())
+      shiny::req(shiny::isTruthy(images_edited()))
+      img_comment <- images_edited() |>
+        dplyr::filter(image_label == sel_image())
+      shiny::req(nrow(img_comment) > 0)
 
-        if (nrow(img_comment) > 0){
-          is_handled <- img_comment$comment_handled
-          card_title <- tagList(
-            card_title,
-            shiny::div(
-              style = "display: flex; align-items: center; gap: 8px; margin-top: 2px;",
-              shiny::em(glue::glue("Comment: {img_comment$comment}")),
-              shiny::checkboxInput(ns("comment_handled"), "handled", value = is_handled)
-            )
-          )
-        }
-      }
-      card_title
+      shiny::div(
+        style = "display: flex; align-items: center; gap: 8px;",
+        shiny::em(glue::glue("Comment: {img_comment$comment}")),
+        shiny::checkboxInput(ns("comment_handled"), "handled",
+                             value = img_comment$comment_handled)
+      )
     })
 
     # update images_edited()$comment_handled when user clicks the checkbox
@@ -925,11 +913,13 @@ flags_server <- function(id, main_session, comments_out) {
       ro_ids_excldupl <- which(!df_rings$duplicate_ring) - 1
       warn_col_ids <- which(names(df_rings) %in% disqual_issues) - 1
 
+      hot_height <- min(nrow(df_rings) * 23L + 26L, 400L) + 5L
+
       hot <- rhandsontable::rhandsontable(
         df_rings,
         stretchH = "all",
         contextMenu = FALSE,
-        height = 400
+        height = hot_height
       ) |> # style the mandatory columns
       rhandsontable::hot_col(
         "duplicate_ring",
@@ -1040,14 +1030,24 @@ flags_server <- function(id, main_session, comments_out) {
   
     ## enter key to select cell ------------------------------------------------
     shiny::observe({
-      shiny::req(sel_marker(), flags_out())
-      marker <- sel_marker()
+      shiny::req(sel_image(), flags_out())
       df_hot <- flags_out()
 
-      row_idx <- which(rownames(df_hot) == as.character(marker$year))
-
-      if (length(row_idx) == 0) {
-        return(NULL)
+      if (shiny::isTruthy(sel_marker())) {
+        # marker exists: select its row in HOT
+        marker <- sel_marker()
+        row_idx <- which(rownames(df_hot) == as.character(marker$year))
+        if (length(row_idx) == 0) return(NULL)
+      } else {
+        # no marker: select first row and set sel_marker
+        row_idx <- 1L
+        first_year <- as.integer(rownames(df_hot)[[1L]])
+        new_marker <- resolve_row_marker(
+          sel_woodpiece(), sel_image(), first_year, df_selwp(), input$sel_param
+        )
+        sel_marker(new_marker)
+        p <- plotly::plotlyProxy("main_plot", session)
+        draw_sel_marker(p, new_marker, input$traces_crn, sel_subplots())
       }
 
       # select the cell in the 3rd column (i.e. exclude_issues)
@@ -1057,7 +1057,7 @@ flags_server <- function(id, main_session, comments_out) {
           hot.hot.selectCell(%d, 2);
           hot.hot.scrollViewportTo(%d, 2);
         }
-      ", ns("img_flags"), row_idx - 1, row_idx - 1))
+      ", ns("img_flags"), row_idx - 1L, row_idx - 1L))
     }) |> shiny::bindEvent(input$enter_key)
 
 
@@ -1207,15 +1207,14 @@ flags_server <- function(id, main_session, comments_out) {
     # DEBUG OUTPUT -------------------------------------------------------------
     output$debug <- renderPrint({
       #sel_subplots()
-      print(sample(1:10000, 1))
+      flags_out()
       #shiny::req(save_settings$initialized)
       #images_edited()
-      comments_out$goto_img()
+      #comments_out$goto_img()
       #df <- traces_to_df(input$traces_crn)
       #tail(df)
       #rings_data_org()
-
-
+      #input$enter_key
     })
 
 

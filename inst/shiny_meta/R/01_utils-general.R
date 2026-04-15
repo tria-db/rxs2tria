@@ -22,6 +22,8 @@ sec_col_grad <- c("#853270", "#A36794", "#C299B8", "#E0CCDB", "#F0E6ED", "#F7F2F
 tert_col_grad <- c("#324a85", "#6778a3", "#99a5c2", "#ccd2e0", "#e6e9f0", "#f2f4f7")
 
 # params for dynamic ht heights
+# TODO: maybe better use something like this (but need to have additional space after for dropdown overflows):
+# hot_height <- min(nrow(df_rings) * 23L + 26L, 400L) + 5L
 ht_row_height <- 28 # typical row height in px
 ht_min_height <- 180 # min height of the ht
 ht_max_height <- 750 # max height of the ht

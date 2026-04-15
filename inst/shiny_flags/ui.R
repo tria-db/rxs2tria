@@ -70,18 +70,29 @@ ui <- bslib::page_fluid(
     #   DT::DTOutput("numeric_table")
     # )
 
+    # FOOTER ---------------------------------------------------------------------
+    footer = bslib::card_body(
+      class = "wsl-footer",
+      fill = TRUE,
+      tags$img(src = "WSL_Logo_neg.png",
+              height = "30px", style = "vertical-align:middle; margin-right: 5px;"),
+      actionLink("contact_link", "Contact",
+                style = "color: white; margin-left: 5px; text-decoration: none;")
+      
+    )
+
   ), # end of navset_card_underline
 
   # FOOTER ---------------------------------------------------------------------
-  shiny::tags$footer(
-    class = "wsl-footer",
-    shiny::tags$img(
-      src = "WSL_Logo_neg.png",
-      height = "30px",
-      style = "vertical-align:middle; margin-right: 10px;"
-    ),
-    shiny::actionLink("contact_link", "Contact",
-               style = "color: white; margin-left: 20px; text-decoration: none;")
-  )
+  # shiny::tags$footer(
+  #   class = "wsl-footer",
+  #   shiny::tags$img(
+  #     src = "WSL_Logo_neg.png",
+  #     height = "30px",
+  #     style = "vertical-align:middle; margin-right: 10px;"
+  #   ),
+  #   shiny::actionLink("contact_link", "Contact",
+  #              style = "color: white; margin-left: 20px; text-decoration: none;")
+  # )
 
 ) # end of ui

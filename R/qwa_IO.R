@@ -285,20 +285,19 @@ read_QWAdata <- function(dir = NULL, file_cells = NULL, file_rings = NULL,
   cells <- NULL
 
   if ("rings" %in% components) {
+    cli::cli_inform(c(" " = "Reading rings data from {.file {file_rings}}..."))
     rings <- vroom::vroom(file_rings, show_col_types = FALSE)
+    cli::cli_inform(c("v" = "{nrow(rings)} rings read from file"))
   }
 
   if ("cells" %in% components) {
+    cli::cli_inform(c(" " = "Reading cells data from {.file {file_cells}}..."))
     cells <- vroom::vroom(file_cells, show_col_types = FALSE)
+    cli::cli_inform(c("v" = "{nrow(cells)} cells read from file"))
   }
 
   # TODO: validate / align to schema
   # check structures match / can be joined
-
-  msgs <- character(0)
-  if (!is.null(cells)) msgs <- c(msgs, "v" = "{nrow(cells)} cells read from {.file {file_cells}}")
-  if (!is.null(rings)) msgs <- c(msgs, "v" = "{nrow(rings)} rings read from {.file {file_rings}}")
-  if (length(msgs) > 0) cli::cli_inform(msgs)
 
   new_QWAdata(cells = cells, rings = rings)
 }

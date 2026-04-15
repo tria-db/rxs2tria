@@ -6,9 +6,7 @@ subplot_heights <- list(
   "cov+sd"   = "600px"
 )
 
-plot_max_height <- "700px"
-
-# compute the plot container min_height based on sel subplots as css string
+# compute the plot container height based on sel subplots as css string
 compute_plot_height <- function(active_subplots) {
   key <- if (length(active_subplots) == 0) {
     "none"
@@ -665,3 +663,35 @@ traces_to_df <- function(traces){
     purrr::list_rbind(names_to = "name")
 }
 
+# calculate the corellation of sel wp trace with mean
+calculate_correlation <- function(df_sel, df_all, x_axes, sel_mean) {
+  # Use plot axes limits if available
+  x_min <- x_axes$x_min %||% min(df_sel$year)
+  x_max <- x_axes$x_max %||% max(df_sel$year)
+
+  sel_wp <- df_sel$woodpiece_label[1]
+
+  # filter selected trace values
+  df_sel <- df_sel |>
+    dplyr::filter(year >= x_min, year <= x_max, !exclude_dupl) |>
+    dplyr::select(year, vals)
+  df_all <- df_all |> 
+    dplyr::filter(year >= x_min, year <= x_max, !exclude_dupl) 
+  df_mean <- calc_mean_vals(df_all, sel_mean) # TODO: or only others?
+  df_corr <- dplyr::inner_join(df_sel, df_mean, by = "year")
+
+  if (nrow(df_corr) < 5) {
+    msg <- "Not enough overlapping years to compute correlation."
+  } else {
+    # estimate correlation
+    r <- cor(
+      df_corr$vals.x,
+      df_corr$vals.y,
+      method = "pearson",
+      use = "complete.obs"
+    )
+    n <- nrow(df_corr)
+    msg <- glue::glue("Pearson correlation of {sel_wp} with {sel_mean} ({n} overlapping years): <strong>{round(r,3)}</strong>")
+  }
+  msg
+}

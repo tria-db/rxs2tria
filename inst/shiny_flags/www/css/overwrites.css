@@ -21,3 +21,8 @@ input.htCheckboxRendererInput[type='checkbox'] {
 .htCore tbody tr td:nth-child(2) input.htCheckboxRendererInput[type='checkbox'] {
   accent-color: grey !important;
 }
+/* change header color of ht */
+.handsontable th {
+  background-color: #324a85 !important; /* tert_col_grad[1] */
+  color: white !important;
+}
