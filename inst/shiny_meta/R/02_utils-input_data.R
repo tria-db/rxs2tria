@@ -69,7 +69,7 @@ create_empty_df <- function(tbl_name, nrows = 0){
   col_types[which(col_names == "embargoed_until")] <- "date" # special special case because of dependency on ds_access in schema
 
   r_col_types <- paste(json_to_r_types[col_types], collapse ="")
-  empty_df <- readr::read_csv("\n", col_names = col_names, col_types = r_col_types)
+  empty_df <- vroom::vroom(I("\n"), col_names = col_names, col_types = r_col_types)
 
   # add dummy rows if nrows > 0
   if (nrows > 0){

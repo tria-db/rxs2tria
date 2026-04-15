@@ -9,15 +9,20 @@ add_resources(x, path, recursive = FALSE, include_unmatched = FALSE)
 \arguments{
 \item{x}{A \link{QWAmetadata} object.}
 
-\item{resources}{A data frame of resources, typically from \code{\link[=collect_resources]{collect_resources()}}.}
+\item{path}{Path to a directory to scan for files.}
+
+\item{recursive}{If \code{TRUE}, recurse into sub-directories (default \code{FALSE}).}
+
+\item{include_unmatched}{If \code{TRUE}, resources that could not be matched
+to a specific type are includes as "other" (default \code{FALSE}).}
 }
 \value{
 The \link{QWAmetadata} object with the \verb{$resources} component updated.
 }
 \description{
 Stores a resources data frame (typically created by \code{\link[=collect_resources]{collect_resources()}})
-as the \verb{$resources} component of a \link{QWAmetadata} object. Any previously
-stored resources are replaced.
+as the \verb{$resources} component of a \link{QWAmetadata} object. Appended to any
+previously stored resources, \verb{$images} used to infer linked labels.
 }
 \seealso{
 \code{\link[=collect_resources]{collect_resources()}}, \code{\link[=QWAmetadata]{QWAmetadata()}}

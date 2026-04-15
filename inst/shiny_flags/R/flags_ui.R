@@ -73,7 +73,7 @@ flags_ui <- function(id) {
       # inputs related to excluded / plot updates ----
       shiny::checkboxInput(
         ns("show_excl"),
-        label_with_pop( # TODO: improve popover labels, add to all inputs
+        label_with_tt( # TODO: improve popover labels, add to all inputs
           "Include excluded rings",
           "Click update plot to include/exclude newly edited rings (pink markers)"),
         value = FALSE

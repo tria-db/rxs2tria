@@ -210,6 +210,8 @@ infer_resource_type <- function(filename) {
 #'   [extract_data_structure()]). Reserved for future use to auto-populate
 #'   `linked_label` from matching file names.
 #' @param recursive If `TRUE`, recurse into sub-directories (default `FALSE`).
+#' @param include_unmatched If `TRUE`, resources that could not be matched
+#'   to a specific type are includes as "other" (default `FALSE`).
 #'
 #' @returns A [tibble][tibble::tibble] with columns:
 #'   - `resource_name`: base file name.
@@ -227,6 +229,7 @@ collect_resources <- function(path, append_to = NULL, df_structure = NULL,
   checkmate::assert_data_frame(append_to, null.ok = TRUE)
   checkmate::assert_data_frame(df_structure, null.ok = TRUE)
   checkmate::assert_flag(recursive)
+  checkmate::assert_flag(include_unmatched)
 
   if (!is.null(append_to)) {
     df <- align_df_to_schema(append_to, "resources")
@@ -299,19 +302,21 @@ collect_resources <- function(path, append_to = NULL, df_structure = NULL,
 #' Add a resources table to a QWAmetadata object
 #'
 #' Stores a resources data frame (typically created by [collect_resources()])
-#' as the `$resources` component of a [QWAmetadata] object. Any previously
-#' stored resources are replaced.
+#' as the `$resources` component of a [QWAmetadata] object. Appended to any
+#' previously stored resources, `$images` used to infer linked labels.
 #'
 #' @param x A [QWAmetadata] object.
-#' @param resources A data frame of resources, typically from [collect_resources()].
-#'
+#' @param path Path to a directory to scan for files.
+#' @param recursive If `TRUE`, recurse into sub-directories (default `FALSE`).
+#' @param include_unmatched If `TRUE`, resources that could not be matched
+#'   to a specific type are includes as "other" (default `FALSE`).
 #' @returns The [QWAmetadata] object with the `$resources` component updated.
 #'
 #' @seealso [collect_resources()], [QWAmetadata()]
 #' @export
 add_resources <- function(x, path, recursive = FALSE, include_unmatched = FALSE) {
   checkmate::assert_class(x, "QWAmetadata")
-  checkmate::assert_data_frame(resources)
+  checkmate::assert_directory_exists(path)
   x$resources <- collect_resources(
     path = path, append_to = x$resources, df_structure = x$images,
     recursive = recursive, include_unmatched = include_unmatched

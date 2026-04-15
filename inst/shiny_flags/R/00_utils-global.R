@@ -160,15 +160,15 @@ input_specs <- list(
 )
 
 # GENERAL HELPERS ------------------
-label_with_pop <- function(label_text, popover_text,
-                           icon_name = "info-circle", icon_title = "Info",
-                           popover_title = NULL){
+label_with_tt <- function(label_text, tooltip_text,
+                           icon_name = "info-circle", icon_lib = "font-awesome",
+                           tooltip_title = NULL){
   shiny::span(
     label_text,
-    bslib::popover(
-      bsicons::bs_icon(icon_name, title = icon_title),
-      title = popover_title,
-      popover_text
+    bslib::tooltip(
+      shiny::icon(icon_name, lib = icon_lib),
+      title = tooltip_title,
+      tooltip_text
     )
   )
 }
