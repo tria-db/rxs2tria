@@ -11,9 +11,11 @@ sec_col_grad <- c("#853270", "#A36794", "#C299B8", "#E0CCDB", "#F0E6ED", "#F7F2F
 tert_col_grad <- c("#324a85", "#6778a3", "#99a5c2", "#ccd2e0", "#e6e9f0", "#f2f4f7")
 
 # create palette for plots
-base_palette <- RColorBrewer::brewer.pal(11, "Spectral")
+#base_palette <- RColorBrewer::brewer.pal(8, "Dark2")
 #base_palette <- scales::pal_hue()(9)
 #base_palette <- c("#338585", "#324a85","#853270")
+base_palette <- c("#1B9E77FF", "#D95F02FF", "#7570B3FF", "#E7298AFF", "#66A61EFF", "#338585", "#324a85","#853270", "#A6761DFF", "#666666FF")
+# dark2 with added lighter base colors
 
 # helper function to extend palette to desired length,
 # reordering for better contrast if desired

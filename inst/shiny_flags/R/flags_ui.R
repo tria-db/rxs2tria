@@ -119,27 +119,45 @@ flags_ui <- function(id) {
     # MAIN PANEL ---------------------------------------------------------------
     # main plot card
     bslib::card(
-      #max_height = "750px",
+      fill = FALSE,
       bslib::card_header(
         class = "d-flex justify-content-between align-items-center p-1",
         style = "background-color: #CCE0E0", # "#CCE0E0" is prim_col_grad[4]
-        shiny::uiOutput(ns("selwp")), # reactive output to contain selwp input
+        shiny::div(
+          style = "display: flex; align-items: center; gap: 8px;",
+          shiny::strong("Selected woodpiece:"),
+          shiny::uiOutput(ns("selwp")), # reactive output to contain selwp input
+        ),
         shiny::actionLink(
           ns("plot_settings"), "",
           icon = shiny::icon("gear"))
       ),
       bslib::card_body(
         class = "p-0",
+        fillable = FALSE,
         uiOutput(ns("main_plot_ui"))
+      ),
+      bslib::card_footer(
+        class = "p-1",
+        uiOutput(ns("corr_info_ui"))
       )
     ),
 
     # hot card to edit ring flags of selected image/year
     bslib::card(
+      fill = FALSE,
       bslib::card_header(
         class = "d-flex justify-content-between align-items-center p-1",
-        style = "background-color: #CCE0E0",
-        shiny::uiOutput(ns("selimg")), # reactive output (selimg title)
+        style = "background-color: #CCE0E0; position: relative;",
+        shiny::div(
+          style = "display: flex; align-items: center; gap: 8px;",
+          shiny::strong("Selected image:"),
+          shiny::uiOutput(ns("selimg"))
+        ),
+        shiny::div(
+          style = "position: absolute; left: 50%; transform: translateX(-50%); max-width: 40%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;",
+          shiny::uiOutput(ns("selcomment"))
+        ),
         shiny::div(
           style = "display: flex; align-items: center; gap: 10px;",
           bslib::tooltip(
@@ -167,11 +185,15 @@ flags_ui <- function(id) {
           shiny::actionLink(ns("tbl_settings"), NULL, icon = shiny::icon("gear"))
         )
       ),
-      bslib::card_body(class = "p-0",
+      bslib::card_body(
+        class = "p-0",
+        fillable = FALSE,
         rhandsontable::rHandsontableOutput(ns("img_flags"))
+      ),
+      bslib::card_footer(
+        class = "p-1"
       )
     ),
-
 
     shiny::verbatimTextOutput(ns("debug"))
   )

@@ -10,6 +10,8 @@ $(document).ready(function () {
   var interactiveContainers = [
     ".handsontable",
     ".shiny-input-container",
+    ".selectize-control",
+    ".selectize-dropdown",
     ".btn",
     '[role="button"]',
   ];
@@ -29,18 +31,28 @@ $(document).ready(function () {
     return false;
   }
 
+  // clean up on unload so listeners don't bleed into next app on same port
+  $(window).on("unload", function () {
+    $(document).off("keydown.flags");
+  });
+
   // keybindings
-  $(document).on("keydown", function (e) {
-    // Arrow keys (left/right): trigger prev/next ring buttons
-    // NOTE: seems that hot automatically overwrites when table 
-    // in focus?
-    if (e.key === "ArrowLeft") {
-      e.preventDefault();
-      console.log("Left arrow caught!");
-      Shiny.setInputValue("flags-prev_ring", Math.random());
-    } else if (e.key === "ArrowRight") {
-      e.preventDefault();
-      Shiny.setInputValue("flags-next_ring", Math.random());
+  $(document).on("keydown.flags", function (e) {
+    // Arrow keys: left/right = prev/next image, up/down = prev/next ring
+    // (mirrors HOT navigation direction; HOT handles its own arrow keys when focused)
+    if (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "ArrowUp" || e.key === "ArrowDown") {
+      if (!isInteractiveElement(document.activeElement)) {
+        e.preventDefault();
+        if (e.key === "ArrowLeft") {
+          Shiny.setInputValue("flags-prev_img", Math.random());
+        } else if (e.key === "ArrowRight") {
+          Shiny.setInputValue("flags-next_img", Math.random());
+        } else if (e.key === "ArrowUp") {
+          Shiny.setInputValue("flags-prev_ring", Math.random());
+        } else {
+          Shiny.setInputValue("flags-next_ring", Math.random());
+        }
+      }
     }
 
     // Enter key: trigger event (to select cell in hot)
