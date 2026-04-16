@@ -21,6 +21,10 @@ files (cells, rings, settings).
 }
 \description{
 Given a path to a directory, returns a nested list with the full filepaths of
-all required ROXAS files (images, cell outputs, ring outputs, settings) found
-within (including subdirectories).
+all required ROXAS files (images, cell outputs, ring outputs, settings resp.
+metadata) found within (including all subdirectories except those explicitly
+excluded).
+Note that this function assumes that the files follow the standard naming
+suffixes form ROXAS resp. ROXAS AI, and that each set of four files is stored
+in the same (sub-)directory.
 }

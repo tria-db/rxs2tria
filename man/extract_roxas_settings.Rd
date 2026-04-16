@@ -4,7 +4,7 @@
 \alias{extract_roxas_settings}
 \title{Extract data from a ROXAS settings file}
 \usage{
-extract_roxas_settings(file_settings, roxas_version = c("roxas", "roxas_ai"))
+extract_roxas_settings(file_settings, roxas_version)
 }
 \arguments{
 \item{file_settings}{The file to be read.}
