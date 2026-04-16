@@ -127,6 +127,7 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
         rownames = FALSE,
         selection = "single",
         escape = FALSE,
+        fillContainer = TRUE,
         options = list(pageLength = 5)
       )
     })
@@ -267,6 +268,7 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
                     rownames = FALSE,
                     selection = "single",
                     escape = FALSE,
+                    fillContainer = TRUE,
                     options = list(pageLength = 5,
                                    rowGroup = list(dataSrc = 0)))
     })
@@ -539,6 +541,7 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
                     rownames = FALSE,
                     selection = "single",
                     escape = FALSE,
+                    fillContainer = TRUE,
                     options = list(paging = FALSE,
                                    searching = FALSE))
     })

@@ -5,7 +5,7 @@
 
 #' @noRd
 new_QWAimages <- function(data, roxas_version) {
-  checkmate::assert_class(data, classes = "data.frame")
+  checkmate::assert_class(data, "data.frame")
   checkmate::assert_choice(roxas_version, c("roxas","roxas_ai"))
   structure(
     data,
@@ -25,16 +25,16 @@ new_QWAmetadata <- function(dataset = NULL,
                             woodpieces = NULL,
                             slides = NULL,
                             images = new_QWAimages(data.frame(), "roxas")) {
-  stopifnot(is.null(dataset) || is.data.frame(dataset))
-  stopifnot(is.null(authors) || is.data.frame(authors))
-  stopifnot(is.null(funding) || is.data.frame(funding))
-  stopifnot(is.null(related) || is.data.frame(related))
-  stopifnot(is.null(resources) || is.data.frame(resources))
-  stopifnot(is.null(sites) || is.data.frame(sites))
-  stopifnot(is.null(trees) || is.data.frame(trees))
-  stopifnot(is.null(woodpieces) || is.data.frame(woodpieces))
-  stopifnot(is.null(slides) || is.data.frame(slides))
-  stopifnot(inherits(images, "QWAimages"))
+  checkmate::assert_data_frame(dataset, null.ok = TRUE)
+  checkmate::assert_data_frame(authors, null.ok = TRUE)
+  checkmate::assert_data_frame(funding, null.ok = TRUE)
+  checkmate::assert_data_frame(related, null.ok = TRUE)
+  checkmate::assert_data_frame(resources, null.ok = TRUE)
+  checkmate::assert_data_frame(sites, null.ok = TRUE)
+  checkmate::assert_data_frame(trees, null.ok = TRUE)
+  checkmate::assert_data_frame(woodpieces, null.ok = TRUE)
+  checkmate::assert_data_frame(slides, null.ok = TRUE)
+  checkmate::assert_class(images, "QWAimages")
  
   structure(
     list(
@@ -56,8 +56,8 @@ new_QWAmetadata <- function(dataset = NULL,
 #' @noRd
 new_QWAdata <- function(cells = NULL,
                         rings = NULL) {
-  stopifnot(is.null(cells) || is.data.frame(cells))
-  stopifnot(is.null(rings) || is.data.frame(rings))
+  checkmate::assert_data_frame(cells, null.ok = TRUE)
+  checkmate::assert_data_frame(rings, null.ok = TRUE) 
 
   structure(
     list(
@@ -70,9 +70,9 @@ new_QWAdata <- function(cells = NULL,
 
 #' @noRd
 new_QWAprofile <- function(data, profile_type) {
-  stopifnot(is.data.frame(data))
-  stopifnot(profile_type %in% c("sector","band"))
-
+  checkmate::assert_class(data, "data.frame")
+  checkmate::assert_choice(profile_type,  c("sector","band"))
+  
   structure(
     data,
     class = c("QWAprofile", class(data)),

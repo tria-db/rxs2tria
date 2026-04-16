@@ -87,7 +87,7 @@ max_na_inf <- function(x) {
 #' And for the rings, we add
 #' - eww and lww estimates  (based on Mork index <1)
 #'
-#' @param QWA_data a `QWAdata` object containing the cells and rings dataframes
+#' @param QWA_data a `QWAdata` object containing the cells and rings data frames
 #' @return a `QWAdata` object with the updated cells and rings dataframes with the new measures
 #' @export
 complete_cell_measures <- function(QWA_data){

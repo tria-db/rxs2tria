@@ -81,6 +81,7 @@ ui <- bslib::page_fluid(
     title = "TRIA database: Contribute metadata",
 
     # TAB: Start (prefilled metadata) ------------------------------------------
+    bslib::nav_spacer(),
     bslib::nav_panel(
       title = tab_start,
       start_ui('start')

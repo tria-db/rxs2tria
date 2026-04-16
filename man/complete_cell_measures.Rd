@@ -7,7 +7,7 @@
 complete_cell_measures(QWA_data)
 }
 \arguments{
-\item{QWA_data}{a \code{QWAdata} object containing the cells and rings dataframes}
+\item{QWA_data}{a \code{QWAdata} object containing the cells and rings data frames}
 }
 \value{
 a \code{QWAdata} object with the updated cells and rings dataframes with the new measures

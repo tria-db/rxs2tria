@@ -33,9 +33,9 @@ start_server <- function(id, main_session) {
             "This action overwrites any existing inputs provided in the app,
             including any data already provided in the other tabs.
             Are you sure you want to proceed?",
-            footer = tagList(
-              modalButton("Cancel"),
-              actionButton(ns("confirm_overwrite"), "Proceed")
+            footer = shiny::tagList(
+              shiny::modalButton("Cancel"),
+              shiny::actionButton(ns("confirm_overwrite"), "Proceed")
             )
           )
         )
@@ -88,11 +88,13 @@ start_server <- function(id, main_session) {
           } else {
             ext <- tools::file_ext(input$input_file$datapath)
             if (ext == "csv"){
-              df <- read_QWAimages(input$input_file$datapath, allow_missing_req = FALSE,
+              df <- read_QWAimages(input$input_file$datapath, 
+                allow_missing_req = FALSE,
                 add_missing_opt = TRUE)
               validated <- QWAmetadata(images = df) |> complete_QWAmetadata()
             } else {
-              res <- read_QWAmetadata(input$input_file$datapath, allow_missing_req = FALSE,
+              res <- read_QWAmetadata(input$input_file$datapath, 
+                allow_missing_req = TRUE, # don't be strict, may be in-progress file
                 add_missing_opt = TRUE)
               validated <- res |> complete_QWAmetadata()
             }
