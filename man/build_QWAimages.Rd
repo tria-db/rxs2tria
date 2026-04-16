@@ -15,7 +15,7 @@ build_QWAimages(df_structure, df_settings)
 A \link{QWAimages} object with the joined image-level metadata.
 }
 \description{
-Combines the extracted ROXAS filenames plus data structure (from
+Combines the extracted ROXAS / ROXAS AI filenames plus data structure (from
 \code{\link[=extract_data_structure]{extract_data_structure()}}) and ROXAS settings and image exif data (from
 \code{\link[=collect_settings_data]{collect_settings_data()}}) into a \link{QWAimages} object.
 }
@@ -23,7 +23,7 @@ Combines the extracted ROXAS filenames plus data structure (from
 This is the typical starting point of the \code{prepare_rxs_dataset} workflow.
 The resulting \link{QWAimages} can be passed directly to \code{\link[=collect_raw_data]{collect_raw_data()}} and
 to the metadata Shiny app (\code{\link[=launch_metadata_app]{launch_metadata_app()}}), which enriches it with
-site-, tree-, and dataset-level metadata to produce a full \link{QWAmetadata}.
+site-, tree-, and dataset-level metadata to produce a full \link{QWAmetadata} object.
 }
 \seealso{
 \code{\link[=extract_data_structure]{extract_data_structure()}}, \code{\link[=collect_settings_data]{collect_settings_data()}},

@@ -22,7 +22,7 @@ extract_data_structure(
 )
 }
 \arguments{
-\item{pattern}{The labeling pattern followed by the file names, as a regex
+\item{pattern}{The labeling pattern followed by the file names, a regex
 with named groups.}
 
 \item{site_label}{Optional site code to be used if it is not part of the
@@ -57,18 +57,16 @@ applied across all files.
 Not all hierarchical components are mandatory in the pattern, as long as the
 images can be uniquely identified (e.g. if exactly one woodpiece was
 extracted per tree, there might not be a specific woodpiece identifier,
-or if all data is from the same site, there might not be a site identifier
-in the name).
-Iff all images pertain to the same site and/or the same species, and these
+or if all data is from the same site, there might not be a site identifier).
+If all images pertain to the same site and/or the same species, and these
 components are not part of the labeling pattern, they may also be provided
 via the \code{site_label} and \code{species_code} input parameters.
-Here, \code{species_code} should follow the standard ITRDB species codes,
-c.f. \href{https://webapps.wsl.com/tria/#/about}{webapps.wsl.com/tria/#/about}.
+Here, \code{species_code} should follow the standard ITRDB species codes.
 
 \code{\link[=extract_data_structure]{extract_data_structure()}} is a wrapper around \code{\link[=get_structure_from_filenames]{get_structure_from_filenames()}}
-that uses the list of ROXAS files from \code{\link[=get_roxas_files]{get_roxas_files()}} as input,
-applies the hierarchy extraction to the image file names,
-and adds the original file names to the resulting dataframe.
+that uses the list of ROXAS (AI) files from \code{\link[=get_roxas_files]{get_roxas_files()}} as input,
+applies the hierarchy extraction to the \verb{$fname_image} component,
+and appends the original filepaths as columns to the structure data frame output.
 }
 \examples{
 # with the default pattern ({site}_{species}_{tree}{woodpiece}_{slide}_{image})
@@ -77,7 +75,8 @@ files <- c(
   "SITEA_PISY_01A_1_2.jpg",
   "SITEA_PISY_01A_2_1.jpg",
   "SITEB_LASI_02A_1_1.jpg",
-  "SITEB_LASI_02B_1_1.jpg"
+  "SITEB_LASI_02B_1_1.jpg",
+  "SITEB_LASI_03_1_1.jpg"
 )
 get_structure_from_filenames(files)
 
@@ -92,4 +91,5 @@ files <- c(
  get_structure_from_filenames(
    files, pattern,
    site_label = "SITEA", species_code = "PISY")
+
 }
