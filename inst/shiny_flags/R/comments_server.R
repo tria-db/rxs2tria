@@ -53,7 +53,7 @@ comments_server <- function(id, main_session, flags_out) {
             name = "",
             cell = function(value, row_index) {
               row <- df[row_index, ]
-              htmltools::tags$button(
+              shiny::tags$button(
                 class = "btn btn-sm btn-outline-primary",
                 onclick = sprintf(
                   "Shiny.setInputValue('comments-goto_img', {woodpiece: '%s', image: '%s', nonce: Math.random()})",

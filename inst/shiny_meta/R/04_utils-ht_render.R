@@ -11,7 +11,7 @@ renderer_char <- function(required = NULL, min_length = NULL, max_length = NULL,
   check_regex <- ifelse(is.null(regex_pattern), "false", 'true')
   check_unique <- ifelse(is.null(unique), "false", ifelse(unique, "true", "false"))
 
-  htmlwidgets::JS(htmltools::HTML(sprintf("
+  htmlwidgets::JS(shiny::HTML(sprintf("
     function(instance, td, row, col, prop, value, cellProperties) {
       // remove old tippy if necessary
       if(td.hasOwnProperty('_tippy')) {
@@ -67,7 +67,7 @@ renderer_char <- function(required = NULL, min_length = NULL, max_length = NULL,
 renderer_text <- function(required = NULL){
   check_required <- ifelse(is.null(required), "false", ifelse(required, "true", "false"))
 
-  htmlwidgets::JS(htmltools::HTML(sprintf("
+  htmlwidgets::JS(shiny::HTML(sprintf("
     function(instance, td, row, col, prop, value, cellProperties) {
 
       Handsontable.renderers.HtmlRenderer.apply(this, arguments);
@@ -105,7 +105,7 @@ renderer_drop <- function(required = NULL, options){
   check_required <- ifelse(is.null(required), "false", ifelse(required, "true", "false"))
   options_js <- jsonlite::toJSON(options, auto_unbox = TRUE)
 
-  htmlwidgets::JS(htmltools::HTML(sprintf("
+  htmlwidgets::JS(shiny::HTML(sprintf("
     function(instance, td, row, col, prop, value, cellProperties) {
       // remove old tippy if necessary
       if (td.hasOwnProperty('_tippy')) {
@@ -148,7 +148,7 @@ renderer_auto <- function(required = NULL, options){
   #options_js <- paste0("[", paste0(sprintf("'%s'", options), collapse = ", "), "]")
   options_js <- jsonlite::toJSON(options, auto_unbox = TRUE)
 
-  htmlwidgets::JS(htmltools::HTML(sprintf("
+  htmlwidgets::JS(shiny::HTML(sprintf("
     function(instance, td, row, col, prop, value, cellProperties) {
       // remove old tippy if necessary
       if (td.hasOwnProperty('_tippy')) {
@@ -193,7 +193,7 @@ renderer_num <- function(required = NULL, min_val = NULL, max_val = NULL){
   check_max_val <- ifelse(is.null(max_val), "false", "true")
   maxv <- ifelse(is.null(max_val), "null", max_val)
 
-  htmlwidgets::JS(htmltools::HTML(sprintf("
+  htmlwidgets::JS(shiny::HTML(sprintf("
     function(instance, td, row, col, prop, value, cellProperties) {
       // remove old tippy if necessary
       if(td.hasOwnProperty('_tippy')) {
@@ -248,7 +248,7 @@ renderer_check <- function(required = NULL, min_checks = NULL, max_checks = NULL
   mincb <- ifelse(is.null(min_checks), mincb, ifelse(min_checks > 1, min_checks, mincb))
   maxcb <- ifelse(is.null(max_checks), 10000, max_checks)
 
-  htmlwidgets::JS(htmltools::HTML(sprintf("
+  htmlwidgets::JS(shiny::HTML(sprintf("
   function(instance, td, row, col, prop, value, cellProperties) {
     // remove old tippy if necessary
         if(td.hasOwnProperty('_tippy')) {
@@ -290,7 +290,7 @@ renderer_check <- function(required = NULL, min_checks = NULL, max_checks = NULL
 renderer_date <- function(required = NULL){
   check_required <- ifelse(is.null(required), "false", ifelse(required, "true", "false"))
 
-  htmlwidgets::JS(htmltools::HTML(sprintf("
+  htmlwidgets::JS(shiny::HTML(sprintf("
     function(instance, td, row, col, prop, value, cellProperties) {
       // remove old tippy if necessary
       if(td.hasOwnProperty('_tippy')) {
@@ -392,7 +392,7 @@ hot_col_wrapper <- function(ht, col, col_config) {
 
 tippy_renderer <- function(tippies) {
   tippies_js <- jsonlite::toJSON(tippies, auto_unbox = T, null = "null")
-  htmlwidgets::JS(htmltools::HTML(
+  htmlwidgets::JS(shiny::HTML(
   sprintf("
     function(col, th) {
       var tippies_js = %s;

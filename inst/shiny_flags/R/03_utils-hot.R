@@ -28,7 +28,7 @@ hot_settings_modal <- function(ns, sel_cols){
 
 renderer_cb <- function(bgcolor = default_bg_color, selcolor = sel_row_color) {
   bgcolor_js <- bgcolor %||% ""
-  htmlwidgets::JS(htmltools::HTML(glue::glue("
+  htmlwidgets::JS(shiny::HTML(glue::glue("
     function(instance, td, row, col, prop, value, cellProperties) {
       var selRow = (instance._highlightedRow !== undefined) ? instance._highlightedRow : -1;
       var rowData = instance.getDataAtRow(row);
@@ -51,7 +51,7 @@ renderer_cb_ro <- function(readonly_ids = NULL, bgcolor = default_bg_color,
   bgcolor_js <- bgcolor %||% ""
   readonly_js <- jsonlite::toJSON(readonly_ids %||% integer(0))
 
-  htmlwidgets::JS(htmltools::HTML(glue::glue("
+  htmlwidgets::JS(shiny::HTML(glue::glue("
     function(instance, td, row, col, prop, value, cellProperties) {
       var selRow = (instance._highlightedRow !== undefined) ? instance._highlightedRow : -1;
       var readonlyRows = __readonly_js__;
@@ -80,7 +80,7 @@ renderer_cb_dupl <- function(readonly_ids = NULL, bgcolor = NULL,
   bgcolor_js <- bgcolor %||% ""
   readonly_js <- jsonlite::toJSON(readonly_ids %||% integer(0))
 
-  htmlwidgets::JS(htmltools::HTML(glue::glue("
+  htmlwidgets::JS(shiny::HTML(glue::glue("
     function(instance, td, row, col, prop, value, cellProperties) {
       var selRow = (instance._highlightedRow !== undefined) ? instance._highlightedRow : -1;
       var readonlyRows = __readonly_js__;
@@ -115,7 +115,7 @@ renderer_cb_val <- function(warn_col_ids = NULL, bgcolor = default_bg_color,
   bgcolor_js <- bgcolor %||% ""
   warn_js <- jsonlite::toJSON(warn_col_ids %||% integer(0))
 
-  htmlwidgets::JS(htmltools::HTML(glue::glue("
+  htmlwidgets::JS(shiny::HTML(glue::glue("
     function(instance, td, row, col, prop, value, cellProperties) {
       var selRow = (instance._highlightedRow !== undefined) ? instance._highlightedRow : -1;
       var warnCols = __warn_js__;
@@ -152,7 +152,7 @@ renderer_cb_val <- function(warn_col_ids = NULL, bgcolor = default_bg_color,
 
 renderer_dd <- function(bgcolor = default_bg_color, selcolor = sel_row_color) {
   bgcolor_js <- bgcolor %||% ""
-  htmlwidgets::JS(htmltools::HTML(glue::glue("
+  htmlwidgets::JS(shiny::HTML(glue::glue("
     function(instance, td, row, col, prop, value, cellProperties) {
       var selRow = (instance._highlightedRow !== undefined) ? instance._highlightedRow : -1;
       if (row == selRow) {
@@ -168,7 +168,7 @@ renderer_dd <- function(bgcolor = default_bg_color, selcolor = sel_row_color) {
 
 renderer_txt <- function(bgcolor = default_bg_color, selcolor = sel_row_color) {
   bgcolor_js <- bgcolor %||% ""
-  htmlwidgets::JS(htmltools::HTML(glue::glue("
+  htmlwidgets::JS(shiny::HTML(glue::glue("
     function(instance, td, row, col, prop, value, cellProperties) {
       var selRow = (instance._highlightedRow !== undefined) ? instance._highlightedRow : -1;
       if (row == selRow) {

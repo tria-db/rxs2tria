@@ -9,16 +9,16 @@ server <- function(input, output, session) {
     shiny::showModal(shiny::modalDialog(
       title = "Publisher and contact information",
       "Swiss Federal Institute for Forest, Snow and Landscape Research WSL",
-      htmltools::br(),
+      shiny::br(),
       "Zürcherstrasse 111",
-      htmltools::br(),
+      shiny::br(),
       "8903 Birmensdorf",
-      htmltools::br(),
+      shiny::br(),
       "Switzerland",
-      htmltools::br(),
-      htmltools::br(),
-      htmltools::strong("Contact:"), "Mara Nägelin, ",
-      htmltools::a(href = "mailto:mara.naegelin@wsl.ch","mara.naegelin(at)wsl.ch"),
+      shiny::br(),
+      shiny::br(),
+      shiny::strong("Contact:"), "Mara Nägelin, ",
+      shiny::a(href = "mailto:mara.naegelin@wsl.ch","mara.naegelin(at)wsl.ch"),
       easyClose = TRUE,
       footer = shiny::modalButton("Close")
     ))

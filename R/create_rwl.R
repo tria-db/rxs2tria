@@ -97,7 +97,7 @@ create_rwl <- function(prf_data, df_rings, PAR = "mrw", SECTOR = NULL, path_out,
     }
 
     rwl <- rings_df |>
-      dplyr::select(image_label, year, !!rlang::sym(PAR)) |>
+      dplyr::select(image_label, year, dplyr::all_of(PAR)) |>
       dplyr::filter(!is.na(.data[[PAR]])) |>
       dplyr::mutate(
         series = make_series_id(image_label),
@@ -145,7 +145,7 @@ create_rwl <- function(prf_data, df_rings, PAR = "mrw", SECTOR = NULL, path_out,
     }
 
     rwl <- prf_df |>
-      dplyr::select(image_label, year, !!rlang::sym(PAR)) |>
+      dplyr::select(image_label, year, dplyr::all_of(PAR)) |>
       dplyr::filter(!is.na(.data[[PAR]])) |>
       dplyr::mutate(series = make_series_id(image_label)) |>
       dplyr::group_by(year, series) |>

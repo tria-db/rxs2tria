@@ -23,6 +23,9 @@ collect_resources(
 \code{linked_label} from matching file names.}
 
 \item{recursive}{If \code{TRUE}, recurse into sub-directories (default \code{FALSE}).}
+
+\item{include_unmatched}{If \code{TRUE}, resources that could not be matched
+to a specific type are includes as "other" (default \code{FALSE}).}
 }
 \value{
 A \link[tibble:tibble]{tibble} with columns:
