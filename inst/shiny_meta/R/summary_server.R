@@ -25,8 +25,8 @@ summary_server <- function(id, main_session, start_out, dataset_out, site_out) {
     })
 
     data_combined <- shiny::reactive({
-      images <- QWAimages(start_out$images())
-      new_QWAmetadata(
+      images <- rxs2tria::QWAimages(start_out$images())
+      rxs2tria:::new_QWAmetadata(
         dataset = dataset_out$dataset_tbls$dataset(),
         authors = dataset_out$dataset_tbls$authors(),
         funding = dataset_out$dataset_tbls$funding(),
