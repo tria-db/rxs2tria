@@ -154,6 +154,107 @@ collect_raw_outputs <- function(df_structure, roxas_version, ftype) {
     dplyr::filter(!is.na(.data$year))
 }
 
+#' Remove outliers in cells and rings data
+#'
+#' ROXAS does some automatic outlier detection and replaces the found outliers
+#' in cell and ring measures with negative values. This function replaces
+#' these 'negatives' with NA.
+#' ROXAS also uses error codes (-9999, -999, -99) to indicate aborted analysis,
+#' which in newer software versions are alredy set to NA in the .txt output files.
+#' In any case, the removal of negative values also takes care of these.
+#'
+#' @param QWA_data a `QWAdata` object containing the cells and rings dataframes
+#' @returns A `QWAdata` object with the 'negative' outliers/error codes replaced by NAs
+#'
+#' @export
+remove_outliers <- function(QWA_data, mute_info = FALSE) {
+  checkmate::assert_class(QWA_data, "QWAdata")
+  checkmate::assert_data_frame(QWA_data$cells, null.ok = TRUE)
+  checkmate::assert_data_frame(QWA_data$rings, null.ok = TRUE)
+
+  outl_cols_cells <- c(
+    # no negative values possible:
+    # "raddistr", "rraddistr","la", "asp","majax", "kh","dh","drad", "dtan",
+    # could have negatve error codes: 
+    "nbrno", "nbrid", "cwttan", "cwtrad", "cwtall", "rtsr", "ctsr",  "tb2",
+    # could have negative error codes or outliers:
+    "cwtpi", "cwtba", "cwtle", "cwtri", "cwa", "rwd")
+  outl_cols_rings <- c(
+    # no negative values possible:
+    # "ra", "dh_w", "dh_m",
+    # could have negatve error codes: 
+    "rvgi", "rvsf", "rgsgv", "aoiar",
+    # could have negative values due to artifacts
+    "mrw"
+  )
+
+  info_msg <- c()
+  warn_msg <- c()
+
+  if (!is.null(QWA_data$cells)) {
+    cell_outliers <- QWA_data$cells |> 
+      dplyr::select(dplyr::where(is.numeric), -"year") |>
+      dplyr::summarise(dplyr::across(dplyr::everything(),
+                                      ~sum(.x < 0, na.rm = TRUE))) |>
+      tidyr::pivot_longer(dplyr::everything()) %>%
+      dplyr::filter(value > 0) 
+    if (!mute_info) {
+      info_msg <- c(info_msg,
+        cell_outliers |> 
+          dplyr::filter(.data$name %in% outl_cols_cells) |>
+          glue::glue_data("{name}: {value}"))
+    }
+    cells_rm <- QWA_data$cells %>%
+      dplyr::mutate(dplyr::across(dplyr::all_of(outl_cols_cells),
+                                  ~ dplyr::if_else(.x < 0, NA_real_, .x)))
+    warn_msg <- c(warn_msg,
+      cell_outliers |> 
+        dplyr::filter(! .data$name %in% outl_cols_cells) |>
+        glue::glue_data("{name}: {value}"))
+  } else {
+    cells_rm <- NULL
+  }
+
+  if (!is.null(QWA_data$rings)) {
+    rings_outliers <- QWA_data$rings |> 
+      dplyr::select(dplyr::where(is.numeric), -"year") |>
+      dplyr::summarise(dplyr::across(dplyr::everything(),
+                                      ~sum(.x < 0, na.rm = TRUE))) |>
+      tidyr::pivot_longer(dplyr::everything()) %>%
+      dplyr::filter(value > 0) 
+    if (!mute_info) {
+      info_msg <- c(info_msg,
+        rings_outliers |> 
+          dplyr::filter(.data$name %in% outl_cols_rings) |>
+          glue::glue_data("{name}: {value}"))
+    }
+    rings_rm <- QWA_data$rings %>%
+      dplyr::mutate(dplyr::across(dplyr::all_of(outl_cols_rings),
+                                  ~ dplyr::if_else(.x < 0, NA_real_, .x)))
+    warn_msg <- c(warn_msg,
+      rings_outliers |> 
+        dplyr::filter(! .data$name %in% outl_cols_rings) |>
+        glue::glue_data("{name}: {value}"))
+  } else {
+    rings_rm <- NULL
+  }
+
+  if (!mute_info && length(info_msg)>0) {
+    cli::cli_inform(c(
+      "v" = "Outliers (negative values) have been replaced with NA",
+      info_msg
+    ))
+  }
+
+  if (length(warn_msg)>0) {
+    cli::cli_warn(c(
+      "!" = "Negative values found in unexpected columns:",
+      warn_msg
+    ))
+  }
+
+  new_QWAdata(cells = cells_rm, rings = rings_rm)
+}
 
 #' Collect raw cells and rings output data
 #'
@@ -164,8 +265,7 @@ collect_raw_outputs <- function(df_structure, roxas_version, ftype) {
 #'
 #' The resulting [QWAdata] should then be passed through the additional
 #' preprocessing steps descriped in the `prepare_rxs_dataset` template
-#' (i.e., [remove_outliers()], [complete_cell_measures()] and 
-#' [validate_QWA_data()]).
+#' (i.e., [complete_cell_measures()] and [validate_QWA_data()]).
 #'
 #' @param df_structure Dataframe containing filenames and data structure.
 #' @param roxas_version The software used to create the files (`"roxas"` or `"roxas_ai"`).
@@ -192,6 +292,8 @@ collect_raw_data <- function(df_structure, roxas_version = NULL){
   df_cells_all <- collect_raw_outputs(df_structure, roxas_version, "cells")
   df_rings_all <- collect_raw_outputs(df_structure, roxas_version, "rings")
 
-  new_QWAdata(cells = df_cells_all, rings = df_rings_all)
+  QWA_data <- new_QWAdata(cells = df_cells_all, rings = df_rings_all)
+  # return the object with negative values / error codes removed
+  remove_outliers(QWA_data, mute_info = TRUE)
 }
 

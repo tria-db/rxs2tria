@@ -1102,26 +1102,30 @@ flags_server <- function(id, main_session, comments_out) {
       image_path <- input_data$rxsmeta_data %>%
         dplyr::filter(image_label == sel_img) %>%
         dplyr::pull(fname_image)
+      
+      org_img_name <- input_data$rxsmeta_data %>%
+        dplyr::filter(image_label == sel_img) %>%
+        dplyr::pull(org_img_name)
 
       base_path <- dirname(image_path)
 
       # Check for annotated (twin) image(s) in same folder
       annotated_twin <- list.files(
         base_path,
-        pattern = paste0(sel_img, "_annotated_twin\\."),
+        pattern = paste0(org_img_name, "_annotated_twin\\."),
         full.names = TRUE
       )
       annotated_image <- list.files(
         base_path,
-        pattern = paste0(sel_img, "_annotated\\."),
+        pattern = paste0(org_img_name, "_annotated\\."),
         full.names = TRUE
       )
 
-      # Prefer twin > annotated > image file if found
-      if (length(annotated_twin) == 1) {
-        file_to_open <- annotated_twin
-      } else if (length(annotated_image) == 1) {
+      # Prefer annotated > twin > image file if found
+      if (length(annotated_image) == 1) {
         file_to_open <- annotated_image
+      } else if (length(annotated_twin) == 1) {
+        file_to_open <- annotated_twin
       } else {
         file_to_open <- image_path
       }

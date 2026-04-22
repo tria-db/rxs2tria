@@ -89,7 +89,6 @@ launch_metadata_app()
 # raw ROXAS output files into a QWAdata object.
 
 QWA_data <- collect_raw_data(rxs_images)
-QWA_data <- remove_outliers(QWA_data)
 QWA_data <- complete_cell_measures(QWA_data)
 
 # validate_QWA_data checks dating and CWT estimates and adds ring quality flags
