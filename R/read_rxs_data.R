@@ -181,11 +181,11 @@ remove_outliers <- function(QWA_data, mute_info = FALSE) {
     "cwtpi", "cwtba", "cwtle", "cwtri", "cwa", "rwd")
   outl_cols_rings <- c(
     # no negative values possible:
-    # "ra", "dh_w", "dh_m",
+    # "dh_w", "dh_m",
     # could have negatve error codes: 
     "rvgi", "rvsf", "rgsgv", "aoiar",
     # could have negative values due to artifacts
-    "mrw"
+    "mrw", "ra"
   )
 
   info_msg <- c()
@@ -311,7 +311,7 @@ collect_raw_data <- function(df_meta, roxas_version = NULL) {
   # check dating (df_meta for outmost_year check if available)
   check_ring_years(df_rings_complete, df_meta, warn_only = TRUE)
 
-    cli::cli_inform(c(
+  cli::cli_inform(c(
     "v" = "Data extracted to {.var QWAdata} object"
   ))
   

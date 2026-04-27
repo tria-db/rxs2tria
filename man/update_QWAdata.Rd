@@ -2,10 +2,33 @@
 % Please edit documentation in R/partial_update.R
 \name{update_QWAdata}
 \alias{update_QWAdata}
-\title{Function to update QWA data with new raw data for selected images}
+\title{Update a QWAdata object with re-read raw data for selected images}
 \usage{
-update_QWAdata(QWA_data, imgs_to_update, df_rxsmeta)
+update_QWAdata(x, imgs_to_update, meta, exclude_mode = NULL)
+}
+\arguments{
+\item{x}{a \link{QWAdata} object}
+
+\item{imgs_to_update}{character vector of \code{image_label} values to update;
+must be a subset of \code{meta$image_label}}
+
+\item{meta}{a \link{QWAimages} object, required for \code{\link[=complete_flags]{complete_flags()}} when flag
+columns are present in \code{x}}
+
+\item{exclude_mode}{passed to \code{\link[=complete_flags]{complete_flags()}}; only relevant when flag
+columns are present in \code{x}. \code{NULL} uses the \code{\link[=complete_flags]{complete_flags()}} default
+(\code{"either"}).}
+}
+\value{
+An updated \link{QWAdata} object
 }
 \description{
-Function to update QWA data with new raw data for selected images
+Re-reads the raw data files for \code{imgs_to_update}, recomputes any derived
+cell/ring measures and flag columns that are already present in \code{x}, and
+splices the result back into the existing \link{QWAdata} object. Columns not yet
+present in \code{x} are not added (i.e. the set of columns is preserved).
+}
+\details{
+Duplicate-ring flags are recalculated across all images sharing a woodpiece
+with any updated image, because overlaps may change when one image changes.
 }
