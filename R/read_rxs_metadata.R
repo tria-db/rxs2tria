@@ -591,20 +591,21 @@ build_QWAimages <- function(df_structure,
 
   # auto-detect schema version from the software column
   schema_name <- "images"
-  rv <- unique(df_rxsmeta$software)
-  if (length(rv) != 1 || !(rv %in% c("roxas", "roxas_ai"))){
-    cli::cli_abort("The column `df_settings$software` needs to be 'roxas' or 'roxas_ai'.")
-  }
+  rv <- infer_roxas_version(df_rxsmeta)
 
+  # compliance with base schema
+  schema_path <- system.file(schema_rel_path(rv), package = "rxs2tria")
+  schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
+  tbl_schema <- resolve_schema(schema_obj, schema_path)
+  tbl_props <- get_tbl_props(tbl_schema)
+  
   # align columns and types to schema (coerce with warnings)
-  df_rxsmeta <- align_df_to_schema(df_rxsmeta, 
-    schema_name, roxas_version = rv, 
-    allow_missing_req = FALSE, add_missing_opt = FALSE,
-    mute_info = TRUE) # silent mode except for important warnings
+  df_rxsmeta <- align_to_schema(df_rxsmeta, tbl_props, rv, add_opt = FALSE, mute_info = FALSE)
+   # silent mode except for important warnings
 
   # validate against the base schema, but warn only. user may want to fix
   # things manually in the metadata app
-  validate_schema(df_rxsmeta, schema = schema_name, roxas_version = rv, warn_only = TRUE)
+  check_schema(df_rxsmeta, schema_obj, rv, warn_only = TRUE, greedy = FALSE)
 
   cli::cli_inform(c(
     "v" = "Available ROXAS metadata extracted to {.var QWAimages} object"

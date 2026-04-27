@@ -50,19 +50,19 @@ start_ui <- function(id) {
     h5('Overview of input metadata'),
 
     # WARNING that app is still under construction
-    bslib::card(
-      max_height = 150,
-      bslib::card_header(icon("exclamation-triangle",
-                              class = "me-2", style = "color: #69004F;"),
-                         tags$b("Warning"), style = "color: black; background-color: #E0CCDB;"),
-      bslib::card_body(
-        "This is a preview of the app currently under active development.
-        There is absolutely no warranty regarding the accuracy or completeness
-        of the information provided. Features and data are subject to change,
-        and some functionality may not work as expected at this stage."
-      ),
-      style = "border: 2px solid #69004F; background-color: #F7F2F6"
-    ),
+    # bslib::card(
+    #   max_height = 150,
+    #   bslib::card_header(icon("exclamation-triangle",
+    #                           class = "me-2", style = "color: #69004F;"),
+    #                      tags$b("Warning"), style = "color: black; background-color: #E0CCDB;"),
+    #   bslib::card_body(
+    #     "This is a preview of the app currently under active development.
+    #     There is absolutely no warranty regarding the accuracy or completeness
+    #     of the information provided. Features and data are subject to change,
+    #     and some functionality may not work as expected at this stage."
+    #   ),
+    #   style = "border: 2px solid #69004F; background-color: #F7F2F6"
+    # ),
 
     # accordion ----------------------------------------------------------------
     bslib::accordion(

@@ -87,15 +87,15 @@ launch_metadata_app()
 # ------------------------------------------------------------------------------
 # Read, combine and preprocess the cells and rings measurement data from the
 # raw ROXAS output files into a QWAdata object.
-
+# Removes any outliers (negative values) and error codes in columns where they
+# could occur. Checks if the dating is valid and if CWT analysis was performed.
 QWA_data <- collect_raw_data(rxs_images)
-QWA_data <- remove_outliers(QWA_data)
-QWA_data <- complete_cell_measures(QWA_data)
 
-# validate_QWA_data checks dating and CWT estimates and adds ring quality flags
+# Add additional cell and ring measues, add ring quality flags
 # for duplicate rings (overlapping years from separate images), radially 
 # incomplete rings (at image borders) and missing/wedging rings.
-QWA_data <- validate_QWA_data(QWA_data, rxs_images)
+QWA_data <- complete_QWAdata(QWA_data, rxs_images, exclude_mode = "either")
+
 
 # ------------------------------------------------------------------------------
 # Step 5: Save the QWA data
