@@ -3,7 +3,7 @@
 #' @noRd
 infer_roxas_version <- function(data, warn_only = FALSE) {
   valid <- c("roxas", "roxas_ai")
-  if (!("software" %in% names(data))){
+  if (!("software" %in% names(data))) {
     msg <- "Cannot infer {.arg roxas_version}: {.var data} has no {.var software} column."
     if (warn_only) cli::cli_warn(msg)
     else cli::cli_abort(msg)

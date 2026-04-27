@@ -265,35 +265,56 @@ remove_outliers <- function(QWA_data, mute_info = FALSE) {
 #'
 #' The resulting [QWAdata] should then be passed through the additional
 #' preprocessing steps descriped in the `prepare_rxs_dataset` template
-#' (i.e., [complete_cell_measures()] and [validate_QWA_data()]).
+#' (i.e., [complete_QWAdata()].
 #'
-#' @param df_structure Dataframe containing filenames and data structure.
+#' @param df_meta Data frame or QWAimages containing filenames and data structure.
 #' @param roxas_version The software used to create the files (`"roxas"` or `"roxas_ai"`).
-#'   Required only if `df_structure` is not a `QWAimages` object.
+#'   Required only if `df_meta` is not a `QWAimages` object.
 #' @returns A (non-validated) `QWAdata` object containing the combined 
 #' raw data for cells and rings in `$cells` and `$rings`, respectively.
 #' @seealso [build_QWAimages()], [extract_data_structure()],
 #' [collect_raw_outputs()], [QWAdata()], [remove_outliers()], 
-#' [complete_cell_measures()], [validate_QWA_data()]
+#' [check_QWAdata()]
 #' @export
-collect_raw_data <- function(df_structure, roxas_version = NULL){
-  checkmate::assert_data_frame(df_structure)
+collect_raw_data <- function(df_meta, roxas_version = NULL) {
+  checkmate::assert_data_frame(df_meta)
   checkmate::assert_subset(
     c("fname_cells", 'fname_rings', 'woodpiece_label',
       'slide_label', 'image_label'),
-    names(df_structure))
+    names(df_meta))
 
-  if (inherits(df_structure, "QWAimages")) {
-    roxas_version <- attr(df_structure, "roxas_version")
-  } else {
-    checkmate::assert_choice(roxas_version, c("roxas", "roxas_ai"))
+  if (inherits(df_meta, "QWAimages")) {
+    roxas_version <- attr(df_meta, "roxas_version")
+  } else if (is.null(roxas_version)) {
+    roxas_version <- infer_roxas_version(df_meta)
   }
+  checkmate::assert_choice(roxas_version, c("roxas", "roxas_ai"))
 
-  df_cells_all <- collect_raw_outputs(df_structure, roxas_version, "cells")
-  df_rings_all <- collect_raw_outputs(df_structure, roxas_version, "rings")
+  df_cells_all <- collect_raw_outputs(df_meta, roxas_version, "cells")
+  df_rings_all <- collect_raw_outputs(df_meta, roxas_version, "rings")
+  # these dfs have correct required columns and types per defintion
+  # exepct if there was an issue with one or more files -> warning message
 
-  QWA_data <- new_QWAdata(cells = df_cells_all, rings = df_rings_all)
-  # return the object with negative values / error codes removed
-  remove_outliers(QWA_data, mute_info = TRUE)
+  # forcibly remove any error codes and "negative" values that are actually outliers
+  QWA_data <- remove_outliers(
+    new_QWAdata(cells = df_cells_all, rings = df_rings_all),
+    mute_info = FALSE
+  )
+
+  # ensure we have full sequence of years in rings df (including missing)
+  df_rings_complete <- complete_rings(QWA_data)
+
+  # check for cwt estimates (expected/required for conifer data)
+  # TODO: could already check in df_meta for info wrt angiosperm/confifer?
+  check_cwt(QWA_data$cells, warn_only = TRUE)
+  
+  # check dating (df_meta for outmost_year check if available)
+  check_ring_years(df_rings_complete, df_meta, warn_only = TRUE)
+
+    cli::cli_inform(c(
+    "v" = "Data extracted to {.var QWAdata} object"
+  ))
+  
+  new_QWAdata(cells = df_cells_all, rings = df_rings_complete)
 }
 

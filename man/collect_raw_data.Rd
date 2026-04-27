@@ -4,13 +4,13 @@
 \alias{collect_raw_data}
 \title{Collect raw cells and rings output data}
 \usage{
-collect_raw_data(df_structure, roxas_version = NULL)
+collect_raw_data(df_meta, roxas_version = NULL)
 }
 \arguments{
-\item{df_structure}{Dataframe containing filenames and data structure.}
+\item{df_meta}{Data frame or QWAimages containing filenames and data structure.}
 
 \item{roxas_version}{The software used to create the files (\code{"roxas"} or \code{"roxas_ai"}).
-Required only if \code{df_structure} is not a \code{QWAimages} object.}
+Required only if \code{df_meta} is not a \code{QWAimages} object.}
 }
 \value{
 A (non-validated) \code{QWAdata} object containing the combined
@@ -25,11 +25,10 @@ or the output from the earlier \code{\link[=extract_data_structure]{extract_data
 \details{
 The resulting \link{QWAdata} should then be passed through the additional
 preprocessing steps descriped in the \code{prepare_rxs_dataset} template
-(i.e., \code{\link[=remove_outliers]{remove_outliers()}}, \code{\link[=complete_cell_measures]{complete_cell_measures()}} and
-\code{\link[=validate_QWA_data]{validate_QWA_data()}}).
+(i.e., \code{\link[=complete_QWAdata]{complete_QWAdata()}}.
 }
 \seealso{
 \code{\link[=build_QWAimages]{build_QWAimages()}}, \code{\link[=extract_data_structure]{extract_data_structure()}},
 \code{\link[=collect_raw_outputs]{collect_raw_outputs()}}, \code{\link[=QWAdata]{QWAdata()}}, \code{\link[=remove_outliers]{remove_outliers()}},
-\code{\link[=complete_cell_measures]{complete_cell_measures()}}, \code{\link[=validate_QWA_data]{validate_QWA_data()}}
+\code{\link[=check_QWAdata]{check_QWAdata()}}
 }

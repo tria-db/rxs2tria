@@ -316,7 +316,9 @@ check_QWAmetadata <- function(x) {
 
   components <- c("dataset", "authors", "funding", "related",
                   "resources", "sites", "trees", "woodpieces", "slides")
-  for (comp in components) check_component(x[[comp]], comp)
+  for (comp in components) { # check against schema, missing optional cols
+    check_component(x[[comp]], comp)
+  }
 
   # hierarchy consistency checks against x$images
   check_hierarchy(x$sites, "sites", "site_label", x$images, function(d) {
@@ -364,7 +366,7 @@ check_QWAmetadata <- function(x) {
 #' @param x A [QWAmetadata] object.
 #' @returns A [QWAmetadata] object with all optional columns and component
 #'   tables initialized.
-#' @seealso [complete_QWAimages()], [QWAmetadata()], [make_schema_skeleton()]
+#' @seealso [complete_QWAimages()], [QWAmetadata()]
 #' @export
 complete_QWAmetadata <- function(x) {
   checkmate::assert_class(x, "QWAmetadata")

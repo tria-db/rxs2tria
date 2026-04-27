@@ -44,7 +44,7 @@ QWAprofile <- function(data, profile_type = c("sector", "band")) {
   new_QWAprofile(data, profile_type)
 }
 
-# Methods (general and specifi) ----
+# Methods (general and specific) ----
 #' Summarise a QWAprofile object
 #'
 #' Displays a compact overview of a [QWAprofile] object: the profile type,
@@ -129,3 +129,6 @@ read_QWAprofile <- function(file) {
   cli::cli_inform(c("v" = "QWAprofile read from {.file {file}}"))
   new_QWAprofile(df, profile_type = pt)
 }
+
+# TODO: add a wrapper method
+# calculate_QWAprofile(QWAdata, method, ...)

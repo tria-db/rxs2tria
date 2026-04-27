@@ -231,11 +231,12 @@ collect_resources <- function(path, append_to = NULL, df_structure = NULL,
   checkmate::assert_flag(recursive)
   checkmate::assert_flag(include_unmatched)
 
+   # TODO: fix with new api
   if (!is.null(append_to)) {
-    df <- align_df_to_schema(append_to, "resources")
-    validate_schema(df, "resources", warn_only = TRUE, greedy = FALSE)
+    df <- align_to_schema(append_to, "resources")
+    check_schema(df, "resources", warn_only = TRUE, greedy = FALSE)
   } else {
-    df <- make_schema_skeleton("resources")
+    df <- create_empty_df("resources")
   }
 
   files <- fs::dir_ls(path, recurse = recursive, type = "file")
