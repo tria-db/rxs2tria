@@ -60,19 +60,16 @@ check_hierarchy <- function(df, name, id_col, img, summary_fn) {
   }
   # find IDs where the values from df vs imgs-derived don't match (i.e. distinct rows)
   df_counts <- summary_fn(img)
-    # df_exp <- imgs |>
-    #   dplyr::group_by(dplyr::across(union(groupby_cols, id_col))) |>
-    #   dplyr::summarise("{count_name}" := dplyr::n_distinct({{ count_col }}),
-    #                   .groups = "drop")
   check_mismatch <- df[names(df_counts)] |>
     dplyr::bind_rows(df_counts, .id = "source") |>
-    dplyr::distinct(dplyr::across(names(df_counts)), .keep_all = TRUE) |> 
-    dplyr::filter(source == 2) |> 
-    dplyr::pull({{ id_col }})
+    dplyr::distinct(dplyr::across(names(df_counts)), .keep_all = TRUE) |>
+    dplyr::filter(source == 2) |>
+    dplyr::pull(.data[[id_col]])
   if (length(check_mismatch) > 0) {
+    hint_cols <- setdiff(names(df_counts), id_col)
     cli::cli_abort(c(
       "x" = "{length(check_mismatch)} ID{?s} with mismatched data found for {.var ${id_col}} in {.field {name}}",
-      "i" = "Compare {c(groupby_cols, count_name)} in {.field {name}} vs the corresponding values from {.field images}}",
+      "i" = "Compare {.field {hint_cols}} in {.field {name}} vs the corresponding values derived from {.field images}",
       "i" = "Mismatches: {check_mismatch}"
     ))
   }
@@ -104,7 +101,7 @@ complete_tbl <- function(df, schema, img = NULL, summary_fn = NULL) {
     df_counts <- summary_fn(img)
     join_by <- intersect(names(df_counts), names(df_empty))
     df <- dplyr::left_join(df_counts, df_empty, by = join_by)
-    df[names(df_empty)]  # ensure schema column order
+    df <- df[names(df_empty)]  # ensure schema column order
   }
 
   df

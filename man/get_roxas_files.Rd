@@ -12,12 +12,12 @@ get_roxas_files(path_in, roxas_version, exclude_dirs = NULL)
 \item{roxas_version}{which ROXAS version was used to create the files (classic
 \code{"roxas"} or new AI version \code{"roxas_ai"}).}
 
-\item{exclude_dirs}{directory names / keywords that should be ignored ignored
+\item{exclude_dirs}{directory names / keywords that should be ignored
 when searching for ROXAS files (e.g., "unused_files", optional)}
 }
 \value{
-A list of lists containing filepaths of images and ROXAS output
-files (cells, rings, settings).
+A named list of four character vectors (\code{fname_image}, \code{fname_cells},
+\code{fname_rings}, \code{fname_settings}) containing the full filepaths.
 }
 \description{
 Given a path to a directory, returns a nested list with the full filepaths of

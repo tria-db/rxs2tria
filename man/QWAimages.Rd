@@ -14,7 +14,7 @@ structure for QWAimages objects and validated against the corresponding JSON sch
 If \code{NULL}, inferred from the \verb{$software} column of \code{data}.}
 }
 \value{
-An \code{QWAimages} object with a \code{roxas_version} attribute.
+A \code{QWAimages} object with a \code{roxas_version} attribute.
 }
 \description{
 \code{QWAimages} is a subclass of \code{data.frame} that holds image-level metadata

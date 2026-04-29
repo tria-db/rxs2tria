@@ -11,10 +11,10 @@
 #' @param path_in path of the input directory.
 #' @param roxas_version which ROXAS version was used to create the files (classic
 #'   `"roxas"` or new AI version `"roxas_ai"`).
-#' @param exclude_dirs directory names / keywords that should be ignored ignored
+#' @param exclude_dirs directory names / keywords that should be ignored
 #'   when searching for ROXAS files (e.g., "unused_files", optional)
-#' @returns A list of lists containing filepaths of images and ROXAS output
-#'          files (cells, rings, settings).
+#' @returns A named list of four character vectors (`fname_image`, `fname_cells`,
+#'   `fname_rings`, `fname_settings`) containing the full filepaths.
 #' @export
 get_roxas_files <- function(path_in, roxas_version,
                             exclude_dirs = NULL) {
@@ -77,10 +77,10 @@ get_roxas_files <- function(path_in, roxas_version,
 
   # check: if the patterns are removed, the four file lists should match
   l_files <- list(
-    sub(pattern_cell_files, "", files_cells, ignore.case = TRUE),
-    sub(pattern_ring_files, "", files_rings, ignore.case = TRUE),
-    sub(pattern_settings_files, "", files_settings, ignore.case = TRUE),
-    sub(pattern_orgimg_files, "", files_images, ignore.case = TRUE)
+    stringr::str_remove(files_cells, stringr::regex(pattern_cell_files, ignore_case = TRUE)),
+    stringr::str_remove(files_rings, stringr::regex(pattern_ring_files, ignore_case = TRUE)),
+    stringr::str_remove(files_settings, stringr::regex(pattern_settings_files, ignore_case = TRUE)),
+    stringr::str_remove(files_images, stringr::regex(pattern_orgimg_files, ignore_case = TRUE))
   )
   all_fnames <- Reduce(union, l_files)
 
@@ -185,14 +185,14 @@ get_roxas_files <- function(path_in, roxas_version,
 #'  "tree2_sl1_img1.jpg",
 #'  "tree2_sl1_img2.jpg"
 #'  )
-#'  pattern <- "(?<tree>[:alnum:].+)_(?<slide>[:alnum:]+)_(?<image>[:alnum:]+)"
+#'  pattern <- "(?<tree>[[:alnum:]].+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)"
 #'  get_structure_from_filenames(
 #'    files, pattern,
 #'    site_label = "SITEA", species_code = "PISY")
 #' 
 get_structure_from_filenames <- function(
     filenames,
-    pattern = "(?<site>[:alnum:]+)_(?<species>[:alnum:]+)_(?<tree>[:alnum:][:alnum:])(?<woodpiece>[:alnum:]*)_(?<slide>[:alnum:]+)_(?<image>[:alnum:]+)",
+    pattern = "(?<site>[[:alnum:]]+)_(?<species>[[:alnum:]]+)_(?<tree>[[:alnum:]][[:alnum:]])(?<woodpiece>[[:alnum:]]*)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)",
     site_label = NULL, species_code = NULL){
   checkmate::assert_character(filenames, any.missing = FALSE, min.len = 1)
   checkmate::assert_string(pattern)
@@ -228,7 +228,7 @@ get_structure_from_filenames <- function(
   }
 
   duplicates <- fnames[duplicated(fnames)]
-  if (length(duplicates > 0)) {
+  if (length(duplicates) > 0) {
     cli::cli_abort(c(
       "Extracted structure must yield unique image identifiers",
       "x" = "The following files yield duplicate image identifiers",
@@ -285,11 +285,11 @@ get_structure_from_filenames <- function(
 }
 
 #' @rdname get_structure_from_filenames
-#' @param files The list of vectors with ROXAS file names.
+#' @param files The named list of file vectors returned by [get_roxas_files()].
 #' @export
 extract_data_structure <- function(
     files,
-    pattern = "(?<site>[[:alnum:]]+)_(?<species>[[:alnum:]]+)_(?<tree>[[:alnum:].]+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)", # "(?<site>[:alnum:]+)_(?<species>[:alnum:]+)_(?<tree>[:alnum:][:alnum:])(?<woodpiece>[:alnum:]*)_(?<slide>[:alnum:]+)_(?<image>[:alnum:]+)",
+    pattern = "(?<site>[[:alnum:]]+)_(?<species>[[:alnum:]]+)_(?<tree>[[:alnum:].]+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)",
     site_label = NULL, species_code = NULL) {
   checkmate::assert_list(
     files, types = 'character', any.missing = FALSE, len = 4)
@@ -365,7 +365,7 @@ collect_image_info <- function(files_images, batch_size = 50) {
     ) 
 
   cli::cli_inform(c(
-    "v" = glue::glue("Image metadata extracted from {length(files_images)} images")
+    "v" = "Image metadata extracted from {length(files_images)} images"
   ))
 
   df_image_meta |>
@@ -424,9 +424,11 @@ extract_roxas_settings <- function(file_settings, roxas_version) {
         meas_geometry = dplyr::if_else(.data$meas_geometry==1, "linear", "circular"),
         fname_settings = file_settings,
         software = "roxas") |>
-      tidyr::separate("origin_calibrated",
-                      into = c("origin_calibrated_x", "origin_calibrated_y"),
-                      sep = "[ ]*/[ ]*", remove = TRUE, convert = TRUE) |>
+      tidyr::separate_wider_regex("origin_calibrated",
+                                  patterns = c(origin_calibrated_x = "[^/]+",
+                                               "[ ]*/[ ]*",
+                                               origin_calibrated_y = ".+")) |>
+      dplyr::mutate(dplyr::across(c("origin_calibrated_x", "origin_calibrated_y"), as.numeric)) |>
       dplyr::relocate("fname_settings", "software", "sw_version")
   } else {
     cli::cli_warn("ROXAS AI support is still under development.")
@@ -540,7 +542,7 @@ collect_settings_data <- function(files_settings,
 
   rv_file <- if (roxas_version == "roxas") rv_file else paste(rv_file, "and image exif")
   cli::cli_inform(c(
-    "v" = glue::glue("{rv_file} data extracted from {nrow(df_settings_all)} files")
+    "v" = "{rv_file} data extracted from {nrow(df_settings_all)} files"
   ))
   df_settings_all
 }
@@ -582,16 +584,11 @@ build_QWAimages <- function(df_structure,
   check_structure(df_structure)
 
   df_rxsmeta <- df_structure |>
-    dplyr::left_join(df_settings, by = 'fname_settings') 
-  # |> 
-  #   dplyr::mutate( # TODO: should we initialize the missing user-input columns (empty, cannot be read from files)
-  #     band_width = NA_character_,
-  #     only_ew = NA
-  #   )
+    dplyr::left_join(df_settings, by = 'fname_settings')
 
   # auto-detect schema version from the software column
   schema_name <- "images"
-  rv <- infer_roxas_version(df_rxsmeta)
+  rv <- resolve_roxas_version(df_rxsmeta)
 
   # compliance with base schema
   schema_path <- system.file(schema_rel_path(rv), package = "rxs2tria")

@@ -67,7 +67,11 @@ comments_server <- function(id, main_session, flags_out) {
         # selection = "multiple",
         # defaultSelected = which(df$comment_handled),
         compact = TRUE,
-        borderless = FALSE
+        borderless = FALSE,
+        searchable = TRUE,
+        showPageSizeOptions = TRUE,
+        pageSizeOptions = c(10,25,50),
+        defaultPageSize = 50
       )
     })
 

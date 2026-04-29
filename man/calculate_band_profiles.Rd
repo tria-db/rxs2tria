@@ -38,6 +38,11 @@ Computes moving-band profiles of selected cell parameters across the ring
 width. Each band is a window of \code{bandwidth} microns that shifts in steps of
 \code{stepsize} microns from the cambial side to the lumen side of the ring.
 }
+\details{
+Requires that \code{\link[=complete_QWAdata]{complete_QWAdata()}} has been run, as \verb{$rings} must
+contain \code{mrw} and \code{eww}. \code{raddistr.st} is computed internally from
+\code{rraddistr} and \code{mrw}.
+}
 \seealso{
 \code{\link[=calculate_sector_profiles]{calculate_sector_profiles()}}, \code{\link[=QWAprofile]{QWAprofile()}}
 }

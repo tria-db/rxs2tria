@@ -25,11 +25,11 @@ read_output_file <- function(filename, selcols, colname_variants, delim) {
       return(df_raw)
     },
     error = function(e) {
-      cli::cli_inform(c( 
-        x = "An error occurred while reading file {.file {filename}}",
+      cli::cli_inform(c(
+        "x" = "Could not read {.file {filename}}:",
         " " = e$message
       ))
-      return(data.frame(year = NA_integer_)) # return a single NA row for this file
+      return(data.frame(year = integer(0)))
     }
   )
 }
@@ -106,7 +106,7 @@ collect_raw_outputs <- function(df_structure, roxas_version, ftype) {
     # in addition
     #   RBXY; <- ring boundary arrays
     #   cells_above;enabled <- first for sorting, second is incomplete flag?
-    # TODO: use enabled as incomplete?
+    # TODO: use enabled in combination with the incomplete check in complete_flags?
     if (roxas_version == "roxas_ai") {
       selcols <- selcols[selcols != "AOIAR"]
     }
@@ -133,25 +133,19 @@ collect_raw_outputs <- function(df_structure, roxas_version, ftype) {
     tidyr::unnest("raw_data") |> 
     dplyr::arrange(dplyr::pick("image_label", "year"))
 
-  # check for any files that could not be read properly
-  df_failed <- df_raw_all |>
-    dplyr::filter(is.na(.data$year))
-  if (nrow(df_failed) > 0) {
-    failed_files <- df_structure |>
-      dplyr::filter(.data$image_label %in% df_failed$image_label) |>
-      dplyr::select("image_label", {{fname_col}})
+  # check for any files that could not be read (contributed zero rows after unnest)
+  failed_labels <- setdiff(df_structure$image_label, df_raw_all$image_label)
+  if (length(failed_labels) > 0) {
     cli::cli_warn(c(
-      "{nrow(failed_files)} {ftype} {cli::qty(nrow(failed_files))} file{?s} could not be read properly.",
-      "Please check the raw file{?s} for the following {nrow(failed_files)} image label{?s}:",
-      failed_files$image_label
+      "!" = "{length(failed_labels)} {ftype} file{?s} could not be read:",
+      failed_labels
     ))
   } else {
     cli::cli_alert_success("All {ftype} data files read successfully")
   }
 
   df_raw_all |>
-    dplyr::select(!{{fname_col}}) |>
-    dplyr::filter(!is.na(.data$year))
+    dplyr::select(!{{fname_col}})
 }
 
 #' Remove outliers in cells and rings data
@@ -163,9 +157,10 @@ collect_raw_outputs <- function(df_structure, roxas_version, ftype) {
 #' which in newer software versions are alredy set to NA in the .txt output files.
 #' In any case, the removal of negative values also takes care of these.
 #'
-#' @param QWA_data a `QWAdata` object containing the cells and rings dataframes
-#' @returns A `QWAdata` object with the 'negative' outliers/error codes replaced by NAs
-#'
+#' @param QWA_data A `QWAdata` object containing the cells and rings dataframes.
+#' @param mute_info If `TRUE`, suppresses the per-column outlier count message
+#'   (warnings for unexpected negative columns are always shown).
+#' @returns A `QWAdata` object with negative outliers/error codes replaced by `NA`.
 #' @export
 remove_outliers <- function(QWA_data, mute_info = FALSE) {
   checkmate::assert_class(QWA_data, "QWAdata")
@@ -196,7 +191,7 @@ remove_outliers <- function(QWA_data, mute_info = FALSE) {
       dplyr::select(dplyr::where(is.numeric), -"year") |>
       dplyr::summarise(dplyr::across(dplyr::everything(),
                                       ~sum(.x < 0, na.rm = TRUE))) |>
-      tidyr::pivot_longer(dplyr::everything()) %>%
+      tidyr::pivot_longer(dplyr::everything()) |>
       dplyr::filter(value > 0) 
     if (!mute_info) {
       info_msg <- c(info_msg,
@@ -204,7 +199,7 @@ remove_outliers <- function(QWA_data, mute_info = FALSE) {
           dplyr::filter(.data$name %in% outl_cols_cells) |>
           glue::glue_data("{name}: {value}"))
     }
-    cells_rm <- QWA_data$cells %>%
+    cells_rm <- QWA_data$cells |>
       dplyr::mutate(dplyr::across(dplyr::all_of(outl_cols_cells),
                                   ~ dplyr::if_else(.x < 0, NA_real_, .x)))
     warn_msg <- c(warn_msg,
@@ -220,7 +215,7 @@ remove_outliers <- function(QWA_data, mute_info = FALSE) {
       dplyr::select(dplyr::where(is.numeric), -"year") |>
       dplyr::summarise(dplyr::across(dplyr::everything(),
                                       ~sum(.x < 0, na.rm = TRUE))) |>
-      tidyr::pivot_longer(dplyr::everything()) %>%
+      tidyr::pivot_longer(dplyr::everything()) |>
       dplyr::filter(value > 0) 
     if (!mute_info) {
       info_msg <- c(info_msg,
@@ -228,7 +223,7 @@ remove_outliers <- function(QWA_data, mute_info = FALSE) {
           dplyr::filter(.data$name %in% outl_cols_rings) |>
           glue::glue_data("{name}: {value}"))
     }
-    rings_rm <- QWA_data$rings %>%
+    rings_rm <- QWA_data$rings |>
       dplyr::mutate(dplyr::across(dplyr::all_of(outl_cols_rings),
                                   ~ dplyr::if_else(.x < 0, NA_real_, .x)))
     warn_msg <- c(warn_msg,
@@ -263,18 +258,15 @@ remove_outliers <- function(QWA_data, mute_info = FALSE) {
 #' be a `QWAimages` object derived with [build_QWAimages()],
 #' or the output from the earlier [extract_data_structure()] step.
 #'
-#' The resulting [QWAdata] should then be passed through the additional
-#' preprocessing steps descriped in the `prepare_rxs_dataset` template
-#' (i.e., [complete_QWAdata()].
+#' The resulting [QWAdata] should then be passed through [complete_QWAdata()]
+#' to add derived measures and ring quality flags.
 #'
-#' @param df_meta Data frame or QWAimages containing filenames and data structure.
+#' @param df_meta Data frame or `QWAimages` object containing filenames and data structure.
 #' @param roxas_version The software used to create the files (`"roxas"` or `"roxas_ai"`).
 #'   Required only if `df_meta` is not a `QWAimages` object.
-#' @returns A (non-validated) `QWAdata` object containing the combined 
-#' raw data for cells and rings in `$cells` and `$rings`, respectively.
-#' @seealso [build_QWAimages()], [extract_data_structure()],
-#' [collect_raw_outputs()], [QWAdata()], [remove_outliers()], 
-#' [check_QWAdata()]
+#' @returns A `QWAdata` object, ready to pass to [complete_QWAdata()].
+#' @seealso [build_QWAimages()], [extract_data_structure()], [QWAdata()],
+#'   [complete_QWAdata()]
 #' @export
 collect_raw_data <- function(df_meta, roxas_version = NULL) {
   checkmate::assert_data_frame(df_meta)
@@ -283,12 +275,7 @@ collect_raw_data <- function(df_meta, roxas_version = NULL) {
       'slide_label', 'image_label'),
     names(df_meta))
 
-  if (inherits(df_meta, "QWAimages")) {
-    roxas_version <- attr(df_meta, "roxas_version")
-  } else if (is.null(roxas_version)) {
-    roxas_version <- infer_roxas_version(df_meta)
-  }
-  checkmate::assert_choice(roxas_version, c("roxas", "roxas_ai"))
+  roxas_version <- resolve_roxas_version(df_meta, rv_param = roxas_version)
 
   df_cells_all <- collect_raw_outputs(df_meta, roxas_version, "cells")
   df_rings_all <- collect_raw_outputs(df_meta, roxas_version, "rings")

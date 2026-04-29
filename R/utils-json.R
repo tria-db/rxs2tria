@@ -540,21 +540,7 @@ check_missing_opt <- function(df, tbl_props, schema = NULL) {
   invisible(TRUE)
 }
 
-#' @noRd
-check_roxas_version <- function(x, rv_param = NULL) {
-  checkmate::assert_choice(rv_param, c("roxas", "roxas_ai"), null.ok = TRUE, .var.name = "Parameter roxas_version")
-  rv_attr <- attr(x, "roxas_version")
-  checkmate::assert_choice(rv_attr, c("roxas", "roxas_ai"), null.ok = TRUE, .var.name = "Data attribute roxas_version")
-  rv_data <- infer_roxas_version(x, warn_only = TRUE)
-  sources <- Filter(Negate(is.null), list(param = rv_param, attr = rv_attr, data = rv_data))
-  if (length(unique(sources)) > 1)
-    cli::cli_warn(c(
-      "!" = "Conflicting {.arg roxas_version} values.",
-      "i" = "Parameter: {.val {rv_param}}",
-      "i" = "Data attribute: {.val {rv_attr}}",
-      "i" = "Inferred from data: {.val {rv_data}}"
-    ))
-}
+
 
 
 

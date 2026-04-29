@@ -211,7 +211,7 @@ infer_resource_type <- function(filename) {
 #'   `linked_label` from matching file names.
 #' @param recursive If `TRUE`, recurse into sub-directories (default `FALSE`).
 #' @param include_unmatched If `TRUE`, resources that could not be matched
-#'   to a specific type are includes as "other" (default `FALSE`).
+#'   to a specific type are included as "other" (default `FALSE`).
 #'
 #' @returns A [tibble][tibble::tibble] with columns:
 #'   - `resource_name`: base file name.
@@ -231,12 +231,16 @@ collect_resources <- function(path, append_to = NULL, df_structure = NULL,
   checkmate::assert_flag(recursive)
   checkmate::assert_flag(include_unmatched)
 
-   # TODO: fix with new api
+  schema_path <- system.file(schema_rel_path("resources"), package = "rxs2tria")
+  schema_obj  <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
+  tbl_schema  <- resolve_schema(schema_obj, schema_path)
+  tbl_props   <- get_tbl_props(tbl_schema)
+
   if (!is.null(append_to)) {
-    df <- align_to_schema(append_to, "resources")
-    check_schema(df, "resources", warn_only = TRUE, greedy = FALSE)
+    df <- align_to_schema(append_to, tbl_props, "resources")
+    check_schema(df, schema_obj, "resources", warn_only = TRUE, greedy = FALSE)
   } else {
-    df <- create_empty_df("resources")
+    df <- create_empty_df(tbl_props)
   }
 
   files <- fs::dir_ls(path, recurse = recursive, type = "file")
@@ -294,7 +298,7 @@ collect_resources <- function(path, append_to = NULL, df_structure = NULL,
     }
   }
 
-  n_new <- if (exists("new_res")) nrow(df) else 0L
+  n_new <- if (exists("new_res", inherits = FALSE)) nrow(new_res) else 0L
   cli::cli_inform(c("v" = "Found {n_new} resource{?s} in {.path {path}}"))
   df
 }
@@ -310,7 +314,7 @@ collect_resources <- function(path, append_to = NULL, df_structure = NULL,
 #' @param path Path to a directory to scan for files.
 #' @param recursive If `TRUE`, recurse into sub-directories (default `FALSE`).
 #' @param include_unmatched If `TRUE`, resources that could not be matched
-#'   to a specific type are includes as "other" (default `FALSE`).
+#'   to a specific type are included as "other" (default `FALSE`).
 #' @returns The [QWAmetadata] object with the `$resources` component updated.
 #'
 #' @seealso [collect_resources()], [QWAmetadata()]

@@ -7,12 +7,12 @@
 #' @param meta a [QWAimages] object
 #' @param imgs_to_update character vector of `image_label` values to update;
 #'   must be a subset of `meta$image_label`
-#' @param settings_date_orders date order string(s) passed to
+#' @param settings_date_orders Character; date order string(s) passed to
 #'   [lubridate::parse_date_time()] to parse the `rxs_created_at` field
 #' @returns An updated [QWAimages] object
 #' @export
-update_rxsmeta <- function(meta, imgs_to_update,
-                           settings_date_orders) {
+update_QWAimages <- function(meta, imgs_to_update,
+                             settings_date_orders) {
   checkmate::assert_class(meta, "QWAimages")
   checkmate::assert_subset(imgs_to_update, meta$image_label)
 
@@ -22,6 +22,7 @@ update_rxsmeta <- function(meta, imgs_to_update,
 
   roxas_version <- attr(meta, "roxas_version")
 
+  # read in settings files again (cf. collect_settings_data())
   rv_file <- if (roxas_version == "roxas") "ROXAS settings" else "ROXAS AI metadata"
   results <- files_to_update |>
     purrr::map(\(x) extract_roxas_settings(x, roxas_version = roxas_version),
@@ -53,9 +54,8 @@ update_rxsmeta <- function(meta, imgs_to_update,
 #' Update a QWAdata object with re-read raw data for selected images
 #'
 #' Re-reads the raw data files for `imgs_to_update`, recomputes any derived
-#' cell/ring measures and flag columns that are already present in `x`, and
-#' splices the result back into the existing [QWAdata] object. Columns not yet
-#' present in `x` are not added (i.e. the set of columns is preserved).
+#' cell/ring measures and derived flag columns that are already present in `x`, and
+#' splices the result back into the existing [QWAdata] object.
 #'
 #' Duplicate-ring flags are recalculated across all images sharing a woodpiece
 #' with any updated image, because overlaps may change when one image changes.
@@ -65,15 +65,25 @@ update_rxsmeta <- function(meta, imgs_to_update,
 #'   must be a subset of `meta$image_label`
 #' @param meta a [QWAimages] object, required for [complete_flags()] when flag
 #'   columns are present in `x`
-#' @param exclude_mode passed to [complete_flags()]; only relevant when flag
-#'   columns are present in `x`. `NULL` uses the [complete_flags()] default
-#'   (`"either"`).
+#' @param exclude_mode passed to [complete_flags()]; only relevant when the
+#'   `$exclude_issues` flag is present in `x`: how should the `$exclude_issues`
+#'    flag column be initialized, to exclude any incomplete or missing rings
+#'   (`"either"`, default) or only the incomplete rings (i.e., not flagging
+#'   missing/wedging rings for exclusion from analyses, `"incomplete_only"`).
+#' @param reset_manual_flags Logical; if `TRUE` (default), any manual flag
+#'   column edits made via the flags Shiny app for the updated images are
+#'   reset. If `FALSE`, existing values in the manual flag columns are kept
+#'   (i.e. this assumes that the dating was not affected by the re-analysis).
 #' @returns An updated [QWAdata] object
 #' @export
-update_QWAdata <- function(x, imgs_to_update, meta, exclude_mode = NULL) {
+update_QWAdata <- function(x, imgs_to_update, meta,
+                           exclude_mode = c("either","incomplete_only"),
+                           reset_manual_flags = TRUE) {
   checkmate::assert_class(x, "QWAdata")
   checkmate::assert_class(meta, "QWAimages")
   checkmate::assert_subset(imgs_to_update, meta$image_label)
+  checkmate::assert_flag(reset_manual_flags)
+  exclude_mode <- match.arg(exclude_mode)
 
   files_to_update <- meta |>
     dplyr::filter(image_label %in% imgs_to_update)
@@ -81,20 +91,34 @@ update_QWAdata <- function(x, imgs_to_update, meta, exclude_mode = NULL) {
   # read and preprocess raw cells/rings data for the updated images
   x_new <- collect_raw_data(files_to_update)
 
-  # recalculate only the measures that already exist 
-  cell_meas_all <- c("tca", "rwd2", "dcwt", "raddistr.st", "cwtall.adj",
-                     "cdrad", "cdtan", "cdratio", "sector100", "ew_lw")
-  cell_do_not_calc <- names(x$cells)[!names(x$cells) %in% cell_meas_all]
-  ring_meas_all <- c("eww","lww")
-  ring_do_not_calc <- names(x$rings)[!names(x$rings) %in% ring_meas_all]
-  x_new$cells[cell_do_not_calc] <- NA
-  x_new$rings[ring_do_not_calc] <- NA
-  x_new <- complete_measures(x_new)
-  x_new$cells[cell_do_not_calc] <- NULL
-  x_new$rings[ring_do_not_calc] <- NULL
+  # recalculate only the measures that already exist in x
+  meas_all <- c("tca", "rwd2", "dcwt", "cwtall.adj",
+                "cdrad", "cdtan", "cdratio", "sector100", "ew_lw",
+                "eww", "lww")
+  meas_to_recalc <- intersect(meas_all, c(names(x$cells), names(x$rings)))
+  x_new <- complete_measures(x_new, only = meas_to_recalc)
 
   # for the rings data, we still need to recalculate the automatic flags
   flag_cols <- c("incomplete_ring", "missing_ring", "duplicate_ring", "exclude_dupl", "exclude_issues")
+
+  # first: carry over or reset manual flag columns
+  manual_lgl_cols <- setdiff(names(x$rings)[sapply(x$rings, is.logical)], flag_cols)
+  manual_char_cols <- intersect(c("affected_tissue", "comment"), names(x$rings))
+  manual_cols <- c(manual_lgl_cols, manual_char_cols)
+
+  if (length(manual_cols) > 0) {
+    # if we reset: nothing to do, bind rows and replace NA with FALSE
+    # if we want to keep old values: add them to x_new
+    if (!reset_manual_flags) {
+      old_manual <- x$rings |>
+        dplyr::filter(image_label %in% imgs_to_update) |>
+        dplyr::select(image_label, year, dplyr::all_of(manual_cols))
+      x_new$rings <- x_new$rings |>
+        dplyr::left_join(old_manual, by = c("image_label", "year"))
+    }
+  }
+  
+  # recaluclate flag columns if present:
   if (any(flag_cols %in% names(x$rings))) {
     if (!all(flag_cols %in% names(x$rings))) {
       cli::cli_abort("Cannot update with partial calculated flag columns. Remove all or run complete_QWAdata first.")
@@ -111,18 +135,22 @@ update_QWAdata <- function(x, imgs_to_update, meta, exclude_mode = NULL) {
 
     df_rings_wps <- flag_duplicate_rings(df_rings_wps) # this affects only the duplicate_ring and exclude_dupl cols, so any other edited cols stay the same
 
+    # update the rings component with the data (incl calc flags for all affected wps)
     x$rings <- x$rings |>
-      dplyr::filter(!woodpiece_label %in% affected_wps) |> # filter out wps to update
+      dplyr::filter(!woodpiece_label %in% affected_wps) |> # filter out any affected/old wp data
       dplyr::bind_rows(df_rings_wps) |>
       dplyr::mutate(dplyr::across(dplyr::where(is.logical), ~tidyr::replace_na(., FALSE))) |>
       dplyr::arrange(woodpiece_label, slide_label, image_label, year)
   } else {
+    # update the rings component with the data (no calc flags, only imgs_to_update)
     x$rings <- x$rings |>
       dplyr::filter(!image_label %in% imgs_to_update) |>
       dplyr::bind_rows(x_new$rings) |>
+      dplyr::mutate(dplyr::across(dplyr::where(is.logical), ~tidyr::replace_na(., FALSE))) |>
       dplyr::arrange(woodpiece_label, slide_label, image_label, year)
   }
 
+  # update the cells component with the new data
   x$cells <- x$cells |>
     dplyr::filter(!image_label %in% imgs_to_update) |> # filter out old data
     dplyr::bind_rows(x_new$cells) |>

@@ -1,23 +1,81 @@
 # Helpers ----
-# Get roxas version from images data frame ($software column)
 #' @noRd
-infer_roxas_version <- function(data, warn_only = FALSE) {
+# infer roxas_version from $software column; returns NULL with warning if ambiguous
+infer_rv_from_data <- function(x) {
   valid <- c("roxas", "roxas_ai")
-  if (!("software" %in% names(data))) {
-    msg <- "Cannot infer {.arg roxas_version}: {.var data} has no {.var software} column."
-    if (warn_only) cli::cli_warn(msg)
-    else cli::cli_abort(msg)
-  }
-  vals <- unique(stats::na.omit(data$software))
+  if (!("software" %in% names(x))) return(NULL)
+  vals <- unique(stats::na.omit(x$software))
   ok <- intersect(vals, valid)
-  if (length(ok) != 1) {
-    msg <- c("Cannot infer {.arg roxas_version} from {.var data$software}.",
-            "i" = "Found: {.val {if (length(vals) == 0) NA else vals}}",
-            "i" = "Expected exactly one of: {.val {valid}}")
-    if (warn_only) cli::cli_warn(msg)
-    else cli::cli_abort(msg)
+  if (length(ok) == 1) return(ok)
+  if (length(ok) > 1)
+    cli::cli_warn(c(
+      "!" = "Mixed {.var software} values in data: {.val {ok}}.",
+      "i" = "Data should contain only one ROXAS software version."
+    ))
+  NULL
+}
+
+#' @noRd
+# resolve roxas_version from attr > param > data for a QWAimages object or data.frame
+# warn if: 
+#  - rv_infer cannot be uniquely inferred from data,
+#  - rv_attr and rv_infer do not match (attr wins),
+# error if:
+#  - rv_attr and rv_param mismatch
+#  - rv_param and rv_infer mismatch
+#  - all are NULL
+resolve_roxas_version <- function(x, rv_param = NULL) {
+  valid <- c("roxas", "roxas_ai")
+  checkmate::assert_choice(rv_param, valid, null.ok = TRUE)
+  rv_attr <- attr(x, "roxas_version")
+  checkmate::assert_choice(rv_attr, valid, null.ok = TRUE)
+  rv_infer <- infer_rv_from_data(x)
+
+  if (!is.null(rv_attr)) {
+    if (!is.null(rv_param) && rv_param != rv_attr)
+      cli::cli_abort(c(
+        "Supplied {.arg roxas_version} ({.val {rv_param}}) conflicts with
+         the object's {.arg roxas_version} attribute ({.val {rv_attr}}).",
+        "i" = "Rebuild the  {.val QWAimages} object or correct the input data."
+      ))
+    if (!is.null(rv_infer) && rv_infer != rv_attr)
+      cli::cli_warn(c(
+        "!" = "{.arg roxas_version} attribute ({.val {rv_attr}}) does not match
+               the {.var software} column ({.val {rv_infer}}).",
+        "i" = "Check your data for mixed or incorrect software values."
+      ))
+    return(rv_attr)
   }
-  ok
+
+  if (!is.null(rv_param) && !is.null(rv_infer) && rv_param != rv_infer)
+    cli::cli_abort(c(
+      "Supplied {.arg roxas_version} ({.val {rv_param}}) conflicts with
+       the value inferred from {.field $software} ({.val {rv_infer}}).",
+      "i" = "Check that {.arg roxas_version} matches the {.field software} column."
+    ))
+
+  rv <- rv_param %||% rv_infer
+  if (is.null(rv))
+    cli::cli_abort(c(
+      "Cannot determine {.arg roxas_version}.",
+      "i" = "Supply it explicitly or ensure the data has a valid {.field software} column."
+    ))
+  rv
+}
+
+#' @noRd
+# check if roxas version can be inferred and matches attr
+check_roxas_version <- function(x) {
+  rv_attr <- attr(x, "roxas_version")
+  checkmate::assert_choice(rv_attr, c("roxas", "roxas_ai"))
+  rv_infer <- infer_rv_from_data(x)
+  if (!is.null(rv_infer) && rv_infer != rv_attr)
+    cli::cli_warn(c(
+      "!" = "{.arg roxas_version} attribute ({.val {rv_attr}}) does not match
+             the {.var software} column ({.val {rv_infer}}).",
+      "i" = "Check your data for mixed or incorrect software values."
+    ))
+  invisible(TRUE)
 }
 
 # Internal S3 constructor ----
@@ -51,23 +109,12 @@ new_QWAimages <- function(data, roxas_version) {
 #' @param roxas_version The ROXAS software version: `"roxas"` or `"roxas_ai"`.
 #'   If `NULL`, inferred from the `$software` column of `data`.
 #'
-#' @returns An `QWAimages` object with a `roxas_version` attribute.
+#' @returns A `QWAimages` object with a `roxas_version` attribute.
 #'
 #' @seealso [QWAmetadata()], [build_QWAimages()], [read_QWAimages()]
 #' @export
 QWAimages <- function(data, roxas_version = NULL) {
-  # ensure valid roxas_version can be established:
-  checkmate::assert_choice(roxas_version, c("roxas","roxas_ai"), null.ok = TRUE)
-  rv_param <- roxas_version
-  rv_attr <- attr(data, "roxas_version")
-  checkmate::assert_choice(rv_attr, c("roxas","roxas_ai"), null.ok = TRUE)
-  rv_data <- if (is.null(rv_param) && is.null(rv_attr)) infer_roxas_version(data) else NULL
-  if (length(unique(c(rv_param,rv_attr,rv_data))) > 1) {
-    cli::cli_abort(c(
-      "x" = "Conflicting {.arg roxas_version} values. Check input data."
-    ))
-  }
-  roxas_version <- rv_param %||% rv_attr %||% rv_data 
+  roxas_version <- resolve_roxas_version(data, rv_param = roxas_version)
 
   # prep data:
   data <- tibble::as_tibble(data, .name_repair = janitor::make_clean_names)
@@ -90,6 +137,14 @@ QWAimages <- function(data, roxas_version = NULL) {
 }
 
 # Methods (general and specific) ------
+#' @export
+#' @rdname summary.QWAimages
+print.QWAimages <- function(x, ...) {
+  NextMethod()
+  invisible(x)
+}
+
+
 #' Print summary of a QWAimages object
 #'
 #' Displays a compact overview of a [QWAimages] object: the ROXAS software
@@ -108,7 +163,7 @@ summary.QWAimages <- function(x, ...) {
   n_slides <- length(unique(x$slide_label))
   n_wps <- length(unique(x$woodpiece_label))
   n_trees <- length(unique(x$tree_label))
-    sites <- unique(x$site_label)
+  sites <- unique(x$site_label)
   species <- unique(x$species_code)
   yrs <- range(x$outmost_year, na.rm = TRUE)
   
@@ -149,7 +204,7 @@ check_QWAimages <- function(x) {
   # extended validation checks:
   # compliance with base schema
   check_schema(x, schema_obj, roxas_version, warn_only = TRUE, greedy = FALSE)
-  # warn if roxas_version mismatch
+  # warn if attr vs $software column mismatch
   check_roxas_version(x)
   # warn if missing optional columns
   check_missing_opt(x, tbl_props, roxas_version)
@@ -199,6 +254,9 @@ complete_QWAimages <- function(x) {
 #'   vroom will automatically compress the output regardless of this parameter.
 #' @param overwrite Allow to overwrite existing files? (default `TRUE`).
 #' @returns The output file path, invisibly.
+#' @note The `roxas_version` attribute is not written to the CSV file. It is
+#'   re-derived from the `$software` column when the file is read back with
+#'   [read_QWAimages()].
 #' @seealso [read_QWAimages()], [QWAimages]
 #' @export
 write_QWAimages <- function(x, file, compress = FALSE, overwrite = TRUE) {

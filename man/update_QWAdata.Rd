@@ -4,7 +4,13 @@
 \alias{update_QWAdata}
 \title{Update a QWAdata object with re-read raw data for selected images}
 \usage{
-update_QWAdata(x, imgs_to_update, meta, exclude_mode = NULL)
+update_QWAdata(
+  x,
+  imgs_to_update,
+  meta,
+  exclude_mode = c("either", "incomplete_only"),
+  reset_manual_flags = TRUE
+)
 }
 \arguments{
 \item{x}{a \link{QWAdata} object}
@@ -15,18 +21,24 @@ must be a subset of \code{meta$image_label}}
 \item{meta}{a \link{QWAimages} object, required for \code{\link[=complete_flags]{complete_flags()}} when flag
 columns are present in \code{x}}
 
-\item{exclude_mode}{passed to \code{\link[=complete_flags]{complete_flags()}}; only relevant when flag
-columns are present in \code{x}. \code{NULL} uses the \code{\link[=complete_flags]{complete_flags()}} default
-(\code{"either"}).}
+\item{exclude_mode}{passed to \code{\link[=complete_flags]{complete_flags()}}; only relevant when the
+\verb{$exclude_issues} flag is present in \code{x}: how should the \verb{$exclude_issues}
+flag column be initialized, to exclude any incomplete or missing rings
+(\code{"either"}, default) or only the incomplete rings (i.e., not flagging
+missing/wedging rings for exclusion from analyses, \code{"incomplete_only"}).}
+
+\item{reset_manual_flags}{Logical; if \code{TRUE} (default), any manual flag
+column edits made via the flags Shiny app for the updated images are
+reset. If \code{FALSE}, existing values in the manual flag columns are kept
+(i.e. this assumes that the dating was not affected by the re-analysis).}
 }
 \value{
 An updated \link{QWAdata} object
 }
 \description{
 Re-reads the raw data files for \code{imgs_to_update}, recomputes any derived
-cell/ring measures and flag columns that are already present in \code{x}, and
-splices the result back into the existing \link{QWAdata} object. Columns not yet
-present in \code{x} are not added (i.e. the set of columns is preserved).
+cell/ring measures and derived flag columns that are already present in \code{x}, and
+splices the result back into the existing \link{QWAdata} object.
 }
 \details{
 Duplicate-ring flags are recalculated across all images sharing a woodpiece

@@ -8,7 +8,7 @@
 get_structure_from_filenames(
   filenames,
   pattern =
-    "(?<site>[:alnum:]+)_(?<species>[:alnum:]+)_(?<tree>[:alnum:][:alnum:])(?<woodpiece>[:alnum:]*)_(?<slide>[:alnum:]+)_(?<image>[:alnum:]+)",
+    "(?<site>[[:alnum:]]+)_(?<species>[[:alnum:]]+)_(?<tree>[[:alnum:]][[:alnum:]])(?<woodpiece>[[:alnum:]]*)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)",
   site_label = NULL,
   species_code = NULL
 )
@@ -31,7 +31,7 @@ pattern, only if all images are from the same site.}
 \item{species_code}{Optional species code to be used if it is not part of the
 pattern, only if all images are from the same species.}
 
-\item{files}{The list of vectors with ROXAS file names.}
+\item{files}{The named list of file vectors returned by \code{\link[=get_roxas_files]{get_roxas_files()}}.}
 }
 \value{
 A dataframe containing the extracted data structure (plus the
@@ -87,7 +87,7 @@ files <- c(
  "tree2_sl1_img1.jpg",
  "tree2_sl1_img2.jpg"
  )
- pattern <- "(?<tree>[:alnum:].+)_(?<slide>[:alnum:]+)_(?<image>[:alnum:]+)"
+ pattern <- "(?<tree>[[:alnum:]].+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)"
  get_structure_from_filenames(
    files, pattern,
    site_label = "SITEA", species_code = "PISY")
