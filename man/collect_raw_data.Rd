@@ -7,14 +7,13 @@
 collect_raw_data(df_meta, roxas_version = NULL)
 }
 \arguments{
-\item{df_meta}{Data frame or QWAimages containing filenames and data structure.}
+\item{df_meta}{Data frame or \code{QWAimages} object containing filenames and data structure.}
 
 \item{roxas_version}{The software used to create the files (\code{"roxas"} or \code{"roxas_ai"}).
 Required only if \code{df_meta} is not a \code{QWAimages} object.}
 }
 \value{
-A (non-validated) \code{QWAdata} object containing the combined
-raw data for cells and rings in \verb{$cells} and \verb{$rings}, respectively.
+A \code{QWAdata} object, ready to pass to \code{\link[=complete_QWAdata]{complete_QWAdata()}}.
 }
 \description{
 Read and combine data from all raw cells and ring data files.
@@ -23,12 +22,10 @@ be a \code{QWAimages} object derived with \code{\link[=build_QWAimages]{build_QW
 or the output from the earlier \code{\link[=extract_data_structure]{extract_data_structure()}} step.
 }
 \details{
-The resulting \link{QWAdata} should then be passed through the additional
-preprocessing steps descriped in the \code{prepare_rxs_dataset} template
-(i.e., \code{\link[=complete_QWAdata]{complete_QWAdata()}}.
+The resulting \link{QWAdata} should then be passed through \code{\link[=complete_QWAdata]{complete_QWAdata()}}
+to add derived measures and ring quality flags.
 }
 \seealso{
-\code{\link[=build_QWAimages]{build_QWAimages()}}, \code{\link[=extract_data_structure]{extract_data_structure()}},
-\code{\link[=collect_raw_outputs]{collect_raw_outputs()}}, \code{\link[=QWAdata]{QWAdata()}}, \code{\link[=remove_outliers]{remove_outliers()}},
-\code{\link[=check_QWAdata]{check_QWAdata()}}
+\code{\link[=build_QWAimages]{build_QWAimages()}}, \code{\link[=extract_data_structure]{extract_data_structure()}}, \code{\link[=QWAdata]{QWAdata()}},
+\code{\link[=complete_QWAdata]{complete_QWAdata()}}
 }

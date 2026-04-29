@@ -7,7 +7,8 @@
 launch_metadata_app(server_run = FALSE)
 }
 \arguments{
-\item{server_run}{Logical, if TRUE, runs the app in server mode (for hosting on shiny server).}
+\item{server_run}{Logical; if \code{TRUE}, runs the app in server mode (for
+hosting on a Shiny server).}
 }
 \description{
 Launch the metadata Shiny app

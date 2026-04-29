@@ -207,7 +207,7 @@ load_data_csv <- function(path_prf, path_rings, path_rxsmeta,
   }
 
   rings_data_in <- vroom::vroom(path_rings,
-                                col_types = specs$rings_data$req_cols)
+                                col_types = specs$rings_data$req_cols, guess_max = 1000)
 
   if (is.na(path_rxsmeta) || path_rxsmeta == "") {
     rxsmeta_data_in <- NULL

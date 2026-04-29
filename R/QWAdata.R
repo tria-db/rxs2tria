@@ -154,7 +154,6 @@ max_na_inf <- function(x) {
 #' - tca: la + cwa
 #' - rwd2: cwtrad/drad
 #' - dcwt
-#' - raddistr.st: raddistr standardized by mrw
 #' - cwtall.adj
 #' - cdrad, cdtan, cdratio
 #' - sector100
@@ -165,10 +164,15 @@ max_na_inf <- function(x) {
 #' the missing measures are added.
 #'
 #' @param QWA_data a `QWAdata` object containing the cells and rings data frames
+#' @param only optional character vector of measure names to calculate. When
+#'   supplied, only measures listed here are eligible for calculation (measures
+#'   not in `only` are treated as if already present and are skipped). `NULL`
+#'   (default) retains the existing behaviour: all missing measures are added.
 #' @return a `QWAdata` object with the updated cells and rings dataframes with the new measures
 #' @export
-complete_measures <- function(QWA_data) {
+complete_measures <- function(QWA_data, only = NULL) {
   checkmate::assert_class(QWA_data, "QWAdata")
+  checkmate::assert_character(only, null.ok = TRUE)
 
   df_cells <- QWA_data$cells |> 
     # join mrw may needed for some calculations
@@ -187,7 +191,6 @@ complete_measures <- function(QWA_data) {
                                    (.data$lr + .data$cwtall)^2 * pi - .data$la)),
     dcwt = rlang::quo(.data$wa / (.data$la + .data$wa)),
     # standardized raddistr (by mrw):
-    raddistr.st = rlang::quo(.data$rraddistr * .data$mrw / 100),
     # add mean cwt: mean of radial and tangential cwt if Mork index latewood-like,
     # in earlywood-like cells take cwttan
     cwtall.adj = rlang::quo(dplyr::if_else(.data$rtsr < 1, .data$cwttan, .data$cwtall)),
@@ -205,13 +208,14 @@ complete_measures <- function(QWA_data) {
   )
 
   # find which ones actually need to be recalculated
-  cell_meas_all <- c("tca", "rwd2", "dcwt", "raddistr.st", "cwtall.adj",
-                     "cdrad", "cdtan", "cdratio", "sector100")
+  cell_meas_all <- c("tca", "rwd2", "dcwt", "cwtall.adj",
+                     "cdrad", "cdtan", "cdratio", "sector100", "ew_lw")
   cell_meas_missing <- setdiff(cell_meas_all, names(QWA_data$cells))
-  if ("dcwt" %in% cell_meas_missing) {
-    to_calculate <- c(cell_meas_missing, c("lr","wa"))
+  if (!is.null(only)) cell_meas_missing <- intersect(cell_meas_missing, only)
+  to_calculate <- if ("dcwt" %in% cell_meas_missing) {
+    c(cell_meas_missing, c("lr", "wa"))
   } else {
-    to_calculate <- cell_meas_missing
+    cell_meas_missing
   }
   ring_meas_missing <- c()
   
@@ -222,7 +226,9 @@ complete_measures <- function(QWA_data) {
     dplyr::select(!dplyr::any_of(c("lr","wa")))
 
   # do we need to recalculate max_EW_sector for cells$ew_lw or rings$eww?
-  if (!("ew_lw" %in% names(df_cells)) || !("eww" %in% names(df_rings))) {
+  ew_lw_needed <- "ew_lw" %in% cell_meas_missing
+  eww_needed   <- !"eww" %in% names(df_rings) && (is.null(only) || "eww" %in% only)
+  if (ew_lw_needed || eww_needed) {
     mork <- 1
     df_ewlw <- df_cells |> 
       dplyr::filter(!is.na(.data$rtsr), !is.na(.data$mrw)) |> # remove cells that do not have a measured CWT or MRW
@@ -238,15 +244,14 @@ complete_measures <- function(QWA_data) {
         max_EW_sector = max_na_inf(.data$sector100[.data$rollmean <= mork]),
         .groups = "drop")
     
-    if (!"ew_lw" %in% names(df_cells)) {
-      df_cells <- df_cells |> 
-        dplyr::left_join(df_ewlw, by = c('image_label', 'year')) |> 
-        dplyr::mutate(ew_lw = dplyr::if_else(.data$sector100 <= .data$max_EW_sector, "EW", "LW")) |> 
+    if (ew_lw_needed) {
+      df_cells <- df_cells |>
+        dplyr::left_join(df_ewlw, by = c('image_label', 'year')) |>
+        dplyr::mutate(ew_lw = dplyr::if_else(.data$sector100 <= .data$max_EW_sector, "EW", "LW")) |>
         dplyr::select(!"mrw", !"max_EW_sector")
-      cell_meas_missing <- c(cell_meas_missing, "ew_lw")
     }
 
-    if (!"eww" %in% names(df_rings)) {
+    if (eww_needed) {
       df_rings <- df_rings |> 
         dplyr::left_join(df_ewlw, by = c("image_label", "year")) |> 
         dplyr::mutate(eww = dplyr::if_else(.data$max_EW_sector >= 0,
@@ -256,14 +261,13 @@ complete_measures <- function(QWA_data) {
     }
   }
 
-  if (!"lww" %in% names(df_rings)) {
+  if (!"lww" %in% names(df_rings) && (is.null(only) || "lww" %in% only)) {
     df_rings <- df_rings |>
       dplyr::mutate(lww = .data$mrw - .data$eww)
     ring_meas_missing <- c(ring_meas_missing, "lww")
   }
 
   # reorder: derived columns go to the end
-  cell_meas_all <- c(cell_meas_all, "ew_lw")
   ring_meas_all <- c("eww", "lww")
   df_cells <- df_cells |>
     dplyr::select(-dplyr::any_of(c("mrw",cell_meas_all)),
@@ -347,15 +351,15 @@ complete_flags <- function(x, meta, exclude_mode = c("either","incomplete_only")
   }
 
   if ("missing_ring" %in% flag_cols_missing) {
-    df_rings_log <- df_rings_log %>%
-      dplyr::mutate(missing_ring = is.na(cno) | (cno < 5) | dplyr::coalesce(mrw < 10, FALSE), # TODO: (should never have NA cno anymore because we replace with 0), but mrw might be NA for incomplete rings -> coalesce. make thresholds function params?
-                    no_MRW_other = is.na(mrw) & !(outermost_ring | innermost_ring)) # TODO: check if this ever occurs and for what reason
+    df_rings_log <- df_rings_log |>
+      dplyr::mutate(missing_ring = is.na(.data$cno) | (.data$cno < 5) | dplyr::coalesce(.data$mrw < 10, FALSE), # TODO: (should never have NA cno anymore because we replace with 0), but mrw might be NA for incomplete rings -> coalesce. make thresholds function params?
+                    no_MRW_other = is.na(.data$mrw) & !(.data$outermost_ring | .data$innermost_ring)) # TODO: check if this ever occurs and for what reason
     # for missing rings, we want some measures set to 0
     missing_to_zero <- c("mrw","ra","eww","lww")
-    df_rings_log <- df_rings_log |> 
+    df_rings_log <- df_rings_log |>
       dplyr::mutate(
-        dplyr::across(dplyr::any_of(missing_to_zero), 
-          \(x) dplyr::if_else(.data$missing_ring) & is.na(x) & .data$cno < 5, 0, x)
+        dplyr::across(dplyr::any_of(missing_to_zero),
+          \(x) dplyr::if_else(.data$missing_ring & is.na(x) & .data$cno < 5, 0, x))
       )
   }
 
@@ -365,7 +369,7 @@ complete_flags <- function(x, meta, exclude_mode = c("either","incomplete_only")
 
   mode <- match.arg(exclude_mode)
   if ("exclude_issues" %in% flag_cols_missing) {
-    df_rings_log <- df_rings_log %>%
+    df_rings_log <- df_rings_log |>
       dplyr::mutate(
         exclude_issues = switch(
           mode,
@@ -659,6 +663,9 @@ check_QWAdata <- function(x, meta = NULL,
     # TODO: check against schema for cells
     check_missing <- checkmate::test_data_frame(
       x$cells[c("image_label","year","xpix","ypix")], any.missing = FALSE)
+    if (!check_missing) {
+      cli::cli_warn("Missing required detected in {.field cells} component")
+    }
     # extra_cols <- names(x$cells) %in% all_cols
     # char_cols <- x$cells |> dplyr::select(dplyr::where(is.character)) |> names()
     # checkmate::assert_subset(char_cols, ...)

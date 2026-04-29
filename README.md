@@ -24,17 +24,18 @@ nor officially released.
 ## Installation
 
 You can install the development version of `rxs2tria` from
-[GitHub](https://github.com/) with:
+[GitHub](https://github.com/tria-db/rxs2tria/) with:
 
 ``` r
-pak::pak("tria-db/rxs2tria") # or pak::pak("tria-db/rxs2tria@develop") for the even more experimental develop branch
+pak::pak("tria-db/rxs2tria")
+# or pak::pak("tria-db/rxs2tria@develop") for the develop branch
 ```
 
 ## Getting started
 
-The easiest way to follow the `rxs2tria` worklow defined in template
-file. The following makes a copy of the template and saves it your
-current working directory:
+The easiest way to get started is to follow the `rxs2tria` workflow
+defined in the template file. The following makes a copy of the template
+and saves it to your current working directory:
 
 ``` r
 library(rxs2tria)

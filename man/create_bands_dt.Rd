@@ -3,7 +3,7 @@
 \name{create_bands_dt}
 \alias{create_bands_dt}
 \title{Helper function to create the moving band definitions for given a mrw,
-andwidth and stepsize}
+bandwidth and stepsize}
 \usage{
 create_bands_dt(mrw_val, bandwidth, stepsize, band_rebound = TRUE)
 }
@@ -21,6 +21,6 @@ a data.table with start and end positions of each band for the given mrw_val
 }
 \description{
 Helper function to create the moving band definitions for given a mrw,
-andwidth and stepsize
+bandwidth and stepsize
 }
 \keyword{internal}

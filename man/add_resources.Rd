@@ -14,7 +14,7 @@ add_resources(x, path, recursive = FALSE, include_unmatched = FALSE)
 \item{recursive}{If \code{TRUE}, recurse into sub-directories (default \code{FALSE}).}
 
 \item{include_unmatched}{If \code{TRUE}, resources that could not be matched
-to a specific type are includes as "other" (default \code{FALSE}).}
+to a specific type are included as "other" (default \code{FALSE}).}
 }
 \value{
 The \link{QWAmetadata} object with the \verb{$resources} component updated.

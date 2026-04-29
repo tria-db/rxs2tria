@@ -21,6 +21,11 @@ The output file path, invisibly.
 \description{
 Write a QWAprofile object to a CSV file
 }
+\note{
+The \code{profile_type} attribute is not written to the CSV file. It is
+re-derived from the column names when the file is read back with
+\code{\link[=read_QWAprofile]{read_QWAprofile()}}.
+}
 \seealso{
 \code{\link[=read_QWAprofile]{read_QWAprofile()}}, \code{\link[=QWAprofile]{QWAprofile()}}
 }

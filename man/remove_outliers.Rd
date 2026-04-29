@@ -7,10 +7,13 @@
 remove_outliers(QWA_data, mute_info = FALSE)
 }
 \arguments{
-\item{QWA_data}{a \code{QWAdata} object containing the cells and rings dataframes}
+\item{QWA_data}{A \code{QWAdata} object containing the cells and rings dataframes.}
+
+\item{mute_info}{If \code{TRUE}, suppresses the per-column outlier count message
+(warnings for unexpected negative columns are always shown).}
 }
 \value{
-A \code{QWAdata} object with the 'negative' outliers/error codes replaced by NAs
+A \code{QWAdata} object with negative outliers/error codes replaced by \code{NA}.
 }
 \description{
 ROXAS does some automatic outlier detection and replaces the found outliers

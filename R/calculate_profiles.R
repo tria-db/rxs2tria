@@ -21,7 +21,7 @@ calculate_sector_profiles <- function(QWA_data, n_sectors, sel_cell_params, quan
   # if (length(sel_cell_params) == 1 && sel_cell_params == "all"){
   #   sel_cell_params <- setdiff(
   #     colnames(QWA_data$cells),
-  #     c("image_label", "year", "rraddistr", "raddistr.st")
+  #     c("image_label", "year", "rraddistr")
   #   )
   # }
   # use data.table for speed on large dataframes
@@ -30,7 +30,7 @@ calculate_sector_profiles <- function(QWA_data, n_sectors, sel_cell_params, quan
   cells_dt <- cells_dt[!is.na(rraddistr),
                        c("image_label", "year", "rraddistr", sel_cell_params),
                        with = FALSE]
-  # cut cells into n sectors based on there relative radial position
+  # cut cells into n sectors based on their relative radial position
   cells_dt[,
            sector_n := as.numeric(
              cut(rraddistr, breaks = seq(from = 0, to = 100, by = 100/n_sectors),
@@ -39,12 +39,6 @@ calculate_sector_profiles <- function(QWA_data, n_sectors, sel_cell_params, quan
            sector_n := n_sectors] # allow for rounding errors
   cells_dt <- cells_dt[!is.na(sector_n)] # if we still have some cells outside -> remove
   cells_dt[, rraddistr := NULL] # remove superfluous columns
-
-  # # get the ew widths
-  # ring_widths <- data.table::as.data.table(QWA_data$rings)[
-  #   , c("image_label", "year", "mrw", "eww")]
-  # ring_widths[, max_ew_sector := floor((eww / mrw) * n_sectors)] # max sector that is in ew
-
 
   # now we can aggregate over each sector
   cli::cli_inform(c("i"= "Calculating sector counts and means..."))
@@ -75,20 +69,13 @@ calculate_sector_profiles <- function(QWA_data, n_sectors, sel_cell_params, quan
     rm(prf_data_quant)
   }
 
-  # cli::cli_inform(c("i"= "Adding EW indicator..."))
-  # # add a ew_band column to indicate if band is in EW or LW
-  # prf_data_agg <- ring_widths[prf_data_agg, on = c("image_label", "year")]
-  # prf_data_agg[, ew_sector := ifelse(sector_n <= max_ew_sector, TRUE, FALSE)]
-  # prf_data_agg[, max_ew_sector := NULL] # remove temp column
-  # data.table::setcolorder(prf_data_agg, "ew_sector", after="eww")
-
   cli::cli_inform(c("v"= "All done!"))
   new_QWAprofile(tibble::as_tibble(prf_data_agg), profile_type = "sector")
 }
 
 
 #' Helper function to create the moving band definitions for given a mrw,
-#' andwidth and stepsize
+#' bandwidth and stepsize
 #'
 #' @param mrw_val numeric, the mrw value to create bands for
 #' @param bandwidth numeric, the bandwidth of each band
@@ -136,6 +123,9 @@ create_bands_dt <- function(mrw_val, bandwidth, stepsize, band_rebound = TRUE) {
 #' @param band_rebound If `TRUE` (default), the last band is shifted so its end
 #'   coincides exactly with the ring width (`mrw`).
 #' @returns A [QWAprofile] object with `profile_type = "band"`.
+#' @details Requires that [complete_QWAdata()] has been run, as `$rings` must
+#'   contain `mrw` and `eww`. `raddistr.st` is computed internally from
+#'   `rraddistr` and `mrw`.
 #' @seealso [calculate_sector_profiles()], [QWAprofile()]
 #' @export
 calculate_band_profiles <- function(QWA_data,
@@ -146,13 +136,18 @@ calculate_band_profiles <- function(QWA_data,
   checkmate::assert_class(QWA_data, "QWAdata")
   checkmate::assert_data_frame(QWA_data$cells, null.ok = FALSE)
   checkmate::assert_data_frame(QWA_data$rings, null.ok = FALSE)
+  checkmate::assert_subset(c("mrw", "eww"), names(QWA_data$rings),
+    .var.name = "QWA_data$rings — run complete_QWAdata() first")
+  checkmate::assert_subset(c("rraddistr", "mrw"), names(QWA_data$cells),
+    .var.name = "QWA_data$cells — run complete_QWAdata() first")
   # we use data.table for fast operations on the large cells table
-  # the standardized radial distance raddistr.st is used to to position cells
-  # within bands (since the ring is not the same width everywhere, so the bands
-  # should reflect such fluctuations as well). Note that raddistr.st is <= mrw
-  # (except for rounding errors), and raddistr.st is na if we don't have an mrw
-  # (e.g. for missing / incomplete rings)
+  # raddistr.st (rraddistr * mrw / 100) positions each cell in absolute microns
+  # within its ring. It is NA for cells without an mrw (missing / incomplete rings).
   cells_dt <- data.table::as.data.table(QWA_data$cells)
+  mrw_dt <- data.table::as.data.table(QWA_data$rings)[, c("image_label", "year", "mrw")]
+  cells_dt <- mrw_dt[cells_dt, on = c("image_label", "year")]
+  cells_dt[, raddistr.st := rraddistr * mrw / 100]
+  cells_dt[, mrw := NULL]
   # filter out cells without valid raddistr.st, subset to relevant columns only
   cells_dt <- cells_dt[!is.na(raddistr.st),
                        c("image_label", "year", "raddistr.st", sel_cell_params),
@@ -218,7 +213,7 @@ calculate_band_profiles <- function(QWA_data,
   cli::cli_inform(c("i"= "Adding EW indicator..."))
   # add a ew_band column to indicate if band is in EW or LW
   prf_data_agg <- ring_widths[prf_data_agg, on = c("image_label", "year")]
-  prf_data_agg[, ew_band := ifelse(end <= eww, TRUE, FALSE)]
+  prf_data_agg[, ew_band := data.table::fifelse(end <= eww, TRUE, FALSE)]
   prf_data_agg[, end := start + bandwidth] # restore original end values of last bands (without tolerance)
   data.table::setcolorder(prf_data_agg, "ew_band", after="eww")
 

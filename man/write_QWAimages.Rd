@@ -23,6 +23,11 @@ The output file path, invisibly.
 \description{
 Write a QWAimages object to a CSV file.
 }
+\note{
+The \code{roxas_version} attribute is not written to the CSV file. It is
+re-derived from the \verb{$software} column when the file is read back with
+\code{\link[=read_QWAimages]{read_QWAimages()}}.
+}
 \seealso{
 \code{\link[=read_QWAimages]{read_QWAimages()}}, \link{QWAimages}
 }
