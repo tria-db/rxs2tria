@@ -5,6 +5,8 @@ if (getRversion() < "4.4.0") {
   # For R >= 4.4.0, it's already available
   # No action needed
 }
+# if we absolutely need the magrittr pipe:
+# `%>%` <- getFromNamespace("%>%", "magrittr")
 
 # THEME VARS -------------------------------------------------------------------
 # define the names of the tabs
@@ -141,7 +143,7 @@ max_char_limit <- function(value, limit) {
 }
 
 get_shiny_schema <- function() {
-  schema_path <- system.file("extdata/json_schema/20260402_tria_shinyext_schema.json", package = "rxs2tria")
+  schema_path <- system.file(rxs2tria:::schema_rel_path("shiny_meta"), package = "rxs2tria")
   schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
   full_schema <- jsonlite::fromJSON(schema_obj$schema$schema, simplifyDataFrame = FALSE)
   full_schema <- full_schema |> 

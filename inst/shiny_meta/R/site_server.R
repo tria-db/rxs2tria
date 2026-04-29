@@ -20,6 +20,17 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
     wp_data_in <- shiny::reactiveVal(NULL)
     slide_data_in <- shiny::reactiveVal(NULL)
 
+    # pre-compute table props and renderers once at module init
+    site_tbl_props  <- rxs2tria:::get_tbl_props(full_schema$properties$sites)$properties
+    tree_tbl_props  <- rxs2tria:::get_tbl_props(full_schema$properties$trees)$properties
+    wp_tbl_props    <- rxs2tria:::get_tbl_props(full_schema$properties$woodpieces)$properties
+    slide_tbl_props <- rxs2tria:::get_tbl_props(full_schema$properties$slides)$properties
+
+    site_renderers  <- build_tbl_renderers(site_tbl_props)
+    tree_renderers  <- build_tbl_renderers(tree_tbl_props)
+    wp_renderers    <- build_tbl_renderers(wp_tbl_props)
+    slide_renderers <- build_tbl_renderers(slide_tbl_props)
+
     shiny::observe({
       sites_in <- site_tbls_in()$sites
       if (!is.null(sites_in$country_code)) {
@@ -31,12 +42,12 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
       slide_data_in(site_tbls_in()$slides)
     }) |> shiny::bindEvent(site_tbls_in())
 
- 
+
     # SITE MAP -----------------------------------------------------------------
     # site coordinates reactiveVal, updates IFF coord cols in site_data_out change
-    site_coordinates <- reactiveVal(NULL)
+    site_coordinates <- shiny::reactiveVal(NULL)
 
-    observeEvent(site_data_out(),{
+    shiny::observeEvent(site_data_out(),{
       # TODO: read valid range from tbl schema?
       min_lng <- -180
       max_lng <- 180
@@ -44,18 +55,17 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
       max_lat <- 90
 
       # get valid pairs of coordinates from table
-      site_coords <- site_data_out()
-      site_coords <- site_coords %>%
-        dplyr::select(longitude, latitude) %>%
+      site_coords <- site_data_out() |>
+        dplyr::select(longitude, latitude) |>
         dplyr::mutate(
           longitude = suppressWarnings(as.numeric(longitude)),
           latitude = suppressWarnings(as.numeric(latitude))
-        ) %>%
+        ) |>
         dplyr::mutate(
           longitude = ifelse(longitude < min_lng | longitude > max_lng, NA, longitude),
           latitude = ifelse(latitude < min_lat | latitude > max_lat, NA, latitude)
-        ) %>%
-        dplyr::filter(!is.na(longitude) & !is.na(latitude)) %>%
+        ) |>
+        dplyr::filter(!is.na(longitude) & !is.na(latitude)) |>
         dplyr::distinct()
 
       # update reactive
@@ -65,8 +75,8 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
     # render Leaflet map
     output$site_map <- leaflet::renderLeaflet({
       # start map on WSL coordinates
-      sitemap <- leaflet::leaflet() %>%
-        leaflet::setView(lng = 8.44256, lat = 47.35515, zoom = 8) %>%
+      sitemap <- leaflet::leaflet() |>
+        leaflet::setView(lng = 8.44256, lat = 47.35515, zoom = 8) |>
         leaflet::addTiles()
 
       # add markers for all sites in the table
@@ -74,7 +84,8 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
 
       # if we have both lat and longitude, add markers and zoom to new bounds
       if (!is.null(site_coords) && nrow(site_coords)>0) {
-        sitemap <- sitemap %>% leaflet::addMarkers(lng = site_coords$longitude, lat = site_coords$latitude) %>%
+        sitemap <- sitemap |>
+          leaflet::addMarkers(lng = site_coords$longitude, lat = site_coords$latitude) |>
           leaflet::fitBounds(lng1 = min(site_coords$longitude)-5, lng2 = max(site_coords$longitude)+5,
                              lat1 = min(site_coords$latitude)-5, lat2 = max(site_coords$latitude)+5)
       }
@@ -85,46 +96,37 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
     # SITE TABLE ---------------------------------------------------------------
     # render editable table
     output$site_table <- rhandsontable::renderRHandsontable({
-      validate(need(!is.null(site_data_in()), "No data to show"))
+      shiny::validate(shiny::need(!is.null(site_data_in()), "No data to show"))
 
-      schema_path <- system.file("extdata", "json_schema/20251007_tria_site_ext_schema.json", package = "rxs2tria")
-      tbl_props <- load_extended_schema(schema_path)
-
-      colHeaders <- sapply(tbl_props, function(x) x$title)
+      colHeaders <- sapply(site_tbl_props, function(x) x$title)
       colHeaders <- colHeaders[names(site_data_in())] # ensure correct order
-      tippies <- sapply(tbl_props, function(x) x$description)
-
+      tippies <- sapply(site_tbl_props, function(x) x$description)
 
       n_rows <- nrow(site_data_in())
       ht_height <- min(max(n_rows * ht_row_height, ht_min_height), ht_max_height)
 
-      rhandsontable::rhandsontable(
+      ht <- rhandsontable::rhandsontable(
         site_data_in(),
         rowHeaders = TRUE,
         contextMenu = FALSE,
         stretchH = "all",
         height = ht_height,
         colHeaders = unname(colHeaders),
-        afterGetColHeader = tippy_renderer(tippies)) %>%
-        rhandsontable::hot_cols(fixedColumnsLeft = 1) %>%
-        # custom validation checks renderers for all cols based on tbl_config
-        purrr::reduce(
-          names(colHeaders), # names in df
-          function(ht, col) {
-            config <- tbl_props[[col]]
-            colName <- colHeaders[col] # name in ht
-            hot_col_wrapper(ht, colName, config)
-          },
-          .init = .
-        )
+        afterGetColHeader = tippy_renderer(tippies)) |>
+        rhandsontable::hot_cols(fixedColumnsLeft = 1)
+      purrr::reduce(
+        names(colHeaders),
+        function(ht, col) hot_col_wrapper(ht, colHeaders[col], site_tbl_props[[col]], site_renderers[[col]]),
+        .init = ht
+      )
     })
 
     # create dataframe reactive to hot updates
-    site_data_out <- reactive({
+    site_data_out <- shiny::reactive({
       rhandsontable::hot_to_r(input$site_table)
     })
 
-    site_data_export <- reactive({
+    site_data_export <- shiny::reactive({
       df <- site_data_out()
       if (!is.null(df$country_code)) {
         df$country_code <- combined_to_iso(df$country_code)
@@ -133,7 +135,7 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
     })
 
     # update country column in site data based on coordinates
-    observeEvent(site_coordinates(),{
+    shiny::observeEvent(site_coordinates(),{
       site_coords <- site_coordinates()
       if (nrow(site_coords) > 0) {
         current_df <- site_data_out()
@@ -149,8 +151,9 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
         )
 
         # update country column in site data
-        current_df <- current_df %>% dplyr::left_join(site_coords, by = c('longitude', 'latitude')) %>%
-          dplyr::mutate(country_code = new_country) %>%
+        current_df <- current_df |>
+          dplyr::left_join(site_coords, by = c('longitude', 'latitude')) |>
+          dplyr::mutate(country_code = new_country) |>
           dplyr::select(-iso_codes, -new_country)
         site_data_in(current_df)
       }
@@ -158,13 +161,13 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
     }, ignoreInit = TRUE)
 
     # import data from file: show modal for confirmation
-    observeEvent(input$file_sites,{
+    shiny::observeEvent(input$file_sites,{
       show_ht_import_modal(ns, 'import_site_data')
     })
 
     # observe confirm import data button
-    observeEvent(input$import_site_data, {
-      removeModal()
+    shiny::observeEvent(input$import_site_data, {
+      shiny::removeModal()
       # safe_block({
       #   imported <- load_single_table(input$file_sites$datapath, 'site_data', site_tbl,
       #                                 force_required = FALSE, col_names = input$col_names, skip = input$skip)
@@ -199,41 +202,41 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
 
   # site networks ---
   # TODO: reset site networks if data is reloaded / df_meta or site_data_in are changed
-    observeEvent(input$btn_add_nws, {
-      site_labels <- site_data_out() %>% dplyr::pull(site_label)
-      showModal(modalDialog(
+    shiny::observeEvent(input$btn_add_nws, {
+      site_labels <- site_data_out() |> dplyr::pull(site_label)
+      shiny::showModal(shiny::modalDialog(
         title = "Add site network",
-        tagList(
-          textInput(ns("nw_name"), "Network name", value = NA,
+        shiny::tagList(
+          shiny::textInput(ns("nw_name"), "Network name", value = NA,
                     placeholder = "Specify a name for the network (max 64 char.)"),
-          textAreaInput(ns("nw_desc"), "Network description", rows = 4,
+          shiny::textAreaInput(ns("nw_desc"), "Network description", rows = 4,
                     placeholder = "Provide a brief description of what characterises the site network."),
-          selectizeInput(
+          shiny::selectizeInput(
             inputId = ns("sel_sites"),
             label = "Choose the sites:",
             choices = site_labels,
             multiple = TRUE)
         ),
         easyClose = TRUE,
-        footer = tagList(
-          modalButton("Cancel"),
-          actionButton(ns("btn_trans_nw"), "Add")
+        footer = shiny::tagList(
+          shiny::modalButton("Cancel"),
+          shiny::actionButton(ns("btn_trans_nw"), "Add")
         )
       ))
     })
 
-    nw_data_in <- reactiveVal(data.frame(
+    nw_data_in <- shiny::reactiveVal(data.frame(
       Name = character(0),
       Description = character(0),
       Sites = character(0),
       stringsAsFactors = FALSE
     ))
 
-    observeEvent(input$btn_trans_nw, {
+    shiny::observeEvent(input$btn_trans_nw, {
       # check if all fields are filled
-      validate(need(input$nw_name != "", "Please provide a name for the network"))
-      validate(need(input$nw_desc != "", "Please provide a description for the network"))
-      validate(need(length(input$sel_sites) > 0, "Please select at least one site"))
+      shiny::validate(shiny::need(input$nw_name != "", "Please provide a name for the network"))
+      shiny::validate(shiny::need(input$nw_desc != "", "Please provide a description for the network"))
+      shiny::validate(shiny::need(length(input$sel_sites) > 0, "Please select at least one site"))
 
       # create new row
       new_row <- data.frame(
@@ -248,7 +251,7 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
       current_df[nrow(current_df)+1,] <- new_row
       nw_data_in(current_df)
 
-      removeModal()
+      shiny::removeModal()
     })
 
     # TODO:
@@ -256,10 +259,6 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
     iv <- shinyvalidate::InputValidator$new()
     iv$add_rule("nw_name", shinyvalidate::sv_required())
     iv$add_rule("nw_name", max_char_limit, limit = 64)
-    # iv$add_rule(
-    #   "ds_name",
-    #   shinyvalidate::sv_regex("^[a-zA-Z0-9]*$", "Only alphanumeric characters allowed")
-    # )
     iv$add_rule("nw_desc", shinyvalidate::sv_required())
     iv$add_rule("sel_sites", shinyvalidate::sv_required())
 
@@ -271,14 +270,14 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
     })
 
     output$networks <- DT::renderDataTable({
-      req(nrow(nw_data_in()) > 0)
+      shiny::req(nrow(nw_data_in()) > 0)
 
       deleteButtonColumn(nw_data_in(), 'delbtn', ns)
 
     })
 
     # observe delete row events
-    observeEvent(input$deletePressed, {
+    shiny::observeEvent(input$deletePressed, {
       rowNum <- parseDeleteEvent(input$deletePressed)
       # Delete the row from the data frame
       current_df <- nw_data_in()
@@ -292,47 +291,39 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
 
     # TREE TABLE ---------------------------------------------------------------
     output$tree_table <- rhandsontable::renderRHandsontable({
-      validate(need(!is.null(tree_data_in()), "No data to show"))
+      shiny::validate(shiny::need(!is.null(tree_data_in()), "No data to show"))
 
-      schema_path <- system.file("extdata", "json_schema/20251007_tria_tree_ext_schema.json", package = "rxs2tria")
-      tbl_props <- load_extended_schema(schema_path)
-
-      colHeaders <- sapply(tbl_props, function(x) x$title)
+      colHeaders <- sapply(tree_tbl_props, function(x) x$title)
       colHeaders <- colHeaders[names(tree_data_in())] # ensure correct order
-      tippies <- sapply(tbl_props, function(x) x$description)
+      tippies <- sapply(tree_tbl_props, function(x) x$description)
 
       n_rows <- nrow(tree_data_in())
       ht_height <- min(max(n_rows * ht_row_height, ht_min_height), ht_max_height)
 
-      rhandsontable::rhandsontable(
+      ht <- rhandsontable::rhandsontable(
         tree_data_in(),
         rowHeaders = TRUE,
         contextMenu = FALSE,
         stretchH = "all",
         height = ht_height,
         colHeaders = unname(colHeaders),
-        afterGetColHeader = tippy_renderer(tippies)) %>%
-        rhandsontable::hot_cols(fixedColumnsLeft = 1) %>%
-        # custom validation checks renderers for all cols based on tbl_config
-        purrr::reduce(
-          names(colHeaders), # names in df
-          function(ht, col) {
-            config <- tbl_props[[col]]
-            colName <- colHeaders[col] # name in ht
-            hot_col_wrapper(ht, colName, config)
-          },
-          .init = .
-        )
+        afterGetColHeader = tippy_renderer(tippies)) |>
+        rhandsontable::hot_cols(fixedColumnsLeft = 1)
+      purrr::reduce(
+        names(colHeaders),
+        function(ht, col) hot_col_wrapper(ht, colHeaders[col], tree_tbl_props[[col]], tree_renderers[[col]]),
+        .init = ht
+      )
     })
 
     # create dataframe reactive to hot updates
-    tree_data_out <- reactive({
+    tree_data_out <- shiny::reactive({
       rhandsontable::hot_to_r(input$tree_table)
     })
 
 
     # update species info in tree table IFF speciesname or code are changed
-    observeEvent(input$tree_table,{
+    shiny::observeEvent(input$tree_table,{
 
       # TODO: loop through multiple changes at once
       table_changes <- input$tree_table$changes$changes
@@ -379,79 +370,65 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
 
     # WOODPIECE TABLE ----------------------------------------------------------
     output$wp_table <- rhandsontable::renderRHandsontable({
-      validate(need(!is.null(wp_data_in()), "No data to show"))
+      shiny::validate(shiny::need(!is.null(wp_data_in()), "No data to show"))
 
-      schema_path <- system.file("extdata", "json_schema/20251007_tria_woodpiece_ext_schema.json", package = "rxs2tria")
-      tbl_props <- load_extended_schema(schema_path)
-
-      colHeaders <- sapply(tbl_props, function(x) x$title)
+      colHeaders <- sapply(wp_tbl_props, function(x) x$title)
       colHeaders <- colHeaders[names(wp_data_in())] # ensure correct order
-      tippies <- sapply(tbl_props, function(x) x$description)
+      tippies <- sapply(wp_tbl_props, function(x) x$description)
 
       n_rows <- nrow(wp_data_in())
       ht_height <- min(max(n_rows * ht_row_height, ht_min_height), ht_max_height)
 
-      rhandsontable::rhandsontable(
+      ht <- rhandsontable::rhandsontable(
         wp_data_in(),
         rowHeaders = TRUE,
         contextMenu = FALSE,
         stretchH = "all",
         height = ht_height,
         colHeaders = unname(colHeaders),
-        afterGetColHeader = tippy_renderer(tippies)) %>%
-        rhandsontable::hot_cols(fixedColumnsLeft = 1) %>%
-        purrr::reduce(
-          names(colHeaders), # names in df
-          function(ht, col) {
-            config <- tbl_props[[col]]
-            colName <- colHeaders[col] # name in ht
-            hot_col_wrapper(ht, colName, config)
-          },
-          .init = .
-        )
+        afterGetColHeader = tippy_renderer(tippies)) |>
+        rhandsontable::hot_cols(fixedColumnsLeft = 1)
+      purrr::reduce(
+        names(colHeaders),
+        function(ht, col) hot_col_wrapper(ht, colHeaders[col], wp_tbl_props[[col]], wp_renderers[[col]]),
+        .init = ht
+      )
     })
 
     # create dataframe reactive to hot updates
-    wp_data_out <- reactive({
+    wp_data_out <- shiny::reactive({
       rhandsontable::hot_to_r(input$wp_table)
     })
 
     # SLIDE TABLE --------------------------------------------------------------
     output$slide_table <- rhandsontable::renderRHandsontable({
-      validate(need(!is.null(slide_data_in()), "No data to show"))
+      shiny::validate(shiny::need(!is.null(slide_data_in()), "No data to show"))
 
-      schema_path <- system.file("extdata", "json_schema/20251007_tria_slide_ext_schema.json", package = "rxs2tria")
-      tbl_props <- load_extended_schema(schema_path)
-
-      colHeaders <- sapply(tbl_props, function(x) x$title)
+      colHeaders <- sapply(slide_tbl_props, function(x) x$title)
       colHeaders <- colHeaders[names(slide_data_in())] # ensure correct order
-      tippies <- sapply(tbl_props, function(x) x$description)
+      tippies <- sapply(slide_tbl_props, function(x) x$description)
 
       n_rows <- nrow(slide_data_in())
       ht_height <- min(max(n_rows * ht_row_height, ht_min_height), ht_max_height)
 
-      rhandsontable::rhandsontable(
+      ht <- rhandsontable::rhandsontable(
         slide_data_in(),
         rowHeaders = TRUE,
         contextMenu = FALSE,
         stretchH = "all",
         height = ht_height,
         colHeaders = unname(colHeaders),
-        afterGetColHeader = tippy_renderer(tippies)) %>%
-        rhandsontable::hot_cols(fixedColumnsLeft = 1) %>%
-        purrr::reduce(
-          names(colHeaders), # names in df
-          function(ht, col) {
-            config <- tbl_props[[col]]
-            colName <- colHeaders[col] # name in ht
-            hot_col_wrapper(ht, colName, config)
-          },
-          .init = .
-        )
+        afterGetColHeader = tippy_renderer(tippies)) |>
+        rhandsontable::hot_cols(fixedColumnsLeft = 1)
+      purrr::reduce(
+        names(colHeaders),
+        function(ht, col) hot_col_wrapper(ht, colHeaders[col], slide_tbl_props[[col]], slide_renderers[[col]]),
+        .init = ht
+      )
     })
 
     # create dataframe reactive to hot updates
-    slide_data_out <- reactive({
+    slide_data_out <- shiny::reactive({
       rhandsontable::hot_to_r(input$slide_table)
     })
 
@@ -459,43 +436,31 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
 
     # TODO: check configs, val functions, edge cases
     # VALIDATION CHECKS --------------------------------------------------------
-    validation_checks <- reactive({
+    validation_checks <- shiny::reactive({
       results <- list()
 
       # 1) site table
-      df_site <- site_data_out()
-      schema_path <- system.file("extdata", "json_schema/20251007_tria_site_ext_schema.json", package = "rxs2tria")
-      tbl_props <- load_extended_schema(schema_path)
-      results$site_data <- collect_hot_val_results(df_site, tbl_props)
+      results$site_data <- collect_hot_val_results(site_data_out(), site_tbl_props)
 
       # 2) tree table
-      df_tree <- tree_data_out()
-      schema_path <- system.file("extdata", "json_schema/20251007_tria_tree_ext_schema.json", package = "rxs2tria")
-      tbl_props <- load_extended_schema(schema_path)
-      results$tree_data <- collect_hot_val_results(df_tree, tbl_props)
+      results$tree_data <- collect_hot_val_results(tree_data_out(), tree_tbl_props)
 
       # 3) woodpiece table
-      df_wp <- wp_data_out()
-      schema_path <- system.file("extdata", "json_schema/20251007_tria_woodpiece_ext_schema.json", package = "rxs2tria")
-      tbl_props <- load_extended_schema(schema_path)
-      results$woodpiece_data <- collect_hot_val_results(df_wp, tbl_props)
+      results$woodpiece_data <- collect_hot_val_results(wp_data_out(), wp_tbl_props)
 
       # 4) slide table
-      df_slide <- slide_data_out()
-      schema_path <- system.file("extdata", "json_schema/20251007_tria_slide_ext_schema.json", package = "rxs2tria")
-      tbl_props <- load_extended_schema(schema_path)
-      results$slide_data <- collect_hot_val_results(df_slide, tbl_props)
+      results$slide_data <- collect_hot_val_results(slide_data_out(), slide_tbl_props)
 
 
       # convert collected results to dataframe
-      df_results <- results %>%
-        purrr::map(~ .x %>%
-                     purrr::map(~ tibble::tibble(
-                       field = .x$field,
-                       type = .x$type,
-                       message = .x$message
-                     )) %>%
-                     purrr::list_rbind(names_to = 'fname')) %>%
+      df_results <- results |>
+        purrr::map(\(x) x |>
+                     purrr::map(\(x) tibble::tibble(
+                       field = x$field,
+                       type = x$type,
+                       message = x$message
+                     )) |>
+                     purrr::list_rbind(names_to = 'fname')) |>
         purrr::list_rbind(names_to = 'tname')
 
       df_results$topic <- input_field_names[df_results$tname]
@@ -507,25 +472,25 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
     })
 
 
-    output$validation_check <- renderUI({
+    output$validation_check <- shiny::renderUI({
         df_validation <- validation_checks()
 
         if (nrow(df_validation) == 0) {
-          return(tagList(strong("All checks passed", style = paste0('color: ', prim_col, ';'))))
+          return(shiny::tagList(shiny::strong("All checks passed", style = paste0('color: ', prim_col, ';'))))
         } else {
           # generate html lists for each topic
-          html_output <- df_validation %>%
-            dplyr::group_by(topic) %>%
+          html_output <- df_validation |>
+            dplyr::group_by(topic) |>
             dplyr::summarise(
               content = paste0("<li>", field, ": ", message, "</li>", collapse = "")
-            ) %>%
+            ) |>
             dplyr::mutate(
               html = paste0("<b>", topic, ":</b><ul>", content, "</ul>")
-            ) %>%
-            dplyr::pull(html) %>%
+            ) |>
+            dplyr::pull(html) |>
             paste(collapse = "")
 
-          return(HTML(html_output))
+          return(shiny::HTML(html_output))
 
           # TODO:
           # add warning messages before switching tab or saving data
@@ -535,15 +500,13 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
 
 
     # Next button
-    observeEvent(input$btn_next, {
-      #iv_gen$enable()
-      nav_select(id = 'tabs', selected = tab_summary, session = main_session)
+    shiny::observeEvent(input$btn_next, {
+      bslib::nav_select(id = 'tabs', selected = tab_summary, session = main_session)
     })
 
     # Previous button
-    observeEvent(input$btn_prev, {
-      #iv_gen$enable()
-      nav_select(id = 'tabs', selected = tab_general, session = main_session)
+    shiny::observeEvent(input$btn_prev, {
+      bslib::nav_select(id = 'tabs', selected = tab_general, session = main_session)
     })
 
 

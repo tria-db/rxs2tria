@@ -40,7 +40,6 @@
         "minLength": 1,
         "title": "Species",
         "description": "",
-        "htType": "autocomplete",
         "otherChecks": ["check_speciescode"]
       },
       "phylogenetic_group": {

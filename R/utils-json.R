@@ -12,6 +12,7 @@ schema_rel_path <- function(schema, roxas_version = NULL) {
   schema_clean <- ifelse(schema == "images", roxas_version, schema)
   switch(schema_clean,
     "QWAmetadata" = "extdata/json_schema/base_schema/20260313_tria_metadata_schema.json",
+    "shiny_meta" = "extdata/json_schema/20260402_tria_shinyext_schema.json",
     "dataset" = "extdata/json_schema/base_schema/20251007_tria_ds_data_schema.json",
     "authors" = "extdata/json_schema/base_schema/20251007_tria_author_data_schema.json",
     "funding" = "extdata/json_schema/base_schema/20251007_tria_funding_data_schema.json",

@@ -1,6 +1,3 @@
-library(magrittr)
-library(bslib)
-
 # server -----------------------------------------------------------------------
 server <- function(input, output, session) {
 

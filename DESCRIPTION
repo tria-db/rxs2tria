@@ -1,5 +1,5 @@
 Package: rxs2tria
-Title: Preprocess ROXAS data for TRIA
+Title: Preprocess ROXAS (AI) data for TRIA
 Version: 0.0.0.9000
 Authors@R: c(
     person("Mara", "Naegelin", , "mara.naegelin@wsl.ch", role = c("aut", "cre"),
@@ -7,7 +7,7 @@ Authors@R: c(
     person("Patrick", "Fonti", , "patrick.fonti@wsl.ch", role = c("ctb"),
            comment = c(ORCID = "0000-0002-7070-3292")))       
 Description: This package contains the functionalities to preprocess and prepare
-    the ROXAS output files for upload to the TRIA database.
+    the ROXAS (AI) output files for upload to the TRIA database.
 License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
@@ -44,6 +44,7 @@ Suggests:
     knitr,
     leaflet,
     plotly,
+    rcrossref, 
     reactable,
     rhandsontable,
     rmarkdown,

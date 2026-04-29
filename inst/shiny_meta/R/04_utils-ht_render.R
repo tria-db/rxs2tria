@@ -326,63 +326,41 @@ renderer_date <- function(required = NULL){
       }", check_required)))
 }
 
-hot_col_wrapper <- function(ht, col, col_config) {
-  readOnly <- col_config$readOnly %||% FALSE
+build_col_renderer <- function(col_config) {
   switch(col_config$htType,
-    character = {
-      renderer_js <- renderer_char(
-        required = col_config$required,
-        min_length = col_config$minLength,
-        max_length = col_config$maxLength,
-        regex_pattern = col_config$pattern,
-        unique = col_config$unique
-      )
-      ht |> rhandsontable::hot_col(col, renderer = renderer_js, readOnly = readOnly)
-    },
-    text = {
-      renderer_js <- renderer_text(
-        required = col_config$required
-      )
-      ht |> rhandsontable::hot_col(col, renderer = renderer_js, readOnly = readOnly)
-    },
-    numeric = {
-      renderer_js <- renderer_num(
-        required = col_config$required,
-        min_val = col_config$minimum,
-        max_val = col_config$maximum
-      )
-      if (col_config$type[1] == 'integer') {nr_format <- '0.'} else {nr_format <- NULL }
-      ht |> rhandsontable::hot_col(col, type = 'numeric', format = nr_format, renderer = renderer_js, readOnly = readOnly)
-    },
-    dropdown = {
-      renderer_js <- renderer_drop(
-        required = col_config$required,
-        options = col_config$enum
-      )
-      ht |> rhandsontable::hot_col(col, type = 'dropdown', source = col_config$enum, renderer = renderer_js, readOnly = readOnly)
-    },
-    autocomplete = {
-      renderer_js <- renderer_auto(
-        required = col_config$required,
-        options = get_options(col_config$options)
-      )
-      ht |> rhandsontable::hot_col(col, type = 'autocomplete', source = get_options(col_config$options), renderer = renderer_js, readOnly = readOnly)
-    },
-    checkbox = {
-      renderer_js <- renderer_check(
-        required = col_config$required,
-        min_checks = col_config$min_checks,
-        max_checks = col_config$max_checks
-      )
-      ht |> rhandsontable::hot_col(col, type = 'checkbox', renderer = renderer_js, readOnly = readOnly)
-    },
-    date = {
-      renderer_js <- renderer_date(
-        required = col_config$required
-      )
-      ht |> rhandsontable::hot_col(col, type = 'date', dateFormat = "YYYY-MM-DD", renderer = renderer_js, readOnly = readOnly)
-    },
-    # default: no specific rendering
+    character    = renderer_char(col_config$required, col_config$minLength,
+                                 col_config$maxLength, col_config$pattern, col_config$unique),
+    text         = renderer_text(col_config$required),
+    numeric      = renderer_num(col_config$required, col_config$minimum, col_config$maximum),
+    dropdown     = renderer_drop(col_config$required, col_config$enum),
+    autocomplete = renderer_auto(col_config$required, get_options(col_config$options)),
+    checkbox     = renderer_check(col_config$required, col_config$min_checks, col_config$max_checks),
+    date         = renderer_date(col_config$required),
+    NULL
+  )
+}
+
+build_tbl_renderers <- function(tbl_props) {
+  lapply(tbl_props, build_col_renderer)
+}
+
+hot_col_wrapper <- function(ht, col, col_config, renderer_js = NULL) {
+  readOnly <- col_config$readOnly %||% FALSE
+  if (is.null(renderer_js)) renderer_js <- build_col_renderer(col_config)
+  switch(col_config$htType,
+    character    = ht |> rhandsontable::hot_col(col, renderer = renderer_js, readOnly = readOnly),
+    text         = ht |> rhandsontable::hot_col(col, renderer = renderer_js, readOnly = readOnly),
+    numeric      = ht |> rhandsontable::hot_col(col, type = 'numeric',
+                     format = if (col_config$type[1] == 'integer') '0.' else NULL,
+                     renderer = renderer_js, readOnly = readOnly),
+    dropdown     = ht |> rhandsontable::hot_col(col, type = 'dropdown',
+                     source = col_config$enum, renderer = renderer_js, readOnly = readOnly),
+    autocomplete = ht |> rhandsontable::hot_col(col, type = 'autocomplete',
+                     source = get_options(col_config$options), renderer = renderer_js, readOnly = readOnly),
+    checkbox     = ht |> rhandsontable::hot_col(col, type = 'checkbox',
+                     renderer = renderer_js, readOnly = readOnly),
+    date         = ht |> rhandsontable::hot_col(col, type = 'date', dateFormat = "YYYY-MM-DD",
+                     renderer = renderer_js, readOnly = readOnly),
     ht
   )
 }

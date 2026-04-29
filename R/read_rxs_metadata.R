@@ -451,9 +451,10 @@ extract_roxas_settings <- function(file_settings, roxas_version) {
         "outmost_year" = "rings_outmost_complete_year",
         # model filter settings?
         "img_filetype" = "scan_format", # TODO: what about img_size?
-        "img_width" = "scan_size_1", # get from here or from file?
+        "img_width" = "scan_size_1",
         "img_height" = "scan_size_2", 
-        "img_software" = "Software" #, scan_mode -> add to classic version from exif if possible?
+        "img_software" = "Software" 
+        # scan_mode -> add to classic version from exif if possible?
         #DateTimeOriginal, DateTimeDigitized -> use min as img_created_at?
       )) |>
       dplyr::mutate(
