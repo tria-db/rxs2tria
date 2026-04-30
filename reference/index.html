@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">rxs2tria</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -17,6 +17,15 @@
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../articles/rxs2tria.html">Get started</a></li>
 <li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/QWAdata.html">The QWAdata class</a></li>
+    <li><a class="dropdown-item" href="../articles/QWAimages.html">The QWAimages class</a></li>
+    <li><a class="dropdown-item" href="../articles/QWAmetadata.html">The QWAmetadata class</a></li>
+    <li><a class="dropdown-item" href="../articles/QWAprofile.html">The QWAprofile class</a></li>
+    <li><a class="dropdown-item" href="../articles/workflow.html">Step-by-step instructions</a></li>
+  </ul></li>
+<li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
 <li class="nav-item"><a class="external-link nav-link" href="https://github.com/tria-db/rxs2tria/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
@@ -68,20 +77,6 @@
 
         </dt>
         <dd>Read and combine ROXAS settings data</dd>
-
-        <dt>
-
-          <code><a href="convert_settings_dates.html">convert_settings_dates()</a></code>
-
-        </dt>
-        <dd>Handle date conversion for ROXAS settings created at dates</dd>
-
-        <dt>
-
-          <code><a href="combine_rxs_metadata.html">combine_rxs_metadata()</a></code>
-
-        </dt>
-        <dd>Combine raw ROXAS metadata</dd>
       </dl></div><div class="section level2">
       <h2 id="reading-raw-roxas-output-data">Reading raw ROXAS output data<a class="anchor" aria-label="anchor" href="#reading-raw-roxas-output-data"></a></h2>
 
@@ -94,17 +89,10 @@
 
       <dl><dt>
 
-          <code><a href="collect_cells_data.html">collect_cells_data()</a></code>
+          <code><a href="collect_raw_outputs.html">collect_raw_outputs()</a></code>
 
         </dt>
-        <dd>Collect raw cells output data</dd>
-
-        <dt>
-
-          <code><a href="collect_rings_data.html">collect_rings_data()</a></code>
-
-        </dt>
-        <dd>Collect raw rings output data</dd>
+        <dd>Collect raw output data from multiple files</dd>
 
         <dt>
 
@@ -112,6 +100,273 @@
 
         </dt>
         <dd>Collect raw cells and rings output data</dd>
+      </dl></div><div class="section level2">
+      <h2 id="qwaimages">QWAimages<a class="anchor" aria-label="anchor" href="#qwaimages"></a></h2>
+
+      <div class="section-desc"><p>S3 class QWAimages</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="build_QWAimages.html">build_QWAimages()</a></code>
+
+        </dt>
+        <dd>Build a QWAimages object from raw ROXAS metadata</dd>
+
+        <dt>
+
+          <code><a href="check_QWAimages.html">check_QWAimages()</a></code>
+
+        </dt>
+        <dd>Validate a QWAimages object</dd>
+
+        <dt>
+
+          <code><a href="complete_QWAimages.html">complete_QWAimages()</a></code>
+
+        </dt>
+        <dd>Complete a QWAimages object</dd>
+
+        <dt>
+
+          <code><a href="QWAimages.html">QWAimages()</a></code>
+
+        </dt>
+        <dd>Create a QWAimages object</dd>
+
+        <dt>
+
+          <code><a href="read_QWAimages.html">read_QWAimages()</a></code>
+
+        </dt>
+        <dd>Read a QWAimages object from a CSV file</dd>
+
+        <dt>
+
+          <code><a href="summary.QWAimages.html">print(<i>&lt;QWAimages&gt;</i>)</a></code> <code><a href="summary.QWAimages.html">summary(<i>&lt;QWAimages&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Print summary of a QWAimages object</dd>
+
+        <dt>
+
+          <code><a href="update_QWAimages.html">update_QWAimages()</a></code>
+
+        </dt>
+        <dd>Update QWA metadata for selected images</dd>
+
+        <dt>
+
+          <code><a href="write_QWAimages.html">write_QWAimages()</a></code>
+
+        </dt>
+        <dd>Write a QWAimages object to a CSV file.</dd>
+      </dl></div><div class="section level2">
+      <h2 id="qwametadata">QWAmetadata<a class="anchor" aria-label="anchor" href="#qwametadata"></a></h2>
+
+      <div class="section-desc"><p>S3 QWAmetadata</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="add_resources.html">add_resources()</a></code>
+
+        </dt>
+        <dd>Add a resources table to a QWAmetadata object</dd>
+
+        <dt>
+
+          <code><a href="collect_resources.html">collect_resources()</a></code>
+
+        </dt>
+        <dd>Collect resource file information from a directory</dd>
+
+        <dt>
+
+          <code><a href="check_QWAmetadata.html">check_QWAmetadata()</a></code>
+
+        </dt>
+        <dd>Validate a QWAmetadata object</dd>
+
+        <dt>
+
+          <code><a href="complete_QWAmetadata.html">complete_QWAmetadata()</a></code>
+
+        </dt>
+        <dd>Complete a QWAmetadata object with all optional fields</dd>
+
+        <dt>
+
+          <code><a href="print.QWAmetadata.html">print(<i>&lt;QWAmetadata&gt;</i>)</a></code> <code><a href="print.QWAmetadata.html">summary(<i>&lt;QWAmetadata&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Print a QWAmetadata object</dd>
+
+        <dt>
+
+          <code><a href="QWAmetadata.html">QWAmetadata()</a></code> <code><a href="QWAmetadata.html">as_QWAmetadata()</a></code>
+
+        </dt>
+        <dd>Create a QWAmetadata object</dd>
+
+        <dt>
+
+          <code><a href="read_QWAmetadata.html">read_QWAmetadata()</a></code>
+
+        </dt>
+        <dd>Read a QWAmetadata object from a JSON file</dd>
+
+        <dt>
+
+          <code><a href="write_QWAmetadata.html">write_QWAmetadata()</a></code>
+
+        </dt>
+        <dd>Write a QWAmetadata object to a JSON file</dd>
+      </dl></div><div class="section level2">
+      <h2 id="qwadata">QWAdata<a class="anchor" aria-label="anchor" href="#qwadata"></a></h2>
+
+      <div class="section-desc"><p>S3 class QWAdata</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="check_QWAdata.html">check_QWAdata()</a></code>
+
+        </dt>
+        <dd>Validate a QWAdata object</dd>
+
+        <dt>
+
+          <code><a href="complete_flags.html">complete_flags()</a></code>
+
+        </dt>
+        <dd>Add the initial flags columns to QWAdata</dd>
+
+        <dt>
+
+          <code><a href="complete_measures.html">complete_measures()</a></code>
+
+        </dt>
+        <dd>Complete QWA measures</dd>
+
+        <dt>
+
+          <code><a href="complete_QWAdata.html">complete_QWAdata()</a></code>
+
+        </dt>
+        <dd>Complete a QWAdata object</dd>
+
+        <dt>
+
+          <code><a href="print.QWAdata.html">print(<i>&lt;QWAdata&gt;</i>)</a></code> <code><a href="print.QWAdata.html">summary(<i>&lt;QWAdata&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Print a QWAdata object</dd>
+
+        <dt>
+
+          <code><a href="QWAdata.html">QWAdata()</a></code> <code><a href="QWAdata.html">as_QWAdata()</a></code>
+
+        </dt>
+        <dd>Create a QWAdata object</dd>
+
+        <dt>
+
+          <code><a href="read_QWAdata.html">read_QWAdata()</a></code>
+
+        </dt>
+        <dd>Read a QWAdata object from CSV files</dd>
+
+        <dt>
+
+          <code><a href="update_QWAdata.html">update_QWAdata()</a></code>
+
+        </dt>
+        <dd>Update a QWAdata object with re-read raw data for selected images</dd>
+
+        <dt>
+
+          <code><a href="write_QWAdata.html">write_QWAdata()</a></code>
+
+        </dt>
+        <dd>Write a QWAdata object to files</dd>
+      </dl></div><div class="section level2">
+      <h2 id="qwaprofiles">QWAprofiles<a class="anchor" aria-label="anchor" href="#qwaprofiles"></a></h2>
+
+      <div class="section-desc"><p>Functions to calculate sector or band profiles from cell measurements.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="calculate_band_profiles.html">calculate_band_profiles()</a></code>
+
+        </dt>
+        <dd>Calculate band-wise radial profiles</dd>
+
+        <dt>
+
+          <code><a href="calculate_sector_profiles.html">calculate_sector_profiles()</a></code>
+
+        </dt>
+        <dd>Calculate sector-wise radial profiles</dd>
+
+        <dt>
+
+          <code><a href="check_QWAprofile.html">check_QWAprofile()</a></code>
+
+        </dt>
+        <dd>Validate a QWAprofile object</dd>
+
+        <dt>
+
+          <code><a href="complete_QWAprofile.html">complete_QWAprofile()</a></code>
+
+        </dt>
+        <dd>Add cell parameters to an existing QWAprofile object</dd>
+
+        <dt>
+
+          <code><a href="QWAprofile.html">QWAprofile()</a></code>
+
+        </dt>
+        <dd>Create a QWAprofile object</dd>
+
+        <dt>
+
+          <code><a href="read_QWAprofile.html">read_QWAprofile()</a></code>
+
+        </dt>
+        <dd>Read a QWAprofile object from a CSV file</dd>
+
+        <dt>
+
+          <code><a href="summary.QWAprofile.html">print(<i>&lt;QWAprofile&gt;</i>)</a></code> <code><a href="summary.QWAprofile.html">summary(<i>&lt;QWAprofile&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Summarise a QWAprofile object</dd>
+
+        <dt>
+
+          <code><a href="write_QWAprofile.html">write_QWAprofile()</a></code>
+
+        </dt>
+        <dd>Write a QWAprofile object to a CSV file</dd>
       </dl></div><div class="section level2">
       <h2 id="rest">rest<a class="anchor" aria-label="anchor" href="#rest"></a></h2>
 
@@ -124,17 +379,10 @@
 
       <dl><dt>
 
-          <code><a href="read_QWAdata.html">read_QWAdata()</a></code>
+          <code><a href="launch_flags_app.html">launch_flags_app()</a></code>
 
         </dt>
-        <dd>Read already processed QWA data from CSV files</dd>
-
-        <dt>
-
-          <code><a href="launch_coverage_app.html">launch_coverage_app()</a></code>
-
-        </dt>
-        <dd>Launch the coverage Shiny app</dd>
+        <dd>Launch the ring flags Shiny app</dd>
 
         <dt>
 
@@ -145,38 +393,10 @@
 
         <dt>
 
-          <code><a href="resolve_schema.html">resolve_schema()</a></code>
+          <code><a href="create_rwl.html">create_rwl()</a></code>
 
         </dt>
-        <dd>Read and resolve JSON Schema from file</dd>
-
-        <dt>
-
-          <code><a href="plot_woodpiece_coverage.html">plot_woodpiece_coverage()</a></code>
-
-        </dt>
-        <dd>Plot overview of annual coverage of images</dd>
-
-        <dt>
-
-          <code><a href="create_coverage_plots.html">create_coverage_plots()</a></code>
-
-        </dt>
-        <dd>Create coverage plots for all trees</dd>
-
-        <dt>
-
-          <code><a href="remove_outliers.html">remove_outliers()</a></code>
-
-        </dt>
-        <dd>Remove outliers in cells and rings data</dd>
-
-        <dt>
-
-          <code><a href="validate_QWA_data.html">validate_QWA_data()</a></code>
-
-        </dt>
-        <dd>Validate the raw QWA data</dd>
+        <dd>Create a Tucson (.rwl) file from ROXAS ring-width or profile data</dd>
       </dl></div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>

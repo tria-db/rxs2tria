@@ -1,115 +1,57 @@
 # rxs2tria
 
-The goal of `rxs2tria` is to prepare, quality check and harmonize a
-collection of QWA images, corresponding ROXAS output files and
-accompanying metadata for submission as a dataset to the QWA database.
+`rxs2tria` is an `R` package to handle Quantitative Wood Anatomy (QWA)
+data, specifically data generated with the
+[ROXAS](https://roxas.wsl.ch/en/) software or its successor [ROXAS
+AI](https://github.com/roxas-ai/napari-roxas-ai/tree/released) *(under
+development)*. The package includes functionality to prepare, quality
+check and harmonize a QWA dataset, consisting of QWA images,
+corresponding ROXAS output files and accompanying metadata. The
+processed dataset may then be submitted to the
+[TRIA](https://webapps.wsl.ch/tria/) database for intra-annual and
+anatomical tree-ring data.
 
 **Note:** This package is currently under development and not yet stable
-nor officially released. Version 1.0.0 will be made available under the
-organizational github.
+nor officially released.
 
 ## Installation
 
 You can install the development version of `rxs2tria` from
-[GitHub](https://github.com/) with:
+[GitHub](https://github.com/tria-db/rxs2tria/) with:
 
 ``` r
-# install.packages("pak")
+
 pak::pak("tria-db/rxs2tria")
-
-# or:
-remotes::install_github('tria-db/rxs2tria')
+# or pak::pak("tria-db/rxs2tria@develop") for the develop branch
 ```
 
-## Usage
+## Getting started
 
-Use the package to extract all available metadata from the ROXAS output
-files under a given path.
+The easiest way to get started is to follow the `rxs2tria` workflow
+defined in the template file. The following makes a copy of the template
+and saves it to your current working directory:
 
 ``` r
+
 library(rxs2tria)
-
-# set input and output paths and dataset name
-path_in <- './path/to/ROXAS_output_data'
-path_out <- './out'
-dataset_name <- 'QWA_ex_dataset'
+file.copy(system.file("templates/prepare_rxs_dataset.R", package = "rxs2tria"), ".")
 ```
+
+See the
+[vignette](https://tria-db.github.io/rxs2tria/articles/rxs2tria.html)
+for a detailed introduction and example workflow. You can access it
+locally with:
 
 ``` r
-# get overview of data to be read and extract data structure from filenames
-files <- get_roxas_files(path_in)
-str(files)
+
+vignette("rxs2tria")
 ```
 
-``` r
-# define the naming convention used for your files as a regex pattern
-# e.g. the following means that your filenames are structured as follows:
-# `{site}_{species}_{tree}_{slide}_{image}`
-# since there is exactly one sample (woodpiece) per tree, no woodpiece identifier is included in the pattern
-pattern <- "^(?<site>[:alnum:]+)_(?<species>[:alnum:]+)_(?<tree>[:alnum:].+)_(?<slide>[:alnum:]+)_(?<image>[:alnum:]+)$"
+## Contributions
 
-# extract the data structure from the file names using the specified pattern
-df_structure <- extract_data_structure(files, pattern)
-```
-
-``` r
-# read available metadata
-df_meta <- collect_metadata_from_files(df_structure,
-                                       roxas_version='classic')
-
-# write extracted metadata to file
-write.csv(df_meta, file.path(path_out, paste0(dataset_name, '_meta_extracted.csv')),
-          row.names = FALSE)
-```
-
-To provide the additional metadata required (e.g. site and tree
-information, author details, …) for the submission of a dataset, you can
-use the interactive Shiny app which is part of this package.
-
-The app is hosted on a WSL server and accessible via
-[webapps.wsl.ch/QWAmeta](https://webapps.wsl.ch/QWAmeta/).
-
-Or, if you want to run it locally, you can use the following command:
-
-``` r
-launch_metadata_app()
-```
-
-To load and preprocess the cell and ring measurements:
-
-``` r
-# read raw cells/rings data
-QWA_data <- collect_raw_data(df_structure)
-
-# clean raw data
-QWA_data <- validate_QWA_data(QWA_data, df_meta)
-
-# remove outliers
-# NOTE: ROXAS does some threshold based outlier checks and assigns these a
-# a negative value. Here, we replace these outliers with NAs
-QWA_data <- remove_outliers(QWA_data)
-
-# complete cell measures
-QWA_data <- complete_cell_measures(QWA_data)
-
-# save the cleaned data to files
-write.csv(QWA_data$cells,
-          file.path(path_out, paste0(dataset_name, '_cells.csv')),
-          row.names = FALSE)
-
-write.csv(QWA_data$rings,
-          file.path(path_out, paste0(dataset_name, '_rings.csv')),
-          row.names = FALSE)
-```
-
-To check the coverage and add ring quality flags and setting years to
-exclude:
-
-``` r
-launch_coverage_app()
-
-# TODO: add export functionality to coverage app
-```
+Contributions are welcome! Please feel free to open issues or submit
+pull requests on the [GitHub
+repository](https://github.com/tria-db/rxs2tria/).
 
 # Package index
 
@@ -127,45 +69,131 @@ ROXAS output files.
   : Read and combine image exif data
 - [`collect_settings_data()`](https://tria-db.github.io/rxs2tria/reference/collect_settings_data.md)
   : Read and combine ROXAS settings data
-- [`convert_settings_dates()`](https://tria-db.github.io/rxs2tria/reference/convert_settings_dates.md)
-  : Handle date conversion for ROXAS settings created at dates
-- [`combine_rxs_metadata()`](https://tria-db.github.io/rxs2tria/reference/combine_rxs_metadata.md)
-  : Combine raw ROXAS metadata
 
 ## Reading raw ROXAS output data
 
 Functions for reading and writing ROXAS cells and rings output files.
 
-- [`collect_cells_data()`](https://tria-db.github.io/rxs2tria/reference/collect_cells_data.md)
-  : Collect raw cells output data
-- [`collect_rings_data()`](https://tria-db.github.io/rxs2tria/reference/collect_rings_data.md)
-  : Collect raw rings output data
+- [`collect_raw_outputs()`](https://tria-db.github.io/rxs2tria/reference/collect_raw_outputs.md)
+  : Collect raw output data from multiple files
 - [`collect_raw_data()`](https://tria-db.github.io/rxs2tria/reference/collect_raw_data.md)
   : Collect raw cells and rings output data
+
+## QWAimages
+
+S3 class QWAimages
+
+- [`build_QWAimages()`](https://tria-db.github.io/rxs2tria/reference/build_QWAimages.md)
+  : Build a QWAimages object from raw ROXAS metadata
+- [`check_QWAimages()`](https://tria-db.github.io/rxs2tria/reference/check_QWAimages.md)
+  : Validate a QWAimages object
+- [`complete_QWAimages()`](https://tria-db.github.io/rxs2tria/reference/complete_QWAimages.md)
+  : Complete a QWAimages object
+- [`QWAimages()`](https://tria-db.github.io/rxs2tria/reference/QWAimages.md)
+  : Create a QWAimages object
+- [`read_QWAimages()`](https://tria-db.github.io/rxs2tria/reference/read_QWAimages.md)
+  : Read a QWAimages object from a CSV file
+- [`print(`*`<QWAimages>`*`)`](https://tria-db.github.io/rxs2tria/reference/summary.QWAimages.md)
+  [`summary(`*`<QWAimages>`*`)`](https://tria-db.github.io/rxs2tria/reference/summary.QWAimages.md)
+  : Print summary of a QWAimages object
+- [`update_QWAimages()`](https://tria-db.github.io/rxs2tria/reference/update_QWAimages.md)
+  : Update QWA metadata for selected images
+- [`write_QWAimages()`](https://tria-db.github.io/rxs2tria/reference/write_QWAimages.md)
+  : Write a QWAimages object to a CSV file.
+
+## QWAmetadata
+
+S3 QWAmetadata
+
+- [`add_resources()`](https://tria-db.github.io/rxs2tria/reference/add_resources.md)
+  : Add a resources table to a QWAmetadata object
+- [`collect_resources()`](https://tria-db.github.io/rxs2tria/reference/collect_resources.md)
+  : Collect resource file information from a directory
+- [`check_QWAmetadata()`](https://tria-db.github.io/rxs2tria/reference/check_QWAmetadata.md)
+  : Validate a QWAmetadata object
+- [`complete_QWAmetadata()`](https://tria-db.github.io/rxs2tria/reference/complete_QWAmetadata.md)
+  : Complete a QWAmetadata object with all optional fields
+- [`print(`*`<QWAmetadata>`*`)`](https://tria-db.github.io/rxs2tria/reference/print.QWAmetadata.md)
+  [`summary(`*`<QWAmetadata>`*`)`](https://tria-db.github.io/rxs2tria/reference/print.QWAmetadata.md)
+  : Print a QWAmetadata object
+- [`QWAmetadata()`](https://tria-db.github.io/rxs2tria/reference/QWAmetadata.md)
+  [`as_QWAmetadata()`](https://tria-db.github.io/rxs2tria/reference/QWAmetadata.md)
+  : Create a QWAmetadata object
+- [`read_QWAmetadata()`](https://tria-db.github.io/rxs2tria/reference/read_QWAmetadata.md)
+  : Read a QWAmetadata object from a JSON file
+- [`write_QWAmetadata()`](https://tria-db.github.io/rxs2tria/reference/write_QWAmetadata.md)
+  : Write a QWAmetadata object to a JSON file
+
+## QWAdata
+
+S3 class QWAdata
+
+- [`check_QWAdata()`](https://tria-db.github.io/rxs2tria/reference/check_QWAdata.md)
+  : Validate a QWAdata object
+- [`complete_flags()`](https://tria-db.github.io/rxs2tria/reference/complete_flags.md)
+  : Add the initial flags columns to QWAdata
+- [`complete_measures()`](https://tria-db.github.io/rxs2tria/reference/complete_measures.md)
+  : Complete QWA measures
+- [`complete_QWAdata()`](https://tria-db.github.io/rxs2tria/reference/complete_QWAdata.md)
+  : Complete a QWAdata object
+- [`print(`*`<QWAdata>`*`)`](https://tria-db.github.io/rxs2tria/reference/print.QWAdata.md)
+  [`summary(`*`<QWAdata>`*`)`](https://tria-db.github.io/rxs2tria/reference/print.QWAdata.md)
+  : Print a QWAdata object
+- [`QWAdata()`](https://tria-db.github.io/rxs2tria/reference/QWAdata.md)
+  [`as_QWAdata()`](https://tria-db.github.io/rxs2tria/reference/QWAdata.md)
+  : Create a QWAdata object
+- [`read_QWAdata()`](https://tria-db.github.io/rxs2tria/reference/read_QWAdata.md)
+  : Read a QWAdata object from CSV files
+- [`update_QWAdata()`](https://tria-db.github.io/rxs2tria/reference/update_QWAdata.md)
+  : Update a QWAdata object with re-read raw data for selected images
+- [`write_QWAdata()`](https://tria-db.github.io/rxs2tria/reference/write_QWAdata.md)
+  : Write a QWAdata object to files
+
+## QWAprofiles
+
+Functions to calculate sector or band profiles from cell measurements.
+
+- [`calculate_band_profiles()`](https://tria-db.github.io/rxs2tria/reference/calculate_band_profiles.md)
+  : Calculate band-wise radial profiles
+- [`calculate_sector_profiles()`](https://tria-db.github.io/rxs2tria/reference/calculate_sector_profiles.md)
+  : Calculate sector-wise radial profiles
+- [`check_QWAprofile()`](https://tria-db.github.io/rxs2tria/reference/check_QWAprofile.md)
+  : Validate a QWAprofile object
+- [`complete_QWAprofile()`](https://tria-db.github.io/rxs2tria/reference/complete_QWAprofile.md)
+  : Add cell parameters to an existing QWAprofile object
+- [`QWAprofile()`](https://tria-db.github.io/rxs2tria/reference/QWAprofile.md)
+  : Create a QWAprofile object
+- [`read_QWAprofile()`](https://tria-db.github.io/rxs2tria/reference/read_QWAprofile.md)
+  : Read a QWAprofile object from a CSV file
+- [`print(`*`<QWAprofile>`*`)`](https://tria-db.github.io/rxs2tria/reference/summary.QWAprofile.md)
+  [`summary(`*`<QWAprofile>`*`)`](https://tria-db.github.io/rxs2tria/reference/summary.QWAprofile.md)
+  : Summarise a QWAprofile object
+- [`write_QWAprofile()`](https://tria-db.github.io/rxs2tria/reference/write_QWAprofile.md)
+  : Write a QWAprofile object to a CSV file
 
 ## rest
 
 Other utility functions.
 
-- [`read_QWAdata()`](https://tria-db.github.io/rxs2tria/reference/read_QWAdata.md)
-  : Read already processed QWA data from CSV files
-- [`launch_coverage_app()`](https://tria-db.github.io/rxs2tria/reference/launch_coverage_app.md)
-  : Launch the coverage Shiny app
+- [`launch_flags_app()`](https://tria-db.github.io/rxs2tria/reference/launch_flags_app.md)
+  : Launch the ring flags Shiny app
 - [`launch_metadata_app()`](https://tria-db.github.io/rxs2tria/reference/launch_metadata_app.md)
   : Launch the metadata Shiny app
-- [`resolve_schema()`](https://tria-db.github.io/rxs2tria/reference/resolve_schema.md)
-  : Read and resolve JSON Schema from file
-- [`plot_woodpiece_coverage()`](https://tria-db.github.io/rxs2tria/reference/plot_woodpiece_coverage.md)
-  : Plot overview of annual coverage of images
-- [`create_coverage_plots()`](https://tria-db.github.io/rxs2tria/reference/create_coverage_plots.md)
-  : Create coverage plots for all trees
-- [`remove_outliers()`](https://tria-db.github.io/rxs2tria/reference/remove_outliers.md)
-  : Remove outliers in cells and rings data
-- [`validate_QWA_data()`](https://tria-db.github.io/rxs2tria/reference/validate_QWA_data.md)
-  : Validate the raw QWA data
+- [`create_rwl()`](https://tria-db.github.io/rxs2tria/reference/create_rwl.md)
+  : Create a Tucson (.rwl) file from ROXAS ring-width or profile data
 
 # Articles
 
 ### All vignettes
 
+- [The QWAdata
+  class](https://tria-db.github.io/rxs2tria/articles/QWAdata.md):
+- [The QWAimages
+  class](https://tria-db.github.io/rxs2tria/articles/QWAimages.md):
+- [The QWAmetadata
+  class](https://tria-db.github.io/rxs2tria/articles/QWAmetadata.md):
+- [The QWAprofile
+  class](https://tria-db.github.io/rxs2tria/articles/QWAprofile.md):
 - [rxs2tria](https://tria-db.github.io/rxs2tria/articles/rxs2tria.md):
+- [Step-by-step
+  instructions](https://tria-db.github.io/rxs2tria/articles/workflow.md):

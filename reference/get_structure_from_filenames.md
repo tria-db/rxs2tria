@@ -19,18 +19,19 @@ consistently applied across all files. Not all hierarchical components
 are mandatory in the pattern, as long as the images can be uniquely
 identified (e.g. if exactly one woodpiece was extracted per tree, there
 might not be a specific woodpiece identifier, or if all data is from the
-same site, there might not be a site identifier in the name). Iff all
-images pertain to the same site and/or the same species, and these
-components are not part of the labeling pattern, they may also be
-provided via the `site_label` and `species_code` input parameters. Here,
-`species_code` should follow the standard ITRDB species codes, c.f.
-[webapps.wsl.com/tria/#/about](https://webapps.wsl.com/tria/#/about).
+same site, there might not be a site identifier). If all images pertain
+to the same site and/or the same species, and these components are not
+part of the labeling pattern, they may also be provided via the
+`site_label` and `species_code` input parameters. Here, `species_code`
+should follow the standard ITRDB species codes.
 
 `extract_data_structure()` is a wrapper around
-`get_structure_from_filenames()` that uses the list of ROXAS files from
+`get_structure_from_filenames()` that uses the list of ROXAS (AI) files
+from
 [`get_roxas_files()`](https://tria-db.github.io/rxs2tria/reference/get_roxas_files.md)
-as input, applies the hierarchy extraction to the image file names, and
-adds the original file names to the resulting dataframe.
+as input, applies the hierarchy extraction to the `$fname_image`
+component, and appends the original filepaths as columns to the
+structure data frame output.
 
 ## Usage
 
@@ -38,7 +39,7 @@ adds the original file names to the resulting dataframe.
 get_structure_from_filenames(
   filenames,
   pattern =
-    "(?<site>[:alnum:]+)_(?<species>[:alnum:]+)_(?<tree>[:alnum:][:alnum:])(?<woodpiece>[:alnum:]*)_(?<slide>[:alnum:]+)_(?<image>[:alnum:]+)",
+    "(?<site>[[:alnum:]]+)_(?<species>[[:alnum:]]+)_(?<tree>[[:alnum:]][[:alnum:]])(?<woodpiece>[[:alnum:]]*)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)",
   site_label = NULL,
   species_code = NULL
 )
@@ -46,7 +47,7 @@ get_structure_from_filenames(
 extract_data_structure(
   files,
   pattern =
-    "(?<site>[:alnum:]+)_(?<species>[:alnum:]+)_(?<tree>[:alnum:][:alnum:])(?<woodpiece>[:alnum:]*)_(?<slide>[:alnum:]+)_(?<image>[:alnum:]+)",
+    "(?<site>[[:alnum:]]+)_(?<species>[[:alnum:]]+)_(?<tree>[[:alnum:].]+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)",
   site_label = NULL,
   species_code = NULL
 )
@@ -54,9 +55,13 @@ extract_data_structure(
 
 ## Arguments
 
+- filenames:
+
+  The vector of file names.
+
 - pattern:
 
-  The labeling pattern followed by the file names, as a regex with named
+  The labeling pattern followed by the file names, a regex with named
   groups.
 
 - site_label:
@@ -71,7 +76,8 @@ extract_data_structure(
 
 - files:
 
-  The list of vectors with ROXAS file names.
+  The named list of file vectors returned by
+  [`get_roxas_files()`](https://tria-db.github.io/rxs2tria/reference/get_roxas_files.md).
 
 ## Value
 
@@ -82,15 +88,16 @@ file names for `extract_data_structure()`).
 
 ``` r
 # with the default pattern ({site}_{species}_{tree}{woodpiece}_{slide}_{image})
-files <- c(
+filenames <- c(
   "SITEA_PISY_01A_1_1.jpg",
   "SITEA_PISY_01A_1_2.jpg",
   "SITEA_PISY_01A_2_1.jpg",
   "SITEB_LASI_02A_1_1.jpg",
-  "SITEB_LASI_02B_1_1.jpg"
+  "SITEB_LASI_02B_1_1.jpg",
+  "SITEB_LASI_03_1_1.jpg"
 )
-get_structure_from_filenames(files)
-#> # A tibble: 5 × 7
+get_structure_from_filenames(filenames)
+#> # A tibble: 6 × 7
 #>   image_label     slide_label woodpiece_label tree_label species_code site_label
 #>   <chr>           <chr>       <chr>           <chr>      <chr>        <chr>     
 #> 1 SITEA_PISY_01_… SITEA_PISY… SITEA_PISY_01_A SITEA_PIS… PISY         SITEA     
@@ -98,18 +105,19 @@ get_structure_from_filenames(files)
 #> 3 SITEA_PISY_01_… SITEA_PISY… SITEA_PISY_01_A SITEA_PIS… PISY         SITEA     
 #> 4 SITEB_LASI_02_… SITEB_LASI… SITEB_LASI_02_A SITEB_LAS… LASI         SITEB     
 #> 5 SITEB_LASI_02_… SITEB_LASI… SITEB_LASI_02_B SITEB_LAS… LASI         SITEB     
+#> 6 SITEB_LASI_03_… SITEB_LASI… SITEB_LASI_03   SITEB_LAS… LASI         SITEB     
 #> # ℹ 1 more variable: org_img_name <chr>
 
 # custom pattern of the form {tree}_{slide}_{image}
-files <- c(
+filenames <- c(
  "tree1_sl1_img1.jpg",
  "tree1_sl2_img1.jpg",
  "tree2_sl1_img1.jpg",
  "tree2_sl1_img2.jpg"
  )
- pattern <- "(?<tree>[:alnum:].+)_(?<slide>[:alnum:]+)_(?<image>[:alnum:]+)"
+ pattern <- "(?<tree>[[:alnum:]].+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)"
  get_structure_from_filenames(
-   files, pattern,
+   filenames, pattern,
    site_label = "SITEA", species_code = "PISY")
 #> # A tibble: 4 × 7
 #>   image_label     slide_label woodpiece_label tree_label species_code site_label

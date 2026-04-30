@@ -13,13 +13,13 @@
 Source:
 [`DESCRIPTION`](https://github.com/tria-db/rxs2tria/blob/main/DESCRIPTION)
 
-Naegelin M (2026). *rxs2tria: Preprocess ROXAS data for TRIA*. R package
-version 0.0.0.9000, <https://tria-db.github.io/rxs2tria/>.
+Naegelin M (2026). *rxs2tria: Preprocess ROXAS (AI) data for TRIA*. R
+package version 0.1.0, <https://tria-db.github.io/rxs2tria/>.
 
     @Manual{,
-      title = {rxs2tria: Preprocess ROXAS data for TRIA},
+      title = {rxs2tria: Preprocess ROXAS (AI) data for TRIA},
       author = {Mara Naegelin},
       year = {2026},
-      note = {R package version 0.0.0.9000},
+      note = {R package version 0.1.0},
       url = {https://tria-db.github.io/rxs2tria/},
     }

@@ -1,7 +1,7 @@
-# rxs2tria: Preprocess ROXAS data for TRIA
+# rxs2tria: Preprocess ROXAS (AI) data for TRIA
 
 This package contains the functionalities to preprocess and prepare the
-ROXAS output files for upload to the TRIA database.
+ROXAS (AI) output files for upload to the TRIA database.
 
 ## See also
 

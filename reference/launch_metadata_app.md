@@ -12,5 +12,5 @@ launch_metadata_app(server_run = FALSE)
 
 - server_run:
 
-  Logical, if TRUE, runs the app in server mode (for hosting on shiny
-  server).
+  Logical; if `TRUE`, runs the app in server mode (for hosting on a
+  Shiny server).
