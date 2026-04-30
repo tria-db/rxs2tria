@@ -86,7 +86,7 @@ flags_ui <- function(id) {
         ns("apply_changes"), "Update excluded in plot",
         icon = shiny::icon("arrows-rotate"), class = "btn-tert"
       ),
-      hr(class = "hr-slim"),
+      shiny::hr(class = "hr-slim"),
 
       # button to save and/or download edited data ----
       # TODO: what about saving in between? what about saving if app crashes?
@@ -99,14 +99,14 @@ flags_ui <- function(id) {
       #   icon = shiny::icon("xmark"), class = "btn-danger"
       # ),
 
-      tags$div(
+      shiny::tags$div(
         style = "display: flex; flex-direction: column;  gap: 4px;",
-        shiny::actionButton(ns("save_btn"), "Save ring flags", icon = shiny::icon("save"), 
+        shiny::actionButton(ns("save_btn"), "Save ring flags", icon = shiny::icon("save"),
                     class = "btn-tert", width = "100%"),
-        tags$div(
+        shiny::tags$div(
           style = "display: flex; align-items: center; gap: 4px;",
           shiny::actionLink(ns("save_settings_btn"), NULL, shiny::icon("gear")),
-          tags$span("Save settings", style = "font-size: 0.8em; ")
+          shiny::tags$span("Save settings", style = "font-size: 0.8em; ")
         ),
 
       )
@@ -135,11 +135,11 @@ flags_ui <- function(id) {
       bslib::card_body(
         class = "p-0",
         fillable = FALSE,
-        uiOutput(ns("main_plot_ui"))
+        shiny::uiOutput(ns("main_plot_ui"))
       ),
       bslib::card_footer(
         class = "p-1",
-        uiOutput(ns("corr_info_ui"))
+        shiny::uiOutput(ns("corr_info_ui"))
       )
     ),
 

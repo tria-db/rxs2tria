@@ -45,9 +45,9 @@ data frame, making it easy to build a resource list incrementally from
 multiple directories (e.g., processed outputs + raw ROXAS files + images).
 }
 \details{
-Resource types are inferred from file names via \code{\link[=infer_resource_type]{infer_resource_type()}}.
+Resource types are inferred from file names via \code{infer_resource_type()}.
 See that function's documentation for the full pattern table.
 }
 \seealso{
-\code{\link[=add_resources]{add_resources()}}, \code{\link[=infer_resource_type]{infer_resource_type()}}
+\code{\link[=add_resources]{add_resources()}}
 }

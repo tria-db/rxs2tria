@@ -11,7 +11,7 @@
 #'
 #' @return a logical indicating whether the true inner ring border lies outside
 #' the image border and the ring is thus incomplete
-#' @keywords internal
+#' @noRd
 # TODO: compare my method with GvA's original one, check thresholds
 check_incomplete_innermost <- function(cells.innermost, res){
   # first check that we do have cell data for the year in question,
@@ -112,7 +112,7 @@ check_incomplete_innermost <- function(cells.innermost, res){
 #' for the spatial resolution)
 #'
 #' @return the input dataframe with additional logical columns 'incomplete_ring'
-#' @keywords internal
+#' @noRd
 # TODO: additional columns
 # TODO: what about circular samples?
 flag_incomplete_rings <- function(df_rings_log, df_cells_all, df_meta){
@@ -164,7 +164,7 @@ flag_incomplete_rings <- function(df_rings_log, df_cells_all, df_meta){
 #'
 #' @return the input dataframe with additional logical column 'duplicate_ring'
 #' and integer column 'duplicate_sel' with the selected ring among duplicates
-#' @keywords internal
+#' @noRd
 # TODO: avoid switching too often?
 flag_duplicate_rings <- function(df_rings_log){
   # flag which rings are overlapping with others

@@ -9,7 +9,6 @@
 #'
 #' @param QWA_data a list containing the cells and rings dataframes
 #' @return an extended data frame of rings data
-#' @keywords internal
 #' @noRd
 complete_rings <- function(QWA_data) {
   df_rings <- QWA_data$rings
@@ -141,8 +140,8 @@ check_cell_years <- function(df_cells, warn_only = FALSE) {
   invisible(TRUE)
 }
 
-
-#' @keywords internal
+# Helper to avoid -inf warning on all NA vectors
+#' @noRd
 max_na_inf <- function(x) {
   x_na <- is.na(x)
   if(all(x_na)) -Inf else max(x[!x_na])
@@ -425,8 +424,8 @@ new_QWAdata <- function(cells = NULL,
 #'   (one row per annual ring per image).
 #'
 #' At least one component must be provided. The typical workflow builds a
-#' `QWAdata` object incrementally using [collect_raw_data()],
-#' [remove_outliers()], [complete_QWAdata()], and [check_QWAdata()].
+#' `QWAdata` object incrementally using [collect_raw_data()], [complete_QWAdata()],
+#' and [check_QWAdata()].
 #' Metadata is kept separately as a [QWAmetadata] or [QWAimages] object.
 #' Radial profiles are computed separately as [QWAprofile] objects using
 #' [calculate_sector_profiles()] or [calculate_band_profiles()].

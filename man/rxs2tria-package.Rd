@@ -4,9 +4,9 @@
 \name{rxs2tria-package}
 \alias{rxs2tria}
 \alias{rxs2tria-package}
-\title{rxs2tria: Preprocess ROXAS data for TRIA}
+\title{rxs2tria: Preprocess ROXAS (AI) data for TRIA}
 \description{
-This package contains the functionalities to preprocess and prepare the ROXAS output files for upload to the TRIA database.
+This package contains the functionalities to preprocess and prepare the ROXAS (AI) output files for upload to the TRIA database.
 }
 \seealso{
 Useful links:

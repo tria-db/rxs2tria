@@ -121,7 +121,9 @@ update_QWAdata <- function(x, imgs_to_update, meta,
   # recaluclate flag columns if present:
   if (any(flag_cols %in% names(x$rings))) {
     if (!all(flag_cols %in% names(x$rings))) {
-      cli::cli_abort("Cannot update with partial calculated flag columns. Remove all or run complete_QWAdata first.")
+      cli::cli_abort(
+        "Cannot update with partial calculated flag columns. Remove all or run complete_QWAdata first."
+      )
     }
     x_new <- complete_flags(x_new, meta, exclude_mode)
 
@@ -139,14 +141,20 @@ update_QWAdata <- function(x, imgs_to_update, meta,
     x$rings <- x$rings |>
       dplyr::filter(!woodpiece_label %in% affected_wps) |> # filter out any affected/old wp data
       dplyr::bind_rows(df_rings_wps) |>
-      dplyr::mutate(dplyr::across(dplyr::where(is.logical), ~tidyr::replace_na(., FALSE))) |>
+      dplyr::mutate(dplyr::across(
+        dplyr::where(is.logical),
+        ~ tidyr::replace_na(., FALSE)
+      )) |>
       dplyr::arrange(woodpiece_label, slide_label, image_label, year)
   } else {
     # update the rings component with the data (no calc flags, only imgs_to_update)
     x$rings <- x$rings |>
       dplyr::filter(!image_label %in% imgs_to_update) |>
       dplyr::bind_rows(x_new$rings) |>
-      dplyr::mutate(dplyr::across(dplyr::where(is.logical), ~tidyr::replace_na(., FALSE))) |>
+      dplyr::mutate(dplyr::across(
+        dplyr::where(is.logical),
+        ~ tidyr::replace_na(., FALSE)
+      )) |>
       dplyr::arrange(woodpiece_label, slide_label, image_label, year)
   }
 
@@ -158,3 +166,6 @@ update_QWAdata <- function(x, imgs_to_update, meta,
 
   x
 }
+
+# TODO:
+# update_QWAprofile

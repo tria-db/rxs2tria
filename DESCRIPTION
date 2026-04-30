@@ -27,7 +27,6 @@ Imports:
     jsonlite,
     jsonvalidate,
     lubridate,
-    magrittr,
     purrr,
     rlang,
     stringr,

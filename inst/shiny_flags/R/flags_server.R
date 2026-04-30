@@ -440,9 +440,9 @@ flags_server <- function(id, main_session, comments_out) {
 
       # attach JS callbacks
       if ("sd" %in% sel_subplots()) {
-        fig <- fig %>% htmlwidgets::onRender(js_sync_hover)
+        fig <- fig |> htmlwidgets::onRender(js_sync_hover)
       }
-      fig <- fig %>% htmlwidgets::onRender(js_traces, data = ns("traces_crn"))
+      fig <- fig |> htmlwidgets::onRender(js_traces, data = ns("traces_crn"))
 
       fig
 
@@ -488,7 +488,7 @@ flags_server <- function(id, main_session, comments_out) {
            !is.null(x_axes$x_min) &&
              !is.null(x_axes$x_max)) {
         cat("... restoring x axes limits\n")
-        p <- p %>%
+        p <- p |>
           plotly::plotlyProxyInvoke(
             method = "relayout",
             list(
@@ -538,7 +538,7 @@ flags_server <- function(id, main_session, comments_out) {
 
       p
 
-    }) |> bindEvent(input$traces_crn, ignoreNULL = TRUE, ignoreInit = TRUE)
+    }) |> shiny::bindEvent(input$traces_crn, ignoreNULL = TRUE, ignoreInit = TRUE)
 
 
     # PLOT REACTIVITY ----------------------------------------------------------
@@ -577,7 +577,7 @@ flags_server <- function(id, main_session, comments_out) {
 
       click_data <- plot_click()
       if (click_data$role == "otherwp") {
-        showModal(
+        shiny::showModal(
           switch_selwp_modal(ns, click_data$wp_label)
         )
       } else {
@@ -792,7 +792,7 @@ flags_server <- function(id, main_session, comments_out) {
       # recalculated)
       if (has_mean_trace) {
         crn_curveNumber <- input$traces_crn[['mean_trace']]$curveNumber
-        p <- p %>% plotly::plotlyProxyInvoke("deleteTraces", crn_curveNumber)
+        p <- p |> plotly::plotlyProxyInvoke("deleteTraces", crn_curveNumber)
       }
 
       # recalculate and redraw mean trace only if shown
@@ -955,21 +955,20 @@ flags_server <- function(id, main_session, comments_out) {
       names(opt_col_colors) <- unname(all_opt_cols)
 
       if (length(all_opt_cols) > 0) {
-        hot <- hot %>%
-          purrr::reduce(
-            all_opt_cols, # need names in df
-            function(ht, col) {
-              ht |> rhandsontable::hot_col(col, type = "checkbox", halign = "htCenter",
-                                           renderer = renderer_cb(opt_col_colors[col]))
-            },
-            .init = .
-          )
+        hot <- purrr::reduce(
+          all_opt_cols, # need names in df
+          function(ht, col) {
+            ht |> rhandsontable::hot_col(col, type = "checkbox", halign = "htCenter",
+                                         renderer = renderer_cb(opt_col_colors[col]))
+          },
+          .init = hot
+        )
       }
 
       hot |>
-        rhandsontable::hot_cols(colWidths = 25) %>%
+        rhandsontable::hot_cols(colWidths = 25) |>
         # add esc key functionality to table
-        htmlwidgets::onRender(js_escape) %>%
+        htmlwidgets::onRender(js_escape) |>
         # keep track of user selected row in table
         htmlwidgets::onRender(js_selrow,
                               data = list(
@@ -1099,12 +1098,12 @@ flags_server <- function(id, main_session, comments_out) {
       shiny::req(sel_image())
       sel_img <- sel_image()
 
-      image_path <- input_data$rxsmeta_data %>%
-        dplyr::filter(image_label == sel_img) %>%
+      image_path <- input_data$rxsmeta_data |>
+        dplyr::filter(image_label == sel_img) |>
         dplyr::pull(fname_image)
-      
-      org_img_name <- input_data$rxsmeta_data %>%
-        dplyr::filter(image_label == sel_img) %>%
+
+      org_img_name <- input_data$rxsmeta_data |>
+        dplyr::filter(image_label == sel_img) |>
         dplyr::pull(org_img_name)
 
       base_path <- dirname(image_path)
@@ -1209,7 +1208,7 @@ flags_server <- function(id, main_session, comments_out) {
       
 
     # DEBUG OUTPUT -------------------------------------------------------------
-    output$debug <- renderPrint({
+    output$debug <- shiny::renderPrint({
       #sel_subplots()
       flags_out()
       #shiny::req(save_settings$initialized)

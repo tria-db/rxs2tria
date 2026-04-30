@@ -386,7 +386,7 @@ collect_image_info <- function(files_images, batch_size = 50) {
 #' @param roxas_version The version of ROXAS used to create the file
 #'
 #' @returns A dataframe containing the extracted data.
-#' @keywords internal
+#' @noRd
 # TODO: check that this works for all old versions of ROXAS
 #       it looks like it works for ROXAS versions
 #       3.0.285, 3.0.575, 3.0.590, 3.0.608, 3.0.620, 3.0.634, 3.0.655

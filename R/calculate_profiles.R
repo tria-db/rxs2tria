@@ -82,7 +82,7 @@ calculate_sector_profiles <- function(QWA_data, n_sectors, sel_cell_params, quan
 #' @param stepsize numeric, the step size between band starts
 #' @param band_rebound logical, if TRUE, the last band is rebounded to end exactly at mrw_val
 #' @return a data.table with start and end positions of each band for the given mrw_val
-#' @keywords internal
+#' @noRd
 create_bands_dt <- function(mrw_val, bandwidth, stepsize, band_rebound = TRUE) {
   band_starts <- seq(0, mrw_val - bandwidth + stepsize, by = stepsize)
   # in seq, the last element + by is <= the to value, thus this definition

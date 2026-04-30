@@ -7,7 +7,7 @@
 #'   the classic ROXAS schema, `"roxas_ai"` the ROXAS AI schema.
 #'   Ignored for all other schema names.
 #' @return Package-relative path to the JSON schema file.
-#' @keywords internal
+#' @noRd
 schema_rel_path <- function(schema, roxas_version = NULL) {
   schema_clean <- ifelse(schema == "images", roxas_version, schema)
   switch(schema_clean,
@@ -37,7 +37,7 @@ schema_rel_path <- function(schema, roxas_version = NULL) {
 #' @param x A schema as a nested R list.
 #' @param base_path Directory used to resolve relative `$ref` paths (from where `x` was loaded).
 #' @returns A copy of `x` with all `$ref` nodes replaced by their referenced content.
-#' @keywords internal
+#' @noRd
 resolve_refs <- function(x, base_path){
   if (!is.list(x)) return(x)
   if (!is.null(x[["$ref"]])) {
@@ -54,7 +54,7 @@ resolve_schema <- function(schema_obj, schema_path) {
   resolve_refs(tbl_schema, fs::path_dir(schema_path))
 }
 
-#' @keywords internal
+#' @noRd
 extract_required <- function(x) {
   if (!is.list(x)) return(NULL)
   # collect "required" at this level
@@ -63,7 +63,7 @@ extract_required <- function(x) {
   children <- purrr::map(x, extract_required) 
   c(current, children) |> purrr::list_flatten() |> unname()
 }
-#' @keywords internal
+#' @noRd
 merge_props <- function(a, b) {
   new_keys  <- setdiff(names(b), names(a))
   both_keys <- intersect(names(b), names(a))
@@ -79,7 +79,7 @@ merge_props <- function(a, b) {
   }
   a
 }
-#' @keywords internal
+#' @noRd
 extract_properties <- function(x) {
   if (!is.list(x)) return(NULL)
 
@@ -90,8 +90,8 @@ extract_properties <- function(x) {
 }
 
 #' Helper to extract specific column definitions from a imported schema
-#' @keywords internal
-get_tbl_props <- function(tbl_schema){
+#' @noRd
+get_tbl_props <- function(tbl_schema) {
   required <- tbl_schema |> extract_required() |> unlist()
   properties <- tbl_schema |> extract_properties()
   prop_names <- names(properties)
@@ -105,44 +105,18 @@ get_tbl_props <- function(tbl_schema){
 # tbl_props <- get_tbl_props(full_schema$properties$tbl_name)
 # tbl_props <- get_tbl_props(tbl_schema)
 
-# #' Create a 0-row skeleton data frame for a named QWAmetadata schema
-# #'
-# #' Resolves the JSON schema for the given component and returns an empty tibble
-# #' with all columns (required and optional) typed according to the schema.
-# #' Useful as a template for merging or pre-filling metadata tables.
-# #'
-# #' @param schema Component name: one of `"dataset"`, `"authors"`, `"funding"`,
-# #'   `"related"`, `"resources"`, `"sites"`, `"trees"`, `"woodpieces"`, `"slides"`, `"images"`.
-# #' @param roxas_version ROXAS version (`"roxas"` or `"roxas_ai"`). Required when
-# #'   `schema = "images"`, ignored otherwise.
-# #' @returns A 0-row tibble with all schema columns and correct R column types.
-# #' @seealso [align_df_to_schema()]
-# #' @export
-# make_schema_skeleton <- function(schema, roxas_version = NULL, nrows = 0) {
-#   checkmate::assert_choice(schema, c("dataset", "authors", "funding", "related", "resources",
-#                                      "sites", "trees", "woodpieces", "slides", "images"))
-#   if (schema == "images")
-#     checkmate::assert_subset(roxas_version, c("roxas", "roxas_ai"), empty.ok = FALSE)
-#   schema_path <- system.file(schema_rel_path(schema, roxas_version), package = "rxs2tria")
-#   schema_obj  <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
-#   tbl_schema  <- jsonlite::fromJSON(schema_obj$schema$schema, simplifyDataFrame = FALSE)
-#   tbl_schema  <- tbl_schema |> resolve_refs(fs::path_dir(schema_path))
-#   tbl_props <- get_tbl_props(tbl_schema)
-#   create_empty_df(tbl_props, nrows)
-# }
-
 
 #' Create an empty dataframe conforming to a JSON schema
 #'
 #' @param tbl_props The properties from table schema (i.e. after
-#'   [resolve_refs()] and [get_tbl_props()]), with `$properties`
-#'   containing the column definitions.
+#'   resolve_refs() and get_tbl_props(), with `$properties`
+#'   containing the column definitions, `$required` the required columns.
 #' @param nrows Number of rows to create. If `> 0`, character columns are
 #'   filled with `""` and logical columns with `FALSE`.
 #' @returns A tibble with columns and R types matching the schema, with
 #'   `nrows` rows.
-#' @keywords internal
-create_empty_df <- function(tbl_props, nrows = 0){
+#' @noRd
+create_empty_df <- function(tbl_props, nrows = 0) {
   # Mapping JSON Schema types to R types
   json_to_r_types <- c(
     string = "c",
@@ -181,7 +155,7 @@ create_empty_df <- function(tbl_props, nrows = 0){
 #' Helper to convert a column to the target class
 #' @param x The column to convert.
 #' @param target_class The target class to convert to
-#' @keywords internal
+#' @noRd
 convert_column <- function(x, target_class) {
   target_class <- target_class[1]  # use the first class name
   switch(target_class,
@@ -508,7 +482,7 @@ check_schema <- function(df, schema_obj, schema = NULL, warn_only = TRUE, greedy
 #' Helper to check the structure columns define a sound hierarchy
 #' @param df data frame containing the structure columns image_label, slide_label,
 #'   woodpiece_label, tree_label and site_label
-#' @keywords internal
+#' @noRd
 check_structure <- function(df) {
   checkmate::assert_character(df$image_label, unique = TRUE)
   valid <- (

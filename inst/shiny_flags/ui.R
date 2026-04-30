@@ -31,16 +31,15 @@ ui <- bslib::page_fluid(
       "Quality check series",
       icon = shiny::icon("font-awesome", lib = "font-awesome"),
       flags_ui('flags')
-
     ), # end of tab
 
     # TAB: Comment progress overview -------------------------------------------
 
     bslib::nav_panel(
-        title = shiny::uiOutput("comments-tab_title"),
-        value = "comments_panel",
-        icon = shiny::icon("circle-check"),
-        comments_ui('comments')
+      title = shiny::uiOutput("comments-tab_title"),
+      value = "comments_panel",
+      icon = shiny::icon("circle-check"),
+      comments_ui('comments')
     ), # end of tab
 
     # # TAB: running RBT ---------------------------------------------------------
@@ -74,13 +73,17 @@ ui <- bslib::page_fluid(
     footer = bslib::card_body(
       class = "wsl-footer",
       fill = TRUE,
-      tags$img(src = "WSL_Logo_neg.png",
-              height = "30px", style = "vertical-align:middle; margin-right: 5px;"),
-      actionLink("contact_link", "Contact",
-                style = "color: white; margin-left: 5px; text-decoration: none;")
-      
+      shiny::tags$img(
+        src = "WSL_Logo_neg.png",
+        height = "30px",
+        style = "vertical-align:middle; margin-right: 5px;"
+      ),
+      shiny::actionLink(
+        "contact_link",
+        "Contact",
+        style = "color: white; margin-left: 5px; text-decoration: none;"
+      )
     )
-
   ), # end of navset_card_underline
 
   # FOOTER ---------------------------------------------------------------------
@@ -94,5 +97,4 @@ ui <- bslib::page_fluid(
   #   shiny::actionLink("contact_link", "Contact",
   #              style = "color: white; margin-left: 20px; text-decoration: none;")
   # )
-
 ) # end of ui

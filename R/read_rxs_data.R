@@ -7,7 +7,7 @@
 #' @param colname_variants named character vector of any variant column names to rename
 #' @param delim File delimiter (usually `"\t"` for ROXAS, `";"` for ROXAS AI).
 #' @returns A dataframe with the raw data (relevant columns only, cleaned names).
-#' @keywords internal
+#' @noRd
 read_output_file <- function(filename, selcols, colname_variants, delim) {
   # safely read in the raw data while catch errors
   tryCatch(
@@ -161,7 +161,7 @@ collect_raw_outputs <- function(df_structure, roxas_version, ftype) {
 #' @param mute_info If `TRUE`, suppresses the per-column outlier count message
 #'   (warnings for unexpected negative columns are always shown).
 #' @returns A `QWAdata` object with negative outliers/error codes replaced by `NA`.
-#' @export
+#' @noRd
 remove_outliers <- function(QWA_data, mute_info = FALSE) {
   checkmate::assert_class(QWA_data, "QWAdata")
   checkmate::assert_data_frame(QWA_data$cells, null.ok = TRUE)

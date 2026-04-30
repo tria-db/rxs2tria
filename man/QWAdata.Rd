@@ -31,8 +31,8 @@ data produced from ROXAS output files, organised into two components:
 }
 
 At least one component must be provided. The typical workflow builds a
-\code{QWAdata} object incrementally using \code{\link[=collect_raw_data]{collect_raw_data()}},
-\code{\link[=remove_outliers]{remove_outliers()}}, \code{\link[=complete_QWAdata]{complete_QWAdata()}}, and \code{\link[=check_QWAdata]{check_QWAdata()}}.
+\code{QWAdata} object incrementally using \code{\link[=collect_raw_data]{collect_raw_data()}}, \code{\link[=complete_QWAdata]{complete_QWAdata()}},
+and \code{\link[=check_QWAdata]{check_QWAdata()}}.
 Metadata is kept separately as a \link{QWAmetadata} or \link{QWAimages} object.
 Radial profiles are computed separately as \link{QWAprofile} objects using
 \code{\link[=calculate_sector_profiles]{calculate_sector_profiles()}} or \code{\link[=calculate_band_profiles]{calculate_band_profiles()}}.

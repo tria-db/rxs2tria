@@ -129,7 +129,7 @@
 #' @param filename Character; one or more file names (basenames or full paths).
 #' @returns Character vector of resource type strings, same length as `filename`.
 #' @seealso [collect_resources()]
-#' @export
+#' @noRd
 infer_resource_type <- function(filename) {
   vapply(basename(filename), .infer_one_resource_type, character(1),
          USE.NAMES = FALSE)
@@ -200,7 +200,7 @@ infer_resource_type <- function(filename) {
 #' data frame, making it easy to build a resource list incrementally from
 #' multiple directories (e.g., processed outputs + raw ROXAS files + images).
 #'
-#' Resource types are inferred from file names via [infer_resource_type()].
+#' Resource types are inferred from file names via `infer_resource_type()`.
 #' See that function's documentation for the full pattern table.
 #'
 #' @param path Path to a directory to scan for files.
@@ -221,7 +221,7 @@ infer_resource_type <- function(filename) {
 #'   - `linked_label`: label of the linked entity (`NA`; fill in manually).
 #'   - `fname_resource`: absolute file path.
 #'
-#' @seealso [add_resources()], [infer_resource_type()]
+#' @seealso [add_resources()]
 #' @export
 collect_resources <- function(path, append_to = NULL, df_structure = NULL,
                               recursive = FALSE, include_unmatched = FALSE) {

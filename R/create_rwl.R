@@ -173,6 +173,7 @@ create_rwl <- function(prf_data, df_rings, PAR = "mrw", SECTOR = NULL, path_out,
   invisible(rwl)
 }
 
+
 save_rwl_file <- function(param, df_rings,
                           df_prf = NULL, sel_sect = NULL,
                           auto_scale = TRUE, scaling = NULL,

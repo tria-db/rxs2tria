@@ -397,7 +397,7 @@ draw_sel_marker <- function(plot_obj, marker, traces, sel_subpl) {
       yaxis = "y"
     )
 
-    plot_obj <- plot_obj %>%
+    plot_obj <- plot_obj |>
       plotly::plotlyProxyInvoke(
         "addTraces",
         trace_info_crn
@@ -413,7 +413,7 @@ draw_sel_marker <- function(plot_obj, marker, traces, sel_subpl) {
                          marker$year, ": ", marker$ywp_val))
     )
 
-    plot_obj <- plot_obj %>%
+    plot_obj <- plot_obj |>
       plotly::plotlyProxyInvoke(
         "restyle",
         trace_info_crn,
@@ -435,7 +435,7 @@ draw_sel_marker <- function(plot_obj, marker, traces, sel_subpl) {
         yaxis = yaxis_cov
       )
 
-      plot_obj <- plot_obj %>%
+      plot_obj <- plot_obj |>
         plotly::plotlyProxyInvoke(
           "addTraces",
           trace_info_cov
@@ -449,7 +449,7 @@ draw_sel_marker <- function(plot_obj, marker, traces, sel_subpl) {
         color = marker$marker_col
       )
 
-      plot_obj <- plot_obj %>%
+      plot_obj <- plot_obj |>
         plotly::plotlyProxyInvoke(
           "restyle",
           trace_info_cov,
@@ -474,7 +474,7 @@ clear_sel_marker <- function(plot_obj, traces, sel_subpl){
       }
     }
 
-    plot_obj <- plot_obj %>% 
+    plot_obj <- plot_obj |>
       plotly::plotlyProxyInvoke("deleteTraces", selm_curveNumber)
   }
 
@@ -573,7 +573,7 @@ draw_excl_markers <- function(plot_obj, excl_markers, traces) {
       marker_symbol = "circle-open",
       yaxis = "y"
     )
-    plot_obj <- plot_obj %>%
+    plot_obj <- plot_obj |>
       plotly::plotlyProxyInvoke(
         "addTraces",
         excl_trace_info
@@ -588,7 +588,7 @@ draw_excl_markers <- function(plot_obj, excl_markers, traces) {
       yvals <- list(excl_markers$ywp_val)
     }
 
-    plot_obj <- plot_obj %>%
+    plot_obj <- plot_obj |>
       plotly::plotlyProxyInvoke(
         "restyle",
         list(
@@ -599,7 +599,7 @@ draw_excl_markers <- function(plot_obj, excl_markers, traces) {
       )
   } else if (excl_trace_exists) {
     excl_curveNumber <- traces[['excl_markers']]$curveNumber
-    plot_obj <- plot_obj %>%
+    plot_obj <- plot_obj |>
       plotly::plotlyProxyInvoke("deleteTraces", excl_curveNumber)
   }
   plot_obj
@@ -630,7 +630,7 @@ calc_mean_vals <- function(df_all, sel_mean) {
 
 # draw (add) the mean trace
 draw_mean_trace <- function(plot_obj, x_years, y_vals, sel_mean) {
-  plot_obj %>%
+  plot_obj |>
     plotly::plotlyProxyInvoke(
       "addTraces",
       list(
