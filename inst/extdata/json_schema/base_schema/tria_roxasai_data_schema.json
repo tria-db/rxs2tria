@@ -8,7 +8,7 @@
   "items": {
     "type": "object",
     "allOf": [
-      { "$ref": "20260313_tria_image_data_schema.json"},
+      { "$ref": "tria_image_data_schema.json"},
       {
         "properties": {
           "rings_segmentation_model": {

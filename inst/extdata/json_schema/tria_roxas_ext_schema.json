@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "TODO:addurltoTRIAschema",
   "allOf": [
-    { "$ref": "base_schema/20260313_tria_roxas_data_schema.json"},
+    { "$ref": "base_schema/tria_roxas_data_schema.json"},
     {
       "type": "array",
       "items": {

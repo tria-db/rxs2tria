@@ -697,7 +697,7 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
     # orcid transfer: what if names don't match?
 
     output$testing <- shiny::renderPrint({
-      ds_data_out()
+      #ds_data_out()
     })
 
     ds_data_out <- shiny::reactive({

@@ -2,7 +2,7 @@
   "$id": "https://example.com/schemas/extended_woodpiece.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "allOf": [
-    { "$ref": "base_schema/20251007_tria_woodpiece_data_schema.json"},
+    { "$ref": "base_schema/tria_woodpiece_data_schema.json"},
     { 
       "type": "array",
       "items": {

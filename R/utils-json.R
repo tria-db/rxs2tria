@@ -8,22 +8,21 @@
 #'   Ignored for all other schema names.
 #' @return Package-relative path to the JSON schema file.
 #' @noRd
-schema_rel_path <- function(schema, roxas_version = NULL) {
-  schema_clean <- ifelse(schema == "images", roxas_version, schema)
-  switch(schema_clean,
-    "QWAmetadata" = "extdata/json_schema/base_schema/20260313_tria_metadata_schema.json",
-    "shiny_meta" = "extdata/json_schema/20260402_tria_shinyext_schema.json",
-    "dataset" = "extdata/json_schema/base_schema/20251007_tria_ds_data_schema.json",
-    "authors" = "extdata/json_schema/base_schema/20251007_tria_author_data_schema.json",
-    "funding" = "extdata/json_schema/base_schema/20251007_tria_funding_data_schema.json",
-    "related" = "extdata/json_schema/base_schema/20251007_tria_relresource_data_schema.json",
-    "resources" = "extdata/json_schema/base_schema/20260331_tria_resource_data_schema.json",
-    "sites" = "extdata/json_schema/base_schema/20251007_tria_site_data_schema.json",
-    "trees" = "extdata/json_schema/base_schema/20251007_tria_tree_data_schema.json",
-    "woodpieces" = "extdata/json_schema/base_schema/20251007_tria_woodpiece_data_schema.json",
-    "slides" = "extdata/json_schema/base_schema/20251007_tria_slide_data_schema.json",
-    "roxas" = "extdata/json_schema/base_schema/20260313_tria_roxas_data_schema.json",
-    "roxas_ai" = "extdata/json_schema/base_schema/20260313_tria_roxasai_data_schema.json"
+schema_rel_path <- function(schema) {
+  switch(schema,
+    "QWAmetadata" = "extdata/json_schema/base_schema/tria_metadata_schema.json",
+    "shiny_meta" = "extdata/json_schema/tria_shinyext_schema.json",
+    "dataset" = "extdata/json_schema/base_schema/tria_ds_data_schema.json",
+    "authors" = "extdata/json_schema/base_schema/tria_author_data_schema.json",
+    "funding" = "extdata/json_schema/base_schema/tria_funding_data_schema.json",
+    "related" = "extdata/json_schema/base_schema/tria_related_data_schema.json",
+    "resources" = "extdata/json_schema/base_schema/tria_resource_data_schema.json",
+    "sites" = "extdata/json_schema/base_schema/tria_site_data_schema.json",
+    "trees" = "extdata/json_schema/base_schema/tria_tree_data_schema.json",
+    "woodpieces" = "extdata/json_schema/base_schema/tria_woodpiece_data_schema.json",
+    "slides" = "extdata/json_schema/base_schema/tria_slide_data_schema.json",
+    "roxas" = "extdata/json_schema/base_schema/tria_roxas_data_schema.json",
+    "roxas_ai" = "extdata/json_schema/base_schema/tria_roxasai_data_schema.json"
   )
 }
 

@@ -7,7 +7,6 @@
 .quarto
 .env
 .vscode/*
-.lintr
 archive/*
 explorations/*
 out/*
@@ -17,4 +16,5 @@ inst/doc
 .RDataTmp
 logs_MN.R
 scripts_MAN.R
-example_worflow.R
+example_workflow.R
+example_file.R

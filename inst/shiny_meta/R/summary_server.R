@@ -98,7 +98,7 @@ summary_server <- function(id, main_session, start_out, dataset_out, site_out) {
 
 
     output$testing <- shiny::renderPrint({
-      dataset_out$dataset_tbls$dataset()
+      #dataset_out$dataset_tbls$dataset()
     })
   })
 }

@@ -7,19 +7,19 @@
     "type": "object",
     "properties":
     {
-        "dataset": { "$ref": "20251007_tria_ds_data_schema.json" },
-        "authors": { "$ref": "20251007_tria_author_data_schema.json" },
-        "funding": { "$ref": "20251007_tria_funding_data_schema.json" },
+        "dataset": { "$ref": "tria_ds_data_schema.json" },
+        "authors": { "$ref": "tria_author_data_schema.json" },
+        "funding": { "$ref": "tria_funding_data_schema.json" },
         "related": { "$ref": "20260331_tria_related_data_schema.json" },
-        "resources": { "$ref": "20260331_tria_resource_data_schema.json" },
-        "sites": { "$ref": "20251007_tria_site_data_schema.json" },
-        "trees": { "$ref": "20251007_tria_tree_data_schema.json" },
-        "woodpieces": { "$ref": "20251007_tria_woodpiece_data_schema.json" },
-        "slides": { "$ref": "20251007_tria_slide_data_schema.json" },
+        "resources": { "$ref": "tria_resource_data_schema.json" },
+        "sites": { "$ref": "tria_site_data_schema.json" },
+        "trees": { "$ref": "tria_tree_data_schema.json" },
+        "woodpieces": { "$ref": "tria_woodpiece_data_schema.json" },
+        "slides": { "$ref": "tria_slide_data_schema.json" },
         "images": { 
           "anyOf": [
-            { "$ref": "20260313_tria_roxas_data_schema.json" },
-            { "$ref": "20260313_tria_roxasai_data_schema.json" }
+            { "$ref": "tria_roxas_data_schema.json" },
+            { "$ref": "tria_roxasai_data_schema.json" }
           ]
         }
     },

@@ -1216,7 +1216,7 @@ flags_server <- function(id, main_session, comments_out) {
     # DEBUG OUTPUT -------------------------------------------------------------
     output$debug <- shiny::renderPrint({
       #sel_subplots()
-      flags_out()
+      #flags_out()
       #shiny::req(save_settings$initialized)
       #images_edited()
       #comments_out$goto_img()

@@ -261,7 +261,7 @@ start_server <- function(id, main_session) {
     })
 
     output$testing <- shiny::renderPrint({
-      image_data_out()
+      #image_data_out()
     })
 
     # return the input meta and val check for use in other tabs
