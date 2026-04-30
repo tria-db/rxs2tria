@@ -1001,7 +1001,13 @@ flags_server <- function(id, main_session, comments_out) {
     ## capture hot edits -------------------------------------------------------
     # reactive to capture hot edits
     flags_out <- shiny::reactive({
-      rhandsontable::hot_to_r(input$img_flags)
+      shiny::req(input$img_flags)
+      # rhandsontable may pass values in checkbox columns as JSON strings ("true"/"false")
+      # coerce back to logical for R
+      all_cols <- c(input_specs$rings_data$req_cols, input_specs$rings_data$opt_cols)
+      logical_col_names <- names(all_cols[all_cols == "l"])
+      rhandsontable::hot_to_r(input$img_flags) |>
+        dplyr::mutate(dplyr::across(dplyr::any_of(logical_col_names), as.logical))
     })
 
     # update rings_data_edited with the edited flags from the hot
