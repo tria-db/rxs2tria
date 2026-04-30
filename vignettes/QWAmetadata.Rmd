@@ -1,0 +1,190 @@
+---
+title: "The QWAmetadata class"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{The QWAmetadata class}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+```{r setup}
+library(rxs2tria)
+```
+
+## Overview
+
+A `QWAmetadata` object is a named list that bundles all metadata
+required for a TRIA database submission. It has ten components, one per
+level of the QWA sampling hierarchy:
+
+| Component | Description |
+|---|---|
+| `$images` | Image-level metadata; a `QWAimages` object. **Required.** |
+| `$sites` | Site-level metadata (location, coordinates, climate) |
+| `$trees` | Tree-level metadata (species, DBH, age) |
+| `$woodpieces` | Woodpiece-level metadata (type: disc, core, etc.) |
+| `$slides` | Slide-level metadata (preparation method, staining) |
+| `$dataset` | Dataset name, description, license, embargo date |
+| `$authors` | Author names, affiliations, contact information |
+| `$funding` | Funding sources and grant numbers |
+| `$related` | Related publications or datasets (DOIs, URLs) |
+| `$resources` | Files to include in the submission |
+
+`$images` is the only required component. All others are optional and
+can be populated incrementally. The hierarchical components (`$sites`,
+`$trees`, `$woodpieces`, `$slides`) are linked to `$images` via the
+shared label columns (`site_label`, `tree_label`, `woodpiece_label`,
+`slide_label`).
+
+---
+
+## Building a QWAmetadata object
+
+In normal use, `QWAmetadata` is assembled through the interactive
+metadata Shiny app, which takes a `QWAimages` object as its starting
+point and guides you through all components. The output is exported as a
+JSON file that can be read back at any time:
+
+```{r build-app}
+launch_metadata_app()
+
+QWA_metadata <- read_QWAmetadata("output/my_dataset_QWAmetadata.json")
+```
+
+You can also construct a `QWAmetadata` object directly, passing any
+components you already have as data frames:
+
+```{r build-direct}
+QWA_metadata <- QWAmetadata(
+  images = rxs_images,      # required QWAimages object
+  sites  = df_sites,        # optional data frames
+  trees  = df_trees
+)
+```
+
+Or from a named list, for example after reading from a custom source:
+
+```{r build-list}
+QWA_metadata <- as_QWAmetadata(my_list)
+```
+
+`as_QWAmetadata()` matches list names against the known component names,
+drops any unrecognised names with a warning, and calls `QWAmetadata()`
+on the remainder.
+
+The constructor validates and aligns each supplied component against its
+JSON schema: column names are cleaned, types are coerced, and
+unrecognised columns are dropped. Missing required columns are added as
+`NA` with a warning.
+
+---
+
+## Inspecting a QWAmetadata object
+
+```{r inspect}
+QWA_metadata          # same as print(QWA_metadata)
+summary(QWA_metadata) # identical output
+```
+
+`print()` shows the image-level coverage (images, slides, woodpieces,
+trees, sites, species, year range) and the status of each optional
+component — present with row count, or flagged as not provided.
+
+Individual components are standard data frames and can be accessed and
+edited directly:
+
+```{r access}
+QWA_metadata$sites
+QWA_metadata$authors
+
+# Edit in place:
+QWA_metadata$dataset$license <- "CC BY 4.0"
+```
+
+---
+
+## Checking a QWAmetadata object
+
+```{r check}
+check_QWAmetadata(QWA_metadata)
+```
+
+`check_QWAmetadata()` validates each component in turn and returns
+`TRUE` invisibly when done:
+
+- **Absent components** are skipped with an informational message.
+- **Schema compliance** (warning): checks that required columns are
+  present and values are within expected ranges for each component.
+- **Missing optional columns** (warning): reports optional columns not
+  yet present.
+- **Hierarchy consistency** (error): for `$sites`, `$trees`,
+  `$woodpieces`, and `$slides`, checks that every ID present in
+  `$images` has exactly one matching row, with no extras and no
+  duplicates. Also verifies that derived counts (e.g. number of trees
+  per site) match between the component table and `$images`.
+- **`$images` validity** (delegates to `check_QWAimages()`).
+
+---
+
+## Completing a QWAmetadata object
+
+```{r complete}
+QWA_metadata <- complete_QWAmetadata(QWA_metadata)
+```
+
+Returns a new `QWAmetadata` object with all optional columns added and
+existing values preserved:
+
+- **`$images`**: delegates to `complete_QWAimages()`.
+- **Hierarchical tables** (`$sites`, `$trees`, `$woodpieces`,
+  `$slides`): if a table is absent, it is pre-filled with the IDs and
+  counts derived from `$images` (the same starting point the Shiny app
+  uses), with all other columns initialized as `NA`. If a table is
+  already present, only missing optional columns are added.
+- **Flat tables** (`$dataset`, `$authors`, `$funding`, `$related`): if
+  absent, a one-row skeleton with all schema columns (all `NA`) is
+  created so you can see the expected fields. If already present, only
+  missing optional columns are added.
+- **`$resources`**: not modified by `complete_QWAmetadata()`; use
+  `add_resources()` to populate this component.
+
+---
+
+## Adding resources
+
+Resources (data files to be included in the submission) are managed
+separately via `add_resources()`, which scans a directory, infers the
+resource type of each file from its name, and appends the result to
+`$resources`:
+
+```{r resources}
+QWA_metadata <- add_resources(QWA_metadata, path = "output/submission_files/")
+```
+
+---
+
+## Persisting to disk
+
+`QWAmetadata` is saved as a JSON file, which preserves the nested list
+structure and all component tables in a single file:
+
+```{r write-read}
+write_QWAmetadata(QWA_metadata, "output/my_dataset_QWAmetadata.json")
+
+QWA_metadata <- read_QWAmetadata("output/my_dataset_QWAmetadata.json")
+```
+
+Partial submissions can be saved and reloaded at any time. The JSON
+format is human-readable, so components can also be inspected or edited
+outside of R if needed.

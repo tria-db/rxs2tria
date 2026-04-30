@@ -97,11 +97,8 @@ summary.QWAprofile <- function(object, ...) {
 #' @export
 write_QWAprofile <- function(x, file, compress = FALSE, overwrite = TRUE) {
   checkmate::assert_class(x, "QWAprofile")
-  ext <- if (compress) ".csv.gz" else ".csv"
-  file_fixed <- paste0(sub("\\.csv(\\.gz)?$", "", file), ext)
-  if (file_fixed != file)
-    cli::cli_warn("Adjusted {.arg file} extension to {.val {ext}}: {.file {file_fixed}}")
-  file <- file_fixed
+  if (compress && fs::path_ext(file) != "gz")
+    file <- paste0(file, ".gz")
   checkmate::assert_path_for_output(file, overwrite = overwrite)
   vroom::vroom_write(x, file, delim = ",")
   cli::cli_inform(c("v" = "QWAprofile written to {.file {file}}"))
