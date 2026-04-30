@@ -1,62 +1,57 @@
 Package: rxs2tria
-Title: Preprocess ROXAS data for TRIA
-Version: 0.0.0.9000
+Title: Preprocess ROXAS (AI) data for TRIA
+Version: 0.1.0
 Authors@R: c(
     person("Mara", "Naegelin", , "mara.naegelin@wsl.ch", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-0490-7510")),
     person("Patrick", "Fonti", , "patrick.fonti@wsl.ch", role = c("ctb"),
            comment = c(ORCID = "0000-0002-7070-3292")))       
 Description: This package contains the functionalities to preprocess and prepare
-    the ROXAS output files for upload to the TRIA database.
+    the ROXAS (AI) output files for upload to the TRIA database.
 License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 Imports: 
     backports,
-    beepr,
-    bsicons,
-    bslib,
     checkmate,
+    cli,
     collapse,
     data.table,
-    data.tree,
     dplR,
     dplyr,
-    DT,
     exifr,
     fs,
-    ggnewscale,
-    ggplot2,
-    ggstance,
-    htmltools,
-    htmlwidgets,
-    httr,
+    glue,
     janitor,
     jsonlite,
     jsonvalidate,
-    leaflet,
     lubridate,
-    magrittr,
-    plotly,
     purrr,
-    readr,
-    rhandsontable,
-    sf,
-    shiny,
-    shinyalert,
-    shinyFiles,
-    shinyjs,
-    shinyTree,
-    shinyvalidate,
-    stringdist,
+    rlang,
     stringr,
+    tibble,
     tidyr,
     vroom,
     zoo
-Suggests: 
+Suggests:
+    bslib,
+    data.tree,
+    DT,
+    htmlwidgets,
+    httr,
     knitr,
+    leaflet,
+    plotly,
+    rcrossref, 
+    reactable,
+    rhandsontable,
     rmarkdown,
+    sf,
+    shiny,
+    shinyjs,
+    shinyTree,
+    shinyvalidate,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 URL: https://tria-db.github.io/rxs2tria/, https://github.com/tria-db/rxs2tria/

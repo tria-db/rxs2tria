@@ -3,74 +3,92 @@
 
 # SERVER -----------------------------------------------------------------------
 dataset_server <- function(id, main_session, dataset_tbls_in) {
-  moduleServer(id, function(input, output, session) {
+  shiny::moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
     shinyjs::disable(id = "file_authors")
     shinyjs::disable(id = "file_funding")
     shinyjs::disable(id = "file_relres")
 
+    # pre-compute table props and renderers once at module init
+    aut_tbl_props_full    <- rxs2tria:::get_tbl_props(full_schema$properties$authors)
+    fund_tbl_props_full   <- rxs2tria:::get_tbl_props(full_schema$properties$funding)
+    relres_tbl_props_full <- rxs2tria:::get_tbl_props(full_schema$properties$related)
+
+    aut_tbl_props    <- aut_tbl_props_full$properties
+    fund_tbl_props   <- fund_tbl_props_full$properties
+    relres_tbl_props <- relres_tbl_props_full$properties
+
+    aut_renderers    <- build_tbl_renderers(aut_tbl_props)
+    fund_renderers   <- build_tbl_renderers(fund_tbl_props)
+    relres_renderers <- build_tbl_renderers(relres_tbl_props)
+
     # mock event to close ROR tab on start of app
-    observeEvent(1,{
-      accordion_panel_close(id = 'search_tools', values = TRUE)
-      accordion_panel_close(id = 'doi_search_tool', values = TRUE)
-    }, ignoreNULL = FALSE) # to fire the event at startup
+    shiny::observe({
+      bslib::accordion_panel_close(id = 'search_tools', values = TRUE)
+      bslib::accordion_panel_close(id = 'doi_search_tool', values = TRUE)
+    }) |> shiny::bindEvent(1) # to fire the event at startup
 
 
     # observe changes (i.e. loading) of dataset input tables and fill fields and containers
-    observeEvent(dataset_tbls_in(),{
-      tbls <- dataset_tbls_in()
+    shiny::observe({
+      safe_block({
+        ds_data <- dataset_tbls_in()$dataset
 
-      # Update ds_data fields if available and possible
-      if (!is.null(tbls$ds_data)){
-        updateTextInput(
-          session, "ds_name",
-          value = ifelse(isTruthy(tbls$ds_data$ds_name), tbls$ds_data$ds_name, ""))
-        updateTextAreaInput(
-          session, "acknowledgements",
-          value = ifelse(isTruthy(tbls$ds_data$acknowledgements), tbls$ds_data$acknowledgements, ""))
-        safe_block({
-          if (isTruthy(tbls$ds_data$ds_access)) {
-            updateRadioButtons(session, "ds_access", selected = tbls$ds_data$ds_access)
-            if (tbls$ds_data$ds_access == "public"){
-              updateSelectizeInput(
-                session, "ds_license",
-                selected = ifelse(isTruthy(tbls$ds_data$ds_license), tbls$ds_data$ds_license, "CC BY 4.0"))
-            } else if (tbls$ds_data$ds_access == "restricted"){
-              updateDateInput(
-                session, "embargoed_until",
-                value = ifelse(isTruthy(tbls$ds_data$embargoed_until), as.Date(tbls$ds_data$embargoed_until), Sys.Date() + 365))
-            }
-          }
-          if (isTruthy(tbls$ds_data$description)) {
-            updateTextAreaInput(
-              session, "description",
-              value = tbls$ds_data$description)
+        if (nrow(ds_data) != 1) {
+          cli::cli_abort("Dataset table has {nrow(ds_data)} rows")
+        }
+
+        if (shiny::isTruthy(ds_data$ds_name)) {
+          shiny::updateTextInput(session, "ds_name", value = ds_data$ds_name)
+        }
+        if (shiny::isTruthy(ds_data$acknowledgements)) {
+          shiny::updateTextAreaInput(
+            session, "acknowledgements", value = ds_data$acknowledgements
+          )
+        }
+        if (shiny::isTruthy(ds_data$ds_access)) {
+          if (ds_data$ds_access %in% c("public", "restricted")) {
+            shiny::updateRadioButtons(session, "ds_access", selected = ds_data$ds_access)
           } else {
-            template <- generate_desc_template(tbls$roxas_data)
-            updateTextAreaInput(
-              session, "description",
-              value = template)
+            cli::cli_abort("Invalid access option {ds_data$ds_access}")
           }
-        }, err_message = "Some dataset fields could not be updated", propagate_err = FALSE)
-      }
+        }
 
-      # Update author_data_in if available
-      if(!is.null(tbls$author_data)) {
-        author_data_in(tbls$author_data)
-      }
+        if (shiny::isTruthy(ds_data$ds_license)) {
+          shiny::updateSelectizeInput(session, "ds_license", selected = ds_data$ds_license)
+        }
 
-      # Update funding_data_in if available
-      if(!is.null(tbls$funding_data)) {
-        funding_data_in(tbls$funding_data)
-      }
+        if (shiny::isTruthy(ds_data$embargoed_until)) {
+          if (ds_data$ds_access == "restricted") {
+            shiny::updateDateInput(
+              session, "embargoed_until", value = as.Date(ds_data$embargoed_until)
+            )
+          } else {
+            cli::cli_warn("Embargo date applies only to restricted datasets.")
+          }
+        }
 
-      # Update doi_data_in if available
-      if(!is.null(tbls$relresource_data)) {
-        relres_data_in(tbls$relresource_data)
-      }
+        if (shiny::isTruthy(ds_data$description)) {
+          shiny::updateTextAreaInput(
+            session, "description", value = ds_data$description
+          )
+        }
+      }, err_message = "Some dataset fields could not be updated", propagate_err = FALSE)
 
-    })
+      authors_in <- dataset_tbls_in()$authors
+      if (!is.null(authors_in$org_country)) {
+        authors_in$org_country <- iso_to_combined(authors_in$org_country)
+      }
+      author_data_in(authors_in)
+      funding_in <- dataset_tbls_in()$funding
+      if (!is.null(funding_in$org_country)) {
+        funding_in$org_country <- iso_to_combined(funding_in$org_country)
+      }
+      funding_data_in(funding_in)
+      relres_data_in(dataset_tbls_in()$related)
+
+    }) |> shiny::bindEvent(dataset_tbls_in())
 
 
     # DATASET INPUT ------------------------------------------------------------
@@ -96,8 +114,8 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
     })
 
     # ror_df: a reactive updated only in the event of the search button being clicked
-    ror_df <- eventReactive(input$btn_ror_search, {
-      req(input$ror_search_country, input$ror_search_string)
+    ror_df <- shiny::eventReactive(input$btn_ror_search, {
+      shiny::req(input$ror_search_country, input$ror_search_string)
 
       # run the ROR API request with the input search string
       ror_api_request(search_string = input$ror_search_string,
@@ -105,58 +123,61 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
     })
 
     # render instructions
-    output$ror_instr <- renderUI({
+    output$ror_instr <- shiny::renderUI({
       if (is.null(ror_df())) {
-        tags$i("Run ROR search first...")
+        shiny::tags$i("Run ROR search first...")
       } else {
-        tags$i("Click on a row to select and transfer the ROR data to the tables below.")
+        shiny::tags$i("Click on a row to select and transfer the ROR data to the tables below.")
       }
     })
 
     # render ROR DT
     output$ror_results <- DT::renderDT({
-      validate(need(!is.null(ror_df()), "No data to show"))
-      DT::datatable(ror_df() %>% dplyr::select(Link, RORID, Name, Location),
-                    style = 'default',
-                    rownames = FALSE,
-                    selection = "single",
-                    escape = FALSE,
-                    options = list(pageLength = 5))
+      shiny::validate(shiny::need(!is.null(ror_df()), "No data to show"))
+      DT::datatable(
+        ror_df() |> dplyr::select(Link, RORID, Name, Location),
+        style = 'default',
+        rownames = FALSE,
+        selection = "single",
+        escape = FALSE,
+        fillContainer = TRUE,
+        options = list(pageLength = 5)
+      )
     })
 
     # observe ROR row selection: open modal
-    observeEvent(input$ror_results_rows_selected, {
-      showModal(modalDialog(
+    shiny::observeEvent(input$ror_results_rows_selected, {
+      shiny::showModal(shiny::modalDialog(
         title = "Transfer ROR data",
-        tagList(
-          p("Do you want to transfer the selected ROR data to the author and/or funding table?"),
-          checkboxGroupInput(
+        shiny::tagList(
+          shiny::p("Do you want to transfer the selected ROR data to the author and/or funding table?"),
+          shiny::checkboxGroupInput(
             ns("selected_authors"),
             label = "Select authors to update:",
             choices = get_author_choices(author_data_out())
           ),
-          checkboxGroupInput(
+          shiny::checkboxGroupInput(
             ns("selected_funders"),
             label = "Select funding institutions to update:",
             choices = get_funding_choices(funding_data_out())
           )
         ),
         easyClose = TRUE,
-        footer = tagList(
-          modalButton("Cancel"),
-          actionButton(ns("btn_trans_ror"), "Transfer")
+        footer = shiny::tagList(
+          shiny::modalButton("Cancel"),
+          shiny::actionButton(ns("btn_trans_ror"), "Transfer")
         )
       ))
     })
 
     # transfer ROR data to authors on confirm transfer
-    observeEvent(input$btn_trans_ror, {
+    shiny::observeEvent(input$btn_trans_ror, {
       # update the authors table
       if (!is.null(input$selected_authors) && !is.null(input$ror_results_rows_selected)) {
         # get the ROR data of the selected row (NOTE that only 1 row can be selected)
         selected_ror_data <- ror_df()[input$ror_results_rows_selected, c("RORID", "Name", "city", "country_code")]
         selected_ror_data$Name <- gsub('\n','<br>',stringr::str_wrap(selected_ror_data$Name, width = 50))
-        selected_ror_data$country_code <- countries_info |> dplyr::filter(country_iso_code == selected_ror_data$country_code) |> dplyr::pull(combined)
+        selected_ror_data$country_code <- iso_to_combined(selected_ror_data$country_code)
         # update the author data table for the selected authors
         current_df <- author_data_out()
         current_df[input$selected_authors, c("rorid", "org_name", "aff_city", "org_country")] <- selected_ror_data
@@ -168,31 +189,31 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
         # get the ROR data of the selected row (NOTE that only 1 row can be selected)
         selected_ror_data <- ror_df()[input$ror_results_rows_selected, c("RORID", "Name", "country_code")]
         # selected_ror_data$Name <- gsub('\n','<br>',stringr::str_wrap(selected_ror_data$Name, width = 50))
-        selected_ror_data$country_code <- countries_info |> dplyr::filter(country_iso_code == selected_ror_data$country_code) |> dplyr::pull(combined)
+        selected_ror_data$country_code <- iso_to_combined(selected_ror_data$country_code)
         # update in the funding data table for the selected funders
         current_df <- funding_data_out()
         current_df[input$selected_funders, c("rorid", "org_name", "org_country")] <- selected_ror_data
         funding_data_in(current_df)
       }
       # close the modal
-      removeModal()
+      shiny::removeModal()
     })
 
 
 
     # ORCID SEARCH ---------------------------------------------------------------
     # toggle search button: only enable if we have a country and search string
-    observe({
+    shiny::observe({
       shinyjs::toggleState(id = "btn_orcid_search",
                            condition = !(input$orcid_search_string==""))
     })
 
     # reactiveVal (responding to search orcid from string or from table buttons)
-    orcid_df <- reactiveVal()
+    orcid_df <- shiny::reactiveVal()
 
     # run ORCID API search on provided search string
-    observeEvent(input$btn_orcid_search, {
-      req(input$orcid_search_string)
+    shiny::observeEvent(input$btn_orcid_search, {
+      shiny::req(input$orcid_search_string)
 
       # run the ORCID API request with the input search string
       res_df <- orcid_api_request(search_string = input$orcid_search_string)
@@ -203,7 +224,7 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
     })
 
     # run ORCID API search on author table
-    observeEvent(input$btn_orcid_tbl, {
+    shiny::observeEvent(input$btn_orcid_tbl, {
       current_df <- author_data_out()
       results_combined <- list()
       for (row in 1:nrow(current_df)){
@@ -242,35 +263,36 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
     })
 
     # render instructions
-    output$orcid_instr <- renderUI({
+    output$orcid_instr <- shiny::renderUI({
       if (is.null(orcid_df())) {
-        tags$i("Run ORCID search first...")
+        shiny::tags$i("Run ORCID search first...")
       } else {
-        tags$i("Click on a row to select and transfer the ORCID data to the table below.
+        shiny::tags$i("Click on a row to select and transfer the ORCID data to the table below.
                 Email and affiliation data will only be transferred if not yet provided in the table.")
       }
     })
 
     # render ORCID DT
     output$orcid_results <- DT::renderDT({
-      validate(need(!is.null(orcid_df()), "No data to show"))
-      DT::datatable(orcid_df() %>% dplyr::select(search_terms, last_name, first_name, email, orcid, org_name, other_names),
+      shiny::validate(shiny::need(!is.null(orcid_df()), "No data to show"))
+      DT::datatable(orcid_df() |> dplyr::select(search_terms, last_name, first_name, email, orcid, org_name, other_names),
                     extensions = 'RowGroup',
                     style = 'default',
                     rownames = FALSE,
                     selection = "single",
                     escape = FALSE,
+                    fillContainer = TRUE,
                     options = list(pageLength = 5,
                                    rowGroup = list(dataSrc = 0)))
     })
 
     # observe ORCID row selection: open modal
-    observeEvent(input$orcid_results_rows_selected, {
-      showModal(modalDialog(
+    shiny::observeEvent(input$orcid_results_rows_selected, {
+      shiny::showModal(shiny::modalDialog(
         title = "Transfer ORCID data",
-        tagList(
-          p("Do you want to transfer the selected ORCID data to the author table?"),
-          radioButtons(
+        shiny::tagList(
+          shiny::p("Do you want to transfer the selected ORCID data to the author table?"),
+          shiny::radioButtons(
             ns("sel_author_orc"),
             label = "Select author to update:",
             choices = c(get_author_choices(author_data_out()), "Add new author" = "new"),
@@ -278,15 +300,15 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
           )
         ),
         easyClose = TRUE,
-        footer = tagList(
-          modalButton("Cancel"),
-          actionButton(ns("btn_trans_orcid"), "Transfer")
+        footer = shiny::tagList(
+          shiny::modalButton("Cancel"),
+          shiny::actionButton(ns("btn_trans_orcid"), "Transfer")
         )
       ))
     })
 
     # transfer ORCID data to author table on confirm transfer
-    observeEvent(input$btn_trans_orcid, {
+    shiny::observeEvent(input$btn_trans_orcid, {
       if (!is.null(input$sel_author_orc) && !is.null(input$orcid_results_rows_selected)) {
         # get the ORCID data of the selected row (NOTE: only 1 row can be selected)
         sel_orcid_data <- orcid_df()[input$orcid_results_rows_selected,]
@@ -295,8 +317,8 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
         current_df <- author_data_out()
         if (input$sel_author_orc == "new"){
           row <- nrow(current_df) + 1
-          current_df[row,] <- create_empty_df("author_data", nrows=1)
-          current_df[row, "author_nr"] <- as.integer(max(current_df$author_nr, na.rm = TRUE) + 1)
+          current_df[row,] <- rxs2tria:::create_empty_df(aut_tbl_props_full, nrows=1)
+          current_df[row, "author_nr"] <- nrow(current_df) + 1
         } else {
           row <- input$sel_author_orc
         }
@@ -313,7 +335,7 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
       }
 
       # close the modal
-      removeModal()
+      shiny::removeModal()
     })
 
 
@@ -321,49 +343,54 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
 
     # AUTHOR RHANDSONTABLE -----------------------------------------------------
     # initialize reactiveVal (responding to add/delete row, ror/orcid transfer, file upload)
-    author_data_in <- reactiveVal(create_empty_df("author_data", nrows=1) |>
-                                    dplyr::mutate(author_nr = as.integer(1)))
+    author_data_in <- shiny::reactiveVal()
 
     # render editable table
     output$author_table <- rhandsontable::renderRHandsontable({
-      schema_path <- system.file("extdata", "json_schema/20251007_tria_author_ext_schema.json", package = "rxs2tria")
-      tbl_props <- load_extended_schema(schema_path)
+      shiny::req(author_data_in())
 
-      colHeaders <- sapply(tbl_props, function(x) x$title)
+      colHeaders <- sapply(aut_tbl_props, function(x) x$title)
       colHeaders <- colHeaders[names(author_data_in())] # ensure correct order
-      tippies <- sapply(tbl_props, function(x) x$description)
+      tippies <- sapply(aut_tbl_props, function(x) x$description)
 
-      rhandsontable::rhandsontable(
+      n_rows <- nrow(author_data_in())
+      ht_height <- min(max(n_rows * ht_row_height, ht_min_height), ht_max_height)
+
+      ht <- rhandsontable::rhandsontable(
         author_data_in(),
         rowHeaders = TRUE,
         contextMenu = FALSE,
         stretchH = "all",
-        #height = 150,
+        height = ht_height,
         colHeaders = unname(colHeaders),
         afterGetColHeader = tippy_renderer(tippies)
-      ) %>%
-      # custom validation check renderers for all cols based on tbl_config
+      )
       purrr::reduce(
-        names(colHeaders), # names in df
-        function(ht, col) {
-          config <- tbl_props[[col]]
-          colName <- colHeaders[col] # name in ht
-          hot_col_wrapper(ht, colName, config)
-        },
-        .init = . # start with the base hot
+        names(colHeaders),
+        function(ht, col) hot_col_wrapper(ht, colHeaders[col], aut_tbl_props[[col]], aut_renderers[[col]]),
+        .init = ht
       )
 
     })
 
 
-    # create dataframe reactive to hot updates
-    author_data_out <- reactive({
+    # create dataframe reactive to hot updates (keeps combined country values for display)
+    author_data_out <- shiny::reactive({
       rhandsontable::hot_to_r(input$author_table)
     })
 
+    # output-only reactive: converts org_country from combined display value to ISO code
+    author_data_export <- shiny::reactive({
+      df <- author_data_out()
+      if (!is.null(df$org_country)) {
+        df$org_country <- combined_to_iso(df$org_country)
+      }
+      df
+    })
+
     # observe add row button
-    observeEvent(input$btn_add_author, {
-      new_row <- create_empty_df("author_data", nrows=1)
+    shiny::observeEvent(input$btn_add_author, {
+      new_row <- rxs2tria:::create_empty_df(aut_tbl_props_full, nrows=1)
       current_df <- author_data_out()
       new_row$author_nr <- as.integer(max(current_df$author_nr, na.rm = TRUE) + 1)
       current_df[nrow(current_df)+1,] <- new_row
@@ -371,79 +398,79 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
     })
 
     # observe delete row button
-    observeEvent(input$btn_del_author, {
-      req(nrow(author_data_out()) > 1)
+    shiny::observeEvent(input$btn_del_author, {
+      shiny::req(nrow(author_data_out()) > 1)
       current_df <- author_data_out()
-      current_df <- current_df[-nrow(current_df),]
+      current_df <- current_df[-nrow(current_df), ]
       author_data_in(current_df)
     })
 
-    # TODO:
-    # import data from file
-    observeEvent(input$file_authors,{
+    # TODO: import data from file
+    shiny::observeEvent(input$file_authors, {
       show_ht_import_modal(ns, 'import_aut_data')
     })
 
     # observe confirm import data button
-    observeEvent(input$import_aut_data, {
-      removeModal()
-      # TODO: update with new load function
-      # imported <- load_single_table(input$file_authors$datapath, 'author_data', author_tbl,
-      #                               force_required = FALSE, col_names = input$col_names, skip = input$skip)
-      # author_data_in(imported)
+    shiny::observeEvent(input$import_aut_data, {
+      shiny::removeModal()
     })
 
 
     # FUNDING RHANDSONTABLE ----------------------------------------------------
     # initialize reactiveVal (responding to add/delete row, ror transfer, file upload)
-    funding_data_in <- reactiveVal(create_empty_df("funding_data", nrows=1))
+    funding_data_in <- shiny::reactiveVal()
 
     # Render editable table
     output$funding_table <- rhandsontable::renderRHandsontable({
-      schema_path <- system.file("extdata", "json_schema/20251007_tria_funding_ext_schema.json", package = "rxs2tria")
-      tbl_props <- load_extended_schema(schema_path)
+      shiny::req(funding_data_in())
 
-      colHeaders <- sapply(tbl_props, function(x) x$title)
+      colHeaders <- sapply(fund_tbl_props, function(x) x$title)
       colHeaders <- colHeaders[names(funding_data_in())] # ensure correct order
-      tippies <- sapply(tbl_props, function(x) x$description)
+      tippies <- sapply(fund_tbl_props, function(x) x$description)
 
-      rhandsontable::rhandsontable(
+      n_rows <- nrow(funding_data_in())
+      ht_height <- min(max(n_rows * ht_row_height, ht_min_height), ht_max_height)
+
+      ht <- rhandsontable::rhandsontable(
         funding_data_in(),
         rowHeaders = TRUE,
         contextMenu = FALSE,
         stretchH = "all",
-        #height = 150,
+        height = ht_height,
         colHeaders = unname(colHeaders),
         afterGetColHeader = tippy_renderer(tippies)
-      ) %>%
-        # custom validation check renderers for all cols based on tbl_config
-        purrr::reduce(
-          names(colHeaders), # names in df
-          function(ht, col) {
-            config <- tbl_props[[col]]
-            colName <- colHeaders[col] # name in ht
-            hot_col_wrapper(ht, colName, config)
-          },
-          .init = .
-        )
+      )
+      purrr::reduce(
+        names(colHeaders),
+        function(ht, col) hot_col_wrapper(ht, colHeaders[col], fund_tbl_props[[col]], fund_renderers[[col]]),
+        .init = ht
+      )
     })
 
     # create dataframe reactive to hot updates
-    funding_data_out <- reactive({
+    funding_data_out <- shiny::reactive({
       rhandsontable::hot_to_r(input$funding_table)
     })
 
+    funding_data_export <- shiny::reactive({
+      df <- funding_data_out()
+      if (!is.null(df$org_country)) {
+        df$org_country <- combined_to_iso(df$org_country)
+      }
+      df
+    })
+
     # observe add row button
-    observeEvent(input$btn_add_fund, {
-      new_row <- create_empty_df("funding_data", nrows=1)
+    shiny::observeEvent(input$btn_add_fund, {
+      new_row <- rxs2tria:::create_empty_df(fund_tbl_props_full, nrows=1)
       current_df <- funding_data_out()
       current_df[nrow(current_df)+1,] <- new_row
       funding_data_in(current_df)
     })
 
     # observe delete row button
-    observeEvent(input$btn_del_fund, {
-      req(nrow(funding_data_out()) > 1)
+    shiny::observeEvent(input$btn_del_fund, {
+      shiny::req(nrow(funding_data_out()) > 1)
       current_df <- funding_data_out()
       current_df <- current_df[-nrow(current_df),]
       funding_data_in(current_df)
@@ -451,73 +478,63 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
 
 
     # import data from file: show modal for confirmation
-    observeEvent(input$file_funding,{
+    shiny::observeEvent(input$file_funding,{
       show_ht_import_modal(ns, 'import_fund_data')
     })
 
     # observe confirm import data button
-    observeEvent(input$import_fund_data, {
-      removeModal()
-      # TODO: update with new load function
-      # imported <- load_single_table(input$file_funding$datapath, 'funding_data', funding_tbl,
-      #                               force_required = FALSE, col_names = input$col_names, skip = input$skip)
-      # funding_data_in(imported)
+    shiny::observeEvent(input$import_fund_data, {
+      shiny::removeModal()
     })
-
-
-
-
-
 
 
     # DOI SEARCH ---------------------------------------------------------------
     # toggle add button: only enable if we have a DOI or citation to add
     # TODO: add tria lookup?
-    observe({
+    shiny::observe({
       shinyjs::toggleState(id = "btn_cite_search",
                            condition = (input$doi_string != "" || input$citation_string != ""))
     })
 
     # doi_df: a reactive updated only in the event of the search button being clicked
-    doi_df <- eventReactive(input$btn_cite_search, {
-      #req(input$ror_search_country, input$ror_search_string)
-
-      # run the ROR API request with the input search string
+    doi_df <- shiny::eventReactive(input$btn_cite_search, {
+      # run the DOI/crossref API request with the input search string
       if (input$doi_string != "") {
         doi_res <- doi_api_request(input$doi_string)
-        updateTextInput(session, "doi_string", value = "")
+        shiny::updateTextInput(session, "doi_string", value = "")
         return(doi_res)
       } else if (input$citation_string != "") {
         cite_res <- cr_api_request(input$citation_string)
-        updateTextAreaInput(session, "citation_string", value = "")
+        shiny::updateTextAreaInput(session, "citation_string", value = "")
         return(cite_res)
       }
       # TODO: tria ds search
     })
 
     # render instructions
-    output$doi_instr <- renderUI({
+    output$doi_instr <- shiny::renderUI({
       if (is.null(doi_df())) {
-        tags$i("Run DOI search first...")
+        shiny::tags$i("Run DOI search first...")
       } else {
-        tags$i("Click on a row to select and transfer the DOI data to the tables below.")
+        shiny::tags$i("Click on a row to select and transfer the DOI data to the tables below.")
       }
     })
 
-    # render ROR DT
+    # render DOI DT
     output$doi_results <- DT::renderDT({
-      validate(need(!is.null(doi_df()), "No data to show"))
+      shiny::validate(shiny::need(!is.null(doi_df()), "No data to show"))
       DT::datatable(doi_df(),
                     style = 'default',
                     rownames = FALSE,
                     selection = "single",
                     escape = FALSE,
+                    fillContainer = TRUE,
                     options = list(paging = FALSE,
                                    searching = FALSE))
     })
 
     # observe DOI row selection: transfer data
-    observeEvent(input$doi_results_rows_selected, {
+    shiny::observeEvent(input$doi_results_rows_selected, {
       selected_doi_data <- doi_df()[input$doi_results_rows_selected, c("citation", "doi")]
       selected_doi_data$citation <- gsub('\n','<br>',stringr::str_wrap(selected_doi_data$citation, width = 50))
       # add to relres data table
@@ -530,54 +547,51 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
 
     # REL RESOURCE RHANDSONTABLE -----------------------------------------------
     # initialize reactiveVal (responding to add/delete item, DT cell edits)
-    relres_data_in <- reactiveVal(create_empty_df("relresource_data", nrows=0))
+    relres_data_in <- shiny::reactiveVal()
 
     # Render editable table
     output$relres_table <- rhandsontable::renderRHandsontable({
-      schema_path <- system.file("extdata", "json_schema/20251007_tria_relresource_ext_schema.json", package = "rxs2tria")
-      tbl_props <- load_extended_schema(schema_path)
+      shiny::req(relres_data_in())
 
-      colHeaders <- sapply(tbl_props, function(x) x$title)
+      colHeaders <- sapply(relres_tbl_props, function(x) x$title)
       colHeaders <- colHeaders[names(relres_data_in())] # ensure correct order
-      tippies <- sapply(tbl_props, function(x) x$description)
+      tippies <- sapply(relres_tbl_props, function(x) x$description)
 
-      rhandsontable::rhandsontable(
+      n_rows <- nrow(relres_data_in())
+      ht_height <- min(max(n_rows * ht_row_height, ht_min_height), ht_max_height)
+
+      ht <- rhandsontable::rhandsontable(
         relres_data_in(),
         rowHeaders = TRUE,
         contextMenu = FALSE,
         stretchH = "all",
-        #height = 150,
+        height = ht_height,
         colHeaders = unname(colHeaders),
         afterGetColHeader = tippy_renderer(tippies)
-      ) %>%
-        # custom validation check renderers for all cols based on tbl_config
-        purrr::reduce(
-          names(colHeaders), # names in df
-          function(ht, col) {
-            config <- tbl_props[[col]]
-            colName <- colHeaders[col] # name in ht
-            hot_col_wrapper(ht, colName, config)
-          },
-          .init = .
-        )
+      )
+      purrr::reduce(
+        names(colHeaders),
+        function(ht, col) hot_col_wrapper(ht, colHeaders[col], relres_tbl_props[[col]], relres_renderers[[col]]),
+        .init = ht
+      )
     })
 
     # create dataframe reactive to hot updates
-    relres_data_out <- reactive({
+    relres_data_out <- shiny::reactive({
       rhandsontable::hot_to_r(input$relres_table)
     })
 
     # observe add row button
-    observeEvent(input$btn_add_res, {
-      new_row <- create_empty_df("relresource_data", nrows=1)
+    shiny::observeEvent(input$btn_add_res, {
+      new_row <- rxs2tria:::create_empty_df(relres_tbl_props_full, nrows=1)
       current_df <- relres_data_out()
       current_df[nrow(current_df)+1,] <- new_row
       relres_data_in(current_df)
     })
 
     # observe delete row button
-    observeEvent(input$btn_del_res, {
-      req(nrow(funding_data_out()) > 0)
+    shiny::observeEvent(input$btn_del_res, {
+      shiny::req(nrow(funding_data_out()) > 0)
       current_df <- relres_data_out()
       current_df <- current_df[-nrow(current_df),]
       relres_data_in(current_df)
@@ -585,22 +599,18 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
 
 
     # import data from file: show modal for confirmation
-    observeEvent(input$file_relres,{
+    shiny::observeEvent(input$file_relres,{
       show_ht_import_modal(ns, 'import_res_data')
     })
 
     # observe confirm import data button
-    observeEvent(input$import_res_data, {
-      removeModal()
-      # TODO: update with new load function
-      # imported <- load_single_table(input$file_funding$datapath, 'funding_data', funding_tbl,
-      #                               force_required = FALSE, col_names = input$col_names, skip = input$skip)
-      # funding_data_in(imported)
+    shiny::observeEvent(input$import_res_data, {
+      shiny::removeModal()
     })
 
 
     # VALIDATION CHECKS --------------------------------------------------------
-    validation_checks <- reactive({
+    validation_checks <- shiny::reactive({
       results <- list()
 
       # 1) dataset input fields from the input validator
@@ -609,32 +619,23 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
       # TODO: change to schema validation? what about other fields
 
       # 2) author table
-      df_aut <- author_data_out()
-      schema_path <- system.file("extdata", "json_schema/20251007_tria_author_ext_schema.json", package = "rxs2tria")
-      aut_tbl_props <- load_extended_schema(schema_path)
-      results$author_data <- collect_hot_val_results(df_aut, aut_tbl_props)
+      results$author_data <- collect_hot_val_results(author_data_out(), aut_tbl_props)
 
       # 3) funding table
-      df_fund <- funding_data_out()
-      schema_path <- system.file("extdata", "json_schema/20251007_tria_funding_ext_schema.json", package = "rxs2tria")
-      fund_tbl_props <- load_extended_schema(schema_path)
-      results$funding_data <- collect_hot_val_results(df_fund, fund_tbl_props)
+      results$funding_data <- collect_hot_val_results(funding_data_out(), fund_tbl_props)
 
       # 4) related resources
-      df_res <- relres_data_out()
-      schema_path <- system.file("extdata", "json_schema/20251007_tria_relresource_ext_schema.json", package = "rxs2tria")
-      relres_tbl_props <- load_extended_schema(schema_path)
-      results$relres_data <- collect_hot_val_results(df_res, relres_tbl_props)
+      results$relres_data <- collect_hot_val_results(relres_data_out(), relres_tbl_props)
 
       # convert collected results to dataframe
-      df_results <- results %>%
-        purrr::map(~ .x %>%
-                     purrr::map(~ tibble::tibble(
-                       field = .x$field,
-                       type = .x$type,
-                       message = .x$message
-                     )) %>%
-                     purrr::list_rbind(names_to = 'fname')) %>%
+      df_results <- results |>
+        purrr::map(\(x) x |>
+                     purrr::map(\(x) tibble::tibble(
+                       field = x$field,
+                       type = x$type,
+                       message = x$message
+                     )) |>
+                     purrr::list_rbind(names_to = 'fname')) |>
         purrr::list_rbind(names_to = 'tname')
 
       df_results$topic <- input_field_names[df_results$tname]
@@ -646,30 +647,30 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
     })
 
     # set the color of the card header based on the validation results
-    observe({
+    shiny::observe({
       shinyjs::toggleClass(id = "val_check_header", class = 'bg-secondary',
                            condition = nrow(validation_checks()) > 0)
     })
 
-    output$validation_check <- renderUI({
+    output$validation_check <- shiny::renderUI({
       df_validation <- validation_checks()
 
       if (nrow(df_validation) == 0) {
-        return(tagList(strong("All checks passed", style = paste0('color: ', prim_col, ';'))))
+        return(shiny::tagList(shiny::strong("All checks passed", style = paste0('color: ', prim_col, ';'))))
       } else {
         # generate html lists for each topic
-        html_output <- df_validation %>%
-          dplyr::group_by(topic) %>%
+        html_output <- df_validation |>
+          dplyr::group_by(topic) |>
           dplyr::summarise(
             content = paste0("<li>", field, ": ", message, "</li>", collapse = "")
-          ) %>%
+          ) |>
           dplyr::mutate(
             html = paste0("<b>", topic, ":</b><ul>", content, "</ul>")
-          ) %>%
-          dplyr::pull(html) %>%
+          ) |>
+          dplyr::pull(html) |>
           paste(collapse = "")
 
-        return(HTML(html_output))
+        return(shiny::HTML(html_output))
 
       # TODO:
       # add warning messages before switching tab or saving data
@@ -677,34 +678,14 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
       }
     })
 
-    # TODO:
-    # Observe save button
-    # observeEvent(input$btn_save_aut, {
-    #   data <- author_data$df_out
-    #
-    #   # TODO: file download rather than predefined file?
-    #   # Save to CSV
-    #   write.csv(data, file = "author_data.csv", row.names = FALSE)
-    #   showModal(modalDialog(
-    #     title = "Success",
-    #     "Data saved successfully!",
-    #     easyClose = TRUE,
-    #     footer = NULL
-    #   ))
-    # })
-
-
-
     # Next button
-    observeEvent(input$btn_next, {
-      #iv_gen$enable()
-      nav_select(id = 'tabs', selected = tab_site, session = main_session)
+    shiny::observeEvent(input$btn_next, {
+      bslib::nav_select(id = 'tabs', selected = tab_site, session = main_session)
     })
 
     # Previous button
-    observeEvent(input$btn_prev, {
-      #iv_gen$enable()
-      nav_select(id = 'tabs', selected = tab_start, session = main_session)
+    shiny::observeEvent(input$btn_prev, {
+      bslib::nav_select(id = 'tabs', selected = tab_start, session = main_session)
     })
 
 
@@ -715,21 +696,29 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
     # more details on validation errors (nr characters, pattern, etc.)
     # orcid transfer: what if names don't match?
 
+    output$testing <- shiny::renderPrint({
+      #ds_data_out()
+    })
+
+    ds_data_out <- shiny::reactive({
+      tibble::tibble(
+        ds_name = input$ds_name,
+        description = input$description,
+        ds_access = input$ds_access,
+        ds_license = input$ds_license,
+        embargoed_until = if (input$ds_access == "restricted") input$embargoed_until else "",
+        acknowledgements = input$acknowledgements
+      )
+    })
 
     return(
       list(
         dataset_tbls  = list(
-          ds_data = reactive(data.frame(
-            ds_name = input$ds_name,
-            description = input$description,
-            ds_access = input$ds_access,
-            ds_license = input$ds_license,
-            embargoed_until = ifelse(input$ds_access == "restricted", input$embargoed_until, ""),
-            acknowledgements = input$acknowledgements
-          )),
-          author_data = author_data_out,
-          funding_data = funding_data_out,
-          relresource_data = relres_data_out
+          dataset = ds_data_out,
+          authors = author_data_export,
+          funding = funding_data_export,
+          related = relres_data_out,
+          resources = shiny::reactive(dataset_tbls_in()$resources)
         ),
         val_check = validation_checks
       )
@@ -737,98 +726,3 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
 
   })
 }
-
-
-
-
-# # RELATED RESOURCES --------------------------------------------------------
-# # TODO: HERE: update to hot
-# # toggle add button: only enable if we have a DOI or citation to add
-# observe({
-#   shinyjs::toggleState(id = "btn_add_pub",
-#                        condition = (input$doi != "" || input$citation != ""))
-# })
-#
-# # initialize reactiveVal (responding to add/delete item, DT cell edits)
-# doi_data_in <- reactiveVal(create_empty_tbl(doi_tbl, nrows=0))
-#
-# # render DT
-# output$rel_resources <- DT::renderDT({
-#   # a DT with a column of delete buttons
-#   colHeaders <- get_tbl_colHeaders(doi_tbl)
-#   deleteButtonColumn(doi_data_in(), 'delbtn', ns, colHeaders)
-# })
-#
-#
-# # observe delete row events
-# observeEvent(input$deletePressed, {
-#   rowNum <- parseDeleteEvent(input$deletePressed)
-#   # Delete the row from the data frame
-#   current_df <- doi_data_in()
-#   current_df <- current_df[-rowNum,]
-#   if (nrow(current_df) > 0) {
-#     rownames(current_df) <- 1:nrow(current_df) # update rownames
-#   }
-#   doi_data_in(current_df)
-# })
-#
-# # observe add item events
-# observeEvent(input$btn_add_pub,{
-#   # TODO: logic if both are provided? (disable add button?)
-#   # TODO: what about XCELL datasets (without DOI)?
-#   # EITHER run DOI API request
-#   if (!is.null(input$doi) && input$doi != "") {
-#     res_df <- doi_api_request(input$doi)
-#     if (!is.null(res_df)) {
-#       current_df <- doi_data_in()
-#       current_df <- current_df |> dplyr::bind_rows(res_df)
-#       doi_data_in(current_df)
-#       updateTextInput(session, "doi", value = "")
-#     }
-#
-#   # OR copy citation text directly to table
-#   } else  if (!is.null(input$citation) && input$citation != "") {
-#     current_df <- doi_data_in()
-#     nrows <- nrow(current_df)
-#     current_df[nrows+1,'citation'] <- input$citation
-#     doi_data_in(current_df)
-#     # clear input field
-#     updateTextInput(session, "citation", value = "")
-#   }
-# })
-#
-# # observe DT cell edits
-# observeEvent(input$rel_resources_cell_edit, {
-#   info <- input$rel_resources_cell_edit
-#   # update the data frame with the new value (-1 due to del button col)
-#   current_df <- doi_data_in()
-#   current_df[info$row, info$col-1] <- info$value
-#   doi_data_in(current_df)
-# })
-
-# observeEvent(start_info$input_meta$meta_json,{
-#   # TODO: add validity checks before updating values?
-#   # req(start_info$input_meta$meta_json)
-#   if (!is.null(start_info$input_meta$meta_json)){
-#     meta_json <- start_info$input_meta$meta_json
-#     if (!is.null(meta_json$ds_data)){
-#       # if it is not null, it has been aligned to structure, so can expect a 1-row df with all required columns
-#       ds_data <- meta_json$ds_data
-#       updateTextInput(session, "ds_name", value = ifelse(is.na(ds_data$ds_name), "", ds_data$ds_name))
-#       updateTextAreaInput(session, "acknowledgements", value = ifelse(is.na(ds_data$acknowledgements), "", ds_data$acknowledgements))
-#       if (!is.na(ds_data$ds_access)){
-#         updateRadioButtons(session, "ds_access", selected = ds_data$ds_access)
-#         if (ds_data$ds_access == "public"){
-#           updateSelectizeInput(session, "ds_license", selected = ifelse(is.na(ds_data$ds_license), "CC BY 4.0", ds_data$ds_license))
-#         } else if (ds_data$ds_access == "restricted"){
-#           safe_block({
-#             updateDateInput(session, "embargoed_until", value = ifelse(is.na(ds_data$embargoed_until), Sys.Date() + 365, as.Date(ds_data$embargoed_until)))
-#           }, err_message = "Embargo date could not be updated", err_propagate = FALSE)
-#         }
-#       }
-#     }
-#     if (!is.null(meta_json$author_data)) {author_data_in(meta_json$author_data)}
-#     if (!is.null(meta_json$funding_data)) {funding_data_in(meta_json$funding_data)}
-#     if (!is.null(meta_json$doi_data)) {doi_data_in(meta_json$doi_data)}
-#   }
-# })

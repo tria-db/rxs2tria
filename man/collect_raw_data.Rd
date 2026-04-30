@@ -4,15 +4,28 @@
 \alias{collect_raw_data}
 \title{Collect raw cells and rings output data}
 \usage{
-collect_raw_data(df_structure)
+collect_raw_data(df_meta, roxas_version = NULL)
 }
 \arguments{
-\item{df_structure}{Dataframe containing filenames and data structure.}
+\item{df_meta}{Data frame or \code{QWAimages} object containing filenames and data structure.}
+
+\item{roxas_version}{The software used to create the files (\code{"roxas"} or \code{"roxas_ai"}).
+Required only if \code{df_meta} is not a \code{QWAimages} object.}
 }
 \value{
-\code{QWA_data}, i.e. a named list containing the combined raw data
-for cells and rings in two dataframes under \verb{$cells} and \verb{$rings}, respectively.
+A \code{QWAdata} object, ready to pass to \code{\link[=complete_QWAdata]{complete_QWAdata()}}.
 }
 \description{
-Read and combine data from all cells and ring output files
+Read and combine data from all raw cells and ring data files.
+The input data frame with filenames plus data structure can
+be a \code{QWAimages} object derived with \code{\link[=build_QWAimages]{build_QWAimages()}},
+or the output from the earlier \code{\link[=extract_data_structure]{extract_data_structure()}} step.
+}
+\details{
+The resulting \link{QWAdata} should then be passed through \code{\link[=complete_QWAdata]{complete_QWAdata()}}
+to add derived measures and ring quality flags.
+}
+\seealso{
+\code{\link[=build_QWAimages]{build_QWAimages()}}, \code{\link[=extract_data_structure]{extract_data_structure()}}, \code{\link[=QWAdata]{QWAdata()}},
+\code{\link[=complete_QWAdata]{complete_QWAdata()}}
 }

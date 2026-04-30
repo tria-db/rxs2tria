@@ -39,6 +39,7 @@
 #'   profile-level parameters (default: 5).
 #' @param path_out Character string specifying the output directory where
 #'   the \code{.rwl} file and mapping information will be written.
+#' @param remove_excluded should rings with issues be removed?
 #'
 #' @return
 #' The function is called for its side effects. It writes a Tucson-format
@@ -97,7 +98,7 @@ create_rwl <- function(prf_data, df_rings, PAR = "mrw", SECTOR = NULL, path_out,
     }
 
     rwl <- rings_df |>
-      dplyr::select(image_label, year, !!rlang::sym(PAR)) |>
+      dplyr::select(image_label, year, dplyr::all_of(PAR)) |>
       dplyr::filter(!is.na(.data[[PAR]])) |>
       dplyr::mutate(
         series = make_series_id(image_label),
@@ -145,7 +146,7 @@ create_rwl <- function(prf_data, df_rings, PAR = "mrw", SECTOR = NULL, path_out,
     }
 
     rwl <- prf_df |>
-      dplyr::select(image_label, year, !!rlang::sym(PAR)) |>
+      dplyr::select(image_label, year, dplyr::all_of(PAR)) |>
       dplyr::filter(!is.na(.data[[PAR]])) |>
       dplyr::mutate(series = make_series_id(image_label)) |>
       dplyr::group_by(year, series) |>
@@ -172,6 +173,7 @@ create_rwl <- function(prf_data, df_rings, PAR = "mrw", SECTOR = NULL, path_out,
 
   invisible(rwl)
 }
+
 
 save_rwl_file <- function(param, df_rings,
                           df_prf = NULL, sel_sect = NULL,

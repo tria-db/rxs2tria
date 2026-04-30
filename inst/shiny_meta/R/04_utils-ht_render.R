@@ -11,7 +11,7 @@ renderer_char <- function(required = NULL, min_length = NULL, max_length = NULL,
   check_regex <- ifelse(is.null(regex_pattern), "false", 'true')
   check_unique <- ifelse(is.null(unique), "false", ifelse(unique, "true", "false"))
 
-  htmlwidgets::JS(htmltools::HTML(sprintf("
+  htmlwidgets::JS(shiny::HTML(sprintf("
     function(instance, td, row, col, prop, value, cellProperties) {
       // remove old tippy if necessary
       if(td.hasOwnProperty('_tippy')) {
@@ -67,7 +67,7 @@ renderer_char <- function(required = NULL, min_length = NULL, max_length = NULL,
 renderer_text <- function(required = NULL){
   check_required <- ifelse(is.null(required), "false", ifelse(required, "true", "false"))
 
-  htmlwidgets::JS(htmltools::HTML(sprintf("
+  htmlwidgets::JS(shiny::HTML(sprintf("
     function(instance, td, row, col, prop, value, cellProperties) {
 
       Handsontable.renderers.HtmlRenderer.apply(this, arguments);
@@ -105,7 +105,7 @@ renderer_drop <- function(required = NULL, options){
   check_required <- ifelse(is.null(required), "false", ifelse(required, "true", "false"))
   options_js <- jsonlite::toJSON(options, auto_unbox = TRUE)
 
-  htmlwidgets::JS(htmltools::HTML(sprintf("
+  htmlwidgets::JS(shiny::HTML(sprintf("
     function(instance, td, row, col, prop, value, cellProperties) {
       // remove old tippy if necessary
       if (td.hasOwnProperty('_tippy')) {
@@ -148,7 +148,7 @@ renderer_auto <- function(required = NULL, options){
   #options_js <- paste0("[", paste0(sprintf("'%s'", options), collapse = ", "), "]")
   options_js <- jsonlite::toJSON(options, auto_unbox = TRUE)
 
-  htmlwidgets::JS(htmltools::HTML(sprintf("
+  htmlwidgets::JS(shiny::HTML(sprintf("
     function(instance, td, row, col, prop, value, cellProperties) {
       // remove old tippy if necessary
       if (td.hasOwnProperty('_tippy')) {
@@ -193,7 +193,7 @@ renderer_num <- function(required = NULL, min_val = NULL, max_val = NULL){
   check_max_val <- ifelse(is.null(max_val), "false", "true")
   maxv <- ifelse(is.null(max_val), "null", max_val)
 
-  htmlwidgets::JS(htmltools::HTML(sprintf("
+  htmlwidgets::JS(shiny::HTML(sprintf("
     function(instance, td, row, col, prop, value, cellProperties) {
       // remove old tippy if necessary
       if(td.hasOwnProperty('_tippy')) {
@@ -248,7 +248,7 @@ renderer_check <- function(required = NULL, min_checks = NULL, max_checks = NULL
   mincb <- ifelse(is.null(min_checks), mincb, ifelse(min_checks > 1, min_checks, mincb))
   maxcb <- ifelse(is.null(max_checks), 10000, max_checks)
 
-  htmlwidgets::JS(htmltools::HTML(sprintf("
+  htmlwidgets::JS(shiny::HTML(sprintf("
   function(instance, td, row, col, prop, value, cellProperties) {
     // remove old tippy if necessary
         if(td.hasOwnProperty('_tippy')) {
@@ -290,7 +290,7 @@ renderer_check <- function(required = NULL, min_checks = NULL, max_checks = NULL
 renderer_date <- function(required = NULL){
   check_required <- ifelse(is.null(required), "false", ifelse(required, "true", "false"))
 
-  htmlwidgets::JS(htmltools::HTML(sprintf("
+  htmlwidgets::JS(shiny::HTML(sprintf("
     function(instance, td, row, col, prop, value, cellProperties) {
       // remove old tippy if necessary
       if(td.hasOwnProperty('_tippy')) {
@@ -326,63 +326,41 @@ renderer_date <- function(required = NULL){
       }", check_required)))
 }
 
-hot_col_wrapper <- function(ht, col, col_config) {
-  readOnly <- col_config$readOnly %||% FALSE
+build_col_renderer <- function(col_config) {
   switch(col_config$htType,
-    character = {
-      renderer_js <- renderer_char(
-        required = col_config$required,
-        min_length = col_config$minLength,
-        max_length = col_config$maxLength,
-        regex_pattern = col_config$pattern,
-        unique = col_config$unique
-      )
-      ht |> rhandsontable::hot_col(col, renderer = renderer_js, readOnly = readOnly)
-    },
-    text = {
-      renderer_js <- renderer_text(
-        required = col_config$required
-      )
-      ht |> rhandsontable::hot_col(col, renderer = renderer_js, readOnly = readOnly)
-    },
-    numeric = {
-      renderer_js <- renderer_num(
-        required = col_config$required,
-        min_val = col_config$minimum,
-        max_val = col_config$maximum
-      )
-      if (col_config$type[1] == 'integer') {nr_format <- '0.'} else {nr_format <- NULL }
-      ht |> rhandsontable::hot_col(col, type = 'numeric', format = nr_format, renderer = renderer_js, readOnly = readOnly)
-    },
-    dropdown = {
-      renderer_js <- renderer_drop(
-        required = col_config$required,
-        options = col_config$enum
-      )
-      ht |> rhandsontable::hot_col(col, type = 'dropdown', source = col_config$enum, renderer = renderer_js, readOnly = readOnly)
-    },
-    autocomplete = {
-      renderer_js <- renderer_auto(
-        required = col_config$required,
-        options = get_options(col_config$options)
-      )
-      ht |> rhandsontable::hot_col(col, type = 'autocomplete', source = get_options(col_config$options), renderer = renderer_js, readOnly = readOnly)
-    },
-    checkbox = {
-      renderer_js <- renderer_check(
-        required = col_config$required,
-        min_checks = col_config$min_checks,
-        max_checks = col_config$max_checks
-      )
-      ht |> rhandsontable::hot_col(col, type = 'checkbox', renderer = renderer_js, readOnly = readOnly)
-    },
-    date = {
-      renderer_js <- renderer_date(
-        required = col_config$required
-      )
-      ht |> rhandsontable::hot_col(col, type = 'date', dateFormat = "YYYY-MM-DD", renderer = renderer_js, readOnly = readOnly)
-    },
-    # default: no specific rendering
+    character    = renderer_char(col_config$required, col_config$minLength,
+                                 col_config$maxLength, col_config$pattern, col_config$unique),
+    text         = renderer_text(col_config$required),
+    numeric      = renderer_num(col_config$required, col_config$minimum, col_config$maximum),
+    dropdown     = renderer_drop(col_config$required, col_config$enum),
+    autocomplete = renderer_auto(col_config$required, get_options(col_config$options)),
+    checkbox     = renderer_check(col_config$required, col_config$min_checks, col_config$max_checks),
+    date         = renderer_date(col_config$required),
+    NULL
+  )
+}
+
+build_tbl_renderers <- function(tbl_props) {
+  lapply(tbl_props, build_col_renderer)
+}
+
+hot_col_wrapper <- function(ht, col, col_config, renderer_js = NULL) {
+  readOnly <- col_config$readOnly %||% FALSE
+  if (is.null(renderer_js)) renderer_js <- build_col_renderer(col_config)
+  switch(col_config$htType,
+    character    = ht |> rhandsontable::hot_col(col, renderer = renderer_js, readOnly = readOnly),
+    text         = ht |> rhandsontable::hot_col(col, renderer = renderer_js, readOnly = readOnly),
+    numeric      = ht |> rhandsontable::hot_col(col, type = 'numeric',
+                     format = if (col_config$type[1] == 'integer') '0.' else NULL,
+                     renderer = renderer_js, readOnly = readOnly),
+    dropdown     = ht |> rhandsontable::hot_col(col, type = 'dropdown',
+                     source = col_config$enum, renderer = renderer_js, readOnly = readOnly),
+    autocomplete = ht |> rhandsontable::hot_col(col, type = 'autocomplete',
+                     source = get_options(col_config$options), renderer = renderer_js, readOnly = readOnly),
+    checkbox     = ht |> rhandsontable::hot_col(col, type = 'checkbox',
+                     renderer = renderer_js, readOnly = readOnly),
+    date         = ht |> rhandsontable::hot_col(col, type = 'date', dateFormat = "YYYY-MM-DD",
+                     renderer = renderer_js, readOnly = readOnly),
     ht
   )
 }
@@ -392,7 +370,7 @@ hot_col_wrapper <- function(ht, col, col_config) {
 
 tippy_renderer <- function(tippies) {
   tippies_js <- jsonlite::toJSON(tippies, auto_unbox = T, null = "null")
-  htmlwidgets::JS(htmltools::HTML(
+  htmlwidgets::JS(shiny::HTML(
   sprintf("
     function(col, th) {
       var tippies_js = %s;

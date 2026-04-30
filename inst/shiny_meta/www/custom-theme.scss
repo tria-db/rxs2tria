@@ -158,14 +158,12 @@ ol.custom-indent {
 
 /* footer */
 .wsl-footer {
-  position: fixed;
-  left: 0;
-  bottom: 0;
   width: 100%;
   background: $primary;
   color: white;
   padding: 10px 30px;
-  z-index: 1000;
-  text-align: left;
   box-shadow: 0 -2px 4px rgba(0,0,0,0.05);
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
 }

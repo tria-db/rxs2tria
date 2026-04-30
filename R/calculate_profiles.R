@@ -1,74 +1,88 @@
-#' Calculate sector-wise cell parameter profiles
+#' Calculate sector-wise radial profiles
 #'
-#' This function calculates sector-wise profiles of selected cell parameters
-#' (means and quantiles) from the cells data.
+#' Divides each ring into `n_sectors` equal-width sectors (by relative radial
+#' position) and computes per-sector means and optionally quantiles of the
+#' selected cell parameters.
 #'
-#' @param df_cells dataframe containing the cells data (e.g. `QWA_data$cells`)
-#' @param n_sectors number of radial sectors to divide the ring into (e.g 5)
-#' @param sel_cell_params character vector with the names of the cell parameters
-#' to include in the profiles (e.g. c("la", "cwttan"))
-#' @param quant_probs numeric vector with the quantile probabilities to
-#' calculate (e.g. c(0.25, 0.5, 0.75)). If NULL or empty, no quantiles are
-#' calculated (i.e. only the mean).
-#' @return a dataframe with the sector-wise profiles of the selected cell
-#' parameters
+#' @param QWA_data A [QWAdata] object with a non-`NULL` `$cells` component.
+#' @param n_sectors Number of equal-width sectors to divide each ring into.
+#' @param sel_cell_params Character vector of cell parameter column names to
+#'   include in the profiles (e.g. `c("la", "cwttan")`).
+#' @param quant_probs Numeric vector of quantile probabilities to calculate
+#'   (e.g. `c(0.25, 0.5, 0.75)`). `NULL` or empty -> means only.
+#' @returns A [QWAprofile] object with `profile_type = "sector"`.
+#' @seealso [calculate_band_profiles()], [QWAprofile()]
 #' @export
-#'
-calculate_profiles <- function(df_cells, n_sectors, sel_cell_params, quant_probs){
-  prf_data <- df_cells |>
-    # create sector number based on rraddistr (relative position within ring)
-    dplyr::mutate(
-      sector_n = as.numeric(cut(rraddistr,
-                                b = seq(from=0, to=100, by = 100/n_sectors),
-                                labels = 1:n_sectors,
-                                include.lowest = T))) %>%
-    # allow for rounding errors for data with rraddistr just above 100, otherwise leave NA
-    dplyr::mutate(sector_n = dplyr::if_else(rraddistr > 100 & rraddistr <= 101, n_sectors, sector_n)) |>
-    dplyr::filter(!is.na(sector_n)) |> # only use cells with valid sector as basis for calculation
-    dplyr::select(image_label, year, sector_n, dplyr::all_of(sel_cell_params))
+calculate_sector_profiles <- function(QWA_data, n_sectors, sel_cell_params, quant_probs = NULL){
+  checkmate::assert_class(QWA_data, "QWAdata")
+  checkmate::assert_data_frame(QWA_data$cells, null.ok = FALSE)
 
-  # use the collapse package for fast groupwise aggregations
-  prf_data_agg <- prf_data |>
+  # TODO: allow to select all params?
+  # if (length(sel_cell_params) == 1 && sel_cell_params == "all"){
+  #   sel_cell_params <- setdiff(
+  #     colnames(QWA_data$cells),
+  #     c("image_label", "year", "rraddistr")
+  #   )
+  # }
+  # use data.table for speed on large dataframes
+  cells_dt <- data.table::as.data.table(QWA_data$cells)
+  # filter out cells without valid rraddistr, subset to relevant columns only
+  cells_dt <- cells_dt[!is.na(rraddistr),
+                       c("image_label", "year", "rraddistr", sel_cell_params),
+                       with = FALSE]
+  # cut cells into n sectors based on their relative radial position
+  cells_dt[,
+           sector_n := as.numeric(
+             cut(rraddistr, breaks = seq(from = 0, to = 100, by = 100/n_sectors),
+                 labels = 1:n_sectors, include.lowest = TRUE))]
+  cells_dt[rraddistr > 100 & rraddistr <= 101,
+           sector_n := n_sectors] # allow for rounding errors
+  cells_dt <- cells_dt[!is.na(sector_n)] # if we still have some cells outside -> remove
+  cells_dt[, rraddistr := NULL] # remove superfluous columns
+
+  # now we can aggregate over each sector
+  cli::cli_inform(c("i"= "Calculating sector counts and means..."))
+  prf_data_agg <- cells_dt |>
     collapse::fgroup_by(image_label, year, sector_n) |>
-    collapse::fmean() |>
-    dplyr::rename_with(
-      \(x) paste0(x, "_mean"),
-      dplyr::all_of(sel_cell_params)
-    )
+    collapse::fsummarise(across(sel_cell_params,
+                                list(N = collapse::fnobs,
+                                     mean = collapse::fmean)))
 
   if (!is.null(quant_probs) && length(quant_probs) > 0){
-    prf_data_quant <- prf_data |>
+    cli::cli_inform(c("i"= "Calculating sector quantiles..."))
+    prf_data_quant <- cells_dt |>
       collapse::fgroup_by(image_label, year, sector_n) |>
       collapse::BY(collapse::.quantile,
                    probs = quant_probs,
-                   expand.wide = TRUE) |>
-      dplyr::rename_with(
-        \(x) {
-          for (i in seq_along(quant_probs)){
-            x <- stringr::str_replace_all(x,
-                                          paste0(".V", i),
-                                          paste0("_q", quant_probs[i]*100))
-          }
-          x
-        }
-      )
-    prf_data_agg <- prf_data_agg |>
-      dplyr::full_join(prf_data_quant,
-                       by = c("image_label", "year", "sector_n"))
+                   expand.wide = TRUE)
+
+    old_col_names <- unlist(lapply(sel_cell_params, function(param) {
+      paste0(param, ".V", seq(length(quant_probs)))
+    }))
+    new_col_names <- unlist(lapply(sel_cell_params, function(param) {
+      paste0(param, "_q", sprintf("%02d", round(quant_probs*100)))
+    }))
+    data.table::setnames(prf_data_quant, old = old_col_names, new = new_col_names)
+
+    prf_data_agg <- prf_data_agg[prf_data_quant,
+                                 on = c("image_label", "year", "sector_n")]
+    rm(prf_data_quant)
   }
 
-  prf_data_agg
+  cli::cli_inform(c("v"= "All done!"))
+  new_QWAprofile(tibble::as_tibble(prf_data_agg), profile_type = "sector")
 }
 
+
 #' Helper function to create the moving band definitions for given a mrw,
-#' andwidth and stepsize
+#' bandwidth and stepsize
 #'
 #' @param mrw_val numeric, the mrw value to create bands for
 #' @param bandwidth numeric, the bandwidth of each band
 #' @param stepsize numeric, the step size between band starts
 #' @param band_rebound logical, if TRUE, the last band is rebounded to end exactly at mrw_val
 #' @return a data.table with start and end positions of each band for the given mrw_val
-#' @keywords internal
+#' @noRd
 create_bands_dt <- function(mrw_val, bandwidth, stepsize, band_rebound = TRUE) {
   band_starts <- seq(0, mrw_val - bandwidth + stepsize, by = stepsize)
   # in seq, the last element + by is <= the to value, thus this definition
@@ -92,40 +106,53 @@ create_bands_dt <- function(mrw_val, bandwidth, stepsize, band_rebound = TRUE) {
 }
 
 
-#' Calculate band-wise cell parameter profiles
+#' Calculate band-wise radial profiles
 #'
-#' This function calculates band-wise profiles of selected cell parameters
-#' (means and quantiles) from the cells data. A band is a moving window of
-#' given bandwidth that moves from the start to the end of the ring at the given
-#' stepsize.
+#' Computes moving-band profiles of selected cell parameters across the ring
+#' width. Each band is a window of `bandwidth` microns that shifts in steps of
+#' `stepsize` microns from the cambial side to the lumen side of the ring.
 #'
-#' @param QWA_data list containing the rings and cells dataframes
-#' @param bandwidth the width of the band in microns
-#' @param stepsize the step size with which the band is shifted, in microns
-#' @param sel_cell_params character vector with the names of the cell parameters
-#' to include in the profiles (e.g. c("la", "cwttan"))
-#' @param quant_probs numeric vector with the quantile probabilities to
-#' calculate (e.g. c(0.25, 0.5, 0.75)). If NULL or empty, no quantiles are
-#' calculated (i.e. only the mean).
-#' @return a dataframe with the sector-wise profiles of the selected cell
-#' parameters
+#' @param QWA_data A [QWAdata] object with non-`NULL` `$cells` and `$rings`
+#'   components.
+#' @param bandwidth Width of each band in microns.
+#' @param stepsize Step size between band starts in microns.
+#' @param sel_cell_params Character vector of cell parameter column names to
+#'   include in the profiles (e.g. `c("la", "cwttan")`).
+#' @param quant_probs Numeric vector of quantile probabilities to calculate
+#'   (e.g. `c(0.25, 0.5, 0.75)`). If not provided, only means will be calculated.
+#' @param band_rebound If `TRUE` (default), the last band is shifted so its end
+#'   coincides exactly with the ring width (`mrw`).
+#' @returns A [QWAprofile] object with `profile_type = "band"`.
+#' @details Requires that [complete_QWAdata()] has been run, as `$rings` must
+#'   contain `mrw` and `eww`. `raddistr.st` is computed internally from
+#'   `rraddistr` and `mrw`.
+#' @seealso [calculate_sector_profiles()], [QWAprofile()]
 #' @export
 calculate_band_profiles <- function(QWA_data,
                                     bandwidth, stepsize,
                                     sel_cell_params,
                                     quant_probs = NULL,
                                     band_rebound = TRUE) {
+  checkmate::assert_class(QWA_data, "QWAdata")
+  checkmate::assert_data_frame(QWA_data$cells, null.ok = FALSE)
+  checkmate::assert_data_frame(QWA_data$rings, null.ok = FALSE)
+  checkmate::assert_subset(c("mrw", "eww"), names(QWA_data$rings),
+    .var.name = "QWA_data$rings - run complete_QWAdata() first")
+  checkmate::assert_subset(c("rraddistr", "mrw"), names(QWA_data$cells),
+    .var.name = "QWA_data$cells - run complete_QWAdata() first")
   # we use data.table for fast operations on the large cells table
-  # the standardized radial distance raddistr.st is used to to position cells
-  # within bands (since the ring is not the same width everywhere, so the bands
-  # should reflect such fluctuations as well). Note that raddistr.st is <= mrw
-  # (except for rounding errors), and raddistr.st is na if we don't have an mrw
-  # (e.g. for missing / incomplete rings)
+  # raddistr.st (rraddistr * mrw / 100) positions each cell in absolute microns
+  # within its ring. It is NA for cells without an mrw (missing / incomplete rings).
   cells_dt <- data.table::as.data.table(QWA_data$cells)
+  mrw_dt <- data.table::as.data.table(QWA_data$rings)[, c("image_label", "year", "mrw")]
+  cells_dt <- mrw_dt[cells_dt, on = c("image_label", "year")]
+  cells_dt[, raddistr.st := rraddistr * mrw / 100]
+  cells_dt[, mrw := NULL]
   # filter out cells without valid raddistr.st, subset to relevant columns only
   cells_dt <- cells_dt[!is.na(raddistr.st),
                        c("image_label", "year", "raddistr.st", sel_cell_params),
                        with = FALSE]
+
 
   cli::cli_inform(c("i"= "Creating band definitions..."))
   # get the ring widths and ew widths
@@ -186,10 +213,10 @@ calculate_band_profiles <- function(QWA_data,
   cli::cli_inform(c("i"= "Adding EW indicator..."))
   # add a ew_band column to indicate if band is in EW or LW
   prf_data_agg <- ring_widths[prf_data_agg, on = c("image_label", "year")]
-  prf_data_agg[, ew_band := ifelse(end <= eww, TRUE, FALSE)]
+  prf_data_agg[, ew_band := data.table::fifelse(end <= eww, TRUE, FALSE)]
   prf_data_agg[, end := start + bandwidth] # restore original end values of last bands (without tolerance)
   data.table::setcolorder(prf_data_agg, "ew_band", after="eww")
 
   cli::cli_inform(c("v"= "All done!"))
-  tibble::as_tibble(prf_data_agg)
+  new_QWAprofile(tibble::as_tibble(prf_data_agg), profile_type = "band")
 }

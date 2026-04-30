@@ -30,24 +30,24 @@ ror_api_request <- function(search_string, country_code){
 
     if (ror_data$number_of_results > 0) {
       # get the names (assuming that there is always exactly one ror_display name)
-      res_names <- ror_data$items$names %>%
-        dplyr::bind_rows() %>%
-        dplyr::filter(grepl('ror_display', types)) %>%
-        dplyr::rename(Name = value) %>%
+      res_names <- ror_data$items$names |>
+        dplyr::bind_rows() |>
+        dplyr::filter(grepl('ror_display', types)) |>
+        dplyr::rename(Name = value) |>
         dplyr::select(Name)
 
       # get the locations
-      res_locs <- ror_data$items$locations %>%
-        dplyr::bind_rows() %>%
-        dplyr::pull(geonames_details) %>%
-        tidyr::unite(col = 'Location', name, country_name, sep = ', ', remove = FALSE) %>%
-        dplyr::rename(city = name) %>%
+      res_locs <- ror_data$items$locations |>
+        dplyr::bind_rows() |>
+        dplyr::pull(geonames_details) |>
+        tidyr::unite(col = 'Location', name, country_name, sep = ', ', remove = FALSE) |>
+        dplyr::rename(city = name) |>
         dplyr::select(Location, country_code, city)
 
       res_df <- cbind(res_names, res_locs)
 
       # get the ror ids and corresponding hyperlinks
-      res_df <- res_df %>%
+      res_df <- res_df |>
         dplyr::mutate(
           RORID = gsub('https://ror.org/', '', ror_data$items$id),
           Link = paste0("<a href='",ror_data$items$id,"' target='_blank'>",ror_data$items$id,"</a>")
@@ -55,12 +55,12 @@ ror_api_request <- function(search_string, country_code){
       return(res_df)
 
     } else {
-      showNotification("No ROR results found. Try again.", type = "message")
+      shiny::showNotification("No ROR results found. Try again.", type = "message")
       return(NULL)
     }
 
   } else {
-    showNotification("ROR API request failed. Try again.", type = "error")
+    shiny::showNotification("ROR API request failed. Try again.", type = "error")
     return(NULL)
   }
 }
@@ -113,16 +113,16 @@ orcid_api_request <- function(search_string = NULL, last_name = NULL, first_name
                              stringsAsFactors = FALSE, allowEscapes = TRUE)
 
     if (nrow(orcid_data) > 0) {
-      orcid_data <- orcid_data %>%
+      orcid_data <- orcid_data |>
         dplyr::rename(
           last_name = 'family.name',
           first_name = 'given.names',
           orcid_id = 'orcid',
           org_name = 'current.institution.affiliation.name',
-          other_names = 'other.names') %>%
+          other_names = 'other.names') |>
         # only use the first entry for email and affiliation
-        tidyr::separate(email, into = c("email"), sep = ",(?!\\s)", extra = "drop") %>%
-        tidyr::separate(org_name, into = c("org_name"), sep = ",(?!\\s)", extra = "drop") %>%
+        tidyr::separate(email, into = c("email"), sep = ",(?!\\s)", extra = "drop") |>
+        tidyr::separate(org_name, into = c("org_name"), sep = ",(?!\\s)", extra = "drop") |>
         dplyr::mutate(
           # create orcid hyperlinks
           orcid = paste0("<a href='https://orcid.org/", orcid_id, "' target='_blank'>",orcid_id,"</a>"))
@@ -130,12 +130,12 @@ orcid_api_request <- function(search_string = NULL, last_name = NULL, first_name
       return(orcid_data)
 
     } else {
-      showNotification("No ORCID results found. Try again.", type = "message")
+      shiny::showNotification("No ORCID results found. Try again.", type = "message")
       return(NULL)
     }
 
   } else {
-    showNotification("ORCID API request failed. Try again.", type = "error")
+    shiny::showNotification("ORCID API request failed. Try again.", type = "error")
     return(NULL)
   }
 

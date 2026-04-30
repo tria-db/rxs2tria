@@ -4,17 +4,27 @@
 \alias{get_roxas_files}
 \title{Identify ROXAS data files}
 \usage{
-get_roxas_files(path_in)
+get_roxas_files(path_in, roxas_version, exclude_dirs = NULL)
 }
 \arguments{
 \item{path_in}{path of the input directory.}
+
+\item{roxas_version}{which ROXAS version was used to create the files (classic
+\code{"roxas"} or new AI version \code{"roxas_ai"}).}
+
+\item{exclude_dirs}{directory names / keywords that should be ignored
+when searching for ROXAS files (e.g., "unused_files", optional)}
 }
 \value{
-A list of lists containing filepaths of images and ROXAS output
-files (cells, rings, settings).
+A named list of four character vectors (\code{fname_image}, \code{fname_cells},
+\code{fname_rings}, \code{fname_settings}) containing the full filepaths.
 }
 \description{
 Given a path to a directory, returns a nested list with the full filepaths of
-all required ROXAS files (images, cell outputs, ring outputs, settings) found
-within (including subdirectories).
+all required ROXAS files (images, cell outputs, ring outputs, settings resp.
+metadata) found within (including all subdirectories except those explicitly
+excluded).
+Note that this function assumes that the files follow the standard naming
+suffixes form ROXAS resp. ROXAS AI, and that each set of four files is stored
+in the same (sub-)directory.
 }

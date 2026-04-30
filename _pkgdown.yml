@@ -13,24 +13,61 @@ reference:
   - extract_data_structure
   - collect_image_info
   - collect_settings_data
-  - convert_settings_dates
-  - combine_rxs_metadata
+
 - title: "Reading raw ROXAS output data"
   desc: "Functions for reading and writing ROXAS cells and rings output files."
   contents:
-  - collect_cells_data
-  - collect_rings_data
+  - collect_raw_outputs
   - collect_raw_data
+- title: "QWAimages"
+  desc: "S3 class QWAimages"
+  contents:
+  - build_QWAimages
+  - check_QWAimages
+  - complete_QWAimages
+  - QWAimages
+  - read_QWAimages
+  - summary.QWAimages
+  - update_QWAimages
+  - write_QWAimages
+- title: "QWAmetadata"
+  desc: "S3 QWAmetadata"
+  contents:
+  - add_resources
+  - collect_resources
+  - check_QWAmetadata
+  - complete_QWAmetadata
+  - print.QWAmetadata
+  - QWAmetadata
+  - read_QWAmetadata
+  - write_QWAmetadata
+- title: "QWAdata"
+  desc: "S3 class QWAdata"
+  contents:
+  - check_QWAdata
+  - complete_flags
+  - complete_measures
+  - complete_QWAdata
+  - print.QWAdata
+  - QWAdata
+  - read_QWAdata
+  - update_QWAdata
+  - write_QWAdata
+- title: "QWAprofiles"
+  desc: "Functions to calculate sector or band profiles from cell measurements."
+  contents: 
+  - calculate_band_profiles
+  - calculate_sector_profiles
+  - check_QWAprofile
+  - complete_QWAprofile
+  - QWAprofile
+  - read_QWAprofile
+  - summary.QWAprofile
+  - write_QWAprofile
 - title: "rest"
   desc: "Other utility functions."
   contents:
-  - read_QWAdata
-  - launch_coverage_app
+  - launch_flags_app
   - launch_metadata_app
-  - resolve_schema
-  - plot_woodpiece_coverage
-  - create_coverage_plots
-  - remove_outliers
-  - validate_QWA_data
-
+  - create_rwl
 

@@ -1,0 +1,37 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "extended_shiny_thema",
+    "title": "TRIA metadata schema",
+    "description": "Extended Schema for .. TODO: adapt properly for roxas ai",
+    "type": "object",
+    "properties":
+    {
+        "dataset": { "$ref": "base_schema/tria_ds_data_schema.json" },
+        "authors": { "$ref": "tria_author_ext_schema.json" },
+        "funding": { "$ref": "tria_funding_ext_schema.json" },
+        "related": { "$ref": "tria_related_ext_schema.json" },
+        "resources": {"$ref": "base_schema/tria_resource_data_schema.json" },
+        "sites": { "$ref": "tria_site_ext_schema.json" },
+        "trees": { "$ref": "tria_tree_ext_schema.json" },
+        "woodpieces": { "$ref": "tria_woodpiece_ext_schema.json" },
+        "slides": { "$ref": "tria_slide_ext_schema.json" },
+        "images": { 
+          "anyOf": [
+            { "$ref": "tria_roxas_ext_schema.json" },
+            { "$ref": "base_schema/tria_roxasai_data_schema.json" }
+          ]
+        }
+    },
+    "required":
+    [
+        "dataset",
+        "authors",
+        "funding",
+        "sites",
+        "trees",
+        "woodpieces",
+        "slides",
+        "images"
+    ],
+    "additionalProperties": true
+}

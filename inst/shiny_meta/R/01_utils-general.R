@@ -5,6 +5,8 @@ if (getRversion() < "4.4.0") {
   # For R >= 4.4.0, it's already available
   # No action needed
 }
+# if we absolutely need the magrittr pipe:
+# `%>%` <- getFromNamespace("%>%", "magrittr")
 
 # THEME VARS -------------------------------------------------------------------
 # define the names of the tabs
@@ -22,6 +24,8 @@ sec_col_grad <- c("#853270", "#A36794", "#C299B8", "#E0CCDB", "#F0E6ED", "#F7F2F
 tert_col_grad <- c("#324a85", "#6778a3", "#99a5c2", "#ccd2e0", "#e6e9f0", "#f2f4f7")
 
 # params for dynamic ht heights
+# TODO: maybe better use something like this (but need to have additional space after for dropdown overflows):
+# hot_height <- min(nrow(df_rings) * 23L + 26L, 400L) + 5L
 ht_row_height <- 28 # typical row height in px
 ht_min_height <- 180 # min height of the ht
 ht_max_height <- 750 # max height of the ht
@@ -30,16 +34,16 @@ ht_max_height <- 750 # max height of the ht
 # need only the names of fields with validation checks,
 # can take table column names from tbl_configs
 input_field_names <- c(
-  ds_data = 'Dataset',
+  dataset = 'Dataset',
   ds_name = 'Dataset name',
   description = 'Dataset description',
-  author_data = 'Authors',
-  funding_data = 'Funding',
-  relres_data = "Related resources",
-  site_data = 'Sites',
-  tree_data = 'Trees',
-  wp_data = 'Woodpieces',
-  slide_data = 'Slides')
+  authors = 'Authors',
+  funding = 'Funding',
+  relresources = "Related resources",
+  sites = 'Sites',
+  trees = 'Trees',
+  woodpieces = 'Woodpieces',
+  slides = 'Slides')
 
 # GLOBAL OPTIONS ---------------------------------------------------------------
 # whether app should be run in example mode or not
@@ -96,6 +100,26 @@ get_species_info <- function(){
 }
 species_info <- get_species_info()
 
+# convert ISO codes to combined display values (e.g. "CH" -> "Switzerland  (CH)")
+iso_to_combined <- function(x) {
+  result <- dplyr::left_join(
+    data.frame(country_iso_code = x, stringsAsFactors = FALSE),
+    countries_info[, c("country_iso_code", "combined")],
+    by = "country_iso_code"
+  )$combined
+  dplyr::coalesce(result, x)
+}
+
+# convert combined display values back to ISO codes (e.g. "Switzerland  (CH)" -> "CH")
+combined_to_iso <- function(x) {
+  result <- dplyr::left_join(
+    data.frame(combined = x, stringsAsFactors = FALSE),
+    countries_info[, c("country_iso_code", "combined")],
+    by = "combined"
+  )$country_iso_code
+  dplyr::coalesce(result, x)
+}
+
 # wrapper to get country or species info for the autocomplete/dropdowns etc
 get_options <- function(options){
   if (is.list(options)) { # or by length?
@@ -118,20 +142,41 @@ max_char_limit <- function(value, limit) {
   if (nchar(value) > limit) paste0("Input exceeds ", limit, " characters.")
 }
 
+get_shiny_schema <- function() {
+  schema_path <- system.file(rxs2tria:::schema_rel_path("shiny_meta"), package = "rxs2tria")
+  schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
+  full_schema <- jsonlite::fromJSON(schema_obj$schema$schema, simplifyDataFrame = FALSE)
+  full_schema <- full_schema |> 
+    rxs2tria:::resolve_refs(fs::path_dir(schema_path)) 
+  full_schema
+}
+full_schema <- get_shiny_schema()
 
 #' Load a subschema for a specific table
-#' Possible schema names are "metadata" (whole schema including subschemas),
-#' "ds_data", "author_data", "funding_data", "lres_data",
-#' "site_data", "tree_data", "woodpiece_data", "slide_data","roxas_data".
-#' The provided names are matched against the file names in extdata/json_schema
-#' @param schema_name The name of the schema to load (default whole schema is "metadata").
+#' Accepts QWAmetadata slot names: "images", "dataset", "authors", "funding",
+#' "relresources", "sites", "trees", "woodpieces", "slides", or "metadata"
+#' (the full combined schema).
+#' @param schema_name The name of the schema to load (default: "metadata").
 #' @returns A jsonvalidate schema object for the specified schema.
 #' @export
 get_schema <- function(schema_name = "metadata"){
+  # Map QWAmetadata slot names to schema file name patterns
+  file_pattern <- switch(schema_name,
+    "images"      = "roxas_data",
+    "dataset"     = "ds_data",
+    "authors"     = "author_data",
+    "funding"     = "funding_data",
+    "relresources" = "relresource_data",
+    "sites"       = "site_data",
+    "trees"       = "tree_data",
+    "woodpieces"  = "woodpiece_data",
+    "slides"      = "slide_data",
+    schema_name   # pass through for "metadata", "cell_data", etc.
+  )
   schema_files <- list.files(system.file("extdata", "json_schema/base_schema",
                                          package = "rxs2tria"), full.names = TRUE)
-  # find file matching the schema_name (sort for most recent version if multiple matches)
-  schema_filepath <- grep(sort(schema_files, decreasing = TRUE), pattern = schema_name, value = TRUE)[1]
+  # find file matching the pattern (sort for most recent version if multiple matches)
+  schema_filepath <- grep(sort(schema_files, decreasing = TRUE), pattern = file_pattern, value = TRUE)[1]
   schema_obj <- jsonvalidate::json_schema$new(schema_filepath)
   schema_obj
 }
@@ -183,23 +228,23 @@ load_extended_schema <- function(schema_path) {
 #' Show modal dialog to select input source
 #' @param ns Namespace function for the module.
 show_input_modal <- function(ns){
-  showModal(
-    modalDialog(
+  shiny::showModal(
+    shiny::modalDialog(
       title = "Select input source",
-      tagList(
-        radioButtons(
+      shiny::tagList(
+        shiny::radioButtons(
           ns("load_type"), "Choose input option:",
           choices = c(
-            "Start fresh with raw metadata" = "fresh",
-            "Continue from partially completed submission" = "continue",
+            "From local R environment" = "env",
+            "From file" = "file",
             "Load example data (for demonstration only)" = "example")
         ),
-        hr(),
-        uiOutput(ns("load_details_ui"))
+        shiny::hr(),
+        shiny::uiOutput(ns("load_details_ui"))
       ),
-      footer = tagList(
-        modalButton("Cancel"),
-        actionButton(ns("confirm_input"), "Proceed")
+      footer = shiny::tagList(
+        shiny::modalButton("Cancel"),
+        shiny::actionButton(ns("confirm_input"), "Proceed")
       )
     )
   )
@@ -209,9 +254,9 @@ show_input_modal <- function(ns){
 # wrapper for an error message
 show_error_modal <- function(title, message) {
   if (shiny::isRunning()) {
-    showModal(modalDialog(
+    shiny::showModal(modalDialog(
       title = title,
-      message,
+      cli::ansi_strip(message),
       easyClose = TRUE,
       footer = NULL
     ))
@@ -223,14 +268,14 @@ show_error_modal <- function(title, message) {
 # wrapper for a warning notification
 show_warning_notification <- function(message) {
   if (shiny::isRunning()) {
-    shiny::showNotification(message, type = "warning")
+    shiny::showNotification(cli::ansi_strip(message), type = "warning")
   } else {
     message(sprintf("[WARNING] %s", message))
   }
 }
 
 show_ht_import_modal <- function(ns, confirm_id){
-  showModal(modalDialog(
+  shiny::showModal(modalDialog(
     title = "Confirm Import",
     tagList(
       span("Importing data will overwrite any changes already made in the current table.

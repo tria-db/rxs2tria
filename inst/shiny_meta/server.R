@@ -1,6 +1,3 @@
-library(magrittr)
-library(bslib)
-
 # server -----------------------------------------------------------------------
 server <- function(input, output, session) {
 
@@ -33,7 +30,7 @@ server <- function(input, output, session) {
   dataset_out <- dataset_server('ds', session, start_out$dataset_tbls)
 
   site_out <- site_server('site', session,
-                          start_out$roxas_data, start_out$site_tbls,
+                          start_out$images, start_out$site_tbls,
                           countries_list)
 
   summary_server('summary', session,
@@ -42,7 +39,7 @@ server <- function(input, output, session) {
 
   # footer ---------------------------------------------------------------------
   # open contact information modal on click
-  observeEvent(input$contact_link, {
+  shiny::observeEvent(input$contact_link, {
     showModal(modalDialog(
       title = "Publisher and contact information",
       "Swiss Federal Institute for Forest, Snow and Landscape Research WSL",

@@ -1,70 +1,70 @@
 summary_ui <- function(id) {
-  ns <- NS(id)
+  ns <- shiny::NS(id)
 
-  layout_sidebar(
+  bslib::layout_sidebar(
 
     # sidebar
-    sidebar = sidebar(
+    sidebar = bslib::sidebar(
       title = "Instructions",
-      card(
+      bslib::card(
         class = 'card-note',
-        card_header(
+        bslib::card_header(
           class = 'bg-primary',
-          span(icon("exclamation", style = "color: white"),'Note')),
+          shiny::span(shiny::icon("exclamation", style = "color: white"),'Note')),
         "The overview here combines all information provided in the previous tabs."
       ),
-      hr(),
-      tags$ol(
+      shiny::hr(),
+      shiny::tags$ol(
         class = 'custom-indent',
-        tags$li("Please consult the validation check summary and correct any issues in the data entry tabs."),),
-      hr(),
-      tags$ol(
+        shiny::tags$li("Please consult the validation check summary and correct any issues in the data entry tabs."),),
+      shiny::hr(),
+      shiny::tags$ol(
         class = 'custom-indent', start = 2,
-        tags$li("When there are no more issues or if you are certain that you want to ignore the remaining messages,
+        shiny::tags$li("When there are no more issues or if you are certain that you want to ignore the remaining messages,
                 please click the 'Export data to file' button to download the final version of the metadata.")),
-      hr(),
-      tags$ol(
+      shiny::hr(),
+      shiny::tags$ol(
         class = 'custom-indent', start = 3,
-        tags$li("You are now ready to share the file alongside the harmonized cells and rings data from the `rxs2tria` package with the TRIA database team,
+        shiny::tags$li("You are now ready to share the file alongside the harmonized cells and rings data from the `rxs2tria` package with the TRIA database team,
                 please contact ",
-                tags$a(href = "mailto:mara.naegelin@wsl.ch","mara.naegelin(at)wsl.ch")),
+                shiny::tags$a(href = "mailto:mara.naegelin@wsl.ch","mara.naegelin(at)wsl.ch")),
       ),
 
-      hr(),
+      shiny::hr(),
 
-      actionButton(ns('btn_prev'), 'Previous', icon = icon('angle-double-left')),
+      shiny::actionButton(ns('btn_prev'), 'Previous', icon = shiny::icon('angle-double-left')),
 
-      hr()
+      shiny::hr()
 
 
     ),
 
     # main content
-    accordion(
+    bslib::accordion(
       open = c('Overview'),
 
-      accordion_panel(
+      bslib::accordion_panel(
         'Overview',
 
-        h5('Data overview'),
+        shiny::h5('Data overview'),
 
-        card(
+        bslib::card(
           class = 'card-note',
-          card_header(
+          bslib::card_header(
             class = 'bg-primary',
-            span(icon("exclamation", style = "color: white"),'Validation check summary')),
+            shiny::span(shiny::icon("exclamation", style = "color: white"),'Validation check summary')),
           "List of all failed validation checks:",
-          #uiOutput(ns('validation_check')),
+          #shiny::uiOutput(ns('validation_check')),
           DT::DTOutput(ns('DT_valcheck'))
         ),
-        hr(),
+        shiny::hr(),
 
-        verbatimTextOutput(ns("testing")),
-        hr(),
+        shiny::verbatimTextOutput(ns("testing")),
+        shiny::hr(),
 
-        div(
+        shiny::div(
           style = "text-align: center; margin-top: 20px;", # Centering and adding margin
-          actionButton(ns('btn_save'), "Export data to file", icon = icon('download', lib = "glyphicon"),
+          shiny::actionButton(ns('btn_save'), "Export data to file", icon = shiny::icon('download', lib = "glyphicon"),
                          style = "font-size: 1.1rem; padding: 8px 15px;") # Bigger button styling
         )
 
