@@ -7,15 +7,17 @@
 \usage{
 \method{print}{QWAimages}(x, ...)
 
-\method{summary}{QWAimages}(x, ...)
+\method{summary}{QWAimages}(object, ...)
 }
 \arguments{
 \item{x}{A \code{QWAimages} object.}
 
 \item{...}{Further arguments (currently unused).}
+
+\item{object}{A \code{QWAimages} object.}
 }
 \value{
-\code{x}, invisibly.
+\code{object}, invisibly.
 }
 \description{
 Displays a compact overview of a \link{QWAimages} object: the ROXAS software

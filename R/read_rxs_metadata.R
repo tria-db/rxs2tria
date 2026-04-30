@@ -155,7 +155,7 @@ get_roxas_files <- function(path_in, roxas_version,
 #' applies the hierarchy extraction to the `$fname_image` component,
 #' and appends the original filepaths as columns to the structure data frame output.
 #'
-#' @param files The vector of file names.
+#' @param filenames The vector of file names.
 #' @param pattern The labeling pattern followed by the file names, a regex
 #' with named groups.
 #' @param site_label Optional site code to be used if it is not part of the
@@ -168,7 +168,7 @@ get_roxas_files <- function(path_in, roxas_version,
 #' @export
 #' @examples
 #' # with the default pattern ({site}_{species}_{tree}{woodpiece}_{slide}_{image})
-#' files <- c(
+#' filenames <- c(
 #'   "SITEA_PISY_01A_1_1.jpg",
 #'   "SITEA_PISY_01A_1_2.jpg",
 #'   "SITEA_PISY_01A_2_1.jpg",
@@ -176,10 +176,10 @@ get_roxas_files <- function(path_in, roxas_version,
 #'   "SITEB_LASI_02B_1_1.jpg",
 #'   "SITEB_LASI_03_1_1.jpg"
 #' )
-#' get_structure_from_filenames(files)
+#' get_structure_from_filenames(filenames)
 #'
 #' # custom pattern of the form {tree}_{slide}_{image}
-#' files <- c(
+#' filenames <- c(
 #'  "tree1_sl1_img1.jpg",
 #'  "tree1_sl2_img1.jpg",
 #'  "tree2_sl1_img1.jpg",
@@ -187,7 +187,7 @@ get_roxas_files <- function(path_in, roxas_version,
 #'  )
 #'  pattern <- "(?<tree>[[:alnum:]].+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)"
 #'  get_structure_from_filenames(
-#'    files, pattern,
+#'    filenames, pattern,
 #'    site_label = "SITEA", species_code = "PISY")
 #' 
 get_structure_from_filenames <- function(

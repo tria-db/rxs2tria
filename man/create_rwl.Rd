@@ -29,6 +29,8 @@ profile-level parameters (default: 5).}
 
 \item{path_out}{Character string specifying the output directory where
 the \code{.rwl} file and mapping information will be written.}
+
+\item{remove_excluded}{should rings with issues be removed?}
 }
 \value{
 The function is called for its side effects. It writes a Tucson-format

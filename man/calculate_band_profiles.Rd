@@ -25,7 +25,7 @@ components.}
 include in the profiles (e.g. \code{c("la", "cwttan")}).}
 
 \item{quant_probs}{Numeric vector of quantile probabilities to calculate
-(e.g. \code{c(0.25, 0.5, 0.75)}). \code{NULL} or empty → means only.}
+(e.g. \code{c(0.25, 0.5, 0.75)}). If not provided, only means will be calculated.}
 
 \item{band_rebound}{If \code{TRUE} (default), the last band is shifted so its end
 coincides exactly with the ring width (\code{mrw}).}

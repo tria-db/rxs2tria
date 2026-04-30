@@ -699,7 +699,7 @@ check_QWAdata <- function(x, meta = NULL,
 #' @param x A [QWAdata] object.
 #' @param dir Directory to write to. Files are auto-named using `dataset_name`.
 #'   Mutually exclusive with `file_cells`/`file_rings`.
-#' @param file_cells, file_rings Explicit output paths for the cells and rings
+#' @param file_cells,file_rings Explicit output paths for the cells and rings
 #'   CSV files. Both must be provided together. Mutually exclusive with `dir`.
 #' @param dataset_name Name prefix for auto-generated filenames when using
 #'   `dir`. Defaults to `"QWAdata"`.

@@ -279,9 +279,10 @@ print.QWAmetadata <- function(x, ...) {
 }
 
 #' @rdname print.QWAmetadata
+#' @param object A `QWAmetadata` object.
 #' @export
-summary.QWAmetadata <- function(x, ...) {
-  print(x, ...)
+summary.QWAmetadata <- function(object, ...) {
+  print(object, ...)
 }
 
 #' @rdname QWAmetadata

@@ -119,7 +119,7 @@ create_bands_dt <- function(mrw_val, bandwidth, stepsize, band_rebound = TRUE) {
 #' @param sel_cell_params Character vector of cell parameter column names to
 #'   include in the profiles (e.g. `c("la", "cwttan")`).
 #' @param quant_probs Numeric vector of quantile probabilities to calculate
-#'   (e.g. `c(0.25, 0.5, 0.75)`). `NULL` or empty → means only.
+#'   (e.g. `c(0.25, 0.5, 0.75)`). If not provided, only means will be calculated.
 #' @param band_rebound If `TRUE` (default), the last band is shifted so its end
 #'   coincides exactly with the ring width (`mrw`).
 #' @returns A [QWAprofile] object with `profile_type = "band"`.
@@ -137,9 +137,9 @@ calculate_band_profiles <- function(QWA_data,
   checkmate::assert_data_frame(QWA_data$cells, null.ok = FALSE)
   checkmate::assert_data_frame(QWA_data$rings, null.ok = FALSE)
   checkmate::assert_subset(c("mrw", "eww"), names(QWA_data$rings),
-    .var.name = "QWA_data$rings — run complete_QWAdata() first")
+    .var.name = "QWA_data$rings - run complete_QWAdata() first")
   checkmate::assert_subset(c("rraddistr", "mrw"), names(QWA_data$cells),
-    .var.name = "QWA_data$cells — run complete_QWAdata() first")
+    .var.name = "QWA_data$cells - run complete_QWAdata() first")
   # we use data.table for fast operations on the large cells table
   # raddistr.st (rraddistr * mrw / 100) positions each cell in absolute microns
   # within its ring. It is NA for cells without an mrw (missing / incomplete rings).

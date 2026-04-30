@@ -45,6 +45,7 @@ QWAprofile <- function(data, profile_type = c("sector", "band")) {
 }
 
 # Methods (general and specific) ----
+#' @param x A `QWAprofile` object.
 #' @export
 #' @rdname summary.QWAprofile
 print.QWAprofile <- function(x, ...) {

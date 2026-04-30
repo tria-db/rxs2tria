@@ -10,6 +10,8 @@
 \method{summary}{QWAprofile}(object, ...)
 }
 \arguments{
+\item{x}{A \code{QWAprofile} object.}
+
 \item{...}{Further arguments (currently unused).}
 
 \item{object}{A \code{QWAprofile} object.}

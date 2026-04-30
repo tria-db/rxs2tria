@@ -137,6 +137,7 @@ QWAimages <- function(data, roxas_version = NULL) {
 }
 
 # Methods (general and specific) ------
+#' @param x A `QWAimages` object.
 #' @export
 #' @rdname summary.QWAimages
 print.QWAimages <- function(x, ...) {
@@ -150,22 +151,22 @@ print.QWAimages <- function(x, ...) {
 #' Displays a compact overview of a [QWAimages] object: the ROXAS software
 #' version, dimensions, and coverage (woodpieces, slides, images, year range).
 #'
-#' @param x A `QWAimages` object.
+#' @param object A `QWAimages` object.
 #' @param ... Further arguments (currently unused).
 #'
-#' @returns `x`, invisibly.
+#' @returns `object`, invisibly.
 #'
 #' @seealso [QWAimages()]
 #' @export
-summary.QWAimages <- function(x, ...) {
-  rv <- attr(x, "roxas_version")
-  n_imgs <- nrow(x)
-  n_slides <- length(unique(x$slide_label))
-  n_wps <- length(unique(x$woodpiece_label))
-  n_trees <- length(unique(x$tree_label))
-  sites <- unique(x$site_label)
-  species <- unique(x$species_code)
-  yrs <- range(x$outmost_year, na.rm = TRUE)
+summary.QWAimages <- function(object, ...) {
+  rv <- attr(object, "roxas_version")
+  n_imgs <- nrow(object)
+  n_slides <- length(unique(object$slide_label))
+  n_wps <- length(unique(object$woodpiece_label))
+  n_trees <- length(unique(object$tree_label))
+  sites <- unique(object$site_label)
+  species <- unique(object$species_code)
+  yrs <- range(object$outmost_year, na.rm = TRUE)
   
   cli::cli_h3("{.cls QWAimages}")
   cli::cli_bullets(c(
@@ -176,7 +177,7 @@ summary.QWAimages <- function(x, ...) {
     "*" = "outmost years coverage: {yrs[1]}\u2013{yrs[2]}"
   ))
 
-  invisible(x)
+  invisible(object)
 }
 
 #' Validate a QWAimages object

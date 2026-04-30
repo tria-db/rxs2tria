@@ -7,12 +7,14 @@
 \usage{
 \method{print}{QWAmetadata}(x, ...)
 
-\method{summary}{QWAmetadata}(x, ...)
+\method{summary}{QWAmetadata}(object, ...)
 }
 \arguments{
 \item{x}{A \code{QWAmetadata} object.}
 
 \item{...}{Further arguments (currently unused).}
+
+\item{object}{A \code{QWAmetadata} object.}
 }
 \value{
 \code{x}, invisibly.
