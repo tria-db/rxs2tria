@@ -22,7 +22,9 @@ schema_rel_path <- function(schema) {
     "woodpieces" = "extdata/json_schema/base_schema/tria_woodpiece_data_schema.json",
     "slides" = "extdata/json_schema/base_schema/tria_slide_data_schema.json",
     "roxas" = "extdata/json_schema/base_schema/tria_roxas_data_schema.json",
-    "roxas_ai" = "extdata/json_schema/base_schema/tria_roxasai_data_schema.json"
+    "roxas_ai" = "extdata/json_schema/base_schema/tria_roxasai_data_schema.json",
+    "cells" = "extdata/json_schema/base_schema/tria_cell_data_schema.json",
+    "rings" = "extdata/json_schema/base_schema/tria_ring_data_schema.json"
   )
 }
 

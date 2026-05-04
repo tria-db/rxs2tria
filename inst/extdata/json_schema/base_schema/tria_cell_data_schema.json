@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "TODO:addurltoTRIAschema",
-  "title": "cell_data",
-  "description": "Schema for ...",
+  "title": "TRIA QWA data schema for cell measurements",
+  "description": "Schema for cell-level measurements in a QWA dataset",
   "type": "array",
   "minItems": 1,
   "items": {
@@ -12,229 +12,278 @@
         "type": "string",
         "minLength": 1,
         "title": "Image label",
-        "description": "Identifying code",
+        "description": "Identifying code for the image; join key to QWAimages",
         "colType": "key"
       },
       "year": {
         "type": "integer",
         "title": "Year",
-        "description": "Ring year",
+        "description": "Ring affiliation (calendar year of cell formation)",
         "colType": "key"
       },
       "xpix": {
         "type": "integer",
         "unit": "pixel",
         "title": "X coordinate (pixel)",
-        "description": "Cell center x coordinate",
+        "description": "Cell center x coordinate in the image",
         "colType": "key"
       },
       "ypix": {
         "type": "integer",
         "unit": "pixel",
         "title": "Y coordinate (pixel)",
-        "description": "Cell center y coordinate",
+        "description": "Cell center y coordinate in the image",
         "colType": "key"
       },
       "raddistr": {
         "type": ["number", "null"],
         "minimum": 0,
-        "unit": "",
-        "title": "",
-        "description": "",
+        "unit": "µm",
+        "title": "Radial distance",
+        "description": "Radial distance of cell center from inner ring boundary",
         "colType": "measure"
       },
       "rraddistr": {
         "type": ["number", "null"],
         "minimum": 0,
-        "unit": "",
-        "title": "",
-        "description": "",
+        "unit": "%",
+        "title": "Relative radial distance",
+        "description": "Relative radial position of cell center within annual ring (0 = at proximal boundary, 99.99 = at distal boundary)",
         "colType": "measure"
       },
       "nbrno": {
         "type": ["integer", "null"],
         "minimum": 0,
-        "unit": "",
-        "title": "",
-        "description": "",
+        "title": "Neighbour count",
+        "description": "Number of cells in the group the target cell is part of",
         "colType": "measure"
       },
-      "nbrid": {        
+      "nbrid": {
         "type": ["integer", "null"],
         "minimum": 0,
-        "unit": "",
-        "title": "",
-        "description": "",
+        "title": "Neighbour group ID",
+        "description": "ID of all cells belonging to the same group as target cell (remains blank if target cell is solitary)",
         "colType": "measure"
       },
-      "la": {        
+      "la": {
         "type": ["number", "null"],
         "minimum": 0,
-        "unit": "",
-        "title": "",
-        "description": "",
+        "unit": "µm²",
+        "title": "Lumen area",
+        "description": "Cell lumen area",
         "colType": "measure"
       },
-      "asp": {        
+      "asp": {
         "type": ["number", "null"],
-        "minimum": 0,
-        "unit": "",
-        "title": "",
-        "description": "",
+        "minimum": 1,
+        "title": "Aspect ratio",
+        "description": "Aspect of cell: Ratio between major axis and minor axis of ellipse equivalent to object",
         "colType": "measure"
       },
       "majax": {
         "type": ["number", "null"],
         "minimum": 0,
-        "unit": "",
-        "title": "",
-        "description": "",
+        "maximum": 90,
+        "unit": "degrees",
+        "title": "Major axis deviation",
+        "description": "Absolute angular deviation of major cell axis from line towards the X/Y origin",
         "colType": "measure"
       },
       "kh": {
         "type": ["number", "null"],
         "minimum": 0,
-        "unit": "",
-        "title": "",
-        "description": "",
+        "title": "Hydraulic conductivity",
+        "description": "Theoretical hydraulic conductivity [m4*s-1*MPa-1] as approximated by Poiseuille's law and adjusted to elliptical tubes",
         "colType": "measure"
       },
       "cwtpi": {
         "type": ["number", "null"],
         "minimum": 0,
-        "unit": "",
-        "title": "",
-        "description": "",
+        "unit": "µm",
+        "title": "CWT pith side",
+        "description": "Cell wall thickness on the inner (pith) side",
         "colType": "measure"
       },
       "cwtba": {
         "type": ["number", "null"],
         "minimum": 0,
-        "unit": "",
-        "title": "",
-        "description": "",
+        "unit": "µm",
+        "title": "CWT bark side",
+        "description": "Cell wall thickness on the bark side",
         "colType": "measure"
       },
       "cwtle": {
         "type": ["number", "null"],
         "minimum": 0,
-        "unit": "",
-        "title": "",
-        "description": "",
+        "unit": "µm",
+        "title": "Left CWT",
+        "description": "Cell wall thickness on the left tangential side (ROXAS: viewed from pith, ROXAS AI: as viewed in image)",
         "colType": "measure"
       },
       "cwtri": {
         "type": ["number", "null"],
         "minimum": 0,
-        "unit": "",
-        "title": "",
-        "description": "",
+        "unit": "µm",
+        "title": "Right CWT",
+        "description": "Cell wall thickness on the right tangential side (ROXAS: viewed from pith, ROXAS AI: as viewed in image)",
         "colType": "measure"
       },
       "cwttan": {
         "type": ["number", "null"],
         "minimum": 0,
-        "unit": "",
-        "title": "",
-        "description": "",
+        "unit": "µm",
+        "title": "Tangential CWT",
+        "description": "Mean tangential cell wall thickness ((cwtle + cwtri) / 2)",
         "colType": "measure"
       },
       "cwtrad": {
         "type": ["number", "null"],
         "minimum": 0,
-        "unit": "",
-        "title": "",
-        "description": "",
+        "unit": "µm",
+        "title": "Radial CWT",
+        "description": "Mean radial cell wall thickness ((cwtpi + cwtba) / 2)",
         "colType": "measure"
       },
       "cwtall": {
         "type": ["number", "null"],
         "minimum": 0,
-        "unit": "",
-        "title": "",
-        "description": "",
+        "unit": "µm",
+        "title": "CWT mean",
+        "description": "Mean of all four cell wall thicknesses.",
         "colType": "measure"
       },
       "rtsr": {
         "type": ["number", "null"],
         "minimum": 0,
-        "unit": "",
-        "title": "",
-        "description": "",
+        "title": "Radial thickness-to-span ratio",
+        "description": "Radial thickness-to-span ratio, Mork's index",
         "colType": "measure"
       },
       "ctsr": {
         "type": ["number", "null"],
         "minimum": 0,
-        "unit": "",
-        "title": "",
-        "description": "",
+        "title": "Circular thickness-to-span ratio",
+        "description": " Circular thickness-to-span ratio: ratio between 4x single cell wall thickness (CWTall) and tracheid diameter (assuming a circle area-equivalent to the lumen area)",
         "colType": "measure"
       },
       "dh": {
         "type": ["number", "null"],
         "minimum": 0,
-        "unit": "",
-        "title": "",
-        "description": "",
+        "unit": "µm",
+        "title": "Hydraulic diameter",
+        "description": "Hydraulic diameter of cell (i.e. correcting for effect of elliptical shape on flow)",
         "colType": "measure"
       },
       "drad": {
         "type": ["number", "null"],
         "minimum": 0,
-        "unit": "",
-        "title": "",
-        "description": "",
+        "unit": "µm",
+        "title": "Radial lumen diameter",
+        "description": "Radial cell lumen diameter (measured in bark-to-pith direction, but corrected for ring inclination)",
         "colType": "measure"
       },
       "dtan": {
         "type": ["number", "null"],
         "minimum": 0,
-        "unit": "",
-        "title": "",
-        "description": "",
+        "unit": "µm",
+        "title": "Tangential lumen diameter",
+        "description": "Tangential cell lumen diameter (measured tangentially to pith, but corrected for ring inclination)",
         "colType": "measure"
       },
       "tb2": {
         "type": ["number", "null"],
         "minimum": 0,
-        "unit": "",
-        "title": "",
-        "description": "",
+        "title": "Cell wall reinforcement",
+        "description": "Cell wall reinforcement index ((t/b)², t is the double cell wall thickness and b the length of the same cell wall; the smaller of the radial or tangential values is selected)",
         "colType": "measure"
-      },  
+      },
       "cwa": {
         "type": ["number", "null"],
         "minimum": 0,
-        "unit": "",
-        "title": "",
-        "description": "",
+        "unit": "µm²",
+        "title": "Cell wall area",
+        "description": "Cross-sectional area of the cell wall.",
         "colType": "measure"
       },
       "rwd": {
         "type": ["number", "null"],
         "minimum": 0,
-        "unit": "",
-        "title": "",
-        "description": "",
+        "unit": "µm",
+        "title": "Radial wall diameter",
+        "description": "Radial wall diameter.",
         "colType": "measure"
+      },
+      "tca": {
+        "type": ["number", "null"],
+        "minimum": 0,
+        "unit": "µm²",
+        "title": "Total cell area",
+        "description": "Total cross-sectional cell area (la + cwa).",
+        "colType": "derived"
+      },
+      "rwd2": {
+        "type": ["number", "null"],
+        "minimum": 0,
+        "title": "CWT-to-lumen ratio (radial)",
+        "description": "Ratio of radial CWT to radial lumen diameter (cwtrad / drad).",
+        "colType": "derived"
+      },
+      "dcwt": {
+        "type": ["number", "null"],
+        "minimum": 0,
+        "maximum": 1,
+        "title": "Cell wall density fraction",
+        "description": "Fraction of total cell area occupied by cell wall (cwa / tca).",
+        "colType": "derived"
+      },
+      "cwtall_adj": {
+        "type": ["number", "null"],
+        "minimum": 0,
+        "unit": "µm",
+        "title": "Adjusted mean CWT",
+        "description": "cwttan for earlywood-like cells (rtsr < 1), cwtall otherwise.",
+        "colType": "derived"
+      },
+      "cdrad": {
+        "type": ["number", "null"],
+        "minimum": 0,
+        "unit": "µm",
+        "title": "Total radial cell diameter",
+        "description": "Total radial cell diameter including walls (drad + 2 * cwttan).",
+        "colType": "derived"
+      },
+      "cdtan": {
+        "type": ["number", "null"],
+        "minimum": 0,
+        "unit": "µm",
+        "title": "Total tangential cell diameter",
+        "description": "Total tangential cell diameter including walls (dtan + 2 * cwtrad).",
+        "colType": "derived"
+      },
+      "cdratio": {
+        "type": ["number", "null"],
+        "minimum": 0,
+        "title": "Cell diameter ratio",
+        "description": "Ratio of total radial to total tangential cell diameter (cdrad / cdtan).",
+        "colType": "derived"
       },
       "sector100": {
         "type": ["integer", "null"],
-        "minimum": 0,
-        "unit": "",
-        "title": "",
-        "description": "",
+        "minimum": 1,
+        "maximum": 100,
+        "title": "Sector (1–100)",
+        "description": "Radial position bin in a 100-sector division of the ring width",
         "colType": "derived"
       },
       "ew_lw": {
-        "type": ["boolean", "null"],
-        "title": "",
-        "description": "",
+        "type": ["string", "null"],
+        "enum": ["", "ew", "lw"],
+        "title": "Earlywood / latewood",
+        "description": "Earlywood or latewood classification based on Mork's index",
         "colType": "derived"
       }
     },
-     "required": ["image_label", "year", "xpix", "ypix"],
+    "required": ["image_label", "year", "xpix", "ypix"],
     "additionalProperties": false
   }
 }
