@@ -12,7 +12,7 @@
         "type": "string",
         "minLength": 1,
         "readOnly": true,
-        "title": "Site code",
+        "title": "Site label",
         "description": "Identifier for the site, unique within dataset"
       },
       "n_trees": {

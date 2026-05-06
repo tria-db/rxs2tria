@@ -88,14 +88,10 @@ start_server <- function(id, main_session) {
           } else {
             ext <- tools::file_ext(input$input_file$datapath)
             if (ext == "csv"){
-              df <- rxs2tria::read_QWAimages(input$input_file$datapath,
-                allow_missing_req = FALSE,
-                add_missing_opt = TRUE)
+              df <- rxs2tria::read_QWAimages(input$input_file$datapath)
               validated <- rxs2tria::QWAmetadata(images = df) |> rxs2tria::complete_QWAmetadata()
             } else {
-              res <- rxs2tria::read_QWAmetadata(input$input_file$datapath,
-                allow_missing_req = TRUE, # don't be strict, may be in-progress file
-                add_missing_opt = TRUE)
+              res <- rxs2tria::read_QWAmetadata(input$input_file$datapath)
               validated <- res |> rxs2tria::complete_QWAmetadata()
             }
             source <- glue::glue("read from file {input$input_file$name}")
@@ -261,7 +257,7 @@ start_server <- function(id, main_session) {
     })
 
     output$testing <- shiny::renderPrint({
-      #image_data_out()
+      input_meta$site_tbls$sites
     })
 
     # return the input meta and val check for use in other tabs

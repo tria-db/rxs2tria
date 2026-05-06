@@ -582,6 +582,7 @@ build_QWAimages <- function(df_structure,
     df_structure$fname_settings,
     df_settings$fname_settings, na.ok = FALSE)
   # custom check of the hierarchy defined by the structure columns
+  checkmate::assert_character(df_structure$image_label, unique = TRUE, any.missing = FALSE)
   check_structure(df_structure)
 
   df_rxsmeta <- df_structure |>

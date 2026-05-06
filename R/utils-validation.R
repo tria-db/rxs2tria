@@ -219,15 +219,15 @@ align_to_schema <- function(df, tbl_props, schema = NULL, add_opt = FALSE,
 
     if (length(missing_cols) > 0) {
       msg <- c(msg, 
-        "i" = glue::glue("Missing columns added:"), 
-        " " = glue::glue_collapse(missing_cols, sep = ", ")
+        "i" = "Missing columns added:", 
+        " " = "{missing_cols}"
       )
     }
 
     if (length(extra_cols) > 0) {
       msg <- c(msg,
-        "i" = glue::glue("Extra columns ignored:"), 
-        " " = glue::glue_collapse(extra_cols, sep = ", ")
+        "i" = "Extra columns ignored:", 
+        " " = "{extra_cols}"
       )
     }
 
@@ -238,8 +238,8 @@ align_to_schema <- function(df, tbl_props, schema = NULL, add_opt = FALSE,
       if (any(na_counts_aligned > na_counts_org)){
         NA_cols <- names(which(na_counts_aligned>na_counts_org))
         msg <- c(msg,
-          "i" = glue::glue("Type converted columns caused new NAs:"), 
-          " " = glue::glue_collapse(NA_cols, sep = ", ")
+          "i" = "Type converted columns caused new NAs:", 
+          " " = "{NA_cols}"
         )
       }
     }
@@ -299,8 +299,18 @@ check_schema <- function(df, schema_obj, schema = NULL, warn_only = TRUE, greedy
 #' @param df data frame containing the structure columns image_label, slide_label,
 #'   woodpiece_label, tree_label and site_label
 #' @noRd
-check_structure <- function(df) {
-  checkmate::assert_character(df$image_label, unique = TRUE)
+check_structure <- function(df, warn_only = FALSE) {
+  checkmate::assert_data_frame(df[c('image_label','slide_label','woodpiece_label','tree_label','site_label')], 
+    any.missing = FALSE, .var.name = "No missing values allowed in structure columns of QWAimages")
+  msg <- c()
+  # ensure we have unique image_labels
+  if (length(duplicated(df$image_label))>0) {
+    msg <- c(msg,
+      "x" = "Duplicate image_labels found. Fix manually!", 
+      " " = "{df$image_label[duplicated(df$image_label)]}"
+    )
+    #data$image_label <- janitor::make_clean_names(data$image_label, case = "none")
+  }
   valid <- (
     stringr::str_starts(df$image_label, df$slide_label) &
       stringr::str_starts(df$slide_label, df$woodpiece_label) &
@@ -308,10 +318,17 @@ check_structure <- function(df) {
       stringr::str_starts(df$tree_label, df$site_label)
   )
   if (any(!valid)) {
-    cli::cli_abort(c(
-      "x" = "Invalid data structure for:",
-      df$image_label[!valid]
-    ))
+    msg <- c(msg,
+      "!" = "Invalid data structure or not using rxs2tria labels for:",
+      " " = "{df$image_label[!valid]}"
+    )
+  }
+  if (length(msg)>0) {
+    if (warn_only) {
+      cli::cli_warn(c("!" = "{.cls QWAimages} structure check failed with {length(msg)%/%2} warning{?s}", msg))
+    } else {
+      cli::cli_abort(c("!" = "{.cls QWAimages} structure check failed with {length(msg)%/%2} error{?s}", msg))
+    }
   }
   invisible(TRUE)
 }
