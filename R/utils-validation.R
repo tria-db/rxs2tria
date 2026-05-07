@@ -304,7 +304,7 @@ check_structure <- function(df, warn_only = FALSE) {
     any.missing = FALSE, .var.name = "No missing values allowed in structure columns of QWAimages")
   msg <- c()
   # ensure we have unique image_labels
-  if (length(duplicated(df$image_label))>0) {
+  if (any(duplicated(df$image_label))) {
     msg <- c(msg,
       "x" = "Duplicate image_labels found. Fix manually!", 
       " " = "{df$image_label[duplicated(df$image_label)]}"
