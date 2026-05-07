@@ -1,0 +1,281 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "TODO:addurltoTRIAschema",
+  "title": "TRIA QWA data schema for ring measurements",
+  "description": "Schema for ring-level measurements in a QWA dataset.",
+  "type": "array",
+  "minItems": 1,
+  "items": {
+    "type": "object",
+    "properties": {
+      "woodpiece_label": {
+        "type": "string",
+        "minLength": 1,
+        "title": "Woodpiece label",
+        "description": "Identifying code for the woodpiece",
+        "colType": "key"
+      },
+      "slide_label": {
+        "type": "string",
+        "minLength": 1,
+        "title": "Slide label",
+        "description": "Identifying code for the slide",
+        "colType": "key"
+      },
+      "image_label": {
+        "type": "string",
+        "minLength": 1,
+        "title": "Image label",
+        "description": "Identifying code for the image; join key to QWAimages and cells",
+        "colType": "key"
+      },
+      "year": {
+        "type": "integer",
+        "title": "Year",
+        "description": "Calendar year of the annual ring",
+        "colType": "key"
+      },
+      "cno": {
+        "type": ["integer", "null"],
+        "minimum": 0,
+        "title": "Cell count",
+        "description": "Number of cells detected in the ring; derived from the cells component",
+        "colType": "derived"
+      },
+      "mrw": {
+        "type": ["number", "null"],
+        "minimum": 0,
+        "unit": "µm",
+        "title": "Mean ring width",
+        "description": "Mean radial width of the annual ring",
+        "colType": "measure"
+      },
+      "ra": {
+        "type": ["number", "null"],
+        "minimum": 0,
+        "unit": "mm²",
+        "title": "Ring area",
+        "description": "Total area of the annual ring in the image (in linear samples without extrapolation to sector limits (net area), in circular samples with extrapolation to sector limits, even if outside of image)",
+        "colType": "measure"
+      },
+      "rvgi": {
+        "type": ["number", "null"],
+        "title": "Ring vessel grouping index",
+        "description": "Vessel grouping index per annual rings: Mean number of cells per group (solitary cells are also considered as a group)",
+        "colType": "measure"
+      },
+      "rvsf": {
+        "type": ["number", "null"],
+        "unit": "%",
+        "title": "Ring vessel solitary fraction",
+        "description": "Vessel solitary fraction per annual rings: Fraction of solitary cells with respect to all cells",
+        "colType": "measure"
+      },
+      "rgsgv": {
+        "type": ["number", "null"],
+        "title": "Ring group size of grouped vessels",
+        "description": "Mean group size of grouped / non-solitary cells per annual rings;",
+        "colType": "measure"
+      },
+      "aoiar": {
+        "type": ["number", "null"],
+        "minimum": 0,
+        "unit": "mm²",
+        "title": "Area of interest area",
+        "description": "Cumulative area of all AOI's within each annual ring",
+        "colType": "measure"
+      },
+      "dhw": {
+        "type": ["number", "null"],
+        "minimum": 0,
+        "unit": "µm",
+        "title": "Hydraulically weighted mean diameter",
+        "description": "Ring-level hydraulically weighted mean diameter (sum(cell_dh^5)/sum(cell_dh^4); (Kolb & Sperry, 1998))",
+        "colType": "measure"
+      },
+      "dhm": {
+        "type": ["number", "null"],
+        "minimum": 0,
+        "unit": "µm",
+        "title": "Mean hydraulic diameter",
+        "description": "Mean hydraulic diameter per ring (sum(cell_dh^4)/cno)^0.25; (Tyree & Zimmermann, 2002))",
+        "colType": "measure"
+      },
+      "eww": {
+        "type": ["number", "null"],
+        "minimum": 0,
+        "unit": "µm",
+        "title": "Earlywood width",
+        "description": "Estimated earlywood width based on Mork's index threshold",
+        "colType": "derived"
+      },
+      "lww": {
+        "type": ["number", "null"],
+        "minimum": 0,
+        "unit": "µm",
+        "title": "Latewood width",
+        "description": "Estimated latewood width (mrw - eww)",
+        "colType": "derived"
+      },
+      "duplicate_ring": {
+        "type": ["boolean", "null"],
+        "title": "Duplicate ring flag",
+        "description": "TRUE if the same year appears in more than one image due to overlapping slides.",
+        "colType": "flag"
+      },
+      "exclude_dupl": {
+        "type": ["boolean", "null"],
+        "title": "Exclude duplicate flag",
+        "description": "TRUE for the duplicate ring(s) not selected as the preferred source (default values derived from cell count ranking)",
+        "colType": "flag"
+      },
+      "exclude_issues": {
+        "type": ["boolean", "null"],
+        "title": "Exclude issues flag",
+        "description": "TRUE for rings that should be excluded from analyses due to data quality issues (e.g. incomplete rings)",
+        "colType": "flag"
+      },
+      "affected_tissue": {
+        "type": ["string", "null"],
+        "enum": ["", "all", "ew", "lw"],
+        "title": "Affected tissue",
+        "description": "Can be used to indicate whether the data quality issue(s) affect the entire or only part of the ring",
+        "colType": "flag_opt"
+      },
+      "incomplete_ring": {
+        "type": ["boolean", "null"],
+        "title": "Incomplete ring flag",
+        "description": "TRUE if the ring is at the inner or outer image border and the true ring boundary is not fully visible; mrw is unreliable or unavailable",
+        "colType": "flag"
+      },
+      "missing_ring": {
+        "type": ["boolean", "null"],
+        "title": "Missing ring flag",
+        "description": "TRUE if (almost) no cells were detected or ring was added manually during cross-dating (e.g. a wedging ring)",
+        "colType": "flag"
+      },
+      "x_dating": {
+        "type": ["boolean", "null"],
+        "title": "Crossdating issue",
+        "description": "Data quality flag: crossdating problem detected for this ring.",
+        "colType": "opt_flag"
+      },
+      "compression_wood": {
+        "type": ["boolean", "null"],
+        "title": "Compression wood",
+        "description": "Data quality flag: compression wood present.",
+        "colType": "opt_flag"
+      },
+      "orientation": {
+        "type": ["boolean", "null"],
+        "title": "Orientation issue",
+        "description": "Data quality flag: section orientation problem affecting measurements.",
+        "colType": "opt_flag"
+      },
+      "out_of_focus": {
+        "type": ["boolean", "null"],
+        "title": "Out of focus",
+        "description": "Technical quality flag: image is out of focus.",
+        "colType": "opt_flag"
+      },
+      "cracks": {
+        "type": ["boolean", "null"],
+        "title": "Cracks",
+        "description": "Technical quality flag: cracks visible in the section.",
+        "colType": "opt_flag"
+      },
+      "paraffin": {
+        "type": ["boolean", "null"],
+        "title": "Paraffin",
+        "description": "Technical quality flag: paraffin residue visible.",
+        "colType": "opt_flag"
+      },
+      "compressed_cells": {
+        "type": ["boolean", "null"],
+        "title": "Compressed cells",
+        "description": "Technical quality flag: cells are mechanically compressed.",
+        "colType": "opt_flag"
+      },
+      "overlapping_cells": {
+        "type": ["boolean", "null"],
+        "title": "Overlapping cells",
+        "description": "Technical quality flag: cells overlap in the image.",
+        "colType": "opt_flag"
+      },
+      "broken_cells": {
+        "type": ["boolean", "null"],
+        "title": "Broken cells",
+        "description": "Technical quality flag: broken or damaged cells present.",
+        "colType": "opt_flag"
+      },
+      "tang_incomplete": {
+        "type": ["boolean", "null"],
+        "title": "Tangentially incomplete",
+        "description": "Technical quality flag: ring is cut off at the tangential image border.",
+        "colType": "opt_flag"
+      },
+      "tyloses": {
+        "type": ["boolean", "null"],
+        "title": "Tyloses",
+        "description": "Other issue flag: tyloses present in vessels.",
+        "colType": "opt_flag"
+      },
+      "decay": {
+        "type": ["boolean", "null"],
+        "title": "Decay",
+        "description": "Other issue flag: wood decay visible.",
+        "colType": "opt_flag"
+      },
+      "other_disqual": {
+        "type": ["boolean", "null"],
+        "title": "Other issue",
+        "description": "Other issue flag: other data quality issue.",
+        "colType": "opt_flag"
+      },
+      "blue_ring": {
+        "type": ["boolean", "null"],
+        "title": "Blue ring",
+        "description": "Discrete feature flag: blue ring (freeze damage during cell expansion).",
+        "colType": "opt_flag"
+      },
+      "frost_ring": {
+        "type": ["boolean", "null"],
+        "title": "Frost ring",
+        "description": "Discrete feature flag: frost ring (freeze damage during cell wall formation).",
+        "colType": "opt_flag"
+      },
+      "light_ring": {
+        "type": ["boolean", "null"],
+        "title": "Light ring",
+        "description": "Discrete feature flag: light ring (absence of latewood).",
+        "colType": "opt_flag"
+      },
+      "iadf": {
+        "type": ["boolean", "null"],
+        "title": "Intra-annual density fluctuation",
+        "description": "Discrete feature flag: intra-annual density fluctuation.",
+        "colType": "opt_flag"
+      },
+      "traum_resin_ducts": {
+        "type": ["boolean", "null"],
+        "title": "Traumatic resin ducts",
+        "description": "Discrete feature flag: presence of traumatic resin ducts.",
+        "colType": "opt_flag"
+      },
+      "trabeculae": {
+        "type": ["boolean", "null"],
+        "title": "Trabeculae",
+        "description": "Discrete feature flag: presence of trabeculae.",
+        "colType": "opt_flag"
+      },
+      "other_discrete": {
+        "type": ["boolean", "null"],
+        "title": "Other discrete feature",
+        "description": "Discrete feature flag: other discrete features.",
+        "colType": "opt_flag"
+      }
+    },
+    "required": ["image_label", "year"],
+    "additionalProperties": true
+  }
+}

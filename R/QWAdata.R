@@ -153,7 +153,7 @@ max_na_inf <- function(x) {
 #' - tca: la + cwa
 #' - rwd2: cwtrad/drad
 #' - dcwt
-#' - cwtall.adj
+#' - cwtall_adj
 #' - cdrad, cdtan, cdratio
 #' - sector100
 #' - ew_lw: indicates if it is an EW or LW cell (based on Mork index <1 for EW)
@@ -192,7 +192,7 @@ complete_measures <- function(QWA_data, only = NULL) {
     # standardized raddistr (by mrw):
     # add mean cwt: mean of radial and tangential cwt if Mork index latewood-like,
     # in earlywood-like cells take cwttan
-    cwtall.adj = rlang::quo(dplyr::if_else(.data$rtsr < 1, .data$cwttan, .data$cwtall)),
+    cwtall_adj = rlang::quo(dplyr::if_else(.data$rtsr < 1, .data$cwttan, .data$cwtall)),
     cdrad = rlang::quo(.data$drad + 2*.data$cwttan),
     cdtan = rlang::quo(.data$dtan + 2*.data$cwtrad),
     cdratio = rlang::quo(.data$cdrad / .data$cdtan),
@@ -207,7 +207,7 @@ complete_measures <- function(QWA_data, only = NULL) {
   )
 
   # find which ones actually need to be recalculated
-  cell_meas_all <- c("tca", "rwd2", "dcwt", "cwtall.adj",
+  cell_meas_all <- c("tca", "rwd2", "dcwt", "cwtall_adj",
                      "cdrad", "cdtan", "cdratio", "sector100", "ew_lw")
   cell_meas_missing <- setdiff(cell_meas_all, names(QWA_data$cells))
   if (!is.null(only)) cell_meas_missing <- intersect(cell_meas_missing, only)
@@ -247,7 +247,7 @@ complete_measures <- function(QWA_data, only = NULL) {
       df_cells <- df_cells |>
         dplyr::left_join(df_ewlw, by = c('image_label', 'year')) |>
         dplyr::mutate(ew_lw = dplyr::if_else(.data$sector100 <= .data$max_EW_sector, "EW", "LW")) |>
-        dplyr::select(!"mrw", !"max_EW_sector")
+        dplyr::select(-dplyr::any_of(c("mrw", "max_EW_sector")))
     }
 
     if (eww_needed) {
@@ -448,31 +448,69 @@ QWAdata <- function(cells = NULL,
 
   # minimal requirements: cells - align cols, cwt
   if (!is.null(cells)) {
+    # get schema from file
+    schema_path <- system.file(schema_rel_path("cells"), package = "rxs2tria")
+    schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
+    tbl_schema <- resolve_schema(schema_obj, schema_path)
+    tbl_props <- get_tbl_props(tbl_schema)
+    # required cols
     checkmate::assert_data_frame(
-      cells[c("image_label","year","xpix","ypix")], any.missing = FALSE)
+      cells[tbl_props$required], any.missing = FALSE, 
+      .var.name = "Missing required columns in cells component")
+    # expected raw measurement cols
+    measure_cols <- tbl_props$properties |> purrr::keep(\(x) x$colType == "measure") |> names()
+    missing_meas_cols <- setdiff(measure_cols, names(cells))
+    if (length(missing_meas_cols)>0) {
+      cli::cli_warn(c(
+        "!" = "{.field cells} is missing expected raw measurement columns:",
+        "i" = "{missing_meas_cols}"
+      ))
+    }
+    # align: all measurements numeric (TODO: distinguish between numeric and integer?)
     cells <- cells |> 
       dplyr::mutate(
         dplyr::across(dplyr::any_of(c("image_label", "ew_lw")), as.character),
         dplyr::across(-dplyr::any_of(c("image_label", "ew_lw")), as.numeric)
     )
+    # check for cwt estimates (expected for conifers)
     check_cwt(cells, warn_only = TRUE)
-    if (is.null(rings)) { # if no rings, check dating in cells (just in future)
+    if (is.null(rings)) { # if no rings, check dating in cells (just no in-future years)
       check_cell_years(cells, warn_only = FALSE)
     }
   }
    
   # rings - align cols, complete years, check dating
   if (!is.null(rings)) {
+    # get schema from file
+    schema_path <- system.file(schema_rel_path("rings"), package = "rxs2tria")
+    schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
+    tbl_schema <- resolve_schema(schema_obj, schema_path)
+    tbl_props <- get_tbl_props(tbl_schema)
+    # required columns
     checkmate::assert_data_frame(
-      rings[c("image_label","year")], any.missing = FALSE)
-    char_cols <- c("image_label", "slide_label", "woodpiece_label", "affected_tissue")
-    flag_cols <- names(rings)[sapply(rings, is.logical)] # TODO: get from schema
+      rings[tbl_props$required], any.missing = FALSE, 
+      .var.name = "Missing required columns in rings component")
+    # expected measurement cols
+    measure_cols <- tbl_props$properties |> purrr::keep(\(x) x$colType == "measure") |> names()
+    missing_meas_cols <- setdiff(measure_cols, names(rings))
+    if (length(missing_meas_cols)>0) {
+      cli::cli_warn(c(
+        "!" = "{.field rings} is missing expected raw measurement columns:",
+        "i" = "{missing_meas_cols}"
+      ))
+    }
+    # align types
+    char_cols <- tbl_props$properties |> purrr::keep(\(x) "string" %in% x$type) |> names()
+    flag_cols <- tbl_props$properties |> purrr::keep(\(x) "boolean" %in% x$type) |> names()
     rings <- rings |> 
       dplyr::mutate(
         dplyr::across(dplyr::any_of(char_cols), as.character),
+        dplyr::across(dplyr::any_of(flag_cols), as.logical),
         dplyr::across(-dplyr::any_of(c(char_cols, flag_cols)), as.numeric)
       )
+    # ensure we have complete year sequences for each image (re-adds cno)
     rings <- complete_rings(new_QWAdata(cells, rings))
+    # check dating
     check_ring_years(rings, warn_only = FALSE)
   }
   
@@ -665,6 +703,8 @@ check_QWAdata <- function(x, meta = NULL,
     if (!check_missing) {
       cli::cli_warn("Missing required detected in {.field cells} component")
     }
+    # TODO: complete the checks, see QWAdata
+    # check_missing_opt(cells, tbl_props)? or separate for measures and derived
     # extra_cols <- names(x$cells) %in% all_cols
     # char_cols <- x$cells |> dplyr::select(dplyr::where(is.character)) |> names()
     # checkmate::assert_subset(char_cols, ...)
@@ -682,10 +722,9 @@ check_QWAdata <- function(x, meta = NULL,
     check_cell_years(x$cells, warn_only = TRUE)
   }
   
-  # check for negative values / outliers
+  # check for negative values / outliers, ranges as defined in schemata
   # plus check structure against each other, cno
-  # plus check calcualted measures / flags are valid?
-
+  # plus re-check calculated measures / flags are valid?
 
   cli::cli_inform(c("v" = "All checks completed."))
   invisible(TRUE)

@@ -10,6 +10,7 @@
         "properties": {
           "image_label": {
             "htType": "character",
+            "unique": true ,
             "dtColGroup": "cols_structure"
           },
           "slide_label": {

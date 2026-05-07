@@ -112,8 +112,8 @@ collect_raw_outputs <- function(df_structure, roxas_version, ftype) {
     }
 
     colname_variants <- c(
-      DH_W = 'DH', # DH is actually hydraulically weighted mean diameter (Kolb & Sperry, 1998)
-      DH_M = 'DH2' # while DH2 is mean hydraulic diameter (Tyree & Zimmermann, 2002)
+      DHW = 'DH', # DH is actually hydraulically weighted mean diameter (Kolb & Sperry, 1998)
+      DWM = 'DH2' # while DH2 is mean hydraulic diameter (Tyree & Zimmermann, 2002)
     )
 
     checkmate::assert_subset(c('fname_rings', 'image_label'), names(df_structure))
@@ -176,7 +176,7 @@ remove_outliers <- function(QWA_data, mute_info = FALSE) {
     "cwtpi", "cwtba", "cwtle", "cwtri", "cwa", "rwd")
   outl_cols_rings <- c(
     # no negative values possible:
-    # "dh_w", "dh_m",
+    # "dhw", "dhm",
     # could have negatve error codes: 
     "rvgi", "rvsf", "rgsgv", "aoiar",
     # could have negative values due to artifacts
