@@ -93,19 +93,42 @@ get_roxas_files <- function(path_in, roxas_version,
   }
 
   # identify any mismatches between ring, cell, settings, and image files
-  dontmatch <- setdiff(
-    all_fnames,
-    Reduce(intersect, l_files)
-  )
+  complete_fnames <- Reduce(intersect, l_files)
+  dontmatch <- setdiff(all_fnames, complete_fnames)
 
-  # stop if there are any mismatches
   if (length(dontmatch) > 0) {
-    cli::cli_abort(c(
-      "{rv} file mismatch detected",
-      "i" = "Four {rv} files (image, cells, rings, settings) are required per image",
-      "x" = "The following path snippets do not yield complete sets of {rv} files:",
-      dontmatch
-    ))
+    # files that have only an image but no cells/rings/settings are warned and skipped
+    image_only <- dontmatch[
+      dontmatch %in% l_files[[4]] &   # present as image
+      !dontmatch %in% l_files[[1]] &  # absent as cells
+      !dontmatch %in% l_files[[2]] &  # absent as rings
+      !dontmatch %in% l_files[[3]]    # absent as settings
+    ]
+    other_mismatch <- setdiff(dontmatch, image_only)
+
+    if (length(image_only) > 0) {
+      cli::cli_warn(c(
+        "Image files without matching cells/rings/settings — skipping",
+        "!" = "The following {length(image_only)} image{?s} will be ignored:",
+        image_only
+      ))
+    }
+
+    if (length(other_mismatch) > 0) {
+      cli::cli_abort(c(
+        "{rv} file mismatch detected",
+        "i" = "Four {rv} files (image, cells, rings, settings) are required per image",
+        "x" = "The following path snippets do not yield complete sets of {rv} files:",
+        other_mismatch
+      ))
+    }
+
+    # filter all file vectors to only complete sets
+    keep <- complete_fnames
+    files_cells    <- files_cells[stringr::str_remove(files_cells, stringr::regex(pattern_cell_files, ignore_case = TRUE)) %in% keep]
+    files_rings    <- files_rings[stringr::str_remove(files_rings, stringr::regex(pattern_ring_files, ignore_case = TRUE)) %in% keep]
+    files_settings <- files_settings[stringr::str_remove(files_settings, stringr::regex(pattern_settings_files, ignore_case = TRUE)) %in% keep]
+    files_images   <- files_images[stringr::str_remove(files_images, stringr::regex(pattern_orgimg_files, ignore_case = TRUE)) %in% keep]
   }
 
   cli::cli_inform(c(
@@ -582,6 +605,7 @@ build_QWAimages <- function(df_structure,
     df_structure$fname_settings,
     df_settings$fname_settings, na.ok = FALSE)
   # custom check of the hierarchy defined by the structure columns
+  checkmate::assert_character(df_structure$image_label, unique = TRUE, any.missing = FALSE)
   check_structure(df_structure)
 
   df_rxsmeta <- df_structure |>

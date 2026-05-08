@@ -12,14 +12,14 @@
         "type": "string",
         "minLength": 1,
         "readOnly": true,
-        "title": "Tree code",
-        "description": "Identifying code for the tree (generated)"
+        "title": "Tree label",
+        "description": "Identifying label for the tree (generated)"
       },
       "site_label": {
         "type": "string",
         "minLength": 1,
         "readOnly": true,
-        "title": "Site code",
+        "title": "Site label",
         "description": "Site to which the tree belongs"
       },
       "n_woodpieces": {

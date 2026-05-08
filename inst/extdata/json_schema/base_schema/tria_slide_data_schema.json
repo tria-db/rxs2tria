@@ -12,14 +12,14 @@
         "type": "string",
         "minLength": 1,
         "readOnly": true,
-        "title": "Slide code",
+        "title": "Slide label",
         "description": "Identifying code"
       },
       "woodpiece_label": {
         "type": "string",
         "minLength": 1,
         "readOnly": true,
-        "title": "Woodpiece code",
+        "title": "Woodpiece label",
         "description": "To which woodpiece the slide belongs"
       },
       "n_images": {
