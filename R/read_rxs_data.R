@@ -1,19 +1,18 @@
-#' Read single cell or rings measurements file
+#' Helper function to read a single ROXAS (AI) output (table) file (cells or rings)
 #'
-#' Helper function to read a single ROXAS (AI) output (table) file
-#'
-#' @param filename filename to be read
-#' @param selcols character vector of the required columns to keep
-#' @param colname_variants named character vector of any variant column names to rename
+#' @param filename filen ame to be read.
+#' @param selcols character vector of the required columns.
+#' @param colname_variants named character vector of any variant column names to rename.
 #' @param delim File delimiter (usually `"\t"` for ROXAS, `";"` for ROXAS AI).
-#' @returns A dataframe with the raw data (relevant columns only, cleaned names).
+#' @returns A data frame with the raw data (relevant columns only, cleaned names).
 #' @noRd
 read_output_file <- function(filename, selcols, colname_variants, delim) {
-  # safely read in the raw data while catch errors
+  # safely read in the raw data while catching errors
   tryCatch(
     {
-      sel_vars_wrapper <- function() { # to avoid tidyselect warning
-        dplyr::all_of(selcols)
+      # col_select wrapper to avoid tidyselect warning
+      sel_vars_wrapper <- function() { 
+        dplyr::any_of(c(selcols, colname_variants))
       }
       df_raw <- vroom::vroom(filename, delim = delim,
                              col_types = c(.default = "d"),
@@ -26,7 +25,7 @@ read_output_file <- function(filename, selcols, colname_variants, delim) {
     },
     error = function(e) {
       cli::cli_inform(c(
-        "x" = "Could not read {.file {filename}}:",
+        "x" = "Could not read file {.file {filename}}:",
         " " = e$message
       ))
       return(data.frame(year = integer(0)))
@@ -37,12 +36,12 @@ read_output_file <- function(filename, selcols, colname_variants, delim) {
 
 #' Collect raw output data from multiple files
 #'
-#' Read and combine data from multple cells/rings data files (i.e. the
-#' ROXAS output txts or ROXAS AI table csvs with the raw measurements).
+#' Read and combine data from multiple cells/rings data files (i.e. the
+#' ROXAS output .txt or ROXAS AI table .csv files with the raw measurements).
 #' Used by [collect_raw_data()] to read each `QWAdata` component.
 #'
-#' @param df_structure Data frame containing filenames (`$fname_cells` or `$fname_rings`) 
-#'   and image labels (`$image_label`).
+#' @param df_structure Data frame of image identifiers (`$image_label`) and
+#'   corresponding data file names (`$fname_cells` or `$fname_rings`).
 #' @param roxas_version The software used to create the files (`"roxas"` or `"roxas_ai"`).
 #' @param ftype which type of files should be read (`"cells"` or `"rings"`).
 #' @returns A data frame with the relevant raw measurements data from all
@@ -86,7 +85,7 @@ collect_raw_outputs <- function(df_structure, roxas_version, ftype) {
     # 3.0.285, 3.0.575, 3.0.590, 3.0.608, 3.0.620, 3.0.634, 3.0.655
     selcols <- c(
       'YEAR','RA','MRW',
-      'RVGI', 'RVSF', 'RGSGV', 'AOIAR', 'DH', 'DH2'
+      'RVGI', 'RVSF', 'RGSGV', 'AOIAR', 'DHW', 'DHM' # (new DH names)
       # not included cols are (ROXAS):
       # 'CNO' # we re-calculate from cells output
       # 'ID', 'MINRW', 'MAXRW', 'MRADDIST', # not relevant
@@ -97,8 +96,8 @@ collect_raw_outputs <- function(df_structure, roxas_version, ftype) {
       # plus other AOI / AOE related measures (not relevant)
     )
     # ROXAS AI also has:
-    #  YEAR;RA;MRW;RVGI;RVSF;RGSGV;DH;DH2; 
-    #  TODO: WHAT ABOUT AOIAR?
+    #  YEAR;RA;MRW;RVGI;RVSF;RGSGV;AOIAR;DHW;DHM; 
+    #  TODO: sometimes missing RVGI-AOIAR?
     # and not included
     #  CNO;CD;CTA;RCTA;MLA;ID; MINLA;MAXLA;KH;KS;
     #  CWTPI;CWTBA;CWTLE;CWTRI;CWTTAN;CWTRAD;CWTALL;
@@ -107,12 +106,9 @@ collect_raw_outputs <- function(df_structure, roxas_version, ftype) {
     #   RBXY; <- ring boundary arrays
     #   cells_above;enabled <- first for sorting, second is incomplete flag?
     # TODO: use enabled in combination with the incomplete check in complete_flags?
-    if (roxas_version == "roxas_ai") {
-      selcols <- selcols[selcols != "AOIAR"]
-    }
 
     colname_variants <- c(
-      DHW = 'DH', # DH is actually hydraulically weighted mean diameter (Kolb & Sperry, 1998)
+      DHW = 'DH', # DH is hydraulically weighted mean diameter (Kolb & Sperry, 1998)
       DWM = 'DH2' # while DH2 is mean hydraulic diameter (Tyree & Zimmermann, 2002)
     )
 
@@ -133,12 +129,18 @@ collect_raw_outputs <- function(df_structure, roxas_version, ftype) {
     tidyr::unnest("raw_data") |> 
     dplyr::arrange(dplyr::pick("image_label", "year"))
 
+  # make sure we have all measurement columns (adds NAs for missing)
+  df_raw_all <- df_raw_all |> 
+    dplyr::bind_rows(
+      vroom::vroom(I("\n"), col_names = selcols, col_types = c(.default = "d"), 
+                   .name_repair = janitor::make_clean_names))
+
   # check for any files that could not be read (contributed zero rows after unnest)
   failed_labels <- setdiff(df_structure$image_label, df_raw_all$image_label)
   if (length(failed_labels) > 0) {
     cli::cli_warn(c(
-      "!" = "{length(failed_labels)} {ftype} file{?s} could not be read:",
-      failed_labels
+      "!" = "No {ftype} data for the following {length(failed_labels)} image_label{?s}:",
+      cli_truncated_list(failed_labels)
     ))
   } else {
     cli::cli_alert_success("All {ftype} data files read successfully")
@@ -154,7 +156,7 @@ collect_raw_outputs <- function(df_structure, roxas_version, ftype) {
 #' in cell and ring measures with negative values. This function replaces
 #' these 'negatives' with NA.
 #' ROXAS also uses error codes (-9999, -999, -99) to indicate aborted analysis,
-#' which in newer software versions are alredy set to NA in the .txt output files.
+#' which in newer software versions are already set to NA in the .txt output files.
 #' In any case, the removal of negative values also takes care of these.
 #'
 #' @param QWA_data A `QWAdata` object containing the cells and rings dataframes.
@@ -170,14 +172,14 @@ remove_outliers <- function(QWA_data, mute_info = FALSE) {
   outl_cols_cells <- c(
     # no negative values possible:
     # "raddistr", "rraddistr","la", "asp","majax", "kh","dh","drad", "dtan",
-    # could have negatve error codes: 
+    # could have negative error codes:
     "nbrno", "nbrid", "cwttan", "cwtrad", "cwtall", "rtsr", "ctsr",  "tb2",
     # could have negative error codes or outliers:
     "cwtpi", "cwtba", "cwtle", "cwtri", "cwa", "rwd")
   outl_cols_rings <- c(
     # no negative values possible:
     # "dhw", "dhm",
-    # could have negatve error codes: 
+    # could have negative error codes:
     "rvgi", "rvsf", "rgsgv", "aoiar",
     # could have negative values due to artifacts
     "mrw", "ra"
@@ -194,7 +196,7 @@ remove_outliers <- function(QWA_data, mute_info = FALSE) {
       tidyr::pivot_longer(dplyr::everything()) |>
       dplyr::filter(value > 0) 
     if (!mute_info) {
-      info_msg <- c(info_msg,
+      info_msg <- c(info_msg, "Cell values replaced ---",
         cell_outliers |> 
           dplyr::filter(.data$name %in% outl_cols_cells) |>
           glue::glue_data("{name}: {value}"))
@@ -202,7 +204,7 @@ remove_outliers <- function(QWA_data, mute_info = FALSE) {
     cells_rm <- QWA_data$cells |>
       dplyr::mutate(dplyr::across(dplyr::all_of(outl_cols_cells),
                                   ~ dplyr::if_else(.x < 0, NA_real_, .x)))
-    warn_msg <- c(warn_msg,
+    warn_msg <- c(warn_msg, "Cells unexpected negatives ---",
       cell_outliers |> 
         dplyr::filter(! .data$name %in% outl_cols_cells) |>
         glue::glue_data("{name}: {value}"))
@@ -218,7 +220,7 @@ remove_outliers <- function(QWA_data, mute_info = FALSE) {
       tidyr::pivot_longer(dplyr::everything()) |>
       dplyr::filter(value > 0) 
     if (!mute_info) {
-      info_msg <- c(info_msg,
+      info_msg <- c(info_msg, "Ring values replaced ---",
         rings_outliers |> 
           dplyr::filter(.data$name %in% outl_cols_rings) |>
           glue::glue_data("{name}: {value}"))
@@ -226,7 +228,7 @@ remove_outliers <- function(QWA_data, mute_info = FALSE) {
     rings_rm <- QWA_data$rings |>
       dplyr::mutate(dplyr::across(dplyr::all_of(outl_cols_rings),
                                   ~ dplyr::if_else(.x < 0, NA_real_, .x)))
-    warn_msg <- c(warn_msg,
+    warn_msg <- c(warn_msg, "Rings unexpected negatives ---",
       rings_outliers |> 
         dplyr::filter(! .data$name %in% outl_cols_rings) |>
         glue::glue_data("{name}: {value}"))
@@ -234,14 +236,14 @@ remove_outliers <- function(QWA_data, mute_info = FALSE) {
     rings_rm <- NULL
   }
 
-  if (!mute_info && length(info_msg)>0) {
+  if (length(info_msg)>2){ # only if we found anything to replace
     cli::cli_inform(c(
-      "v" = "Outliers (negative values) have been replaced with NA",
+      "v" = "Outliers and error codes (negative values) replaced with {.code NA}",
       info_msg
     ))
   }
 
-  if (length(warn_msg)>0) {
+  if (length(warn_msg)>2) {
     cli::cli_warn(c(
       "!" = "Negative values found in unexpected columns:",
       warn_msg
@@ -279,8 +281,8 @@ collect_raw_data <- function(df_meta, roxas_version = NULL) {
 
   df_cells_all <- collect_raw_outputs(df_meta, roxas_version, "cells")
   df_rings_all <- collect_raw_outputs(df_meta, roxas_version, "rings")
-  # these dfs have correct required columns and types per defintion
-  # exepct if there was an issue with one or more files -> warning message
+  # these dfs have correct required columns and types per definition
+  # except if there was an issue with one or more files -> warning message
 
   # forcibly remove any error codes and "negative" values that are actually outliers
   QWA_data <- remove_outliers(
@@ -298,9 +300,7 @@ collect_raw_data <- function(df_meta, roxas_version = NULL) {
   # check dating (df_meta for outmost_year check if available)
   check_ring_years(df_rings_complete, df_meta, warn_only = TRUE)
 
-  cli::cli_inform(c(
-    "v" = "Data extracted to {.var QWAdata} object"
-  ))
+  cli::cli_alert_success("Data extracted to {.var QWAdata} object")
   
   new_QWAdata(cells = df_cells_all, rings = df_rings_complete)
 }

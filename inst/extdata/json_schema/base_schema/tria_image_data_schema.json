@@ -10,34 +10,34 @@
       "minLength": 1,
       "readOnly": true,
       "title": "Image",
-      "description": "Description"
+      "description": "Unique image identifier"
     },
     "slide_label": {
       "type": "string",
       "minLength": 1,
       "readOnly": true,
       "title": "Slide",
-      "description": "Description"
+      "description": "Slide identifier"
     },
     "woodpiece_label": {
       "type": "string",
       "minLength": 1,
       "readOnly": true,
       "title": "Woodpiece",
-      "description": "Description"
+      "description": "Woodpiece identifier"
     },
     "tree_label": {
       "type": "string",
       "minLength": 1,
       "title": "Tree",
       "readOnly": true,
-      "description": "Description"
+      "description": "Tree identifier"
     },
     "species_code": {
       "type": ["string", "null"],
       "readOnly": true,
       "title": "Species",
-      "description": "Description (change in sites tab if required)"
+      "description": "Species code (change in trees table if needed)"
     },
     "site_label": {
       "type": "string",
@@ -50,58 +50,58 @@
       "type": ["number", "null"],
       "minimum": 0,
       "title": "Bandwidth",
-      "description": "Description"
+      "description": "Width of the analysed band [µm]"
     },
     "only_ew": {
       "type": ["boolean", "null"],
       "title": "Only EW",
-      "description": "Description"
+      "description": "Whether only earlywood was analysed"
     },
     "spatial_resolution": {
       "type": ["number", "null"],
       "title": "Spatial resolution",
-      "description": "Description"
+      "description": "Spatial resolution [pixels/µm]"
     },
     "meas_geometry": {
       "type": ["string", "null"],
       "enum": ["", "linear", "circular"],
       "title": "Geometry",
-      "description": "Description"
+      "description": "Sample geometry: linear or circular"
     },
     "org_img_name": {
       "type": "string",
       "minLength": 1,
       "title": "Original name",
-      "description": "Description"
+      "description": "Original image file name"
     },
     "img_filetype": {
       "type": ["string", "null"],
       "title": "Filetype",
-      "description": "Description"
+      "description": "Image file type/extension"
     },
     "img_size": {
       "type": ["integer", "null"],
       "minimum": 0,
       "title": "Size",
-      "description": "Description"
+      "description": "Image file size [bytes]"
     },
     "img_width": {
       "type": ["integer", "null"],
       "minimum": 0,
       "title": "Width",
-      "description": "Description"
+      "description": "Image width [pixels]"
     },
     "img_height": {
       "type": ["integer", "null"],
       "minimum": 0,
       "title": "Height",
-      "description": "Description"
+      "description": "Image height [pixels]"
     },
     "img_created_at": {
       "type": ["string","null"],
       "format": "date-time",
       "title": "Image created",
-      "description": "Description"
+      "description": "Image creation date and time"
     },
     "img_software": {
       "type": ["string", "null"],
@@ -112,55 +112,55 @@
       "type": ["string", "null"],
       "enum": ["", "RGB", "other"],
       "title": "Scan mode",
-      "description": "Description"
+      "description": "Image colour mode (e.g. RGB)"
     },
     "software": {
       "type": "string",
       "minLength": 1,
       "enum": ["roxas", "roxas_ai"],
       "title": "Analysis sw",
-      "description": "Description"
+      "description": "QWA analysis software used"
     },
     "sw_version": {
       "type": ["string", "null"],
       "title": "SW version",
-      "description": "Description"
+      "description": "Software version used"
     },
     "rxs_created_at": {
       "type": ["string", "null"],
       "format": "date-time",
       "title": "ROXAS created",
-      "description": "Description"
+      "description": "Timestamp of the ROXAS analysis"
     },
     "outmost_year": {
       "type": ["integer", "null"],
       "title": "Outmost year",
-      "description": "Description"
+      "description": "Calendar year of the outermost ring"
     },
     "fname_image": {
       "type": ["string", "null"],
       "title": "File image",
-      "description": "Description"
+      "description": "Image file name"
     },
     "fname_cells": {
       "type": ["string", "null"],
       "title": "File cells",
-      "description": "Description"
+      "description": "Cell data file name"
     },
     "fname_rings": {
       "type": ["string", "null"],
       "title": "File rings",
-      "description": "Description"
+      "description": "Ring data file name"
     },
     "fname_settings": {
       "type": ["string", "null"],
       "title": "File Settings",
-      "description": "Description"
+      "description": "Settings file name"
     },
     "comment": {
       "type": ["string", "null"],
       "title": "Comment",
-      "description": "Description"
+      "description": "Free-text comment"
     }
   },
   "required": ["image_label", "slide_label", "woodpiece_label", "tree_label", 

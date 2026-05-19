@@ -347,7 +347,7 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
 
     # render editable table
     output$author_table <- rhandsontable::renderRHandsontable({
-      shiny::req(author_data_in())
+      shiny::validate(shiny::need(!is.null(author_data_in()), "No data to show."))
 
       colHeaders <- sapply(aut_tbl_props, function(x) x$title)
       colHeaders <- colHeaders[names(author_data_in())] # ensure correct order
@@ -392,9 +392,15 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
     shiny::observeEvent(input$btn_add_author, {
       new_row <- rxs2tria:::create_empty_df(aut_tbl_props_full, nrows=1)
       current_df <- author_data_out()
-      new_row$author_nr <- as.integer(max(current_df$author_nr, na.rm = TRUE) + 1)
-      current_df[nrow(current_df)+1,] <- new_row
-      author_data_in(current_df)
+      if (!is.null(current_df)) {
+        new_row$author_nr <- nrow(current_df) + 1 #as.integer(max(current_df$author_nr, na.rm = TRUE) + 1)
+        current_df[nrow(current_df)+1,] <- new_row
+        author_data_in(current_df)
+      } else {
+        new_row$author_nr <- 1
+        author_data_in(new_row)
+      }
+
     })
 
     # observe delete row button
@@ -422,7 +428,7 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
 
     # Render editable table
     output$funding_table <- rhandsontable::renderRHandsontable({
-      shiny::req(funding_data_in())
+      shiny::validate(shiny::need(!is.null(funding_data_in()), "No data to show."))
 
       colHeaders <- sapply(fund_tbl_props, function(x) x$title)
       colHeaders <- colHeaders[names(funding_data_in())] # ensure correct order
@@ -464,8 +470,13 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
     shiny::observeEvent(input$btn_add_fund, {
       new_row <- rxs2tria:::create_empty_df(fund_tbl_props_full, nrows=1)
       current_df <- funding_data_out()
-      current_df[nrow(current_df)+1,] <- new_row
-      funding_data_in(current_df)
+      if (!is.null(current_df)) {
+        current_df[nrow(current_df)+1,] <- new_row
+        funding_data_in(current_df)
+      } else {
+        funding_data_in(new_row)
+      }
+
     })
 
     # observe delete row button
@@ -585,8 +596,13 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
     shiny::observeEvent(input$btn_add_res, {
       new_row <- rxs2tria:::create_empty_df(relres_tbl_props_full, nrows=1)
       current_df <- relres_data_out()
-      current_df[nrow(current_df)+1,] <- new_row
-      relres_data_in(current_df)
+      if (!is.null(current_df)) {
+        current_df[nrow(current_df)+1,] <- new_row  
+        relres_data_in(current_df)
+      } else {
+        relres_data_in(new_row)
+      }
+ 
     })
 
     # observe delete row button
@@ -615,17 +631,17 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
 
       # 1) dataset input fields from the input validator
       iv_validated <- iv_gen$validate()
-      results$ds_data <- collect_validator_results(iv_validated, input_field_names, 'ds')
+      results$dataset <- collect_validator_results(iv_validated, input_field_names, 'ds')
       # TODO: change to schema validation? what about other fields
 
       # 2) author table
-      results$author_data <- collect_hot_val_results(author_data_out(), aut_tbl_props)
+      results$authors <- collect_hot_val_results(author_data_out(), aut_tbl_props)
 
       # 3) funding table
-      results$funding_data <- collect_hot_val_results(funding_data_out(), fund_tbl_props)
+      results$funding <- collect_hot_val_results(funding_data_out(), fund_tbl_props)
 
       # 4) related resources
-      results$relres_data <- collect_hot_val_results(relres_data_out(), relres_tbl_props)
+      results$related <- collect_hot_val_results(relres_data_out(), relres_tbl_props)
 
       # convert collected results to dataframe
       df_results <- results |>
@@ -697,7 +713,7 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
     # orcid transfer: what if names don't match?
 
     output$testing <- shiny::renderPrint({
-      #ds_data_out()
+      #validation_checks()
     })
 
     ds_data_out <- shiny::reactive({

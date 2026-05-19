@@ -23,7 +23,7 @@ Some additional cell measures are calculated based on the existing data:
 \item tca: la + cwa
 \item rwd2: cwtrad/drad
 \item dcwt
-\item cwtall.adj
+\item cwtall_adj
 \item cdrad, cdtan, cdratio
 \item sector100
 \item ew_lw: indicates if it is an EW or LW cell (based on Mork index <1 for EW)

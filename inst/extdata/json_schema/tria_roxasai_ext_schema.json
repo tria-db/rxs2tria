@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "TODO:addurltoTRIAschema",
+  "allOf": [
+    { "$ref": "base_schema/tria_roxasai_data_schema.json"},
+        {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "image_label": {
+            "htType": "character",
+            "unique": true ,
+            "dtColGroup": "cols_structure"
+          },
+          "slide_label": {
+            "htType": "character",
+            "dtColGroup": "cols_structure"
+          },
+          "woodpiece_label": {
+            "htType": "character",
+            "dtColGroup": "cols_structure"
+          },
+          "tree_label": {
+            "htType": "character",
+            "dtColGroup": "cols_structure"
+          },
+          "species_code": {
+            "htType": "character",
+            "dtColGroup": "cols_structure"
+          },
+          "site_label": {
+            "htType": "character",
+            "dtColGroup": "cols_structure"
+          },
+          "band_width": {
+            "htType": "numeric",
+            "dtColGroup": "cols_settings"
+          },
+          "only_ew": {
+            "htType": "checkbox",
+            "dtColGroup": "cols_settings"
+          },
+          "spatial_resolution": {
+            "htType": "character",
+            "dtColGroup": "cols_settings"
+          },
+          "meas_geometry": {
+            "htType": "dropdown",
+            "dtColGroup": "cols_settings"
+          },
+          "org_img_name": {
+            "htType": "character",
+            "dtColGroup": "cols_images"
+          },
+          "img_filetype": {
+            "htType": "character",
+            "dtColGroup": "cols_images"
+          },
+          "img_size": {
+            "htType": "numeric",
+            "dtColGroup": "cols_images"
+          },
+          "img_width": {
+            "htType": "numeric",
+            "dtColGroup": "cols_images"
+          },
+          "img_height": {
+            "htType": "numeric",
+            "dtColGroup": "cols_images"
+          },
+          "img_created_at": {
+            "htType": "character",
+            "dtColGroup": "cols_images"
+          },
+          "img_software": {
+            "htType": "character",
+            "dtColGroup": "cols_images"
+          },
+          "scan_mode": {
+            "htType": "character",
+            "dtColGroup": "cols_images"
+          },
+          "software": {
+            "htType": "dropdown",
+            "dtColGroup": "cols_settings"
+          },
+          "sw_version": {
+            "htType": "character",
+            "dtColGroup": "cols_settings"
+          },
+          "rxs_created_at": {
+            "htType": "character",
+            "dtColGroup": "cols_settings"
+          },
+          "outmost_year": {
+            "htType": "numeric",
+            "dtColGroup": "cols_settings"
+          },
+          "fname_image": {
+            "htType": "character",
+            "dtColGroup": "cols_paths"
+          },
+          "fname_cells": {
+            "htType": "character",
+            "dtColGroup": "cols_paths"
+          },
+          "fname_rings": {
+            "htType": "character",
+            "dtColGroup": "cols_paths"
+          },
+          "fname_settings": {
+            "htType": "character",
+            "dtColGroup": "cols_paths"
+          },
+          "rings_segmentation_model": {
+            "htType": "character",
+            "dtColGroup": "cols_settings"
+          },
+          "cells_segmentation_model": {
+            "htType": "character",
+            "dtColGroup": "cols_settings"
+          },
+          "rings_segmentation_datetime": {
+            "htType": "character",
+            "dtColGroup": "cols_settings"
+          },
+          "cells_segmentation_datetime": {
+            "htType": "character",
+            "dtColGroup": "cols_settings"
+          },
+          "sample_type": {
+            "htType": "dropdown",
+            "dtColGroup": "cols_settings"
+          },
+          "comment": {
+            "htType": "character",
+            "dtColGroup": "cols_settings"
+          }
+        }
+      }
+    }
+  ]
+}
+

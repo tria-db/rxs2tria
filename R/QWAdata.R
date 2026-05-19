@@ -4,7 +4,7 @@
 #'
 #' This function takes the raw QWA data (cells and rings dataframes) and returns an
 #' extended version of the rings data frame, with additional rows for years that
-#' were only present in the cells data / missing alltogether, and an additional 
+#' were only present in the cells data / missing altogether, and an additional 
 #' column for the number of cells per ring (cno, derived from cells data).
 #'
 #' @param QWA_data a list containing the cells and rings dataframes
@@ -55,8 +55,9 @@ check_cwt <- function(df_cells, warn_only = FALSE) {
   if (length(no_cwt_imgs) > 0) {
     msg <- c(
       "!" = "Missing cell wall thickness estimates detected",
-      "i" = "For conifer (but not angiosperm) data, CWT analysis is expected.",
-      " " = "Images without cwttan: {.val no_cwt_imgs}"
+      "i" = "For conifer (but not angiosperm) data, CWT analysis is expected for TRIA submissions.",
+      " " = "{length(no_cwt_imgs)} image{?s} without cwttan found:",
+      cli_truncated_list(no_cwt_imgs)
     )
     if (warn_only) {
       cli::cli_warn(msg)
@@ -81,7 +82,7 @@ check_ring_years <- function(df_rings, df_meta = NULL, warn_only = FALSE) {
 
   df <- df_rings |> dplyr::select("image_label", "year") |> 
     dplyr::left_join(
-      df_meta |> dplyr::select(image_label, outmost_year), 
+      df_meta |> dplyr::select("image_label", "outmost_year"), 
       by = "image_label"
   )
 
@@ -91,7 +92,7 @@ check_ring_years <- function(df_rings, df_meta = NULL, warn_only = FALSE) {
       duplicated = any(duplicated(.data$year)),
       gaps = dplyr::n_distinct(.data$year, na.rm=TRUE) != (max(.data$year, na.rm=TRUE) - min(.data$year, na.rm=TRUE) + 1),
       in_future = any(.data$year > current_year, na.rm=TRUE),
-      after_outmost = any(.data$year > .data$outmost_year, na.rm=TRUE),
+      after_outmost = any(.data$year > .data$outmost_year + 1, na.rm=TRUE), # add 1 year for incomplete rings
       .by = "image_label"
     )
   issue_counts <- colSums(issues[-1])
@@ -123,17 +124,19 @@ check_cell_years <- function(df_cells, warn_only = FALSE) {
   in_future <- df_cells |> 
     dplyr::distinct(.data$image_label, .data$year) |> 
     dplyr::filter(.data$year > current_year) |> 
-    dplyr::pull(image_label) |> unique()
+    dplyr::pull("image_label") |> unique()
   if (length(in_future)>0) {
     if (warn_only) {
       cli::cli_warn(c(
-        "x" = "The data has dating problems. Fix these issues before continuing!", 
-        " " = "Invalid future years in {length(in_future)} image{?s} {.val {in_future}}"
+        "!" = "The data has dating problems. Fix these issues before continuing!", 
+        "i" = "Invalid future years in {length(in_future)} image{?s}:",
+        cli_truncated_list(in_future)
       ))
     } else {
       cli::cli_abort(c(
-        "x" = "The data has dating problems. Fix these issues before continuing!", 
-        " " = "Invalid future years in {length(in_future)} image{?s} {.val {in_future}}"
+        "The data has dating problems. Fix these issues before continuing!", 
+        "i" = "Invalid future years in {length(in_future)} image{?s}:",
+        cli_truncated_list(in_future)
       ))
     }
   }
@@ -164,9 +167,9 @@ max_na_inf <- function(x) {
 #'
 #' @param QWA_data a `QWAdata` object containing the cells and rings data frames
 #' @param only optional character vector of measure names to calculate. When
-#'   supplied, only measures listed here are eligible for calculation (measures
-#'   not in `only` are treated as if already present and are skipped). `NULL`
-#'   (default) retains the existing behaviour: all missing measures are added.
+#'   supplied, only measures listed here are eligible for calculation (derived measures
+#'   not in `only` are skipped). `NULL` (default) retains the existing behaviour: 
+#'   all missing measures are added.
 #' @return a `QWAdata` object with the updated cells and rings dataframes with the new measures
 #' @export
 complete_measures <- function(QWA_data, only = NULL) {
@@ -280,10 +283,12 @@ complete_measures <- function(QWA_data, only = NULL) {
 
   cli::cli_inform(c(
     "v" = "Cell and ring measures completed:",
-    "i" = "derived cell measures calculated: {.field {cell_meas_missing}}",
+    "i" = if (length(cell_meas_missing) > 0) 
+            "derived cell measures calculated: {.field {cell_meas_missing}}",
     "i" = if (length(cell_meas_existing) > 0)
             "derived cell measures already present: {.field {cell_meas_existing}}",
-    "i" = "derived ring measures calculated: {.field {ring_meas_missing}}",
+    "i" = if (length(ring_meas_missing) > 0) 
+            "derived ring measures calculated: {.field {ring_meas_missing}}",
     "i" = if (length(ring_meas_existing) > 0)
             "derived ring measures already present: {.field {ring_meas_existing}}"
   ))
@@ -330,7 +335,7 @@ complete_measures <- function(QWA_data, only = NULL) {
 #' @param meta a [QWAimages] object or data.frame providing image-level
 #'   information on `spatial_resolution` (required for the incomplete
 #'   innermost ring check) and `outmost_year`.
-#' @param exclude_mode how should the `$excude_issues` flag column be initialized, to
+#' @param exclude_mode how should the `$exclude_issues` flag column be initialized, to
 #'   exclude any incomplete or missing rings (`"either"`, default) or only the 
 #'   incomplete rings (i.e., not flagging missing/wedging rings for exclusion
 #'   from analyses, `"incomplete_only"`).
@@ -363,7 +368,7 @@ complete_flags <- function(x, meta, exclude_mode = c("either","incomplete_only")
   }
 
   if (any(c("duplicate_ring", "exclude_dupl") %in% flag_cols_missing)) {
-    df_rings_log <- flag_duplicate_rings(df_rings_log) # replace with duplciate_sel?
+    df_rings_log <- flag_duplicate_rings(df_rings_log) # replace with duplicate_sel?
   }
 
   mode <- match.arg(exclude_mode)
@@ -462,7 +467,7 @@ QWAdata <- function(cells = NULL,
     missing_meas_cols <- setdiff(measure_cols, names(cells))
     if (length(missing_meas_cols)>0) {
       cli::cli_warn(c(
-        "!" = "{.field cells} is missing expected raw measurement columns:",
+        "!" = "{.field cells} has missing expected raw measurement columns:",
         "i" = "{missing_meas_cols}"
       ))
     }
@@ -658,7 +663,7 @@ complete_QWAdata <- function(x, meta,
   x <- complete_measures(x)
 
   # complete flags columns if not yet initialized
-  # TODO: option to intialise complete set of flags incl the manual ones?
+  # TODO: option to initialise complete set of flags incl the manual ones?
   x <- complete_flags(x, meta, exclude_mode = exclude_mode)
   x
 

@@ -1,9 +1,7 @@
-#library(shiny) # TODO: namespace all shiny/htmltools functions
-
 ui <- bslib::page_fluid(
   shinyjs::useShinyjs(),
 
-  # theme (see 00_utils-theme.R)
+  # theme (see 00_utils-global.R)
   theme = theme,
 
   shiny::tags$head(

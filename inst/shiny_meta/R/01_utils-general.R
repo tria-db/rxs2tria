@@ -39,7 +39,7 @@ input_field_names <- c(
   description = 'Dataset description',
   authors = 'Authors',
   funding = 'Funding',
-  relresources = "Related resources",
+  related = "Related resources",
   sites = 'Sites',
   trees = 'Trees',
   woodpieces = 'Woodpieces',

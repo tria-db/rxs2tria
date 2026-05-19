@@ -2,28 +2,29 @@
 % Please edit documentation in R/read_rxs_metadata.R
 \name{build_QWAimages}
 \alias{build_QWAimages}
-\title{Build a QWAimages object from raw ROXAS metadata}
+\title{Build a QWAimages object from raw ROXAS (AI) metadata}
 \usage{
 build_QWAimages(df_structure, df_settings)
 }
 \arguments{
-\item{df_structure}{Dataframe with all input filenames and data structure.}
+\item{df_structure}{Data frame with all input filenames and data structure.}
 
-\item{df_settings}{Dataframe with extracted ROXAS settings data.}
+\item{df_settings}{Data frame with extracted ROXAS (AI) settings data.}
 }
 \value{
 A \link{QWAimages} object with the joined image-level metadata.
 }
 \description{
-Combines the extracted ROXAS / ROXAS AI filenames plus data structure (from
+Combines the extracted ROXAS / ROXAS AI file names plus data structure (from
 \code{\link[=extract_data_structure]{extract_data_structure()}}) and ROXAS settings and image exif data (from
 \code{\link[=collect_settings_data]{collect_settings_data()}}) into a \link{QWAimages} object.
 }
 \details{
 This is the typical starting point of the \code{prepare_rxs_dataset} workflow.
-The resulting \link{QWAimages} can be passed directly to \code{\link[=collect_raw_data]{collect_raw_data()}} and
-to the metadata Shiny app (\code{\link[=launch_metadata_app]{launch_metadata_app()}}), which enriches it with
-site-, tree-, and dataset-level metadata to produce a full \link{QWAmetadata} object.
+The resulting \link{QWAimages} can be passed directly to \code{\link[=collect_raw_data]{collect_raw_data()}} (to
+read the cell and ring measurements) and to the metadata Shiny app
+(\code{\link[=launch_metadata_app]{launch_metadata_app()}}, where one can enrich it with site-, tree-, and
+dataset-level metadata to produce a full \link{QWAmetadata} object).
 }
 \seealso{
 \code{\link[=extract_data_structure]{extract_data_structure()}}, \code{\link[=collect_settings_data]{collect_settings_data()}},

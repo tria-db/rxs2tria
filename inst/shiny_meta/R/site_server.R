@@ -96,7 +96,7 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
     # SITE TABLE ---------------------------------------------------------------
     # render editable table
     output$site_table <- rhandsontable::renderRHandsontable({
-      shiny::validate(shiny::need(!is.null(site_data_in()), "No data to show"))
+      shiny::validate(shiny::need(!is.null(site_data_in()), "No data to show. Load input data."))
 
       colHeaders <- sapply(site_tbl_props, function(x) x$title)
       colHeaders <- colHeaders[names(site_data_in())] # ensure correct order
@@ -291,7 +291,7 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
 
     # TREE TABLE ---------------------------------------------------------------
     output$tree_table <- rhandsontable::renderRHandsontable({
-      shiny::validate(shiny::need(!is.null(tree_data_in()), "No data to show"))
+      shiny::validate(shiny::need(!is.null(site_data_in()), "No data to show. Load input data."))
 
       colHeaders <- sapply(tree_tbl_props, function(x) x$title)
       colHeaders <- colHeaders[names(tree_data_in())] # ensure correct order
@@ -370,7 +370,7 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
 
     # WOODPIECE TABLE ----------------------------------------------------------
     output$wp_table <- rhandsontable::renderRHandsontable({
-      shiny::validate(shiny::need(!is.null(wp_data_in()), "No data to show"))
+      shiny::validate(shiny::need(!is.null(site_data_in()), "No data to show. Load input data."))
 
       colHeaders <- sapply(wp_tbl_props, function(x) x$title)
       colHeaders <- colHeaders[names(wp_data_in())] # ensure correct order
@@ -402,7 +402,7 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
 
     # SLIDE TABLE --------------------------------------------------------------
     output$slide_table <- rhandsontable::renderRHandsontable({
-      shiny::validate(shiny::need(!is.null(slide_data_in()), "No data to show"))
+      shiny::validate(shiny::need(!is.null(site_data_in()), "No data to show. Load input data."))
 
       colHeaders <- sapply(slide_tbl_props, function(x) x$title)
       colHeaders <- colHeaders[names(slide_data_in())] # ensure correct order
@@ -440,16 +440,16 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
       results <- list()
 
       # 1) site table
-      results$site_data <- collect_hot_val_results(site_data_out(), site_tbl_props)
+      results$sites <- collect_hot_val_results(site_data_out(), site_tbl_props)
 
       # 2) tree table
-      results$tree_data <- collect_hot_val_results(tree_data_out(), tree_tbl_props)
+      results$trees <- collect_hot_val_results(tree_data_out(), tree_tbl_props)
 
       # 3) woodpiece table
-      results$woodpiece_data <- collect_hot_val_results(wp_data_out(), wp_tbl_props)
+      results$woodpieces <- collect_hot_val_results(wp_data_out(), wp_tbl_props)
 
       # 4) slide table
-      results$slide_data <- collect_hot_val_results(slide_data_out(), slide_tbl_props)
+      results$slides <- collect_hot_val_results(slide_data_out(), slide_tbl_props)
 
 
       # convert collected results to dataframe

@@ -196,10 +196,15 @@ start_server <- function(id, main_session) {
     image_data_in <- shiny::reactiveVal(NULL)
 
     # TODO: the first one here is the roxas schema, adapt to work also for roxas ai
-    tbl_props <- rxs2tria:::get_tbl_props(full_schema$properties$images$anyOf[[1]])$properties
+    tbl_props_cl <- rxs2tria:::get_tbl_props(full_schema$properties$images$anyOf[[1]])$properties
+    tbl_props_ai <- rxs2tria:::get_tbl_props(full_schema$properties$images$anyOf[[2]])$properties
 
     df_hot <- shiny::reactive({
       shiny::req(image_data_in())
+
+      rv <- rxs2tria:::infer_rv_from_data(image_data_in())
+      tbl_props <- if (rv == "roxas_ai") tbl_props_ai else tbl_props_cl
+
       col_groups <- purrr::map_chr(tbl_props, "dtColGroup")
       sel_colgroups <- input$cols_meta
       sel_cols <- col_groups[col_groups %in% sel_colgroups] |> names()
@@ -211,14 +216,20 @@ start_server <- function(id, main_session) {
 
     shiny::observeEvent(input_meta$images, {
       df <- input_meta$images |>
-        dplyr::mutate(rxs_created_at = as.character(rxs_created_at),
-                      img_created_at = as.character(img_created_at)
+        dplyr::mutate(
+          dplyr::across(dplyr::any_of(c(
+            "rxs_created_at","img_created_at",
+            "rings_segmentation_datetime","cells_segmentation_datetime")),
+          as.character)
       )
       image_data_in(df)
     })
 
     output$image_table <- rhandsontable::renderRHandsontable({
       shiny::validate(shiny::need(!is.null(image_data_in()), "No data to show"))
+
+      rv <- rxs2tria:::infer_rv_from_data(image_data_in())
+      tbl_props <- if (rv == "roxas_ai") tbl_props_ai else tbl_props_cl
 
       colHeaders <- sapply(tbl_props, function(x) x$title)
       colHeaders <- colHeaders[names(df_hot())] # ensure correct order
