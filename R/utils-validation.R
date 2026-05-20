@@ -1,4 +1,12 @@
-
+#' @noRd
+cli_truncated_list <- function(x, max_show = 5, bullet = " ") {
+  shown <- x[seq_len(min(length(x), max_show))]
+  n_more <- length(x) - length(shown)
+  c(
+    setNames(shown, rep(bullet, length(shown))),
+    if (n_more > 0) setNames(glue::glue("... and {n_more} more"), bullet)
+  )
+}
 
 #' Map a QWAmetadata slot name to its package-relative schema file path
 #'

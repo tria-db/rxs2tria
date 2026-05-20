@@ -13,21 +13,25 @@
         "properties": {
           "rings_segmentation_model": {
             "type": ["string", "null"],
-            "dtColGroup": "cols_settings"
+            "title": "Rings model",
+            "description": "Description"
           },
           "cells_segmentation_model": {
             "type": ["string", "null"],
-            "dtColGroup": "cols_settings"
+            "title": "Cells model",
+            "description": "Description"
           },
           "rings_segmentation_datetime": {
             "type": ["string", "null"],
             "format": "date-time",
-            "dtColGroup": "cols_settings"
+            "title": "Rings analysis created",
+            "description": "Description"
           },
           "cells_segmentation_datetime": {
             "type": ["string", "null"],
             "format": "date-time",
-            "dtColGroup": "cols_settings"
+            "title": "Cells analysis created",
+            "description": "Description"
           },
           "sample_type": {
             "type": ["string", "null"],

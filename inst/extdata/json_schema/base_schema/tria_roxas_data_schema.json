@@ -14,83 +14,83 @@
           "configuration_file": {
             "type": ["string", "null"],
             "title": "Configuration",
-            "description": "Configuration"
+            "description": "ROXAS configuration file name"
           },
           "origin_calibrated_x": {
             "type": ["integer", "null"],
             "title": "Calibr. X",
-            "description": "Description"
+            "description": "Origin X coordinate [pixels]"
           },
           "origin_calibrated_y": {
             "type": ["integer", "null"],
             "title": "Calibr. Y",
-            "description": "Description"
+            "description": "Origin Y coordinate [pixels]"
           },
           "circ_lower_limit": {
             "type": ["integer", "null"],
             "minimum": 0,
             "title": "circ_lower_limit",
-            "description": "Description"
+            "description": "Lower angular limit of circular sample sector [°]"
           },
           "circ_upper_limit": {
             "type": ["integer", "null"],
             "minimum": 0,
             "title": "circ_upper_limit",
-            "description": "Description"
+            "description": "Upper angular limit of circular sample sector [°]"
           },
           "min_cell_area": {
             "type": ["integer", "null"],
             "minimum": 0,
             "title": "min_cell_area",
-            "description": "Description"
+            "description": "Cell area low threshold [µm²]"
           },
           "max_cell_area": {
             "type": ["integer", "null"],
             "minimum": 0,
             "title": "max_cell_area",
-            "description": "Description"
+            "description": "Cell area upper threshold [µm²]"
           },
           "dbl_cwt_threshold": {
             "type": ["number", "null"],
             "minimum": 0,
             "title": "dbl_cwt_threshold",
-            "description": "Description"
+            "description": "Double cell wall thickness threshold [µm]"
           },
           "max_cwtrad_s": {
             "type": ["integer", "null"],
             "minimum": 0,
             "title": "max_cwtrad_s",
-            "description": "Description"
+            "description": "Max. radial CWT of smallest tracheids [µm]"
           },
           "max_cwtrad_l": {
             "type": ["integer", "null"],
             "minimum": 0,
             "title": "max_cwtrad_l",
-            "description": "Description"
+            "description": "Max. radial CWT of largest tracheids [µm]"
           },
           "relwidth_cwt_window": {
             "type": ["number", "null"],
             "minimum": 0,
             "title": "relwidth_cwt_window",
-            "description": "Description"
+            "description": "Width of CWT retrieval window as proportion of tracheid width/height"
           },
           "maxrel_opp_cwt": {
             "type": ["number", "null"],
             "minimum": 0,
             "title": "maxrel_opp_cwt",
-            "description": "Description"
+            "description": "QC: max. ratio of two opposing CWT measurements"
           },
           "max_cwttan_s": {
             "type": ["number", "null"],
             "minimum": 0,
             "title": "max_cwttan_s",
-            "description": "Description"
+            "description": "Max. tangential CWT of smallest tracheids [µm]"
           },
           "max_cwttan_l": {
             "type": ["number", "null"],
             "minimum": 0,
             "title": "max_cwttan_l",
-            "description": "Description"
+            "description": "Max. tangential CWT of largest tracheids [µm]"
           }
         },
         "required": ["configuration_file"]

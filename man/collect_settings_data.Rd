@@ -2,14 +2,14 @@
 % Please edit documentation in R/read_rxs_metadata.R
 \name{collect_settings_data}
 \alias{collect_settings_data}
-\title{Read and combine ROXAS settings data}
+\title{Read and combine ROXAS (AI) settings data}
 \usage{
 collect_settings_data(files_settings, files_images = NULL, roxas_version)
 }
 \arguments{
-\item{files_settings}{Vector/list of ROXAS settings filenames.}
+\item{files_settings}{Vector of ROXAS settings file names.}
 
-\item{files_images}{Vector/list of image filenames in the same order as
+\item{files_images}{Vector of image file names in the same order as
 \code{files_settings}. Required when \code{roxas_version = "roxas"}.}
 
 \item{roxas_version}{The version of ROXAS used to create the files.}
@@ -18,7 +18,7 @@ collect_settings_data(files_settings, files_images = NULL, roxas_version)
 A dataframe containing the extracted data.
 }
 \description{
-Collect the settings data from all ROXAS settings files.
+Collect the settings data from all ROXAS (AI) settings files.
 }
 \details{
 For \code{roxas_version = "roxas"}, image EXIF metadata is collected from the

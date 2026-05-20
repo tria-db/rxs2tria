@@ -10,9 +10,9 @@ complete_measures(QWA_data, only = NULL)
 \item{QWA_data}{a \code{QWAdata} object containing the cells and rings data frames}
 
 \item{only}{optional character vector of measure names to calculate. When
-supplied, only measures listed here are eligible for calculation (measures
-not in \code{only} are treated as if already present and are skipped). \code{NULL}
-(default) retains the existing behaviour: all missing measures are added.}
+supplied, only measures listed here are eligible for calculation (derived measures
+not in \code{only} are skipped). \code{NULL} (default) retains the existing behaviour:
+all missing measures are added.}
 }
 \value{
 a \code{QWAdata} object with the updated cells and rings dataframes with the new measures
@@ -23,7 +23,7 @@ Some additional cell measures are calculated based on the existing data:
 \item tca: la + cwa
 \item rwd2: cwtrad/drad
 \item dcwt
-\item cwtall.adj
+\item cwtall_adj
 \item cdrad, cdtan, cdratio
 \item sector100
 \item ew_lw: indicates if it is an EW or LW cell (based on Mork index <1 for EW)

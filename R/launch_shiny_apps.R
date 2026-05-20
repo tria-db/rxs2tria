@@ -5,7 +5,7 @@
 #' @export
 launch_metadata_app <- function(server_run = FALSE) {
   rlang::check_installed(
-    c("bslib", "data.tree", "DT", "htmlwidgets", "httr", "leaflet", "rhandsontable",
+    c("bslib", "data.tree", "DT", "htmlwidgets", "httr", "leaflet", "rcrossref", "rhandsontable",
       "sf", "shiny", "shinyjs", "shinyTree", "shinyvalidate"),
     reason = "required to run the metadata Shiny app"
   )

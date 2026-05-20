@@ -38,8 +38,10 @@ ror_api_request <- function(search_string, country_code){
 
       # get the locations
       res_locs <- ror_data$items$locations |>
+        purrr::map(\(x) x[1, ]) |>
         dplyr::bind_rows() |>
         dplyr::pull(geonames_details) |>
+        dplyr::bind_rows() |>
         tidyr::unite(col = 'Location', name, country_name, sep = ', ', remove = FALSE) |>
         dplyr::rename(city = name) |>
         dplyr::select(Location, country_code, city)
@@ -55,7 +57,7 @@ ror_api_request <- function(search_string, country_code){
       return(res_df)
 
     } else {
-      shiny::showNotification("No ROR results found. Try again.", type = "message")
+      shiny::showNotification("No ROR results found. Try again.", type = "warning")
       return(NULL)
     }
 

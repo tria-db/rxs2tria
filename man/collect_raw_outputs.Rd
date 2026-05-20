@@ -7,8 +7,8 @@
 collect_raw_outputs(df_structure, roxas_version, ftype)
 }
 \arguments{
-\item{df_structure}{Data frame containing filenames (\verb{$fname_cells} or \verb{$fname_rings})
-and image labels (\verb{$image_label}).}
+\item{df_structure}{Data frame of image identifiers (\verb{$image_label}) and
+corresponding data file names (\verb{$fname_cells} or \verb{$fname_rings}).}
 
 \item{roxas_version}{The software used to create the files (\code{"roxas"} or \code{"roxas_ai"}).}
 
@@ -19,8 +19,8 @@ A data frame with the relevant raw measurements data from all
 files combined.
 }
 \description{
-Read and combine data from multple cells/rings data files (i.e. the
-ROXAS output txts or ROXAS AI table csvs with the raw measurements).
+Read and combine data from multiple cells/rings data files (i.e. the
+ROXAS output .txt or ROXAS AI table .csv files with the raw measurements).
 Used by \code{\link[=collect_raw_data]{collect_raw_data()}} to read each \code{QWAdata} component.
 }
 \seealso{

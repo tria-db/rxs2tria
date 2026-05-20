@@ -7,19 +7,12 @@
 \usage{
 get_structure_from_filenames(
   filenames,
-  pattern =
-    "(?<site>[[:alnum:]]+)_(?<species>[[:alnum:]]+)_(?<tree>[[:alnum:]][[:alnum:]])(?<woodpiece>[[:alnum:]]*)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)",
+  pattern,
   site_label = NULL,
   species_code = NULL
 )
 
-extract_data_structure(
-  files,
-  pattern =
-    "(?<site>[[:alnum:]]+)_(?<species>[[:alnum:]]+)_(?<tree>[[:alnum:].]+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)",
-  site_label = NULL,
-  species_code = NULL
-)
+extract_data_structure(files, pattern, site_label = NULL, species_code = NULL)
 }
 \arguments{
 \item{filenames}{The vector of file names.}
@@ -33,11 +26,11 @@ pattern, only if all images are from the same site.}
 \item{species_code}{Optional species code to be used if it is not part of the
 pattern, only if all images are from the same species.}
 
-\item{files}{The named list of file vectors returned by \code{\link[=get_roxas_files]{get_roxas_files()}}.}
+\item{files}{The data frame of prefix and file paths returned by \code{\link[=get_roxas_files]{get_roxas_files()}}.}
 }
 \value{
-A dataframe containing the extracted data structure (plus the
-original file names for \code{\link[=extract_data_structure]{extract_data_structure()}}).
+A data frame containing the extracted data structure (with the
+original file names appended for \code{\link[=extract_data_structure]{extract_data_structure()}}).
 }
 \description{
 Extract the hierarchical structure of the data (i.e., which images belong to
@@ -48,14 +41,12 @@ joined by underscores to derive unique codes for each level of the data
 structure for the subsequent calculations
 (e.g. \verb{tree_code = \{site\}_\{species\}_\{tree\}}).
 
-The default pattern assumes that all file names follow the labeling scheme
-\verb{\{site\}_\{species\}_\{tree\}\{woodpiece\}_\{slide\}_\{image\}},
-where \code{{tree}} is a two-character code, and \code{{woodpiece}} is optional, as
-suggested in \href{https://doi.org/10.3389/fpls.2016.00781}{Fonti et al. (2025)}.
+Any custom labeling pattern may be used, provided that it allows to
+uniquely identify each image and is consistently applied across all files.
+The first example below assumes the standard labeling pattern
+\verb{\{site\}_\{species\}_\{tree\}_\{slide\}_\{image\}},
+suggested in \href{https://doi.org/10.3389/fpls.2025.1505389}{Fonti et al. (2025)}.
 
-However, a different labeling pattern may be used, provided that it allows to
-uniquely identify each image in the list of file names and is consistently
-applied across all files.
 Not all hierarchical components are mandatory in the pattern, as long as the
 images can be uniquely identified (e.g. if exactly one woodpiece was
 extracted per tree, there might not be a specific woodpiece identifier,
@@ -66,32 +57,32 @@ via the \code{site_label} and \code{species_code} input parameters.
 Here, \code{species_code} should follow the standard ITRDB species codes.
 
 \code{\link[=extract_data_structure]{extract_data_structure()}} is a wrapper around \code{\link[=get_structure_from_filenames]{get_structure_from_filenames()}}
-that uses the list of ROXAS (AI) files from \code{\link[=get_roxas_files]{get_roxas_files()}} as input,
-applies the hierarchy extraction to the \verb{$fname_image} component,
-and appends the original filepaths as columns to the structure data frame output.
+that uses the data frame of ROXAS (AI) files from \code{\link[=get_roxas_files]{get_roxas_files()}} as input,
+applies the hierarchy extraction to the \verb{$prefix} component,
+and appends the original file paths as columns to the returned structure data frame.
 }
 \examples{
-# with the default pattern ({site}_{species}_{tree}{woodpiece}_{slide}_{image})
+# the standard pattern {site}_{species}_{tree}_{slide}_{image}
+pattern <- "(?<site>[[:alnum:]]+)_(?<species>[[:alnum:]]+)_(?<tree>[[:alnum:]]+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)"
 filenames <- c(
-  "SITEA_PISY_01A_1_1.jpg",
-  "SITEA_PISY_01A_1_2.jpg",
-  "SITEA_PISY_01A_2_1.jpg",
-  "SITEB_LASI_02A_1_1.jpg",
-  "SITEB_LASI_02B_1_1.jpg",
+  "SITEA_PISY_01_1_1.jpg",
+  "SITEA_PISY_01_1_2.jpg",
+  "SITEA_PISY_01_2_1.jpg",
+  "SITEB_LASI_02_1_1.jpg",
   "SITEB_LASI_03_1_1.jpg"
 )
-get_structure_from_filenames(filenames)
+get_structure_from_filenames(filenames, pattern)
 
-# custom pattern of the form {tree}_{slide}_{image}
+# custom pattern of the form {tree}-{slide}_{image}
 filenames <- c(
- "tree1_sl1_img1.jpg",
- "tree1_sl2_img1.jpg",
- "tree2_sl1_img1.jpg",
- "tree2_sl1_img2.jpg"
+ "tree1-sl1_img1.jpg",
+ "tree1-sl2_img1.jpg",
+ "tree2-sl1_img1.jpg",
+ "tree2-sl1_img2.jpg"
  )
- pattern <- "(?<tree>[[:alnum:]].+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)"
+ pattern <- "(?<tree>[[:alnum:]].+)-(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)"
  get_structure_from_filenames(
    filenames, pattern,
-   site_label = "SITEA", species_code = "PISY")
+   site_label = "SITEA", species_code = "LASI")
 
 }
