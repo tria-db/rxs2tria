@@ -212,6 +212,8 @@ chronologies).
 
 ```{r, eval = FALSE}
 QWA_data <- collect_raw_data(rxs_images)
+# or if you already loaded the full metadata from json after completing Step 3:
+# QWA_data <- collect_raw_data(QWAmeta$images)
 
 exclude_mode <- "either"
 QWA_data <- complete_QWAdata(QWA_data, rxs_images, exclude_mode)

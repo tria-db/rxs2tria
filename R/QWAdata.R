@@ -282,15 +282,15 @@ complete_measures <- function(QWA_data, only = NULL) {
   ring_meas_existing <- setdiff(ring_meas_all, ring_meas_missing)
 
   cli::cli_inform(c(
-    "v" = "Cell and ring measures completed:",
+    "v" = "Cell and ring measures completed",
     "i" = if (length(cell_meas_missing) > 0) 
-            "derived cell measures calculated: {.field {cell_meas_missing}}",
-    "i" = if (length(cell_meas_existing) > 0)
-            "derived cell measures already present: {.field {cell_meas_existing}}",
+            "Derived cell measures: {.field {cell_meas_missing}}", 
+    # "i" = if (length(cell_meas_existing) > 0)
+    #         "derived cell measures already present: {.field {cell_meas_existing}}",
     "i" = if (length(ring_meas_missing) > 0) 
-            "derived ring measures calculated: {.field {ring_meas_missing}}",
-    "i" = if (length(ring_meas_existing) > 0)
-            "derived ring measures already present: {.field {ring_meas_existing}}"
+            "Derived ring measures: {.field {ring_meas_missing}}"
+    # "i" = if (length(ring_meas_existing) > 0)
+    #         "derived ring measures already present: {.field {ring_meas_existing}}"
   ))
 
   new_QWAdata(cells = df_cells, rings = df_rings)
@@ -391,12 +391,12 @@ complete_flags <- function(x, meta, exclude_mode = c("either","incomplete_only")
         'incomplete_inner', 'incomplete_innerv2', 'incomplete_fct_check',
         'no_MRW_other')))
 
-  cli::cli_inform(c(
-    "v" = "Ring flag columns completed:",
-    "i" = "flag columns calculated: {.field {flag_cols_missing}}",
-    "i" = if (length(flag_cols_existing) > 0)
-            "flag columns already present (not overwritten): {.field {flag_cols_existing}}"
-  ))
+  # cli::cli_inform(c(
+  #   "v" = "Ring flag columns completed",
+  #   "i" = "Derived flag columns: {.field {flag_cols_missing}}",
+  #   "i" = if (length(flag_cols_existing) > 0)
+  #           "Flag columns already present (not overwritten): {.field {flag_cols_existing}}"
+  # ))
 
   new_QWAdata(cells = x$cells, rings = df_rings_log)
 }
@@ -665,6 +665,8 @@ complete_QWAdata <- function(x, meta,
   # complete flags columns if not yet initialized
   # TODO: option to initialise complete set of flags incl the manual ones?
   x <- complete_flags(x, meta, exclude_mode = exclude_mode)
+
+  cli::cli_alert_success("Added derived measures and flags to `QWAdata` object")
   x
 
 }

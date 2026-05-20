@@ -7,7 +7,7 @@
 build_QWAimages(df_structure, df_settings)
 }
 \arguments{
-\item{df_structure}{Data frame with all input filenames and data structure.}
+\item{df_structure}{Data frame with all input file names and data structure.}
 
 \item{df_settings}{Data frame with extracted ROXAS (AI) settings data.}
 }

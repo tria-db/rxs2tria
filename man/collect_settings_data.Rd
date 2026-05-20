@@ -7,9 +7,9 @@
 collect_settings_data(files_settings, files_images = NULL, roxas_version)
 }
 \arguments{
-\item{files_settings}{Vector/list of ROXAS settings file names.}
+\item{files_settings}{Vector of ROXAS settings file names.}
 
-\item{files_images}{Vector/list of image file names in the same order as
+\item{files_images}{Vector of image file names in the same order as
 \code{files_settings}. Required when \code{roxas_version = "roxas"}.}
 
 \item{roxas_version}{The version of ROXAS used to create the files.}

@@ -8,12 +8,6 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
       bslib::accordion_panel_close(id = 'map_acc', values = TRUE)
     }) |> shiny::bindEvent(1) # to fire the event once at startup
 
-    # TODO: remove once table import properly implemented
-    shinyjs::disable(id = "file_sites")
-    shinyjs::disable(id = "file_trees")
-    shinyjs::disable(id = "file_wps")
-    shinyjs::disable(id = "file_slides")
-
     # initialize reactiveVals (responding to changes in input data)
     site_data_in <- shiny::reactiveVal(NULL)
     tree_data_in <- shiny::reactiveVal(NULL)
@@ -162,7 +156,7 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
 
     # import data from file: show modal for confirmation
     shiny::observeEvent(input$file_sites,{
-      show_ht_import_modal(ns, 'import_site_data')
+      #show_ht_import_modal(ns, 'import_site_data')
     })
 
     # observe confirm import data button
@@ -397,7 +391,13 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
 
     # create dataframe reactive to hot updates
     wp_data_out <- shiny::reactive({
-      rhandsontable::hot_to_r(input$wp_table)
+      df <- rhandsontable::hot_to_r(input$wp_table) 
+
+      if (!is.null(df) && nrow(df)>0) {
+        df <- df |> 
+          dplyr::mutate(sample_archived = as.logical(.data$sample_archived))
+      }
+      df
     })
 
     # SLIDE TABLE --------------------------------------------------------------
@@ -429,13 +429,20 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
 
     # create dataframe reactive to hot updates
     slide_data_out <- shiny::reactive({
-      rhandsontable::hot_to_r(input$slide_table)
+      df <- rhandsontable::hot_to_r(input$slide_table)
+
+      if (!is.null(df) && nrow(df)>0) {
+        df <- df |> 
+          dplyr::mutate(slide_archived = as.logical(.data$slide_archived))
+      }
+      df
     })
 
 
 
     # TODO: check configs, val functions, edge cases
     # VALIDATION CHECKS --------------------------------------------------------
+
     validation_checks <- shiny::reactive({
       results <- list()
 

@@ -45,7 +45,7 @@ Any custom labeling pattern may be used, provided that it allows to
 uniquely identify each image and is consistently applied across all files.
 The first example below assumes the standard labeling pattern
 \verb{\{site\}_\{species\}_\{tree\}_\{slide\}_\{image\}},
-suggested in \href{https://doi.org/10.3389/fpls.2016.00781}{Fonti et al. (2025)}.
+suggested in \href{https://doi.org/10.3389/fpls.2025.1505389}{Fonti et al. (2025)}.
 
 Not all hierarchical components are mandatory in the pattern, as long as the
 images can be uniquely identified (e.g. if exactly one woodpiece was
@@ -59,7 +59,7 @@ Here, \code{species_code} should follow the standard ITRDB species codes.
 \code{\link[=extract_data_structure]{extract_data_structure()}} is a wrapper around \code{\link[=get_structure_from_filenames]{get_structure_from_filenames()}}
 that uses the data frame of ROXAS (AI) files from \code{\link[=get_roxas_files]{get_roxas_files()}} as input,
 applies the hierarchy extraction to the \verb{$prefix} component,
-and appends the original file paths as columns to the structure data frame output.
+and appends the original file paths as columns to the returned structure data frame.
 }
 \examples{
 # the standard pattern {site}_{species}_{tree}_{slide}_{image}
@@ -71,7 +71,7 @@ filenames <- c(
   "SITEB_LASI_02_1_1.jpg",
   "SITEB_LASI_03_1_1.jpg"
 )
-get_structure_from_filenames(filenames)
+get_structure_from_filenames(filenames, pattern)
 
 # custom pattern of the form {tree}-{slide}_{image}
 filenames <- c(

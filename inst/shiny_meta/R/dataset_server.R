@@ -125,7 +125,7 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
     # render instructions
     output$ror_instr <- shiny::renderUI({
       if (is.null(ror_df())) {
-        shiny::tags$i("Run ROR search first...")
+        shiny::tags$i("Run ROR search...")
       } else {
         shiny::tags$i("Click on a row to select and transfer the ROR data to the tables below.")
       }
@@ -265,7 +265,7 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
     # render instructions
     output$orcid_instr <- shiny::renderUI({
       if (is.null(orcid_df())) {
-        shiny::tags$i("Run ORCID search first...")
+        shiny::tags$i("Run ORCID search...")
       } else {
         shiny::tags$i("Click on a row to select and transfer the ORCID data to the table below.
                 Email and affiliation data will only be transferred if not yet provided in the table.")
@@ -376,7 +376,13 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
 
     # create dataframe reactive to hot updates (keeps combined country values for display)
     author_data_out <- shiny::reactive({
-      rhandsontable::hot_to_r(input$author_table)
+      df <- rhandsontable::hot_to_r(input$author_table)
+      
+      if (!is.null(df) && nrow(df)>0) {
+        df <- df |> 
+          dplyr::mutate(contact_person = as.logical(.data$contact_person))
+      }
+      df
     })
 
     # output-only reactive: converts org_country from combined display value to ISO code
@@ -413,7 +419,7 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
 
     # TODO: import data from file
     shiny::observeEvent(input$file_authors, {
-      show_ht_import_modal(ns, 'import_aut_data')
+      #show_ht_import_modal(ns, 'import_aut_data')
     })
 
     # observe confirm import data button
@@ -490,7 +496,7 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
 
     # import data from file: show modal for confirmation
     shiny::observeEvent(input$file_funding,{
-      show_ht_import_modal(ns, 'import_fund_data')
+      #show_ht_import_modal(ns, 'import_fund_data')
     })
 
     # observe confirm import data button
@@ -607,7 +613,7 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
 
     # observe delete row button
     shiny::observeEvent(input$btn_del_res, {
-      shiny::req(nrow(funding_data_out()) > 0)
+      shiny::req(nrow(relres_data_out()) > 0)
       current_df <- relres_data_out()
       current_df <- current_df[-nrow(current_df),]
       relres_data_in(current_df)
@@ -616,7 +622,7 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
 
     # import data from file: show modal for confirmation
     shiny::observeEvent(input$file_relres,{
-      show_ht_import_modal(ns, 'import_res_data')
+      #show_ht_import_modal(ns, 'import_res_data')
     })
 
     # observe confirm import data button
@@ -712,9 +718,9 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
     # more details on validation errors (nr characters, pattern, etc.)
     # orcid transfer: what if names don't match?
 
-    output$testing <- shiny::renderPrint({
-      #validation_checks()
-    })
+    # output$testing <- shiny::renderPrint({
+    #   #validation_checks()
+    # })
 
     ds_data_out <- shiny::reactive({
       tibble::tibble(

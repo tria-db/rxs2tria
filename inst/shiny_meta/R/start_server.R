@@ -234,6 +234,7 @@ start_server <- function(id, main_session) {
       colHeaders <- sapply(tbl_props, function(x) x$title)
       colHeaders <- colHeaders[names(df_hot())] # ensure correct order
       tippies <- sapply(tbl_props, function(x) x$description)
+      tippies <- tippies[names(df_hot())]      
 
       n_rows <- nrow(image_data_in())
       ht_height <- min(max(n_rows * ht_row_height, ht_min_height), ht_max_height)
@@ -247,12 +248,25 @@ start_server <- function(id, main_session) {
         colHeaders = unname(colHeaders),
         afterGetColHeader = tippy_renderer(tippies)) |>
         rhandsontable::hot_cols(fixedColumnsLeft = 1)
+      editable_cols <- c("band_width", "only_ew","comment")
       purrr::reduce(
-        names(colHeaders), # names in df
+        names(colHeaders),
         function(ht, col) {
           config <- tbl_props[[col]]
-          colName <- colHeaders[col] # name in ht
-          hot_col_wrapper(ht, colName, config)
+          colName <- colHeaders[col]
+          if (col %in% editable_cols) {
+            hot_col_wrapper(ht, colName, config)
+          } else {
+            switch(config$htType,
+              numeric  = ht |> rhandsontable::hot_col(colName, type = "numeric",
+                           format = if (config$type[1] == "integer") "0." else NULL,
+                           readOnly = TRUE),
+              checkbox = ht |> rhandsontable::hot_col(colName, type = "checkbox", readOnly = TRUE),
+              date     = ht |> rhandsontable::hot_col(colName, type = "date",
+                           dateFormat = "YYYY-MM-DD", readOnly = TRUE),
+              ht |> rhandsontable::hot_col(colName, readOnly = TRUE)
+            )
+          }
         },
         .init = ht
       )
@@ -263,13 +277,18 @@ start_server <- function(id, main_session) {
     image_data_out <- shiny::reactive({
       shiny::req(input$image_table)
       df_out <- rhandsontable::hot_to_r(input$image_table)
+            if (!is.null(df) && nrow(df)>0) {
+      df_out <- df_out |> 
+          dplyr::mutate(ew_only = as.logical(.data$ew_only))
+      }
+
       df_in <- image_data_in()
       df_in |> dplyr::rows_update(df_out, by = "image_label")
     })
 
-    output$testing <- shiny::renderPrint({
-      input_meta$site_tbls$sites
-    })
+    # output$testing <- shiny::renderPrint({
+    #   input_meta$site_tbls$sites
+    # })
 
     # return the input meta and val check for use in other tabs
     return(

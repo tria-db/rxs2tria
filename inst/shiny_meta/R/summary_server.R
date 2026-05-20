@@ -97,8 +97,8 @@ summary_server <- function(id, main_session, start_out, dataset_out, site_out) {
     })
 
 
-    output$testing <- shiny::renderPrint({
-      valchecks_combined()
-    })
+    # output$testing <- shiny::renderPrint({
+    #   valchecks_combined()
+    # })
   })
 }

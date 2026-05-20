@@ -22,7 +22,7 @@ ui <- bslib::page_fluid(
     selected = "Quality check series",
 
     # TITLE --------------------------------------------------------------------
-    title = "rxs2tria: QWA data quality and climate signal explorer",
+    title = "rxs2tria: QWA data quality explorer",
 
     # TAB: Start (plot of the time series) -------------------------------------
     bslib::nav_panel(

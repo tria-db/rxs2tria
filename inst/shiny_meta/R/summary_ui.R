@@ -25,9 +25,9 @@ summary_ui <- function(id) {
       shiny::hr(),
       shiny::tags$ol(
         class = 'custom-indent', start = 3,
-        shiny::tags$li("You are now ready to share the file alongside the harmonized cells and rings data from the `rxs2tria` package with the TRIA database team,
-                please contact ",
-                shiny::tags$a(href = "mailto:mara.naegelin@wsl.ch","mara.naegelin(at)wsl.ch")),
+        shiny::tags$li("You are now ready to share the file alongside the harmonized cells and rings data from the ", 
+        shiny::code("rxs2tria"), " package with the TRIA database team, please contact ",
+        shiny::tags$a(href = "mailto:tria@wsl.ch","tria@wsl.ch")),
       ),
 
       shiny::hr(),

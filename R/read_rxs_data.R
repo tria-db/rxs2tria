@@ -143,7 +143,7 @@ collect_raw_outputs <- function(df_structure, roxas_version, ftype) {
       cli_truncated_list(failed_labels)
     ))
   } else {
-    cli::cli_alert_success("All {ftype} data files read successfully")
+    cli::cli_alert_success("{nrow(df_structure)} {ftype} data files read successfully")
   }
 
   df_raw_all |>

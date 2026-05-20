@@ -1225,18 +1225,18 @@ flags_server <- function(id, main_session, comments_out) {
     }) |> shiny::bindEvent(input$save_btn)
       
 
-    # DEBUG OUTPUT -------------------------------------------------------------
-    output$debug <- shiny::renderPrint({
-      #sel_subplots()
-      #flags_out()
-      #shiny::req(save_settings$initialized)
-      #images_edited()
-      #comments_out$goto_img()
-      #df <- traces_to_df(input$traces_crn)
-      #tail(df)
-      #rings_data_org()
-      #input$enter_key
-    })
+    # # DEBUG OUTPUT -------------------------------------------------------------
+    # output$debug <- shiny::renderPrint({
+    #   #sel_subplots()
+    #   #flags_out()
+    #   #shiny::req(save_settings$initialized)
+    #   #images_edited()
+    #   #comments_out$goto_img()
+    #   #df <- traces_to_df(input$traces_crn)
+    #   #tail(df)
+    #   #rings_data_org()
+    #   #input$enter_key
+    # })
 
 
     # return module exports

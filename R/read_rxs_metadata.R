@@ -570,7 +570,7 @@ collect_settings_data <- function(files_settings,
   cli::cli_inform(c(
     "v" = "{rv_msg} data extracted from {nrow(df_settings_all)} files"
   ))
-  df_settings_all
+  df_settings_all 
 }
 
 #' Build a QWAimages object from raw ROXAS (AI) metadata

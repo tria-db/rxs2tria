@@ -23,7 +23,7 @@ A data frame with columns \code{prefix}, \code{fname_image}, \code{fname_setting
 Returns a data frame with the full path names of the relevant ROXAS (AI) files
 (i.e., images, cell measurements, ring measurements, and ROXAS settings resp.
 ROXAS AI metadata files) found within the given directory.
-The function recurses into any subdirectories, except those explicitely excluded.
+The function recurses into any subdirectories, except those explicitly excluded.
 The files are identified by matching on the standard naming suffixes produced
 by ROXAS resp. ROXAS AI.
 }
