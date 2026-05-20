@@ -8,7 +8,7 @@ Some additional cell measures are calculated based on the existing data:
 
 - dcwt
 
-- cwtall.adj
+- cwtall_adj
 
 - cdrad, cdtan, cdratio
 
@@ -37,9 +37,8 @@ complete_measures(QWA_data, only = NULL)
 
   optional character vector of measure names to calculate. When
   supplied, only measures listed here are eligible for calculation
-  (measures not in `only` are treated as if already present and are
-  skipped). `NULL` (default) retains the existing behaviour: all missing
-  measures are added.
+  (derived measures not in `only` are skipped). `NULL` (default) retains
+  the existing behaviour: all missing measures are added.
 
 ## Value
 

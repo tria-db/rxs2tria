@@ -61,14 +61,14 @@ Functions for reading the metadata that can be extracted from the raw
 ROXAS output files.
 
 - [`get_roxas_files()`](https://tria-db.github.io/rxs2tria/reference/get_roxas_files.md)
-  : Identify ROXAS data files
+  : Identify the ROXAS (AI) files in a directory
 - [`get_structure_from_filenames()`](https://tria-db.github.io/rxs2tria/reference/get_structure_from_filenames.md)
   [`extract_data_structure()`](https://tria-db.github.io/rxs2tria/reference/get_structure_from_filenames.md)
   : Extract the data structure from file names
 - [`collect_image_info()`](https://tria-db.github.io/rxs2tria/reference/collect_image_info.md)
   : Read and combine image exif data
 - [`collect_settings_data()`](https://tria-db.github.io/rxs2tria/reference/collect_settings_data.md)
-  : Read and combine ROXAS settings data
+  : Read and combine ROXAS (AI) settings data
 
 ## Reading raw ROXAS output data
 
@@ -84,7 +84,7 @@ Functions for reading and writing ROXAS cells and rings output files.
 S3 class QWAimages
 
 - [`build_QWAimages()`](https://tria-db.github.io/rxs2tria/reference/build_QWAimages.md)
-  : Build a QWAimages object from raw ROXAS metadata
+  : Build a QWAimages object from raw ROXAS (AI) metadata
 - [`check_QWAimages()`](https://tria-db.github.io/rxs2tria/reference/check_QWAimages.md)
   : Validate a QWAimages object
 - [`complete_QWAimages()`](https://tria-db.github.io/rxs2tria/reference/complete_QWAimages.md)

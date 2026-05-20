@@ -14,8 +14,8 @@ library(rxs2tria)
 Set the path to a folder containing the ROXAS or ROXAS AI output files
 of your QWA dataset. Files may be organized in subdirectories.
 [`get_roxas_files()`](https://tria-db.github.io/rxs2tria/reference/get_roxas_files.md)
-checks that all required file types are present for each image and
-returns a structured list of their full file paths.
+checks that all required files are present for each image and returns a
+data frame of their full file paths.
 
 For **ROXAS**, the required files per image are:
 
@@ -29,22 +29,22 @@ For **ROXAS AI**, the required files per image are:
 - Cells table (`{IMAGEID}.cells_table.csv`)
 - Rings table (`{IMAGEID}.rings_table.csv`)
 - Metadata file (`{IMAGEID}.metadata.json`)
+- Image file (`{IMAGEID}.jpg` or `.jpeg`)
 
 ``` r
 
+roxas_version <- "roxas" # or "roxas_ai"
 path_in <- "path/to/ROXAS_data"
-files <- get_roxas_files(path_in, roxas_version = "roxas") # or "roxas_ai"
+files <- get_roxas_files(path_in, roxas_version)
 ```
-
-------------------------------------------------------------------------
 
 ## Step 2: Extract the data structure
 
 QWA data are organized hierarchically: each analyzed *image* was taken
-of a microsection /*slide*, each slide was cut from a *woodpiece*, and
-each woodpiece was sampled from a *tree* of a certain *species* at a
-specific *site*. Typically, some or all of this information is encoded
-in the image file names. [Fonti et
+of a microsection /*slide*, each slide was cut from a *woodpiece* (e.g.
+a core or a wedge), and each woodpiece was sampled from a *tree* of a
+certain *species* at a specific *site*. Typically, some or all of this
+information is encoded in the image file names. [Fonti et
 al. (2025)](https://doi.org/10.3389/fpls.2025.1505389) recommend the
 naming convention:
 
@@ -59,13 +59,23 @@ groups](https://stringr.tidyverse.org/articles/regular-expressions.html).
 Each named group (`site`, `species`, `tree`, `woodpiece`, `slide`,
 `image`) that appears in the pattern is extracted and used to construct
 the full hierarchical labels. Not all groups need to be in the pattern:
-if, for example, all images belong to the same site, `site_label` can be
-supplied as a fixed argument instead.
+If, for example, all images belong to the same site, `site_label` can be
+supplied as a fixed argument instead. Or if each tree was cored exactly
+once, there may not be a specific woodpiece identifier.
+
+Adapt the pattern to match your naming convention using named regex
+groups. Supported group names: site, species, tree, woodpiece, slide,
+image. Example below assumes the common convention
+`{site}_{species}_{tree}_{slide}_{image}` with alphanumeric components
+and one woodpiece per tree (no separate woodpiece identifier). If your
+naming includes a woodpiece identifier, you can add it (e.g. by
+including “(?\[\[:alnum:\]\]+)” between the tree and slide groups). See
+the documentation of
+[`extract_data_structure()`](https://tria-db.github.io/rxs2tria/reference/get_structure_from_filenames.md)
+for more information.
 
 ``` r
 
-# Pattern for: {site}_{species}_{tree}_{slide}_{image}
-# (one woodpiece per tree, so no woodpiece group needed)
 pattern <- "(?<site>[[:alnum:]]+)_(?<species>[[:alnum:]]+)_(?<tree>[[:alnum:]]+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)"
 df_structure <- extract_data_structure(files, pattern)
 ```
@@ -73,8 +83,6 @@ df_structure <- extract_data_structure(files, pattern)
 **Always inspect the result** with `View(df_structure)` before
 proceeding to confirm that all labels were extracted correctly and the
 hierarchy is consistent.
-
-------------------------------------------------------------------------
 
 ## Step 3: Collect metadata
 
@@ -87,7 +95,8 @@ is combined with the data structure from Step 2 into a `QWAimages`
 object using
 [`build_QWAimages()`](https://tria-db.github.io/rxs2tria/reference/build_QWAimages.md).
 
-Use one of the two calls below depending on your software version:
+Use one of the two calls below depending on the software version used to
+produce your data.
 
 ``` r
 
@@ -104,21 +113,30 @@ df_settings <- collect_settings_data(files_settings = df_structure$fname_setting
 Datetime columns are read as raw character strings to avoid locale- and
 timezone-dependent conversion errors. You need to convert them
 explicitly to `POSIXct` with the format(s) and timezone appropriate for
-your data:
+your data. Make sure to address any conversion warnings before
+overwriting the columns in `df_settings`.
 
 ``` r
 
-df_settings$img_created_at <- lubridate::parse_date_time(
+img_created_at_converted <- lubridate::parse_date_time(
   df_settings$img_created_at,
   orders = "%Y:%m:%d %H:%M:%S", # common EXIF format
-  tz = "UTC"                    # commonly used in EXIF tags
+  tz = "UTC" # commonly used in EXIF tags
 )
+df_settings$img_created_at <- img_created_at_converted
+
 settings_date_orders <- c("%d.%m.%Y %H:%M:%S", "%d/%m/%Y %H:%M") # adjust to your locale
-df_settings$rxs_created_at <- lubridate::parse_date_time(
+rxs_created_at_converted <- lubridate::parse_date_time(
   df_settings$rxs_created_at,
   orders = settings_date_orders,
   tz = Sys.timezone()
 )
+df_settings$rxs_created_at <- rxs_created_at_converted
+```
+
+Combine the extracted data into one object:
+
+``` r
 
 rxs_images <- build_QWAimages(df_structure, df_settings)
 rm(df_structure, df_settings)
@@ -137,7 +155,7 @@ write_QWAimages(rxs_images, "path/to/output_data/example_dataset_QWAimages.csv.g
 # rxs_images <- read_QWAimages("path/to/output_data/example_dataset_QWAimages.csv.gz")
 ```
 
-### Additional metadata for TRIA submission (Step 3b)
+#### Additional metadata for TRIA submission (Step 3b)
 
 To provide the site-, tree-, woodpiece-, slide-, and dataset-level
 metadata required for a TRIA submission, use the interactive metadata
@@ -156,7 +174,7 @@ launch_metadata_app()
 
 ------------------------------------------------------------------------
 
-## Step 4: Read and clean the measurement data
+### Step 4: Read and clean the measurement data
 
 [`collect_raw_data()`](https://tria-db.github.io/rxs2tria/reference/collect_raw_data.md)
 reads the cell and ring measurement tables from all ROXAS output files,
@@ -190,6 +208,8 @@ chronologies).
 ``` r
 
 QWA_data <- collect_raw_data(rxs_images)
+# or if you already loaded the full metadata from json after completing Step 3:
+# QWA_data <- collect_raw_data(QWAmeta$images)
 
 exclude_mode <- "either"
 QWA_data <- complete_QWAdata(QWA_data, rxs_images, exclude_mode)
@@ -199,7 +219,7 @@ QWA_data  # prints an overview including ring flag counts
 
 ------------------------------------------------------------------------
 
-## Step 5: Save the QWA data
+### Step 5: Save the QWA data
 
 [`write_QWAdata()`](https://tria-db.github.io/rxs2tria/reference/write_QWAdata.md)
 saves the `QWAdata` object to two (optionally compressed) CSV files
@@ -224,7 +244,7 @@ for a more complete submission.
 
 ------------------------------------------------------------------------
 
-## Step 6a: Compute radial profiles (optional)
+### Step 6a: Compute radial profiles (optional)
 
 Cell measurements can be aggregated across the ring width into position
 bins, producing a `QWAprofile` object. Two binning schemes are
@@ -258,7 +278,7 @@ prf_sector <- calculate_sector_profiles(QWA_data,
 
 ------------------------------------------------------------------------
 
-## Step 6b: Assess ring data quality (optional)
+### Step 6b: Assess ring data quality (optional)
 
 The flags Shiny app provides an interactive overview of the ring
 measurements and allows you to annotate individual rings with data
@@ -292,7 +312,7 @@ launch_flags_app()
 
 ------------------------------------------------------------------------
 
-## Step 6c: Update re-analysed images (optional)
+### Step 6c: Update re-analysed images (optional)
 
 If data processing reveals issues in the raw data and you re-analyse one
 or more images with ROXAS or ROXAS AI,
@@ -330,7 +350,7 @@ QWA_data <- update_QWAdata(QWA_data,
 
 ------------------------------------------------------------------------
 
-## Step 7: Compile resources (optional)
+### Step 7: Compile resources (optional)
 
 A TRIA submission must include at minimum the `QWAmetadata` `.json` and
 the `QWAdata` `.csv` files. If you want to provide additional files

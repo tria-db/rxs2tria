@@ -7,50 +7,41 @@ tree, woodpiece, slide, image identifiers are joined by underscores to
 derive unique codes for each level of the data structure for the
 subsequent calculations (e.g. `tree_code = {site}_{species}_{tree}`).
 
-The default pattern assumes that all file names follow the labeling
-scheme `{site}_{species}_{tree}{woodpiece}_{slide}_{image}`, where
-`{tree}` is a two-character code, and `{woodpiece}` is optional, as
-suggested in [Fonti et al.
-(2025)](https://doi.org/10.3389/fpls.2016.00781).
+Any custom labeling pattern may be used, provided that it allows to
+uniquely identify each image and is consistently applied across all
+files. The first example below assumes the standard labeling pattern
+`{site}_{species}_{tree}_{slide}_{image}`, suggested in [Fonti et al.
+(2025)](https://doi.org/10.3389/fpls.2025.1505389).
 
-However, a different labeling pattern may be used, provided that it
-allows to uniquely identify each image in the list of file names and is
-consistently applied across all files. Not all hierarchical components
-are mandatory in the pattern, as long as the images can be uniquely
-identified (e.g. if exactly one woodpiece was extracted per tree, there
-might not be a specific woodpiece identifier, or if all data is from the
-same site, there might not be a site identifier). If all images pertain
-to the same site and/or the same species, and these components are not
-part of the labeling pattern, they may also be provided via the
-`site_label` and `species_code` input parameters. Here, `species_code`
-should follow the standard ITRDB species codes.
+Not all hierarchical components are mandatory in the pattern, as long as
+the images can be uniquely identified (e.g. if exactly one woodpiece was
+extracted per tree, there might not be a specific woodpiece identifier,
+or if all data is from the same site, there might not be a site
+identifier). If all images pertain to the same site and/or the same
+species, and these components are not part of the labeling pattern, they
+may also be provided via the `site_label` and `species_code` input
+parameters. Here, `species_code` should follow the standard ITRDB
+species codes.
 
 `extract_data_structure()` is a wrapper around
-`get_structure_from_filenames()` that uses the list of ROXAS (AI) files
-from
+`get_structure_from_filenames()` that uses the data frame of ROXAS (AI)
+files from
 [`get_roxas_files()`](https://tria-db.github.io/rxs2tria/reference/get_roxas_files.md)
-as input, applies the hierarchy extraction to the `$fname_image`
-component, and appends the original filepaths as columns to the
-structure data frame output.
+as input, applies the hierarchy extraction to the `$prefix` component,
+and appends the original file paths as columns to the returned structure
+data frame.
 
 ## Usage
 
 ``` r
 get_structure_from_filenames(
   filenames,
-  pattern =
-    "(?<site>[[:alnum:]]+)_(?<species>[[:alnum:]]+)_(?<tree>[[:alnum:]][[:alnum:]])(?<woodpiece>[[:alnum:]]*)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)",
+  pattern,
   site_label = NULL,
   species_code = NULL
 )
 
-extract_data_structure(
-  files,
-  pattern =
-    "(?<site>[[:alnum:]]+)_(?<species>[[:alnum:]]+)_(?<tree>[[:alnum:].]+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)",
-  site_label = NULL,
-  species_code = NULL
-)
+extract_data_structure(files, pattern, site_label = NULL, species_code = NULL)
 ```
 
 ## Arguments
@@ -76,55 +67,54 @@ extract_data_structure(
 
 - files:
 
-  The named list of file vectors returned by
+  The data frame of prefix and file paths returned by
   [`get_roxas_files()`](https://tria-db.github.io/rxs2tria/reference/get_roxas_files.md).
 
 ## Value
 
-A dataframe containing the extracted data structure (plus the original
-file names for `extract_data_structure()`).
+A data frame containing the extracted data structure (with the original
+file names appended for `extract_data_structure()`).
 
 ## Examples
 
 ``` r
-# with the default pattern ({site}_{species}_{tree}{woodpiece}_{slide}_{image})
+# the standard pattern {site}_{species}_{tree}_{slide}_{image}
+pattern <- "(?<site>[[:alnum:]]+)_(?<species>[[:alnum:]]+)_(?<tree>[[:alnum:]]+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)"
 filenames <- c(
-  "SITEA_PISY_01A_1_1.jpg",
-  "SITEA_PISY_01A_1_2.jpg",
-  "SITEA_PISY_01A_2_1.jpg",
-  "SITEB_LASI_02A_1_1.jpg",
-  "SITEB_LASI_02B_1_1.jpg",
+  "SITEA_PISY_01_1_1.jpg",
+  "SITEA_PISY_01_1_2.jpg",
+  "SITEA_PISY_01_2_1.jpg",
+  "SITEB_LASI_02_1_1.jpg",
   "SITEB_LASI_03_1_1.jpg"
 )
-get_structure_from_filenames(filenames)
-#> # A tibble: 6 × 7
+get_structure_from_filenames(filenames, pattern)
+#> # A tibble: 5 × 7
 #>   image_label     slide_label woodpiece_label tree_label species_code site_label
 #>   <chr>           <chr>       <chr>           <chr>      <chr>        <chr>     
-#> 1 SITEA_PISY_01_… SITEA_PISY… SITEA_PISY_01_A SITEA_PIS… PISY         SITEA     
-#> 2 SITEA_PISY_01_… SITEA_PISY… SITEA_PISY_01_A SITEA_PIS… PISY         SITEA     
-#> 3 SITEA_PISY_01_… SITEA_PISY… SITEA_PISY_01_A SITEA_PIS… PISY         SITEA     
-#> 4 SITEB_LASI_02_… SITEB_LASI… SITEB_LASI_02_A SITEB_LAS… LASI         SITEB     
-#> 5 SITEB_LASI_02_… SITEB_LASI… SITEB_LASI_02_B SITEB_LAS… LASI         SITEB     
-#> 6 SITEB_LASI_03_… SITEB_LASI… SITEB_LASI_03   SITEB_LAS… LASI         SITEB     
+#> 1 SITEA_PISY_01_… SITEA_PISY… SITEA_PISY_01   SITEA_PIS… PISY         SITEA     
+#> 2 SITEA_PISY_01_… SITEA_PISY… SITEA_PISY_01   SITEA_PIS… PISY         SITEA     
+#> 3 SITEA_PISY_01_… SITEA_PISY… SITEA_PISY_01   SITEA_PIS… PISY         SITEA     
+#> 4 SITEB_LASI_02_… SITEB_LASI… SITEB_LASI_02   SITEB_LAS… LASI         SITEB     
+#> 5 SITEB_LASI_03_… SITEB_LASI… SITEB_LASI_03   SITEB_LAS… LASI         SITEB     
 #> # ℹ 1 more variable: org_img_name <chr>
 
-# custom pattern of the form {tree}_{slide}_{image}
+# custom pattern of the form {tree}-{slide}_{image}
 filenames <- c(
- "tree1_sl1_img1.jpg",
- "tree1_sl2_img1.jpg",
- "tree2_sl1_img1.jpg",
- "tree2_sl1_img2.jpg"
+ "tree1-sl1_img1.jpg",
+ "tree1-sl2_img1.jpg",
+ "tree2-sl1_img1.jpg",
+ "tree2-sl1_img2.jpg"
  )
- pattern <- "(?<tree>[[:alnum:]].+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)"
+ pattern <- "(?<tree>[[:alnum:]].+)-(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)"
  get_structure_from_filenames(
    filenames, pattern,
-   site_label = "SITEA", species_code = "PISY")
+   site_label = "SITEA", species_code = "LASI")
 #> # A tibble: 4 × 7
 #>   image_label     slide_label woodpiece_label tree_label species_code site_label
 #>   <chr>           <chr>       <chr>           <chr>      <chr>        <chr>     
-#> 1 SITEA_PISY_tre… SITEA_PISY… SITEA_PISY_tre… SITEA_PIS… PISY         SITEA     
-#> 2 SITEA_PISY_tre… SITEA_PISY… SITEA_PISY_tre… SITEA_PIS… PISY         SITEA     
-#> 3 SITEA_PISY_tre… SITEA_PISY… SITEA_PISY_tre… SITEA_PIS… PISY         SITEA     
-#> 4 SITEA_PISY_tre… SITEA_PISY… SITEA_PISY_tre… SITEA_PIS… PISY         SITEA     
+#> 1 SITEA_LASI_tre… SITEA_LASI… SITEA_LASI_tre… SITEA_LAS… LASI         SITEA     
+#> 2 SITEA_LASI_tre… SITEA_LASI… SITEA_LASI_tre… SITEA_LAS… LASI         SITEA     
+#> 3 SITEA_LASI_tre… SITEA_LASI… SITEA_LASI_tre… SITEA_LAS… LASI         SITEA     
+#> 4 SITEA_LASI_tre… SITEA_LASI… SITEA_LASI_tre… SITEA_LAS… LASI         SITEA     
 #> # ℹ 1 more variable: org_img_name <chr>
 ```

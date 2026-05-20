@@ -30,9 +30,9 @@ complete_flags(x, meta, exclude_mode = c("either", "incomplete_only"))
 
 - exclude_mode:
 
-  how should the `$excude_issues` flag column be initialized, to exclude
-  any incomplete or missing rings (`"either"`, default) or only the
-  incomplete rings (i.e., not flagging missing/wedging rings for
+  how should the `$exclude_issues` flag column be initialized, to
+  exclude any incomplete or missing rings (`"either"`, default) or only
+  the incomplete rings (i.e., not flagging missing/wedging rings for
   exclusion from analyses, `"incomplete_only"`).
 
 ## Value

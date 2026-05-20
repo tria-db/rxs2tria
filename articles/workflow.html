@@ -7,8 +7,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <title>Step-by-step instructions • rxs2tria</title>
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
-<script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
+<link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
+<script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Step-by-step instructions">
 </head>
@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">rxs2tria</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -80,8 +80,8 @@ TRIA dataset.</p>
 </h2>
 <p>Set the path to a folder containing the ROXAS or ROXAS AI output
 files of your QWA dataset. Files may be organized in subdirectories.
-<code><a href="../reference/get_roxas_files.html">get_roxas_files()</a></code> checks that all required file types are
-present for each image and returns a structured list of their full file
+<code><a href="../reference/get_roxas_files.html">get_roxas_files()</a></code> checks that all required files are
+present for each image and returns a data frame of their full file
 paths.</p>
 <p>For <strong>ROXAS</strong>, the required files per image are:</p>
 <ul>
@@ -95,20 +95,22 @@ paths.</p>
 <li>Cells table (<code>{IMAGEID}.cells_table.csv</code>)</li>
 <li>Rings table (<code>{IMAGEID}.rings_table.csv</code>)</li>
 <li>Metadata file (<code>{IMAGEID}.metadata.json</code>)</li>
+<li>Image file (<code>{IMAGEID}.jpg</code> or <code>.jpeg</code>)</li>
 </ul>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">path_in</span> <span class="op">&lt;-</span> <span class="st">"path/to/ROXAS_data"</span></span>
-<span><span class="va">files</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/get_roxas_files.html">get_roxas_files</a></span><span class="op">(</span><span class="va">path_in</span>, roxas_version <span class="op">=</span> <span class="st">"roxas"</span><span class="op">)</span> <span class="co"># or "roxas_ai"</span></span></code></pre></div>
-<hr>
+<code class="sourceCode R"><span><span class="va">roxas_version</span> <span class="op">&lt;-</span> <span class="st">"roxas"</span> <span class="co"># or "roxas_ai"</span></span>
+<span><span class="va">path_in</span> <span class="op">&lt;-</span> <span class="st">"path/to/ROXAS_data"</span></span>
+<span><span class="va">files</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/get_roxas_files.html">get_roxas_files</a></span><span class="op">(</span><span class="va">path_in</span>, <span class="va">roxas_version</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="step-2-extract-the-data-structure">Step 2: Extract the data structure<a class="anchor" aria-label="anchor" href="#step-2-extract-the-data-structure"></a>
 </h2>
 <p>QWA data are organized hierarchically: each analyzed <em>image</em>
 was taken of a microsection /<em>slide</em>, each slide was cut from a
-<em>woodpiece</em>, and each woodpiece was sampled from a <em>tree</em>
-of a certain <em>species</em> at a specific <em>site</em>. Typically,
-some or all of this information is encoded in the image file names. <a href="https://doi.org/10.3389/fpls.2025.1505389" class="external-link">Fonti et al. (2025)</a>
+<em>woodpiece</em> (e.g. a core or a wedge), and each woodpiece was
+sampled from a <em>tree</em> of a certain <em>species</em> at a specific
+<em>site</em>. Typically, some or all of this information is encoded in
+the image file names. <a href="https://doi.org/10.3389/fpls.2025.1505389" class="external-link">Fonti et al. (2025)</a>
 recommend the naming convention:</p>
 <p><code>{site}_{species}_{tree/woodpiece}_{slide}_{image}</code></p>
 <p>e.g. <code>S22_LADE_L08b_1_2.jpg</code> is the second image of the
@@ -120,17 +122,25 @@ groups</a>. Each named group (<code>site</code>, <code>species</code>,
 <code>tree</code>, <code>woodpiece</code>, <code>slide</code>,
 <code>image</code>) that appears in the pattern is extracted and used to
 construct the full hierarchical labels. Not all groups need to be in the
-pattern: if, for example, all images belong to the same site,
-<code>site_label</code> can be supplied as a fixed argument instead.</p>
+pattern: If, for example, all images belong to the same site,
+<code>site_label</code> can be supplied as a fixed argument instead. Or
+if each tree was cored exactly once, there may not be a specific
+woodpiece identifier.</p>
+<p>Adapt the pattern to match your naming convention using named regex
+groups. Supported group names: site, species, tree, woodpiece, slide,
+image. Example below assumes the common convention
+<code>{site}_{species}_{tree}_{slide}_{image}</code> with alphanumeric
+components and one woodpiece per tree (no separate woodpiece
+identifier). If your naming includes a woodpiece identifier, you can add
+it (e.g. by including “(?<woodpiece>[[:alnum:]]+)” between the tree and
+slide groups). See the documentation of
+<code><a href="../reference/get_structure_from_filenames.html">extract_data_structure()</a></code> for more information.</woodpiece></p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Pattern for: {site}_{species}_{tree}_{slide}_{image}</span></span>
-<span><span class="co"># (one woodpiece per tree, so no woodpiece group needed)</span></span>
-<span><span class="va">pattern</span> <span class="op">&lt;-</span> <span class="st">"(?&lt;site&gt;[[:alnum:]]+)_(?&lt;species&gt;[[:alnum:]]+)_(?&lt;tree&gt;[[:alnum:]]+)_(?&lt;slide&gt;[[:alnum:]]+)_(?&lt;image&gt;[[:alnum:]]+)"</span></span>
+<code class="sourceCode R"><span><span class="va">pattern</span> <span class="op">&lt;-</span> <span class="st">"(?&lt;site&gt;[[:alnum:]]+)_(?&lt;species&gt;[[:alnum:]]+)_(?&lt;tree&gt;[[:alnum:]]+)_(?&lt;slide&gt;[[:alnum:]]+)_(?&lt;image&gt;[[:alnum:]]+)"</span></span>
 <span><span class="va">df_structure</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/get_structure_from_filenames.html">extract_data_structure</a></span><span class="op">(</span><span class="va">files</span>, <span class="va">pattern</span><span class="op">)</span></span></code></pre></div>
 <p><strong>Always inspect the result</strong> with
 <code>View(df_structure)</code> before proceeding to confirm that all
 labels were extracted correctly and the hierarchy is consistent.</p>
-<hr>
 </div>
 <div class="section level2">
 <h2 id="step-3-collect-metadata">Step 3: Collect metadata<a class="anchor" aria-label="anchor" href="#step-3-collect-metadata"></a>
@@ -143,8 +153,8 @@ settings (or ROXAS AI metadata) and, for classic ROXAS, also extracts
 EXIF data from the image files. The result is combined with the data
 structure from Step 2 into a <code>QWAimages</code> object using
 <code><a href="../reference/build_QWAimages.html">build_QWAimages()</a></code>.</p>
-<p>Use one of the two calls below depending on your software
-version:</p>
+<p>Use one of the two calls below depending on the software version used
+to produce your data.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># ROXAS: image EXIF data is collected separately from the image files</span></span>
 <span><span class="va">df_settings</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/collect_settings_data.html">collect_settings_data</a></span><span class="op">(</span>files_settings <span class="op">=</span> <span class="va">df_structure</span><span class="op">$</span><span class="va">fname_settings</span>,</span>
@@ -157,21 +167,26 @@ version:</p>
 <p>Datetime columns are read as raw character strings to avoid locale-
 and timezone-dependent conversion errors. You need to convert them
 explicitly to <code>POSIXct</code> with the format(s) and timezone
-appropriate for your data:</p>
+appropriate for your data. Make sure to address any conversion warnings
+before overwriting the columns in <code>df_settings</code>.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">df_settings</span><span class="op">$</span><span class="va">img_created_at</span> <span class="op">&lt;-</span> <span class="fu">lubridate</span><span class="fu">::</span><span class="fu"><a href="https://lubridate.tidyverse.org/reference/parse_date_time.html" class="external-link">parse_date_time</a></span><span class="op">(</span></span>
+<code class="sourceCode R"><span><span class="va">img_created_at_converted</span> <span class="op">&lt;-</span> <span class="fu">lubridate</span><span class="fu">::</span><span class="fu"><a href="https://lubridate.tidyverse.org/reference/parse_date_time.html" class="external-link">parse_date_time</a></span><span class="op">(</span></span>
 <span>  <span class="va">df_settings</span><span class="op">$</span><span class="va">img_created_at</span>,</span>
 <span>  orders <span class="op">=</span> <span class="st">"%Y:%m:%d %H:%M:%S"</span>, <span class="co"># common EXIF format</span></span>
-<span>  tz <span class="op">=</span> <span class="st">"UTC"</span>                    <span class="co"># commonly used in EXIF tags</span></span>
+<span>  tz <span class="op">=</span> <span class="st">"UTC"</span> <span class="co"># commonly used in EXIF tags</span></span>
 <span><span class="op">)</span></span>
+<span><span class="va">df_settings</span><span class="op">$</span><span class="va">img_created_at</span> <span class="op">&lt;-</span> <span class="va">img_created_at_converted</span></span>
+<span></span>
 <span><span class="va">settings_date_orders</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"%d.%m.%Y %H:%M:%S"</span>, <span class="st">"%d/%m/%Y %H:%M"</span><span class="op">)</span> <span class="co"># adjust to your locale</span></span>
-<span><span class="va">df_settings</span><span class="op">$</span><span class="va">rxs_created_at</span> <span class="op">&lt;-</span> <span class="fu">lubridate</span><span class="fu">::</span><span class="fu"><a href="https://lubridate.tidyverse.org/reference/parse_date_time.html" class="external-link">parse_date_time</a></span><span class="op">(</span></span>
+<span><span class="va">rxs_created_at_converted</span> <span class="op">&lt;-</span> <span class="fu">lubridate</span><span class="fu">::</span><span class="fu"><a href="https://lubridate.tidyverse.org/reference/parse_date_time.html" class="external-link">parse_date_time</a></span><span class="op">(</span></span>
 <span>  <span class="va">df_settings</span><span class="op">$</span><span class="va">rxs_created_at</span>,</span>
 <span>  orders <span class="op">=</span> <span class="va">settings_date_orders</span>,</span>
 <span>  tz <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/timezones.html" class="external-link">Sys.timezone</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">rxs_images</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/build_QWAimages.html">build_QWAimages</a></span><span class="op">(</span><span class="va">df_structure</span>, <span class="va">df_settings</span><span class="op">)</span></span>
+<span><span class="va">df_settings</span><span class="op">$</span><span class="va">rxs_created_at</span> <span class="op">&lt;-</span> <span class="va">rxs_created_at_converted</span></span></code></pre></div>
+<p>Combine the extracted data into one object:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">rxs_images</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/build_QWAimages.html">build_QWAimages</a></span><span class="op">(</span><span class="va">df_structure</span>, <span class="va">df_settings</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/rm.html" class="external-link">rm</a></span><span class="op">(</span><span class="va">df_structure</span>, <span class="va">df_settings</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">rxs_images</span>  <span class="co"># prints a summary of the image-level metadata</span></span></code></pre></div>
@@ -179,13 +194,12 @@ appropriate for your data:</p>
 subclass holding the per-image metadata (file paths, image EXIF data,
 and ROXAS settings), with the <code>roxas_version</code> stored as an
 attribute. It can be saved to a compressed CSV for later use:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/write_QWAimages.html">write_QWAimages</a></span><span class="op">(</span><span class="va">rxs_images</span>, <span class="st">"path/to/output_data/example_dataset_QWAimages.csv.gz"</span><span class="op">)</span></span>
 <span><span class="co"># rxs_images &lt;- read_QWAimages("path/to/output_data/example_dataset_QWAimages.csv.gz")</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="additional-metadata-for-tria-submission-step-3b">Additional metadata for TRIA submission (Step 3b)<a class="anchor" aria-label="anchor" href="#additional-metadata-for-tria-submission-step-3b"></a>
-</h3>
+<div class="section level4">
+<h4 id="additional-metadata-for-tria-submission-step-3b">Additional metadata for TRIA submission (Step 3b)<a class="anchor" aria-label="anchor" href="#additional-metadata-for-tria-submission-step-3b"></a>
+</h4>
 <p>To provide the site-, tree-, woodpiece-, slide-, and dataset-level
 metadata required for a TRIA submission, use the interactive metadata
 Shiny app. It takes a <code>QWAimages</code> object as its starting
@@ -193,7 +207,7 @@ point and guides you through filling in the required fields. The output
 is a full <code>QWAmetadata</code> object, which is exported as a
 <code>.json</code> file. Partially completed submissions can be reloaded
 and continued at any time.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/launch_metadata_app.html">launch_metadata_app</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># After exporting and closing the app, optionally read the result back:</span></span>
@@ -201,9 +215,9 @@ and continued at any time.</p>
 <hr>
 </div>
 </div>
-<div class="section level2">
-<h2 id="step-4-read-and-clean-the-measurement-data">Step 4: Read and clean the measurement data<a class="anchor" aria-label="anchor" href="#step-4-read-and-clean-the-measurement-data"></a>
-</h2>
+<div class="section level3">
+<h3 id="step-4-read-and-clean-the-measurement-data">Step 4: Read and clean the measurement data<a class="anchor" aria-label="anchor" href="#step-4-read-and-clean-the-measurement-data"></a>
+</h3>
 <p><code><a href="../reference/collect_raw_data.html">collect_raw_data()</a></code> reads the cell and ring measurement
 tables from all ROXAS output files, combines them, and performs initial
 cleaning: negative values and error codes are replaced with
@@ -237,8 +251,10 @@ are pre-selected for exclusion: <code>"either"</code> (default) marks
 both incomplete and missing rings; <code>"incomplete_only"</code> marks
 only incomplete rings (useful when missing/wedging rings should still
 contribute to chronologies).</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">QWA_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/collect_raw_data.html">collect_raw_data</a></span><span class="op">(</span><span class="va">rxs_images</span><span class="op">)</span></span>
+<span><span class="co"># or if you already loaded the full metadata from json after completing Step 3:</span></span>
+<span><span class="co"># QWA_data &lt;- collect_raw_data(QWAmeta$images)</span></span>
 <span></span>
 <span><span class="va">exclude_mode</span> <span class="op">&lt;-</span> <span class="st">"either"</span></span>
 <span><span class="va">QWA_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/complete_QWAdata.html">complete_QWAdata</a></span><span class="op">(</span><span class="va">QWA_data</span>, <span class="va">rxs_images</span>, <span class="va">exclude_mode</span><span class="op">)</span></span>
@@ -246,15 +262,15 @@ contribute to chronologies).</p>
 <span><span class="va">QWA_data</span>  <span class="co"># prints an overview including ring flag counts</span></span></code></pre></div>
 <hr>
 </div>
-<div class="section level2">
-<h2 id="step-5-save-the-qwa-data">Step 5: Save the QWA data<a class="anchor" aria-label="anchor" href="#step-5-save-the-qwa-data"></a>
-</h2>
+<div class="section level3">
+<h3 id="step-5-save-the-qwa-data">Step 5: Save the QWA data<a class="anchor" aria-label="anchor" href="#step-5-save-the-qwa-data"></a>
+</h3>
 <p><code><a href="../reference/write_QWAdata.html">write_QWAdata()</a></code> saves the <code>QWAdata</code> object to
 two (optionally compressed) CSV files following the naming convention
 <code>{dataset_name}_QWAdata_cells.csv(.gz)</code> and
 <code>{dataset_name}_QWAdata_rings.csv(.gz)</code>. Explicit file names
 can also be provided (see <code><a href="../reference/write_QWAdata.html">?write_QWAdata</a></code>).</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">path_out</span> <span class="op">&lt;-</span> <span class="st">"path/to/output_data"</span></span>
 <span><span class="va">dataset_name</span> <span class="op">&lt;-</span> <span class="st">"example_dataset"</span></span>
 <span><span class="fu"><a href="../reference/write_QWAdata.html">write_QWAdata</a></span><span class="op">(</span><span class="va">QWA_data</span>, dir <span class="op">=</span> <span class="va">path_out</span>, dataset_name <span class="op">=</span> <span class="va">dataset_name</span><span class="op">)</span></span>
@@ -267,9 +283,9 @@ following steps are optional but recommended for a more complete
 submission.</p>
 <hr>
 </div>
-<div class="section level2">
-<h2 id="step-6a-compute-radial-profiles-optional">Step 6a: Compute radial profiles (optional)<a class="anchor" aria-label="anchor" href="#step-6a-compute-radial-profiles-optional"></a>
-</h2>
+<div class="section level3">
+<h3 id="step-6a-compute-radial-profiles-optional">Step 6a: Compute radial profiles (optional)<a class="anchor" aria-label="anchor" href="#step-6a-compute-radial-profiles-optional"></a>
+</h3>
 <p>Cell measurements can be aggregated across the ring width into
 position bins, producing a <code>QWAprofile</code> object. Two binning
 schemes are available:</p>
@@ -285,7 +301,7 @@ radial position matters (e.g. density gradients in µm from the
 cambium).</li>
 </ul>
 <p>Both support computing means and optional quantiles per bin:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">prf_sector</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/calculate_sector_profiles.html">calculate_sector_profiles</a></span><span class="op">(</span><span class="va">QWA_data</span>,</span>
 <span>                                        n_sectors <span class="op">=</span> <span class="fl">5</span>,</span>
 <span>                                        sel_cell_params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"la"</span>, <span class="st">"cwttan"</span><span class="op">)</span>,</span>
@@ -301,9 +317,9 @@ cambium).</li>
 <span><span class="co"># prf_sector &lt;- read_QWAprofile("path/to/output_data/example_dataset_QWAprofile_sector5.csv.gz")</span></span></code></pre></div>
 <hr>
 </div>
-<div class="section level2">
-<h2 id="step-6b-assess-ring-data-quality-optional">Step 6b: Assess ring data quality (optional)<a class="anchor" aria-label="anchor" href="#step-6b-assess-ring-data-quality-optional"></a>
-</h2>
+<div class="section level3">
+<h3 id="step-6b-assess-ring-data-quality-optional">Step 6b: Assess ring data quality (optional)<a class="anchor" aria-label="anchor" href="#step-6b-assess-ring-data-quality-optional"></a>
+</h3>
 <p>The flags Shiny app provides an interactive overview of the ring
 measurements and allows you to annotate individual rings with data
 quality flags (e.g. compression wood, cracks) and discrete feature flags
@@ -322,7 +338,7 @@ app.</li>
 <p>The output is the <code>QWAdata$rings</code> data frame with
 additional logical columns for each flag. It can be saved to file and
 read back to update the <code>QWAdata</code> object:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/launch_flags_app.html">launch_flags_app</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># To update QWA_data$rings with the edited output:</span></span>
@@ -333,9 +349,9 @@ read back to update the <code>QWAdata</code> object:</p>
 <span><span class="co"># write_QWAdata(QWA_data, dir = path_out, dataset_name = dataset_name)</span></span></code></pre></div>
 <hr>
 </div>
-<div class="section level2">
-<h2 id="step-6c-update-re-analysed-images-optional">Step 6c: Update re-analysed images (optional)<a class="anchor" aria-label="anchor" href="#step-6c-update-re-analysed-images-optional"></a>
-</h2>
+<div class="section level3">
+<h3 id="step-6c-update-re-analysed-images-optional">Step 6c: Update re-analysed images (optional)<a class="anchor" aria-label="anchor" href="#step-6c-update-re-analysed-images-optional"></a>
+</h3>
 <p>If data processing reveals issues in the raw data and you re-analyse
 one or more images with ROXAS or ROXAS AI,
 <code><a href="../reference/update_QWAimages.html">update_QWAimages()</a></code> and <code><a href="../reference/update_QWAdata.html">update_QWAdata()</a></code> allow
@@ -347,7 +363,7 @@ generated files.</li>
 <li>Update the settings/metadata for those images in the
 <code>QWAimages</code> object:</li>
 </ol>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">rxs_images</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/update_QWAimages.html">update_QWAimages</a></span><span class="op">(</span><span class="va">rxs_images</span>,</span>
 <span>  imgs_to_update <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"IMAGELABEL1"</span>, <span class="st">"IMAGELABEL2"</span><span class="op">)</span>,</span>
 <span>  settings_date_orders <span class="op">=</span> <span class="va">settings_date_orders</span><span class="op">)</span> <span class="co"># same as defined in Step 3</span></span></code></pre></div>
@@ -358,16 +374,16 @@ automatic flags are reset. By default, any manual edits made in the
 flags app are also reset (set <code>reset_manual_flags = FALSE</code> to
 preserve them):</li>
 </ol>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">QWA_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/update_QWAdata.html">update_QWAdata</a></span><span class="op">(</span><span class="va">QWA_data</span>,</span>
 <span>  imgs_to_update <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"IMAGELABEL1"</span>, <span class="st">"IMAGELABEL2"</span><span class="op">)</span>,</span>
 <span>  meta <span class="op">=</span> <span class="va">rxs_images</span>,</span>
 <span>  exclude_mode <span class="op">=</span> <span class="va">exclude_mode</span><span class="op">)</span> <span class="co"># same as defined in Step 4</span></span></code></pre></div>
 <hr>
 </div>
-<div class="section level2">
-<h2 id="step-7-compile-resources-optional">Step 7: Compile resources (optional)<a class="anchor" aria-label="anchor" href="#step-7-compile-resources-optional"></a>
-</h2>
+<div class="section level3">
+<h3 id="step-7-compile-resources-optional">Step 7: Compile resources (optional)<a class="anchor" aria-label="anchor" href="#step-7-compile-resources-optional"></a>
+</h3>
 <p>A TRIA submission must include at minimum the
 <code>QWAmetadata</code> <code>.json</code> and the <code>QWAdata</code>
 <code>.csv</code> files. If you want to provide additional files
@@ -378,10 +394,11 @@ component of the <code>QWAmetadata</code> object.</p>
 type of each file from its name (see <code>?infer_resource_type</code>
 for the full pattern table), and appends the result to the existing
 resources list. Repeat for each relevant directory:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">QWA_metadata</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/read_QWAmetadata.html">read_QWAmetadata</a></span><span class="op">(</span><span class="st">"path/to/output_data/example_dataset_QWAmetadata.json"</span><span class="op">)</span></span>
 <span><span class="va">QWA_metadata</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/add_resources.html">add_resources</a></span><span class="op">(</span><span class="va">QWA_metadata</span>, path <span class="op">=</span> <span class="st">"path/to/submission_files"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/write_QWAmetadata.html">write_QWAmetadata</a></span><span class="op">(</span><span class="va">QWA_metadata</span>, <span class="st">"path/to/output_data/example_dataset_QWAmetadata.json"</span><span class="op">)</span></span></code></pre></div>
+</div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

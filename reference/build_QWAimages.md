@@ -1,6 +1,6 @@
-# Build a QWAimages object from raw ROXAS metadata
+# Build a QWAimages object from raw ROXAS (AI) metadata
 
-Combines the extracted ROXAS / ROXAS AI filenames plus data structure
+Combines the extracted ROXAS / ROXAS AI file names plus data structure
 (from
 [`extract_data_structure()`](https://tria-db.github.io/rxs2tria/reference/get_structure_from_filenames.md))
 and ROXAS settings and image exif data (from
@@ -19,11 +19,11 @@ build_QWAimages(df_structure, df_settings)
 
 - df_structure:
 
-  Dataframe with all input filenames and data structure.
+  Data frame with all input file names and data structure.
 
 - df_settings:
 
-  Dataframe with extracted ROXAS settings data.
+  Data frame with extracted ROXAS (AI) settings data.
 
 ## Value
 
@@ -37,12 +37,12 @@ workflow. The resulting
 [QWAimages](https://tria-db.github.io/rxs2tria/reference/QWAimages.md)
 can be passed directly to
 [`collect_raw_data()`](https://tria-db.github.io/rxs2tria/reference/collect_raw_data.md)
-and to the metadata Shiny app
-([`launch_metadata_app()`](https://tria-db.github.io/rxs2tria/reference/launch_metadata_app.md)),
-which enriches it with site-, tree-, and dataset-level metadata to
+(to read the cell and ring measurements) and to the metadata Shiny app
+([`launch_metadata_app()`](https://tria-db.github.io/rxs2tria/reference/launch_metadata_app.md),
+where one can enrich it with site-, tree-, and dataset-level metadata to
 produce a full
 [QWAmetadata](https://tria-db.github.io/rxs2tria/reference/QWAmetadata.md)
-object.
+object).
 
 ## See also
 

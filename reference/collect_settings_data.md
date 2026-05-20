@@ -1,6 +1,6 @@
-# Read and combine ROXAS settings data
+# Read and combine ROXAS (AI) settings data
 
-Collect the settings data from all ROXAS settings files.
+Collect the settings data from all ROXAS (AI) settings files.
 
 ## Usage
 
@@ -12,11 +12,11 @@ collect_settings_data(files_settings, files_images = NULL, roxas_version)
 
 - files_settings:
 
-  Vector/list of ROXAS settings filenames.
+  Vector of ROXAS settings file names.
 
 - files_images:
 
-  Vector/list of image filenames in the same order as `files_settings`.
+  Vector of image file names in the same order as `files_settings`.
   Required when `roxas_version = "roxas"`.
 
 - roxas_version:
