@@ -174,6 +174,11 @@ load_data_env <- function(name_prf, name_rings, name_rxsmeta,
         dplyr::across(dplyr::any_of(rxsmeta_cols[['i']]), as.integer),
         dplyr::across(dplyr::any_of(rxsmeta_cols[['l']]), as.logical)
       )
+    
+    # drop all NA columns for species and site
+    if ("site_label" %in% names(rxsmeta_data_in) & all(is.na(rxsmeta_data_in$site_label))) rxsmeta_data_in$site_label <- NULL 
+    if ("species_code" %in% names(rxsmeta_data_in) & all(is.na(rxsmeta_data_in$species_code))) rxsmeta_data_in$species_code <- NULL 
+
   }
 
   return(
@@ -226,6 +231,11 @@ load_data_csv <- function(path_prf, path_rings, path_rxsmeta,
         dplyr::across(dplyr::any_of(rxsmeta_cols[['i']]), as.integer),
         dplyr::across(dplyr::any_of(rxsmeta_cols[['l']]), as.logical)
       )
+    
+    # drop all NA columns for species and site
+    if ("site_label" %in% names(rxsmeta_data_in) & all(is.na(rxsmeta_data_in$site_label))) rxsmeta_data_in$site_label <- NULL 
+    if ("species_code" %in% names(rxsmeta_data_in) & all(is.na(rxsmeta_data_in$species_code))) rxsmeta_data_in$species_code <- NULL 
+    
   }
 
   return(

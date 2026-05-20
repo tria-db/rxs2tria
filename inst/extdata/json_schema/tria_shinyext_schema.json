@@ -18,7 +18,7 @@
         "images": { 
           "anyOf": [
             { "$ref": "tria_roxas_ext_schema.json" },
-            { "$ref": "base_schema/tria_roxasai_data_schema.json" }
+            { "$ref": "tria_roxasai_ext_schema.json" }
           ]
         }
     },

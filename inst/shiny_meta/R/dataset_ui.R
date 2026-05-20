@@ -23,7 +23,7 @@ dataset_ui <- function(id) {
         bslib::card_header(
           class = 'bg-primary',
           shiny::span(shiny::icon("exclamation", style = "color: white"),'Note')),
-        "The order of authors provided here will be used as
+        "The author numbers provided here will be used as
         the order of authorship."
       ),
       shiny::hr(),
@@ -178,7 +178,10 @@ dataset_ui <- function(id) {
                              class = "btn btn-secondary", icon = shiny::icon('trash', lib = "glyphicon"))),
 
             shiny::div(style = "margin-left: auto; margin-bottom: 0;",
-                shiny::fileInput(ns('file_authors'), "Load author data from file", accept = ".csv"))
+              shiny::div(
+                title = "Coming soon",
+                style = "pointer-events: none; opacity: 0.5;",
+                shiny::fileInput(ns('file_authors'), "Load author data from file", accept = ".csv")))
         ),
 
         shiny::br(),
@@ -199,7 +202,10 @@ dataset_ui <- function(id) {
                           class = "btn btn-secondary", icon = shiny::icon('trash', lib = "glyphicon"))),
 
             shiny::div(style = "margin-left: auto; margin-bottom: 0;",
-                shiny::fileInput(ns('file_funding'), "Load funding data from file", accept = ".csv"))
+              shiny::div(
+                title = "Coming soon",
+                style = "pointer-events: none; opacity: 0.5;",
+                shiny::fileInput(ns('file_funding'), "Load funding data from file", accept = ".csv")))
         ),
 
         rhandsontable::rHandsontableOutput(ns("funding_table")),
@@ -251,7 +257,10 @@ dataset_ui <- function(id) {
                              class = "btn btn-secondary", icon = shiny::icon('trash', lib = "glyphicon"))),
 
             shiny::div(style = "margin-left: auto; margin-bottom: 0;",
-                shiny::fileInput(ns('file_relres'), "Load related resource data from file", accept = ".csv"))
+              shiny::div(
+                title = "Coming soon",
+                style = "pointer-events: none; opacity: 0.5;",
+                shiny::fileInput(ns('file_relres'), "Load related resource data from file", accept = ".csv")))
         ),
 
         rhandsontable::rHandsontableOutput(ns("relres_table"))

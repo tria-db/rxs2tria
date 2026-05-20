@@ -88,14 +88,10 @@ start_server <- function(id, main_session) {
           } else {
             ext <- tools::file_ext(input$input_file$datapath)
             if (ext == "csv"){
-              df <- rxs2tria::read_QWAimages(input$input_file$datapath,
-                allow_missing_req = FALSE,
-                add_missing_opt = TRUE)
+              df <- rxs2tria::read_QWAimages(input$input_file$datapath)
               validated <- rxs2tria::QWAmetadata(images = df) |> rxs2tria::complete_QWAmetadata()
             } else {
-              res <- rxs2tria::read_QWAmetadata(input$input_file$datapath,
-                allow_missing_req = TRUE, # don't be strict, may be in-progress file
-                add_missing_opt = TRUE)
+              res <- rxs2tria::read_QWAmetadata(input$input_file$datapath)
               validated <- res |> rxs2tria::complete_QWAmetadata()
             }
             source <- glue::glue("read from file {input$input_file$name}")
@@ -200,10 +196,15 @@ start_server <- function(id, main_session) {
     image_data_in <- shiny::reactiveVal(NULL)
 
     # TODO: the first one here is the roxas schema, adapt to work also for roxas ai
-    tbl_props <- rxs2tria:::get_tbl_props(full_schema$properties$images$anyOf[[1]])$properties
+    tbl_props_cl <- rxs2tria:::get_tbl_props(full_schema$properties$images$anyOf[[1]])$properties
+    tbl_props_ai <- rxs2tria:::get_tbl_props(full_schema$properties$images$anyOf[[2]])$properties
 
     df_hot <- shiny::reactive({
       shiny::req(image_data_in())
+
+      rv <- rxs2tria:::infer_rv_from_data(image_data_in())
+      tbl_props <- if (rv == "roxas_ai") tbl_props_ai else tbl_props_cl
+
       col_groups <- purrr::map_chr(tbl_props, "dtColGroup")
       sel_colgroups <- input$cols_meta
       sel_cols <- col_groups[col_groups %in% sel_colgroups] |> names()
@@ -215,8 +216,11 @@ start_server <- function(id, main_session) {
 
     shiny::observeEvent(input_meta$images, {
       df <- input_meta$images |>
-        dplyr::mutate(rxs_created_at = as.character(rxs_created_at),
-                      img_created_at = as.character(img_created_at)
+        dplyr::mutate(
+          dplyr::across(dplyr::any_of(c(
+            "rxs_created_at","img_created_at",
+            "rings_segmentation_datetime","cells_segmentation_datetime")),
+          as.character)
       )
       image_data_in(df)
     })
@@ -224,9 +228,13 @@ start_server <- function(id, main_session) {
     output$image_table <- rhandsontable::renderRHandsontable({
       shiny::validate(shiny::need(!is.null(image_data_in()), "No data to show"))
 
+      rv <- rxs2tria:::infer_rv_from_data(image_data_in())
+      tbl_props <- if (rv == "roxas_ai") tbl_props_ai else tbl_props_cl
+
       colHeaders <- sapply(tbl_props, function(x) x$title)
       colHeaders <- colHeaders[names(df_hot())] # ensure correct order
       tippies <- sapply(tbl_props, function(x) x$description)
+      tippies <- tippies[names(df_hot())]      
 
       n_rows <- nrow(image_data_in())
       ht_height <- min(max(n_rows * ht_row_height, ht_min_height), ht_max_height)
@@ -240,12 +248,25 @@ start_server <- function(id, main_session) {
         colHeaders = unname(colHeaders),
         afterGetColHeader = tippy_renderer(tippies)) |>
         rhandsontable::hot_cols(fixedColumnsLeft = 1)
+      editable_cols <- c("band_width", "only_ew","comment")
       purrr::reduce(
-        names(colHeaders), # names in df
+        names(colHeaders),
         function(ht, col) {
           config <- tbl_props[[col]]
-          colName <- colHeaders[col] # name in ht
-          hot_col_wrapper(ht, colName, config)
+          colName <- colHeaders[col]
+          if (col %in% editable_cols) {
+            hot_col_wrapper(ht, colName, config)
+          } else {
+            switch(config$htType,
+              numeric  = ht |> rhandsontable::hot_col(colName, type = "numeric",
+                           format = if (config$type[1] == "integer") "0." else NULL,
+                           readOnly = TRUE),
+              checkbox = ht |> rhandsontable::hot_col(colName, type = "checkbox", readOnly = TRUE),
+              date     = ht |> rhandsontable::hot_col(colName, type = "date",
+                           dateFormat = "YYYY-MM-DD", readOnly = TRUE),
+              ht |> rhandsontable::hot_col(colName, readOnly = TRUE)
+            )
+          }
         },
         .init = ht
       )
@@ -254,15 +275,19 @@ start_server <- function(id, main_session) {
     # create dataframe reactive to hot update
     # TODO: join with img_data_in for full columns
     image_data_out <- shiny::reactive({
-      shiny::req(input$image_table)
       df_out <- rhandsontable::hot_to_r(input$image_table)
-      df_in <- image_data_in()
-      df_in |> dplyr::rows_update(df_out, by = "image_label")
+      if (!is.null(df_out) && nrow(df_out)>0) {
+        df_out <- df_out |> 
+            dplyr::mutate(only_ew = as.logical(.data$only_ew))
+        df_in <- image_data_in()
+        df_out <- df_in |> dplyr::rows_update(df_out, by = "image_label")
+      }
+      df_out      
     })
 
-    output$testing <- shiny::renderPrint({
-      #image_data_out()
-    })
+    # output$testing <- shiny::renderPrint({
+    #   image_data_out()
+    # })
 
     # return the input meta and val check for use in other tabs
     return(

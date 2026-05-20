@@ -202,7 +202,7 @@ renderer_num <- function(required = NULL, min_val = NULL, max_val = NULL){
 
       var isValid = true;
       var message = '';
-      var num_value = parseFloat(value)
+      var num_value = Number(value)
 
       // check if value is empty, and if required, set invalid
       if (value === null || value === '') {
@@ -258,10 +258,16 @@ renderer_check <- function(required = NULL, min_checks = NULL, max_checks = NULL
     var isValid = true;
     var message = '';
 
-    // find how many boxes are checked
     var data = instance.getDataAtCol(col);
+
+    // check for bad values: catch non-boolean values (e.g. pasted text)
+    if (value !== null && value !== true && value !== false) {
+      isValid = false;
+      message = 'invalid';
+    }
+
+    // find how many boxes are checked
     var true_count = data.filter(function(val) { return val === true; }).length;
-    console.log(true_count);
 
     if (true_count < %s) {
       isValid = false;
@@ -352,13 +358,13 @@ hot_col_wrapper <- function(ht, col, col_config, renderer_js = NULL) {
     text         = ht |> rhandsontable::hot_col(col, renderer = renderer_js, readOnly = readOnly),
     numeric      = ht |> rhandsontable::hot_col(col, type = 'numeric',
                      format = if (col_config$type[1] == 'integer') '0.' else NULL,
-                     renderer = renderer_js, readOnly = readOnly),
+                     renderer = renderer_js, readOnly = readOnly, allowInvalid = FALSE),
     dropdown     = ht |> rhandsontable::hot_col(col, type = 'dropdown',
                      source = col_config$enum, renderer = renderer_js, readOnly = readOnly),
     autocomplete = ht |> rhandsontable::hot_col(col, type = 'autocomplete',
                      source = get_options(col_config$options), renderer = renderer_js, readOnly = readOnly),
     checkbox     = ht |> rhandsontable::hot_col(col, type = 'checkbox',
-                     renderer = renderer_js, readOnly = readOnly),
+                     renderer = renderer_js, readOnly = readOnly, allowInvalid = FALSE),
     date         = ht |> rhandsontable::hot_col(col, type = 'date', dateFormat = "YYYY-MM-DD",
                      renderer = renderer_js, readOnly = readOnly),
     ht

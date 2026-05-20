@@ -17,39 +17,47 @@ knitr::opts_chunk$set(
 )
 ```
 
-# Introduction to rxs2tria
+rxs2tria is an R package to handle Quantitative Wood Anatomy (QWA) data, specifically data generated with the [ROXAS](https://roxas.wsl.ch/en/) or [ROXAS AI](https://github.com/roxas-ai/napari-roxas-ai/tree/released) software. The package includes functionality to prepare, quality check and harmonize a QWA dataset, consisting of QWA images, corresponding cell and ring measurement files and accompanying metadata. The processed dataset may then be submitted to the [TRIA](https://webapps.wsl.ch/tria/) database for intra-annual and anatomical tree-ring data.
 
-**Note:** This package is currently under development and not yet stable
-nor officially released.
+**Note:** This package is currently under development and not yet stable nor officially released.
 
-`rxs2tria` provides tools to preprocess and prepare Quantitative Wood
-Anatomy (QWA) data — specifically data generated with
-[ROXAS](https://roxas.wsl.ch/en/) or its successor
-[ROXAS AI](https://github.com/roxas-ai/napari-roxas-ai/tree/released) —
-for upload to the [TRIA database](https://webapps.wsl.ch/tria/). The
-package covers the full workflow from locating raw output files, through
-quality checking and computing derived measures, to assembling a
-complete dataset submission.
+# Installation
 
-## Installation
-
-You can install the development version of `rxs2tria` from
-[GitHub](https://github.com/tria-db/rxs2tria/) with:
+The package is (not yet) on CRAN. You can install `rxs2tria` from [GitHub](https://github.com/tria-db/rxs2tria/):
 
 ```{r, eval = FALSE}
 pak::pak("tria-db/rxs2tria")
-# pak::pak("tria-db/rxs2tria@develop") for the develop branch
+
+# or with another remote package installer, such as:
+# devtools::install_github("tria-db/rxs2tria")
+# remotes::install_githbu("tria-db/rxs2tria")
 ```
 
-## Quick start
+## Development version
 
-The fastest way to get started is to copy the workflow template to your
-working directory and fill in your dataset-specific paths and settings:
-
+To get the newest features and bug fixes, you can install the development version:
 ```{r, eval = FALSE}
+pak::pak("tria-db/rxs2tria@develop")
+```
+
+## Troubleshooting
+Ensure that the installer libarary (pak/devtools/remotes) is properly installed. 
+On Windows OS, you may need to install Rtools to build packages from source.
+Run `pkgbuild::check_build_tool(debug=TRUE)` to check for build tools, and restart RStudio/Positron after the installation is completed.
+
+
+# Quick start
+
+The easiest way to get started is to copy the rxs2tria workflow template to your
+working directory and fill in your dataset-specific paths and settings, 
+then run through each step.
+
+The following creates a file `prepare_rxs_dataset.R` in your current directory. 
+```{r, eval = FALSE}
+library(rxs2tria)
 file.copy(system.file("templates/prepare_rxs_dataset.R",
                       package = "rxs2tria"), ".")
 ```
 
-Follow the instructions in the template, or see the
-[worklflow vignette](workflow.html) for more details.
+Open the copied file and follow the instructions therein, or see the
+[workflow vignette](workflow.html) for more details.

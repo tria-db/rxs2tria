@@ -13,7 +13,7 @@ complete_flags(x, meta, exclude_mode = c("either", "incomplete_only"))
 information on \code{spatial_resolution} (required for the incomplete
 innermost ring check) and \code{outmost_year}.}
 
-\item{exclude_mode}{how should the \verb{$excude_issues} flag column be initialized, to
+\item{exclude_mode}{how should the \verb{$exclude_issues} flag column be initialized, to
 exclude any incomplete or missing rings (\code{"either"}, default) or only the
 incomplete rings (i.e., not flagging missing/wedging rings for exclusion
 from analyses, \code{"incomplete_only"}).}

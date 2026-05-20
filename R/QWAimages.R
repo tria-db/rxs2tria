@@ -4,7 +4,7 @@
 infer_rv_from_data <- function(x) {
   valid <- c("roxas", "roxas_ai")
   if (!("software" %in% names(x))) return(NULL)
-  vals <- unique(stats::na.omit(x$software))
+  vals <- unique(stats::na.omit(tolower(x$software)))
   ok <- intersect(vals, valid)
   if (length(ok) == 1) return(ok)
   if (length(ok) > 1)
@@ -115,6 +115,9 @@ new_QWAimages <- function(data, roxas_version) {
 #' @export
 QWAimages <- function(data, roxas_version = NULL) {
   roxas_version <- resolve_roxas_version(data, rv_param = roxas_version)
+  # if we can resolve ok, then make sure that the column software exists (also forces lower_case)
+  rv_infer <- infer_rv_from_data(data)
+  if (is.null(rv_infer) || rv_infer == roxas_version) data$software <- roxas_version
 
   # prep data:
   data <- tibble::as_tibble(data, .name_repair = janitor::make_clean_names)
@@ -128,9 +131,8 @@ QWAimages <- function(data, roxas_version = NULL) {
   # warn if this causes changes to data
   data <- align_to_schema(data, tbl_props, roxas_version)
 
-  # minimal validation checks:
-  # abort if structure invalid
-  check_structure(data)
+  # minimal validation checks: warn if structure invalid
+  check_structure(data, warn_only = TRUE)
  
   # construct object:
   new_QWAimages(data, roxas_version)
@@ -210,8 +212,9 @@ check_QWAimages <- function(x) {
   # warn if missing optional columns
   check_missing_opt(x, tbl_props, roxas_version)
 
-  # abort if structure invalid
-  check_structure(x)
+  checkmate::assert_character(x$image_label, unique = TRUE, any.missing = FALSE)
+  # check if structure invalid / labels start_with logic
+  check_structure(x, warn_only = TRUE)
 
   # TODO: any additional checks?
 

@@ -18,6 +18,10 @@ start_ui <- function(id) {
        shiny::actionButton(ns("btn_input"), "Load input data")
       ),
 
+      shiny::tags$p(
+        shiny::icon("info", class = "me-1"),
+        "For large datasets, allow some time for each tab to load."),
+
       # show selected data source ----------------------------------------------
       shiny::hr(class = "hr-slim"),
       shiny::span(
@@ -77,9 +81,13 @@ start_ui <- function(id) {
         title = "Metadata extracted from files",
         shiny::tags$p("This table shows all structure, settings and image metadata extracted
           from the raw files with the", shiny::code("rxs2tria"), "package."),
-        shiny::tags$p("If available, fill in the information on", shiny::code("band_width"), "and",
-               shiny::code("only_ew"), "(in case only EW cells were measured).",
-               "Click and drag the blue square in the bottom right corner of a cell to use autofill."),
+        shiny::tags$p(
+          "Most columns are read-only, except", shiny::code("comment"), ",", shiny::code("band_width"), "and",
+          shiny::code("only_ew"), "(in case only EW cells were measured)."),
+        shiny::tags$p(
+          shiny::icon("info", class = "me-1"),
+          "The tables in this app support Excel-like keyboard shortcuts (e.g. copy/paste with Ctrl+C / Ctrl+V).",
+          "Or click and drag the blue square in the bottom right corner of a cell to use autofill."),
         shiny::conditionalPanel(
           condition = "output.roxas_data_available",
           shiny::hr(),

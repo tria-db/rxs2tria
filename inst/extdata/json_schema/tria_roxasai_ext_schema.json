@@ -2,8 +2,8 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "TODO:addurltoTRIAschema",
   "allOf": [
-    { "$ref": "base_schema/tria_roxas_data_schema.json"},
-    {
+    { "$ref": "base_schema/tria_roxasai_data_schema.json"},
+        {
       "type": "array",
       "items": {
         "type": "object",
@@ -113,60 +113,24 @@
             "htType": "character",
             "dtColGroup": "cols_paths"
           },
-          "configuration_file": {
+          "rings_segmentation_model": {
             "htType": "character",
             "dtColGroup": "cols_settings"
           },
-          "origin_calibrated_x": {
-            "htType": "numeric",
+          "cells_segmentation_model": {
+            "htType": "character",
             "dtColGroup": "cols_settings"
           },
-          "origin_calibrated_y": {
-            "htType": "numeric",
+          "rings_segmentation_datetime": {
+            "htType": "character",
             "dtColGroup": "cols_settings"
           },
-          "circ_lower_limit": {
-            "htType": "numeric",
+          "cells_segmentation_datetime": {
+            "htType": "character",
             "dtColGroup": "cols_settings"
           },
-          "circ_upper_limit": {
-            "htType": "numeric",
-            "dtColGroup": "cols_settings"
-          },
-          "min_cell_area": {
-            "htType": "numeric",
-            "dtColGroup": "cols_settings"
-          },
-          "max_cell_area": {
-            "htType": "numeric",
-            "dtColGroup": "cols_settings"
-          },
-          "dbl_cwt_threshold": {
-            "htType": "numeric",
-            "dtColGroup": "cols_settings"
-          },
-          "max_cwtrad_s": {
-            "htType": "numeric",
-            "dtColGroup": "cols_settings"
-          },
-          "max_cwtrad_l": {
-            "htType": "numeric",
-            "dtColGroup": "cols_settings"
-          },
-          "relwidth_cwt_window": {
-            "htType": "numeric",
-            "dtColGroup": "cols_settings"
-          },
-          "maxrel_opp_cwt": {
-            "htType": "numeric",
-            "dtColGroup": "cols_settings"
-          },
-          "max_cwttan_s": {
-            "htType": "numeric",
-            "dtColGroup": "cols_settings"
-          },
-          "max_cwttan_l": {
-            "htType": "numeric",
+          "sample_type": {
+            "htType": "dropdown",
             "dtColGroup": "cols_settings"
           },
           "comment": {
@@ -178,3 +142,4 @@
     }
   ]
 }
+

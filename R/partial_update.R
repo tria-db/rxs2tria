@@ -92,7 +92,7 @@ update_QWAdata <- function(x, imgs_to_update, meta,
   x_new <- collect_raw_data(files_to_update)
 
   # recalculate only the measures that already exist in x
-  meas_all <- c("tca", "rwd2", "dcwt", "cwtall.adj",
+  meas_all <- c("tca", "rwd2", "dcwt", "cwtall_adj",
                 "cdrad", "cdtan", "cdratio", "sector100", "ew_lw",
                 "eww", "lww")
   meas_to_recalc <- intersect(meas_all, c(names(x$cells), names(x$rings)))

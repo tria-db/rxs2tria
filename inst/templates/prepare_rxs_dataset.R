@@ -1,7 +1,8 @@
 # Prepare a QWA dataset from ROXAS output files
 # Copy this template to your working directory with:
 #   file.copy(system.file("templates/prepare_rxs_dataset.R", package = "rxs2tria"), ".")
-# See vignette("rxs2tria") for a detailed explanation of each step.
+# For more information, see https://tria-db.github.io/rxs2tria/articles/workflow.html,
+# or consult the help page for each function.
 
 library(rxs2tria)
 
@@ -9,8 +10,9 @@ library(rxs2tria)
 # Step 1: Locate ROXAS data files
 # ------------------------------------------------------------------------------
 
+roxas_version <- "roxas" # or "roxas_ai"
 path_in <- "path/to/ROXAS_data"
-files <- get_roxas_files(path_in, roxas_version = "roxas") # or "roxas_ai"
+files <- get_roxas_files(path_in, roxas_version) 
 
 # ------------------------------------------------------------------------------
 # Step 2: Extract the data structure from file names
@@ -22,7 +24,7 @@ files <- get_roxas_files(path_in, roxas_version = "roxas") # or "roxas_ai"
 # with alphanumeric components and one woodpiece per tree (no separate woodpiece
 # identifier). If your naming includes a woodpiece identifier, you can add it
 # (e.g. by including "(?<woodpiece>[[:alnum:]]+)" between the tree and slide groups).
-# See the documentation of extract_data_structure() for more information.
+# See ?extract_data_structure for more information.
 
 pattern <- "(?<site>[[:alnum:]]+)_(?<species>[[:alnum:]]+)_(?<tree>[[:alnum:]]+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)"
 df_structure <- extract_data_structure(files, pattern)
@@ -31,9 +33,10 @@ df_structure <- extract_data_structure(files, pattern)
 # View(df_structure)
 
 # ------------------------------------------------------------------------------
-# Step 3: Collect metadata from ROXAS files
+# Step 3: Collect metadata from ROXAS files into QWAimages object
 # ------------------------------------------------------------------------------
-# Use one of the two calls below depending on your software version:
+# Use one of the two calls below depending on the software version used to 
+# produce your data.
 
 # ROXAS (image EXIF data is collected separately from files_images):
 df_settings <- collect_settings_data(files_settings = df_structure$fname_settings,
@@ -46,17 +49,20 @@ df_settings <- collect_settings_data(files_settings = df_structure$fname_setting
 
 # Datetime columns are read as strings; convert them to POSIXct with the
 # appropriate format(s) and timezone for your data.
-df_settings$img_created_at <- lubridate::parse_date_time(
+img_created_at_converted <- lubridate::parse_date_time(
   df_settings$img_created_at,
   orders = "%Y:%m:%d %H:%M:%S", # common EXIF format
   tz = "UTC" # commonly used in EXIF tags
 )
+df_settings$img_created_at <- img_created_at_converted
+
 settings_date_orders <- c("%d.%m.%Y %H:%M:%S", "%d/%m/%Y %H:%M") # adjust to your locale
-df_settings$rxs_created_at <- lubridate::parse_date_time(
+rxs_created_at_converted <- lubridate::parse_date_time(
   df_settings$rxs_created_at,
   orders = settings_date_orders,
   tz = Sys.timezone()
 )
+df_settings$rxs_created_at <- rxs_created_at_converted
 
 rxs_images <- build_QWAimages(df_structure, df_settings)
 rm(df_structure, df_settings)
@@ -82,7 +88,7 @@ launch_metadata_app()
 
 # After exporting the completed QWAmetadata and closing the Shiny app, you may
 # read it in your R session with (not required for the steps below):
-# QWA_metadata <- read_QWAmetadata("path/to/output_data/example_dataset_QWAmetadata.json")
+# QWAmeta <- read_QWAmetadata("path/to/output_data/example_dataset_QWAmetadata.json")
 
 # ------------------------------------------------------------------------------
 # Step 4: Read and clean the measurement data
@@ -91,7 +97,10 @@ launch_metadata_app()
 # raw ROXAS output files into a QWAdata object.
 # Removes any outliers (negative values) and error codes in columns where they
 # could occur. Checks if the dating is valid and if CWT analysis was performed.
+
 QWA_data <- collect_raw_data(rxs_images)
+# or if loading full metadata from json after the Shiny app export:
+# QWA_data <- collect_raw_data(QWAmeta$images)
 
 # Add additional cell and ring measures, and ring quality flags
 # for duplicate rings (overlapping years from separate images), radially
@@ -210,7 +219,7 @@ QWA_data <- update_QWAdata(QWA_data,
 # files with your submission, these should be described in the resources
 # component of the QWAmetadata object, which you can compile as follows.
 
-QWA_metadata <- read_QWAmetadata("path/to/output_data/example_dataset_QWAmetadata.json")
-QWA_metadata <- add_resources(QWA_metadata, path = "path/to/submission_files")
+QWAmeta <- read_QWAmetadata("path/to/output_data/example_dataset_QWAmetadata.json")
+QWAmeta <- add_resources(QWAmeta, path = "path/to/submission_files")
 
-write_QWAmetadata(QWA_metadata, "path/to/output_data/example_dataset_QWAmetadata.json")
+write_QWAmetadata(QWAmeta, "path/to/output_data/example_dataset_QWAmetadata.json")

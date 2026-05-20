@@ -12,14 +12,14 @@
         "type": "string",
         "minLength": 1,
         "readOnly": true,
-        "title": "Woodpiece code",
+        "title": "Woodpiece label",
         "description": ""
       },
       "tree_label": {
         "type": "string",
         "minLength": 1,
         "readOnly": true,
-        "title": "Tree code",
+        "title": "Tree label",
         "description": ""
       },
       "n_slides": {

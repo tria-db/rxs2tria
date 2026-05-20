@@ -36,7 +36,7 @@ theme <- bslib::bs_theme(
 # ui ---------------------------------------------------------------------------
 ui <- bslib::page_fluid(
 
-  #shinyjs::useShinyjs(),
+  shinyjs::useShinyjs(),
   theme = theme,
 
   # additional CSS
@@ -116,46 +116,10 @@ ui <- bslib::page_fluid(
 
   #verbatimTextOutput("debug"), # for debugging,
 
-  # FOOTER ---------------------------------------------------------------------
-  # tags$footer(
-  #   class = "wsl-footer",
-  #   tags$img(src = "WSL_Logo_neg.png",
-  #            height = "30px", style = "vertical-align:middle; margin-right: 10px;"),
-  #   actionLink("contact_link", "Contact",
-  #              style = "color: white; margin-left: 20px; text-decoration: none;"),
-  # ),
 
 ) # end of ui
 
 
 
 
-# old css:
-# bs-btn-disabled-bg: #551345;
-# .handsontable .autocompleteEditor .htMacScroll {
-#   overflow: visible !important;
-# }
-# .accordion-tert .accordion-header {
-#   --bs-accordion-active-bg: ", tert_col_grad[2], " !important;
-# }
-# ".jstree-default .jstree-clicked {
-#   background: #C299B8 !important;
-#   background: -webkit-linear-gradient(top, #E0CCDB 0%, #C299B8 100%) !important;
-#                                         background: linear-gradient(to bottom, #E0CCDB 0%, #C299B8 100%) !important;
-# }
-# .jstree-default .jstree-wholerow-clicked {
-#   background: #C299B8 !important;
-#   background: -webkit-linear-gradient(top, #E0CCDB 0%, #C299B8 100%) !important;
-#                                         background: linear-gradient(to bottom, #E0CCDB 0%, #C299B8 100%) !important;
-# }"
-
-# .handsontableEditor .ht_master {
-#   height: 300px;
-#   overflow-y: visible !important;
-# }
-# .handsontableEditor .ht_clone_top {
-#   transform: none !important;
-# }
-# .htColumnHeaders {
-#   overflow: visible !important;
-# }
+#

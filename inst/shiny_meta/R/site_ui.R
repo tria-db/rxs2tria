@@ -57,7 +57,10 @@ site_ui <- function(id) {
         shiny::div(style="display: flex; justify-content: space-between; align-items: center;",
             shiny::span(shiny::tags$i("For valid site coordinates, markers are added to the map tool above.")),
             shiny::div(style = "margin-left: auto; margin-bottom: 0;",
-                shiny::fileInput(ns('file_sites'), "Load site data from file", accept = c(".csv",".json")))),
+            shiny::div(
+                title = "Coming soon",
+                style = "pointer-events: none; opacity: 0.5;",
+                shiny::fileInput(ns('file_sites'), "Load site data from file", accept = c(".csv",".json"))))),
         rhandsontable::rHandsontableOutput(ns("site_table")),
         shiny::hr(),
         shiny::p(shiny::tags$i("Are (some of the) sites part of a network? If so, please provide the network information below.")),
@@ -69,7 +72,10 @@ site_ui <- function(id) {
         'Trees',
         shiny::h5('Tree information'),
         shiny::div(style='float: right',
-            shiny::fileInput(ns('file_trees'), "Load tree data from file", accept = ".csv")),
+          shiny::div(
+                title = "Coming soon",
+                style = "pointer-events: none; opacity: 0.5;",
+            shiny::fileInput(ns('file_trees'), "Load tree data from file", accept = ".csv"))),
         shiny::br(),
         rhandsontable::rHandsontableOutput(ns("tree_table")),
       ),
@@ -78,7 +84,10 @@ site_ui <- function(id) {
         'Woodpieces',
         shiny::h5('Woodpiece information'),
         shiny::div(style='float: right',
-            shiny::fileInput(ns('file_wps'), "Load woodpiece data from file", accept = ".csv")),
+          shiny::div(
+                title = "Coming soon",
+                style = "pointer-events: none; opacity: 0.5;",
+            shiny::fileInput(ns('file_wps'), "Load woodpiece data from file", accept = ".csv"))),
         shiny::br(),
         rhandsontable::rHandsontableOutput(ns("wp_table")),
       ),
@@ -87,7 +96,10 @@ site_ui <- function(id) {
         'Slides',
         shiny::h5('Slide information'),
         shiny::div(style='float: right',
-            shiny::fileInput(ns('file_slides'), "Load slide data from file", accept = ".csv")),
+          shiny::div(
+                title = "Coming soon",
+                style = "pointer-events: none; opacity: 0.5;",
+            shiny::fileInput(ns('file_slides'), "Load slide data from file", accept = ".csv"))),
         shiny::br(),
         rhandsontable::rHandsontableOutput(ns("slide_table")),
       )

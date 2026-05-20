@@ -24,13 +24,12 @@ raw ROXAS / ROXAS AI output files to a submission-ready TRIA dataset.
 library(rxs2tria)
 ```
 
-
-## Step 1: Locate ROXAS files
+# Step 1: Locate ROXAS files
 
 Set the path to a folder containing the ROXAS or ROXAS AI output files
 of your QWA dataset. Files may be organized in subdirectories.
-`get_roxas_files()` checks that all required file types are present for
-each image and returns a structured list of their full file paths.
+`get_roxas_files()` checks that all required files are present for
+each image and returns a data frame of their full file paths.
 
 For **ROXAS**, the required files per image are:
 
@@ -44,21 +43,22 @@ For **ROXAS AI**, the required files per image are:
 - Cells table (`{IMAGEID}.cells_table.csv`)
 - Rings table (`{IMAGEID}.rings_table.csv`)
 - Metadata file (`{IMAGEID}.metadata.json`)
+- Image file (`{IMAGEID}.jpg` or `.jpeg`)
 
 ```{r, eval = FALSE}
+roxas_version <- "roxas" # or "roxas_ai"
 path_in <- "path/to/ROXAS_data"
-files <- get_roxas_files(path_in, roxas_version = "roxas") # or "roxas_ai"
+files <- get_roxas_files(path_in, roxas_version)
 ```
 
----
 
-## Step 2: Extract the data structure
+# Step 2: Extract the data structure
 
 QWA data are organized hierarchically: each analyzed *image* was taken
-of a microsection /*slide*, each slide was cut from a *woodpiece*, and
-each woodpiece was sampled from a *tree* of a certain *species* at a
-specific *site*. Typically, some or all of this information is encoded
-in the image file names.
+of a microsection /*slide*, each slide was cut from a *woodpiece* (e.g.
+a core or a wedge), and each woodpiece was sampled from a *tree* of a 
+certain *species* at a specific *site*. Typically, some or all of this 
+information is encoded in the image file names.
 [Fonti et al. (2025)](https://doi.org/10.3389/fpls.2025.1505389) recommend
 the naming convention:
 
@@ -72,13 +72,22 @@ expression with
 [named groups](https://stringr.tidyverse.org/articles/regular-expressions.html).
 Each named group (`site`, `species`, `tree`, `woodpiece`, `slide`,
 `image`) that appears in the pattern is extracted and used to construct
-the full hierarchical labels. Not all groups need to be in the pattern:
-if, for example, all images belong to the same site, `site_label` can
-be supplied as a fixed argument instead.
+the full hierarchical labels. 
+Not all groups need to be in the pattern:
+If, for example, all images belong to the same site, `site_label` can
+be supplied as a fixed argument instead. Or if each tree was cored
+exactly once, there may not be a specific woodpiece identifier.
+
+Adapt the pattern to match your naming convention using named regex groups.
+Supported group names: site, species, tree, woodpiece, slide, image.
+Example below assumes the common convention
+  `{site}_{species}_{tree}_{slide}_{image}`
+with alphanumeric components and one woodpiece per tree (no separate woodpiece
+identifier). If your naming includes a woodpiece identifier, you can add it
+ (e.g. by including "(?<woodpiece>[[:alnum:]]+)" between the tree and slide groups).
+See the documentation of `extract_data_structure()` for more information.
 
 ```{r, eval = FALSE}
-# Pattern for: {site}_{species}_{tree}_{slide}_{image}
-# (one woodpiece per tree, so no woodpiece group needed)
 pattern <- "(?<site>[[:alnum:]]+)_(?<species>[[:alnum:]]+)_(?<tree>[[:alnum:]]+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)"
 df_structure <- extract_data_structure(files, pattern)
 ```
@@ -87,18 +96,18 @@ df_structure <- extract_data_structure(files, pattern)
 proceeding to confirm that all labels were extracted correctly and the
 hierarchy is consistent.
 
----
 
-## Step 3: Collect metadata
+# Step 3: Collect metadata
 
-### From the ROXAS or ROXAS AI files
+## From the ROXAS or ROXAS AI files
 
 `collect_settings_data()` reads the per-image ROXAS settings (or ROXAS
 AI metadata) and, for classic ROXAS, also extracts EXIF data from the
 image files. The result is combined with the data structure from Step 2
 into a `QWAimages` object using `build_QWAimages()`.
 
-Use one of the two calls below depending on your software version:
+Use one of the two calls below depending on the software version used to 
+produce your data.
 
 ```{r, eval = FALSE}
 # ROXAS: image EXIF data is collected separately from the image files
@@ -114,21 +123,29 @@ df_settings <- collect_settings_data(files_settings = df_structure$fname_setting
 Datetime columns are read as raw character strings to avoid locale- and
 timezone-dependent conversion errors. You need to convert them
 explicitly to `POSIXct` with the format(s) and timezone appropriate for
-your data:
+your data. Make sure to address any conversion warnings before overwriting
+the columns in `df_settings`.
 
 ```{r, eval = FALSE}
-df_settings$img_created_at <- lubridate::parse_date_time(
+img_created_at_converted <- lubridate::parse_date_time(
   df_settings$img_created_at,
   orders = "%Y:%m:%d %H:%M:%S", # common EXIF format
-  tz = "UTC"                    # commonly used in EXIF tags
+  tz = "UTC" # commonly used in EXIF tags
 )
+df_settings$img_created_at <- img_created_at_converted
+
 settings_date_orders <- c("%d.%m.%Y %H:%M:%S", "%d/%m/%Y %H:%M") # adjust to your locale
-df_settings$rxs_created_at <- lubridate::parse_date_time(
+rxs_created_at_converted <- lubridate::parse_date_time(
   df_settings$rxs_created_at,
   orders = settings_date_orders,
   tz = Sys.timezone()
 )
+df_settings$rxs_created_at <- rxs_created_at_converted
 
+```
+
+Combine the extracted data into one object:
+```{r, eval = FALSE}
 rxs_images <- build_QWAimages(df_structure, df_settings)
 rm(df_structure, df_settings)
 
@@ -195,6 +212,8 @@ chronologies).
 
 ```{r, eval = FALSE}
 QWA_data <- collect_raw_data(rxs_images)
+# or if you already loaded the full metadata from json after completing Step 3:
+# QWA_data <- collect_raw_data(QWAmeta$images)
 
 exclude_mode <- "either"
 QWA_data <- complete_QWAdata(QWA_data, rxs_images, exclude_mode)

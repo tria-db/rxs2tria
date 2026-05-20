@@ -18,6 +18,6 @@ A dataframe containing the extracted data.
 }
 \description{
 Collect the exif data from all image files. Used preliminarily for data generated
-with classic ROXAS, for ROXAS AI the image exif inormation is already stored in the
+with classic ROXAS, for ROXAS AI the image exif information is already stored in the
 settings files.
 }

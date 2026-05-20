@@ -190,24 +190,32 @@ flags_server <- function(id, main_session, comments_out) {
 
       # site and species select inputs
       if (!is.null(rxsmeta_data)) {
-        shinyjs::show("filt_species")
         shinyjs::show("filt_site")
-
-        species_choices <- unique(rxsmeta_data$species_code)
-        shiny::updateSelectInput(session, "filt_species",
-                                 choices = species_choices,
-                                 selected = species_choices[1])
-
+        
         site_choices <- unique(rxsmeta_data$site_label)
-        filt_sites <- rxsmeta_data |>
-          dplyr::filter(species_code == species_choices[1]) |>
-          dplyr::pull(site_label) |>
-          unique()
+        filt_sites <- site_choices[1]
+        
+        # species column is opt, only show if we have it
+        if ("species_code" %in% names(rxsmeta_data)) {
+          shinyjs::show("filt_species")
+
+          species_choices <- unique(rxsmeta_data$species_code)
+          shiny::updateSelectInput(session, "filt_species",
+                                  choices = species_choices,
+                                  selected = species_choices[1])
+          # update preselected sites accordingly
+          filt_sites <- rxsmeta_data |>
+            dplyr::filter(species_code == species_choices[1]) |>
+            dplyr::pull(site_label) |>
+            unique()
+
+        } else {
+          shinyjs::hide("filt_species")
+        }
         shiny::updateSelectInput(session, "filt_site",
                                  choices = site_choices,
                                  selected = filt_sites)
       } else {
-        shinyjs::hide("filt_species")
         shinyjs::hide("filt_site")
 
         # without rxsmeta, just show all possible wp from rings_data
@@ -258,12 +266,16 @@ flags_server <- function(id, main_session, comments_out) {
 
     # update filter wp input based on sel site and species
     shiny::observe({
-      shiny::req(input_data$rxsmeta_data, input$filt_site, input$filt_species)
+      shiny::req(input_data$rxsmeta_data, input$filt_site)
       wp_choices <- input_data$rxsmeta_data |>
         dplyr::filter(
           site_label %in% input$filt_site,
-          species_code %in% input$filt_species
-        ) |>
+        ) 
+      if (shiny::isTruthy(input$filt_species)) {
+        wp_choices <- wp_choices |>
+          dplyr::filter(species_code %in% input$filt_species)
+      }
+      wp_choices <- wp_choices |>
         dplyr::pull(woodpiece_label) |>
         unique()
       shiny::updateSelectInput(
@@ -1213,18 +1225,18 @@ flags_server <- function(id, main_session, comments_out) {
     }) |> shiny::bindEvent(input$save_btn)
       
 
-    # DEBUG OUTPUT -------------------------------------------------------------
-    output$debug <- shiny::renderPrint({
-      #sel_subplots()
-      #flags_out()
-      #shiny::req(save_settings$initialized)
-      #images_edited()
-      #comments_out$goto_img()
-      #df <- traces_to_df(input$traces_crn)
-      #tail(df)
-      #rings_data_org()
-      #input$enter_key
-    })
+    # # DEBUG OUTPUT -------------------------------------------------------------
+    # output$debug <- shiny::renderPrint({
+    #   #sel_subplots()
+    #   #flags_out()
+    #   #shiny::req(save_settings$initialized)
+    #   #images_edited()
+    #   #comments_out$goto_img()
+    #   #df <- traces_to_df(input$traces_crn)
+    #   #tail(df)
+    #   #rings_data_org()
+    #   #input$enter_key
+    # })
 
 
     # return module exports
