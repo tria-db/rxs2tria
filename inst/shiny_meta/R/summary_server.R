@@ -16,6 +16,8 @@ summary_server <- function(id, main_session, start_out, dataset_out, site_out) {
     })
 
     output$DT_valcheck <- DT::renderDataTable({
+       shiny::validate(shiny::need(shiny::isTruthy(start_out$images()), "Start by loading input data first."))
+
       DT::datatable(
         valchecks_combined() |> dplyr::select(-dplyr::any_of(c('fname', 'tname'))),
         selection = 'none',
@@ -25,6 +27,7 @@ summary_server <- function(id, main_session, start_out, dataset_out, site_out) {
     })
 
     data_combined <- shiny::reactive({
+      shiny::req(start_out$images())
       images <- rxs2tria::QWAimages(start_out$images()) # nolint: object_name_linter
       rxs2tria:::new_QWAmetadata(
         dataset = dataset_out$dataset_tbls$dataset(),
@@ -91,6 +94,10 @@ summary_server <- function(id, main_session, start_out, dataset_out, site_out) {
       }
     )
 
+    shiny::observe({
+      shinyjs::toggleState("btn_save", condition = !is.null(start_out$images()))
+    })
+
     # Previous button
     shiny::observeEvent(input$btn_prev, {
       bslib::nav_select(id = 'tabs', selected = tab_site, session = main_session)
@@ -98,7 +105,7 @@ summary_server <- function(id, main_session, start_out, dataset_out, site_out) {
 
 
     # output$testing <- shiny::renderPrint({
-    #   valchecks_combined()
+    #   start_out$images()
     # })
   })
 }

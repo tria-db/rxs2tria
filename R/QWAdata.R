@@ -391,12 +391,12 @@ complete_flags <- function(x, meta, exclude_mode = c("either","incomplete_only")
         'incomplete_inner', 'incomplete_innerv2', 'incomplete_fct_check',
         'no_MRW_other')))
 
-  # cli::cli_inform(c(
-  #   "v" = "Ring flag columns completed",
-  #   "i" = "Derived flag columns: {.field {flag_cols_missing}}",
-  #   "i" = if (length(flag_cols_existing) > 0)
-  #           "Flag columns already present (not overwritten): {.field {flag_cols_existing}}"
-  # ))
+  cli::cli_inform(c(
+    "v" = "Ring flag columns completed",
+    "i" = "Derived flag columns: {.field {flag_cols_missing}}"
+    # "i" = if (length(flag_cols_existing) > 0)
+    #         "Flag columns already present (not overwritten): {.field {flag_cols_existing}}"
+  ))
 
   new_QWAdata(cells = x$cells, rings = df_rings_log)
 }

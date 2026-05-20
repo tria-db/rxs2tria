@@ -275,19 +275,18 @@ start_server <- function(id, main_session) {
     # create dataframe reactive to hot update
     # TODO: join with img_data_in for full columns
     image_data_out <- shiny::reactive({
-      shiny::req(input$image_table)
       df_out <- rhandsontable::hot_to_r(input$image_table)
-            if (!is.null(df) && nrow(df)>0) {
-      df_out <- df_out |> 
-          dplyr::mutate(ew_only = as.logical(.data$ew_only))
+      if (!is.null(df_out) && nrow(df_out)>0) {
+        df_out <- df_out |> 
+            dplyr::mutate(only_ew = as.logical(.data$only_ew))
+        df_in <- image_data_in()
+        df_out <- df_in |> dplyr::rows_update(df_out, by = "image_label")
       }
-
-      df_in <- image_data_in()
-      df_in |> dplyr::rows_update(df_out, by = "image_label")
+      df_out      
     })
 
     # output$testing <- shiny::renderPrint({
-    #   input_meta$site_tbls$sites
+    #   image_data_out()
     # })
 
     # return the input meta and val check for use in other tabs
