@@ -268,7 +268,7 @@ get_structure_from_filenames <- function(
   #   fs::path_select_components(filenames,1+incl_supdirs, "end"))
   df_structure <- as.data.frame(stringr::str_match(fnames, pattern)) |>
     dplyr::select(!"V1") |>
-    dplyr::mutate(org_img_name = as.character(fs::path_ext_remove(fs::path_file(filenames))),
+    dplyr::mutate(org_img_name = as.character(fs::path_file(filenames)),
                   .before = 1)
   
   df_structure <- tibble::tibble(
