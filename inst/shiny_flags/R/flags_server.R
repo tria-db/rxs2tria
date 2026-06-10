@@ -111,7 +111,7 @@ flags_server <- function(id, main_session, comments_out) {
             # load_data_csv(path_prf, path_rings, path_rxsmeta)
           }
         )
-
+        
         validate_input_dfs(res$prf_data, res$rings_data, res$rxsmeta_data)
 
         input_data$prf_data <- res$prf_data
@@ -1113,7 +1113,7 @@ flags_server <- function(id, main_session, comments_out) {
     # OPEN IMAGES --------------------------------------------------------------
     # when button is clicked
     shiny::observe({
-      shiny::req(sel_image())
+      shiny::req(sel_image(), input_data$rxsmeta_data)
       sel_img <- sel_image()
 
       image_path <- input_data$rxsmeta_data |>
@@ -1208,7 +1208,7 @@ flags_server <- function(id, main_session, comments_out) {
       shiny::removeModal()
       shiny::req(rings_data_edited())
       df_edited <- rings_data_edited()
-      df_org <- input_data$rings_data
+      df_org <- input_data$rings_data |> init_char_columns()
       save_ring_edits(df_edited, df_org, save_settings,
                       rxsmeta = input_data$rxsmeta_data,
                       handled = images_edited())
@@ -1218,7 +1218,7 @@ flags_server <- function(id, main_session, comments_out) {
       settings_set <- !save_settings$not_set
       shiny::req(settings_set, rings_data_edited())
       df_edited <- rings_data_edited()
-      df_org <- input_data$rings_data
+      df_org <- input_data$rings_data |> init_char_columns()
       save_ring_edits(df_edited, df_org, save_settings,
                       rxsmeta = input_data$rxsmeta_data,
                       handled = images_edited())
@@ -1226,17 +1226,19 @@ flags_server <- function(id, main_session, comments_out) {
       
 
     # # DEBUG OUTPUT -------------------------------------------------------------
-    # output$debug <- shiny::renderPrint({
-    #   #sel_subplots()
-    #   #flags_out()
-    #   #shiny::req(save_settings$initialized)
-    #   #images_edited()
-    #   #comments_out$goto_img()
-    #   #df <- traces_to_df(input$traces_crn)
-    #   #tail(df)
-    #   #rings_data_org()
-    #   #input$enter_key
-    # })
+    output$debug <- shiny::renderPrint({
+      #sel_subplots()
+      #flags_out()
+      #shiny::req(save_settings$initialized)
+      #images_edited()
+      #comments_out$goto_img()
+      #df <- traces_to_df(input$traces_crn)
+      #tail(df)
+      #rings_data_org()
+      #input$enter_key
+      str(input_data$rings_data)
+
+    })
 
 
     # return module exports

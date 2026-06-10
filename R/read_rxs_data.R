@@ -109,7 +109,7 @@ collect_raw_outputs <- function(df_structure, roxas_version, ftype) {
 
     colname_variants <- c(
       DHW = 'DH', # DH is hydraulically weighted mean diameter (Kolb & Sperry, 1998)
-      DWM = 'DH2' # while DH2 is mean hydraulic diameter (Tyree & Zimmermann, 2002)
+      DHM = 'DH2' # while DH2 is mean hydraulic diameter (Tyree & Zimmermann, 2002)
     )
 
     checkmate::assert_subset(c('fname_rings', 'image_label'), names(df_structure))

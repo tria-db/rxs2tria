@@ -38,8 +38,7 @@
       "fname_resource": {
         "type": ["string", "null"], 
         "title": "File path / name of the resource",
-        "description": "",
-        "$comment": "TODO: add validty check of values?"
+        "description": ""
       }
     },
     "required": ["resource_name", "resource_type"],

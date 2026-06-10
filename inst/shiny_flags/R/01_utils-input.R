@@ -197,7 +197,7 @@ load_data_env <- function(name_prf, name_rings, name_rxsmeta,
 #' rxsmeta_data
 load_data_csv <- function(path_prf, path_rings, path_rxsmeta,
                           specs = input_specs){
-  if (is.na(path_prf) || path_prf == "") {
+  if (is.null(path_prf) || is.na(path_prf) || path_prf == "") {
     prf_data_in <- NULL
   } else {
     # NOTE: col_types enforces existence and correct type or required cols
@@ -214,7 +214,7 @@ load_data_csv <- function(path_prf, path_rings, path_rxsmeta,
   rings_data_in <- vroom::vroom(path_rings,
                                 col_types = specs$rings_data$req_cols, guess_max = 1000)
 
-  if (is.na(path_rxsmeta) || path_rxsmeta == "") {
+  if (is.null(path_rxsmeta) || is.na(path_rxsmeta) || path_rxsmeta == "") {
     rxsmeta_data_in <- NULL
   } else {
     rxsmeta_data_in <- vroom::vroom(

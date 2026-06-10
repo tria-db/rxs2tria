@@ -175,7 +175,7 @@ completed submissions can be reloaded and continued at any time.
 launch_metadata_app()
 
 # After exporting and closing the app, optionally read the result back:
-# QWA_metadata <- read_QWAmetadata("path/to/output_data/example_dataset_QWAmetadata.json")
+# QWA_meta <- read_QWAmetadata("path/to/output_data/example_dataset_QWAmetadata.json")
 ```
 
 ---
@@ -213,7 +213,7 @@ chronologies).
 ```{r, eval = FALSE}
 QWA_data <- collect_raw_data(rxs_images)
 # or if you already loaded the full metadata from json after completing Step 3:
-# QWA_data <- collect_raw_data(QWAmeta$images)
+# QWA_data <- collect_raw_data(QWA_meta$images)
 
 exclude_mode <- "either"
 QWA_data <- complete_QWAdata(QWA_data, rxs_images, exclude_mode)
@@ -358,7 +358,7 @@ table), and appends the result to the existing resources list. Repeat
 for each relevant directory:
 
 ```{r, eval = FALSE}
-QWA_metadata <- read_QWAmetadata("path/to/output_data/example_dataset_QWAmetadata.json")
-QWA_metadata <- add_resources(QWA_metadata, path = "path/to/submission_files")
-write_QWAmetadata(QWA_metadata, "path/to/output_data/example_dataset_QWAmetadata.json")
+QWA_meta <- read_QWAmetadata("path/to/output_data/example_dataset_QWAmetadata.json")
+QWA_meta <- add_resources(QWA_meta, path = "path/to/submission_files")
+write_QWAmetadata(QWA_meta, "path/to/output_data/example_dataset_QWAmetadata.json")
 ```
