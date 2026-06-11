@@ -27,8 +27,7 @@
 #' @returns A data frame with columns `prefix`, `fname_image`, `fname_settings`,
 #'   `fname_cells` and `fname_rings` containing the full file paths.
 #' @export
-get_roxas_files <- function(path_in, roxas_version,
-                            exclude_dirs = NULL) {
+get_roxas_files <- function(path_in, roxas_version, exclude_dirs = NULL) {
   checkmate::assert_directory_exists(path_in)
   checkmate::assert_choice(roxas_version, c("roxas","roxas_ai"))
   checkmate::assert_character(exclude_dirs, null.ok = TRUE)
@@ -130,7 +129,7 @@ get_roxas_files <- function(path_in, roxas_version,
   if (any(is_incomplete)) {
     incomplete_prefixes <- df_files$prefix[is_incomplete]
     cli::cli_warn(c(
-      "!" ="{rv} file mismatch: incomplete sets found - check before continuing",
+      "!" = "{rv} file mismatch: incomplete sets found - check before continuing",
       "i" = "Four files (image, cells, rings, settings) are required per image, but",
       "i" = "{sum(is_incomplete)} prefix{?es} have missing files, returned with {.code NA}:",
       cli_truncated_list(incomplete_prefixes)
@@ -188,23 +187,24 @@ get_roxas_files <- function(path_in, roxas_version,
 #'   original file names appended for [extract_data_structure()]).
 #' @export
 #' @examples
-#' # the standard pattern {site}_{species}_{tree}_{slide}_{image}
+#' # the common pattern {site}_{species}_{tree}_{slide}_{image}
 #' pattern <- "(?<site>[[:alnum:]]+)_(?<species>[[:alnum:]]+)_(?<tree>[[:alnum:]]+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)"
 #' filenames <- c(
-#'   "SITEA_PISY_01_1_1.jpg",
-#'   "SITEA_PISY_01_1_2.jpg",
-#'   "SITEA_PISY_01_2_1.jpg",
-#'   "SITEB_LASI_02_1_1.jpg",
-#'   "SITEB_LASI_03_1_1.jpg"
+#'   "path/to/file/SITEA_PISY_01_1_1.jpg",
+#'   "path/to/file/SITEA_PISY_01_1_2.jpg",
+#'   "path/to/file/SITEA_PISY_01_2_1.jpg",
+#'   "path/to/file/SITEB_LASI_02_1_1.jpg",
+#'   "path/to/file/SITEB_LASI_03_1_1.jpg"
 #' )
 #' get_structure_from_filenames(filenames, pattern)
 #'
-#' # custom pattern of the form {tree}-{slide}_{image}
+#' # pattern of the form {tree}-{slide}_{image}
+#' # NOTE: filenames without full paths or extension also work
 #' filenames <- c(
-#'  "tree1-sl1_img1.jpg",
-#'  "tree1-sl2_img1.jpg",
-#'  "tree2-sl1_img1.jpg",
-#'  "tree2-sl1_img2.jpg"
+#'  "tree1-sl1_img1",
+#'  "tree1-sl2_img1",
+#'  "tree2-sl1_img1",
+#'  "tree2-sl1_img2"
 #'  )
 #'  pattern <- "(?<tree>[[:alnum:]].+)-(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)"
 #'  get_structure_from_filenames(
@@ -224,12 +224,12 @@ get_structure_from_filenames <- function(
   # if site_label provided then "site" not in pattern
   checkmate::assert_false(
     !is.null(site_label) &&
-      stringr::str_detect(pattern, "\\(\\?<(site)>[^)]+\\)"),
+      stringr::str_detect(pattern, "\\(\\?<(site)>[^)]+\\)")
   )
   # if species_code provided then "species" not in pattern
   checkmate::assert_false(
     !is.null(species_code) &&
-      stringr::str_detect(pattern, "\\(\\?<(species)>[^)]+\\)"),
+      stringr::str_detect(pattern, "\\(\\?<(species)>[^)]+\\)")
   )
 
   # replace group regex with {group} for human readable pattern in messages
@@ -250,11 +250,11 @@ get_structure_from_filenames <- function(
 
   duplicates <- fnames[duplicated(fnames)]
   if (length(duplicates) > 0) {
+    dup_groups <- split(filenames[fnames %in% duplicates], fnames[fnames %in% duplicates])
     cli::cli_abort(c(
       "Extracted structure must yield unique image identifiers",
-      "x" = "The following files yield duplicate image identifiers when",
-      " " = "extracting the pattern {.code {lbl_structure}}:",
-      cli_truncated_list(grep(paste(duplicates, collapse = "|"), filenames, value=TRUE))
+      "x" = "The following files yield duplicate identifiers with pattern {.code {lbl_structure}}:",
+      cli_truncated_groups(dup_groups)
     ))
   }
 
@@ -362,7 +362,7 @@ collect_image_info <- function(files_images, batch_size = 50) {
                        tags = c("FileType", "FileSize",
                                 "ImageWidth", "ImageHeight",
                                 "Software",
-                                "DateTimeOriginal", "DateCreated", # potential date tags
+                                "DateTimeOriginal", "DateCreated", # all potential date tags
                                 "DateTimeDigitized", "CreateDate"))
   })
 
@@ -377,7 +377,6 @@ collect_image_info <- function(files_images, batch_size = 50) {
         .data$DateTimeOriginal, .data$DateCreated,
         .data$DateTimeDigitized, .data$CreateDate
       ),
-      # scan_mode = NA_character_, # TODO: part of ROXAS AI metadata, do we need it?
       .keep = "unused" # remove the original exif date cols
     ) 
 
@@ -410,6 +409,7 @@ collect_image_info <- function(files_images, batch_size = 50) {
 # TODO: finalize support for ROXAS AI
 extract_roxas_settings <- function(file_settings, roxas_version) {
   checkmate::assert_choice(roxas_version, c("roxas","roxas_ai"))
+  
   if (roxas_version == "roxas") {
     # read from a single settings txt file
     df_settings <- vroom::vroom(file_settings,
@@ -419,21 +419,23 @@ extract_roxas_settings <- function(file_settings, roxas_version) {
 
     # NOTE: this relies heavily on the consistent layout of the settings file
     # in particular, we need tab delimiters, columns RNUM and SETTING,
-    # and the right values in the rows 8,9,10,12,13,17,20,31,33,166,203:208!
+    # and the right values in the rows 8,9,10,12,13,17,20,31,33,166,203:208,247!
     df_settings <- df_settings |>
       dplyr::filter(.data$RNUM %in% c(8,9,10,
                                       12,13,
                                       17,18,19,20,
                                       31,33,166,
-                                      203,204,205,206,207,208
+                                      203,204,205,206,207,208,
+                                      247
                                       )) |>
       dplyr::mutate(new_names = c(
         "configuration_file", "rxs_created_at", "sw_version",
         "spatial_resolution", "origin_calibrated",
         "meas_geometry", "circ_lower_limit", "circ_upper_limit", "outmost_year",
-        "min_cell_area", "max_cell_area", "dbl_cwt_threshold",
+        "min_cell_area", "max_cell_area", "cluster_dbl_cwt_threshold",
         "max_cwtrad_s", "max_cwtrad_l", "relwidth_cwt_window", "maxrel_opp_cwt",
-        "max_cwttan_s", "max_cwttan_l"
+        "max_cwttan_s", "max_cwttan_l",
+        "rw_reference_file"
       )) |>
       dplyr::select("SETTING", "new_names") |>
       tidyr::pivot_wider(names_from = "new_names", values_from = "SETTING") |>
@@ -447,7 +449,8 @@ extract_roxas_settings <- function(file_settings, roxas_version) {
                                                origin_calibrated_y = ".+")) |>
       dplyr::mutate(dplyr::across(c("origin_calibrated_x", "origin_calibrated_y"), as.numeric)) |>
       dplyr::relocate("fname_settings", "software", "sw_version")
-  } else {
+
+  } else { # ROXAS AI
     # read from a single metadata json file
     raw <- jsonlite::read_json(file_settings, simplifyVector = TRUE)
     df_settings <- raw |> 
@@ -455,26 +458,28 @@ extract_roxas_settings <- function(file_settings, roxas_version) {
       tibble::as_tibble() |> 
       tidyr::unnest_wider(col = "scan_size", names_sep = "_") |> 
       tidyr::unnest_wider(col = "scan_exif") |>
-      dplyr::bind_rows(data.frame("Software" = character(0), # ensure we have all columns even if scan_exis is null
+      dplyr::bind_rows(data.frame("Software" = character(0), # ensure we have all columns even if scan_exif is null
         "DateTimeOriginal" = character(0),
         "DateTimeDigitized"= character(0))) |> 
-      dplyr::select(!"scan_info") |> # TODO: include or not?
+      dplyr::select(!"scan_info", !"scan_mode") |> # TODO: confirm that we can ignore these
       dplyr::rename(c(
-        # config files: rings_segmentation_model, cells_segmentation_model,
-        # analysis created at: rings_segmentation_datetime, cells_segmentation_datetime (both? choose? measurements?)
-        # TODO: sw_version - there is currently no ROXAS AI version in the file?
-        # sample_type: new, provide by user for classic?
-        "spatial_resolution" = "sample_scale",
-        # no calibrated origin anymore (?)
-        "meas_geometry" = "sample_geometry",
-        "outmost_year" = "rings_outmost_complete_year",
-        # TODO: will include model filter settings in future versions?
-        "img_filetype" = "scan_format", # TODO: what about img_size?
-        "img_width" = "scan_size_1",
+        # config file: instead we have rings_segmentation_model, cells_segmentation_model
+        # TODO: analysis created at will be implemented under meas_created_at
+        # TODO: sw_version - will be implemented
+        # sample_type: new
+        "spatial_resolution" = "sample_scale", # TODO: will be renamed to fit
+        # origin_calibrated: no calibrated origin atm, might be implemented later for circular samples
+        "meas_geometry" = "sample_geometry",  # TODO: will be renamed to fit
+        "outmost_year" = "rings_outmost_complete_year", # TODO: note somewhere that this only corresponds to the ROXAS var if outermost ring boundary drawn, else its -1
+        # TODO: filtering attributes (similar but not identical to ROXAS vars) still to be implemented
+        # e.g. will also have cluster_dbl_cwt_threshold
+        # TODO: will there be a rwl reference file var?
+        "img_filetype" = "scan_format", 
+        # TODO: img_size - will be implemented 
+        "img_width" = "scan_size_1", # TODO: these might be renamed to fit?
         "img_height" = "scan_size_2",
         "img_software" = "Software"
-        # scan_mode -> add to classic version from exif if possible?
-        # DateTimeOriginal, DateTimeDigitized -> use min as img_created_at
+        # DateTimeOriginal, DateTimeDigitized -> use coalesce to get img_created_at
       )) |>
       dplyr::mutate(
         fname_settings = file_settings, 
@@ -486,12 +491,11 @@ extract_roxas_settings <- function(file_settings, roxas_version) {
       dplyr::select(
         dplyr::any_of(c(
           "fname_settings", "sample_type", "meas_geometry", 
-          "img_filetype", "img_width", "img_height", "img_size", "img_software", "scan_mode",
+          "img_filetype", "img_width", "img_height", "img_size", "img_software",
           "DateTimeOriginal", "DateTimeDigitized", 
           "spatial_resolution",
           "software", "sw_version", "rxs_created_at", "outmost_year",
-          "rings_segmentation_model", "cells_segmentation_model",
-          "rings_segmentation_datetime", "cells_segmentation_datetime"
+          "rings_segmentation_model", "cells_segmentation_model"
         ))
       )
   }
@@ -540,9 +544,8 @@ collect_settings_data <- function(files_settings,
     # convert columns to numeric and integer
     df_settings_all <- df_settings_all |>
       dplyr::mutate(dplyr::across(c("spatial_resolution",
-                                    "dbl_cwt_threshold":"max_cwttan_l"), as.numeric),
+                                    "cluster_dbl_cwt_threshold":"max_cwttan_l"), as.numeric),
                     dplyr::across("circ_lower_limit":"max_cell_area", as.integer)
-                    #sample_type = NA_character_ # TODO: as input?
                   )
     # collect image EXIF metadata and bind alongside settings columns
     # NOTE: files_images and files_settings need to be in the same order
@@ -555,14 +558,15 @@ collect_settings_data <- function(files_settings,
     df_settings_all <- df_settings_all |>
       dplyr::mutate(dplyr::across(c("spatial_resolution"), as.numeric),
                     dplyr::across(c("img_width", "img_height", "outmost_year"), as.integer)) |>
-      dplyr::mutate(  # we know the fixed ISO format for ROXAS AI
-        rings_segmentation_datetime = lubridate::parse_date_time(.data$rings_segmentation_datetime, orders = "ymdHMS"),
-        cells_segmentation_datetime = lubridate::parse_date_time(.data$cells_segmentation_datetime, orders = "ymdHMS"),
-        rxs_created_at = pmax(.data$rings_segmentation_datetime, .data$cells_segmentation_datetime, na.rm = TRUE)
+      dplyr::mutate(  # TODO: change to meas_created_at // we know the fixed ISO format for ROXAS AI
+        #rings_segmentation_datetime = lubridate::parse_date_time(.data$rings_segmentation_datetime, orders = "ymdHMS"),
+        #cells_segmentation_datetime = lubridate::parse_date_time(.data$cells_segmentation_datetime, orders = "ymdHMS"),
+        #rxs_created_at = pmax(.data$rings_segmentation_datetime, .data$cells_segmentation_datetime, na.rm = TRUE)
+        rxs_created_at = lubridate::parse_date_time(.data$rxs_created_at, orders = "ymdHMS"),
       ) |> 
       dplyr::mutate(
         img_created_at = dplyr::coalesce(.data$DateTimeOriginal, .data$DateTimeDigitized),
-        .keep = "unused", .after = "scan_mode"
+        .keep = "unused", .after = "img_software"
       )
   }
 

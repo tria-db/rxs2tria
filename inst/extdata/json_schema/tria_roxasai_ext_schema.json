@@ -77,10 +77,6 @@
             "htType": "character",
             "dtColGroup": "cols_images"
           },
-          "scan_mode": {
-            "htType": "character",
-            "dtColGroup": "cols_images"
-          },
           "software": {
             "htType": "dropdown",
             "dtColGroup": "cols_settings"
@@ -118,14 +114,6 @@
             "dtColGroup": "cols_settings"
           },
           "cells_segmentation_model": {
-            "htType": "character",
-            "dtColGroup": "cols_settings"
-          },
-          "rings_segmentation_datetime": {
-            "htType": "character",
-            "dtColGroup": "cols_settings"
-          },
-          "cells_segmentation_datetime": {
             "htType": "character",
             "dtColGroup": "cols_settings"
           },

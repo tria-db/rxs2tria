@@ -21,18 +21,6 @@
             "title": "Cells model",
             "description": "Description"
           },
-          "rings_segmentation_datetime": {
-            "type": ["string", "null"],
-            "format": "date-time",
-            "title": "Rings analysis created",
-            "description": "Description"
-          },
-          "cells_segmentation_datetime": {
-            "type": ["string", "null"],
-            "format": "date-time",
-            "title": "Cells analysis created",
-            "description": "Description"
-          },
           "sample_type": {
             "type": ["string", "null"],
             "enum": ["", "conifer", "angiosperm"],

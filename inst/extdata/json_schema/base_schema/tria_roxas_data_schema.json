@@ -50,10 +50,10 @@
             "title": "max_cell_area",
             "description": "Cell area upper threshold [µm²]"
           },
-          "dbl_cwt_threshold": {
+          "cluster_dbl_cwt_threshold": {
             "type": ["number", "null"],
             "minimum": 0,
-            "title": "dbl_cwt_threshold",
+            "title": "cluster_dbl_cwt_threshold",
             "description": "Double cell wall thickness threshold [µm]"
           },
           "max_cwtrad_s": {
@@ -91,6 +91,11 @@
             "minimum": 0,
             "title": "max_cwttan_l",
             "description": "Max. tangential CWT of largest tracheids [µm]"
+          },
+          "rw_reference_file": {
+            "type": ["string", "null"],
+            "title": "RW reference file",
+            "description": "Name of the rwl file used as dating reference"
           }
         },
         "required": ["configuration_file"]

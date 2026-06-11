@@ -77,10 +77,6 @@
             "htType": "character",
             "dtColGroup": "cols_images"
           },
-          "scan_mode": {
-            "htType": "character",
-            "dtColGroup": "cols_images"
-          },
           "software": {
             "htType": "dropdown",
             "dtColGroup": "cols_settings"
@@ -141,7 +137,7 @@
             "htType": "numeric",
             "dtColGroup": "cols_settings"
           },
-          "dbl_cwt_threshold": {
+          "cluster_dbl_cwt_threshold": {
             "htType": "numeric",
             "dtColGroup": "cols_settings"
           },
@@ -167,6 +163,10 @@
           },
           "max_cwttan_l": {
             "htType": "numeric",
+            "dtColGroup": "cols_settings"
+          },
+          "rw_reference_file": {
+            "htType": "character",
             "dtColGroup": "cols_settings"
           },
           "comment": {

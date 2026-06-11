@@ -108,12 +108,6 @@
       "title": "Scanner software",
       "description": "Software used to scan the image"
     },
-    "scan_mode": {
-      "type": ["string", "null"],
-      "enum": ["", "RGB", "other"],
-      "title": "Scan mode",
-      "description": "Image colour mode (e.g. RGB)"
-    },
     "software": {
       "type": "string",
       "minLength": 1,

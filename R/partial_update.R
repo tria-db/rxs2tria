@@ -29,7 +29,8 @@ update_QWAimages <- function(meta, imgs_to_update,
                .progress = list(name = glue::glue("Reading {rv_file} files..."), clear = TRUE))
   df_settings_new <- purrr::list_rbind(results)
 
-  num_cols <- c("spatial_resolution", "dbl_cwt_threshold", "max_cwtrad_s", "max_cwtrad_l",
+  # TODO: get from schema?
+  num_cols <- c("spatial_resolution", "cluster_dbl_cwt_threshold", "max_cwtrad_s", "max_cwtrad_l",
     "relwidth_cwt_window", "maxrel_opp_cwt", "max_cwttan_s", "max_cwttan_l")
   int_cols <- c("circ_lower_limit", "circ_upper_limit", "outmost_year", 
     "min_cell_area", "max_cell_area")
