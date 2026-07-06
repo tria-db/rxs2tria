@@ -435,11 +435,11 @@ write_QWAmetadata <- function(x, file, compress = FALSE, overwrite = TRUE) {
   checkmate::assert_path_for_output(file, overwrite = overwrite)
   if (compress){
     write(
-      jsonlite::toJSON(x, na = "null", POSIXt = "ISO8601"),
+      jsonlite::toJSON(x, na = "null", POSIXt = "ISO8601", digits = NA),
       gzfile(file)
     )
   } else {
-    jsonlite::write_json(x, file, na = "null", POSIXt = "ISO8601", pretty = TRUE)
+    jsonlite::write_json(x, file, na = "null", POSIXt = "ISO8601", digits = NA, pretty = TRUE)
   }
   
   cli::cli_inform(c("v" = "QWAmetadata written to {.file {file}}"))

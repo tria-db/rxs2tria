@@ -34,21 +34,21 @@ get_roxas_files <- function(path_in, roxas_version, exclude_dirs = NULL) {
   
   # regex patterns to be matched by the different ROXAS files
   # image files might include annotated images, etc., these are filtered out with keywords
-  if (roxas_version == "roxas"){
+  if (roxas_version == "roxas") {
     pattern_cell_files <- "_Output_Cells\\.txt$"
     pattern_ring_files <- "_Output_Rings\\.txt$"
     pattern_settings_files <- "_ROXAS_Settings\\.txt$"
-    pattern_orgimg_files <- "\\.(jpg|jpeg)$" # expand to "\\.(jpg|jpeg|png|gif|bmp|tiff)$"?
+    pattern_orgimg_files <- "\\.(jpg|jpeg|png|bmp|tiff)$"
     rv <- "ROXAS"
   } else {
     pattern_cell_files <- "\\.cells_table\\.csv$"
     pattern_ring_files <- "\\.rings_table\\.csv$"
     pattern_settings_files <- "\\.metadata\\.json$"
-    pattern_orgimg_files <- "\\.scan\\.(jpg|jpeg)$" # .rxs in future? expand to "\\.(jpg|jpeg|png|gif|bmp|tiff)$"?
-    pattern_excl_keywords <- NULL
+    pattern_orgimg_files <- "\\.scan\\.(jpg|jpeg|png|bmp|tiff)$" # TODO: 'scan' might change to 'rxs' in future
     rv <- "ROXAS AI"
   }
-  imgfiles_exclude_keywords <- c("annotated", "ReferenceSeries", "Preview")
+  imgfiles_exclude_keywords <- c("annotated", "ReferenceSeries", "Preview", 
+                                 "\\.cells\\.", "\\.rings\\.")
   pattern_excl_keywords <- paste(imgfiles_exclude_keywords, collapse = "|")
   
   files_cells <- fs::dir_ls(
@@ -75,7 +75,7 @@ get_roxas_files <- function(path_in, roxas_version, exclude_dirs = NULL) {
     stringr::str_subset(pattern = pattern_excl_keywords, negate = TRUE)
 
   if (!is.null(exclude_dirs)) {
-    excl_dirs_pattern <- paste0("/(", paste(exclude_dirs, collapse = "|"), ")(/|$)")
+    excl_dirs_pattern <- paste0("/(", paste(stringr::str_escape(exclude_dirs), collapse = "|"), ")(/|$)")
     files_cells <- stringr::str_subset(files_cells, excl_dirs_pattern, negate = TRUE)
     files_rings <- stringr::str_subset(files_rings, excl_dirs_pattern, negate = TRUE)
     files_settings <- stringr::str_subset(files_settings, excl_dirs_pattern, negate = TRUE)
@@ -219,9 +219,9 @@ get_structure_from_filenames <- function(
   checkmate::assert_string(pattern)
   checkmate::assert_string(site_label, null.ok = TRUE)
   checkmate::assert_string(species_code, null.ok = TRUE)
-  # site_label provided or "site" in pattern (%??% is checkmate's coalesce operator)
-  checkmate::assert_string(site_label %??% pattern, pattern = site_label %??% "site")
-  # if site_label provided then "site" not in pattern
+  # site_label provided or named group "site" in pattern (%??% is checkmate's coalesce operator)
+  checkmate::assert_string(site_label %??% pattern, pattern = site_label %??% "\\(\\?<(site)>[^)]+\\)")
+  # if site_label provided then "site" group not in pattern
   checkmate::assert_false(
     !is.null(site_label) &&
       stringr::str_detect(pattern, "\\(\\?<(site)>[^)]+\\)")
