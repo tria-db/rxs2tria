@@ -389,6 +389,43 @@ tippy_renderer <- function(tippies) {
 }
 
 
+#' Render a metadata input rhandsontable with per-column validators and tooltips
+#'
+#' Builds an editable rhandsontable with column headers, tippy tooltips and the
+#' per-column validation renderers derived from the schema-based column configs.
+#' Column headers and tooltips are ordered to match `data`.
+#'
+#' @param data data.frame to display.
+#' @param tbl_props Named list of column configs (from `get_tbl_props()`).
+#' @param renderers Named list of JS renderers (from `build_tbl_renderers()`);
+#'   if `NULL`, renderers are built per column on the fly.
+#' @param fixed_cols Number of left columns to freeze (default 0).
+#' @returns An `rhandsontable` htmlwidget.
+render_meta_hot <- function(data, tbl_props, renderers = NULL, fixed_cols = 0) {
+  colHeaders <- sapply(tbl_props, function(x) x$title)[names(data)]
+  tippies    <- sapply(tbl_props, function(x) x$description)[names(data)]
+
+  ht_height <- min(max(nrow(data) * ht_row_height, ht_min_height), ht_max_height)
+
+  ht <- rhandsontable::rhandsontable(
+    data,
+    rowHeaders = TRUE,
+    contextMenu = FALSE,
+    stretchH = "all",
+    height = ht_height,
+    colHeaders = unname(colHeaders),
+    afterGetColHeader = tippy_renderer(tippies))
+  if (fixed_cols > 0) {
+    ht <- ht |> rhandsontable::hot_cols(fixedColumnsLeft = fixed_cols)
+  }
+  purrr::reduce(
+    names(colHeaders),
+    function(ht, col) hot_col_wrapper(ht, colHeaders[col], tbl_props[[col]], renderers[[col]]),
+    .init = ht
+  )
+}
+
+
 # hot_col_wrapper <- function(ht, col, col_config) {
 #   readOnly <- col_config$readOnly %||% FALSE
 #   # for char cols:

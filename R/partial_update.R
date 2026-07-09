@@ -7,43 +7,50 @@
 #' @param meta a [QWAimages] object
 #' @param imgs_to_update character vector of `image_label` values to update;
 #'   must be a subset of `meta$image_label`
+#' @param imgs_date_orders Character; date order string(s) passed to
+#'   [lubridate::parse_date_time()] to parse the `img_created_at` field
 #' @param settings_date_orders Character; date order string(s) passed to
 #'   [lubridate::parse_date_time()] to parse the `rxs_created_at` field
 #' @returns An updated [QWAimages] object
 #' @export
-update_QWAimages <- function(meta, imgs_to_update,
-                             settings_date_orders) {
+update_QWAimages <- function(meta, imgs_to_update, 
+                             imgs_date_orders, settings_date_orders = NULL,
+                             imgs_date_tz = Sys.timezone(), settings_date_tz = Sys.timezone()
+                            ) {
   checkmate::assert_class(meta, "QWAimages")
   checkmate::assert_subset(imgs_to_update, meta$image_label)
 
-  files_to_update <- meta |>
-    dplyr::filter(image_label %in% imgs_to_update) |> 
-    dplyr::pull(fname_settings)
+  # files_to_update <- meta |>
+  #   dplyr::filter(image_label %in% imgs_to_update) |> 
+  #   dplyr::pull(fname_settings)
 
   roxas_version <- attr(meta, "roxas_version")
 
-  # read in settings files again (cf. collect_settings_data())
-  rv_file <- if (roxas_version == "roxas") "ROXAS settings" else "ROXAS AI metadata"
-  results <- files_to_update |>
-    purrr::map(\(x) extract_roxas_settings(x, roxas_version = roxas_version),
-               .progress = list(name = glue::glue("Reading {rv_file} files..."), clear = TRUE))
-  df_settings_new <- purrr::list_rbind(results)
+  # read in settings files again
+  # rv_file <- if (roxas_version == "roxas") "ROXAS settings" else "ROXAS AI metadata"
+  # results <- files_to_update |>
+  #   purrr::map(\(x) read_roxas_settings(x, roxas_version = roxas_version),
+  #              .progress = list(name = glue::glue("Reading {rv_file} files..."), clear = TRUE))
+  # df_settings_new <- purrr::list_rbind(results)
+  df_settings_new <- collect_settings_data(meta |>
+    dplyr::filter(image_label %in% imgs_to_update))
 
-  # TODO: get from schema?
-  num_cols <- c("spatial_resolution", "cluster_dbl_cwt_threshold", "max_cwtrad_s", "max_cwtrad_l",
-    "relwidth_cwt_window", "maxrel_opp_cwt", "max_cwttan_s", "max_cwttan_l")
-  int_cols <- c("circ_lower_limit", "circ_upper_limit", "outmost_year", 
-    "min_cell_area", "max_cell_area")
-  df_settings_new <- df_settings_new |>
-      dplyr::mutate(dplyr::across(dplyr::any_of(num_cols), as.numeric),
-                    dplyr::across(dplyr::any_of(int_cols), as.integer)
-                    #sample_type = NA_character_ # TODO: as input?
-                  )
-  # convert created at dates to POSIXct
-  df_settings_new$rxs_created_at <- lubridate::parse_date_time(
-    df_settings_new$rxs_created_at,
-    orders = settings_date_orders, # cf. lubridate::parse_date_time
-    tz = Sys.timezone())
+  # coerce raw character columns to their target types (shared with collect_settings_data)
+  df_settings_new <- cast_settings_types(df_settings_new, roxas_version)
+  
+  # convert img_created_at dates to POSIXct
+    df_settings_new$img_created_at <- df_settings_new$img_created_at |> 
+      lubridate::parse_date_time(
+        orders = imgs_date_orders, # cf. lubridate::parse_date_time
+        tz = imgs_date_tz)
+
+  # convert rxs_created_at dates to POSIXct (already done for standardized roxas ai)
+  if (roxas_version == "roxas") {
+    df_settings_new$rxs_created_at <- df_settings_new$rxs_created_at |> 
+      lubridate::parse_date_time(
+        orders = settings_date_orders, # cf. lubridate::parse_date_time
+        tz = settings_date_tz)
+  }
 
   # UPDATE THE DATAFRAME WITH THE NEW SETTINGS INFO
   meta <- meta |>

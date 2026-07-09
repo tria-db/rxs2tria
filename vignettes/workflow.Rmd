@@ -106,18 +106,21 @@ AI metadata) and, for classic ROXAS, also extracts EXIF data from the
 image files. The result is combined with the data structure from Step 2
 into a `QWAimages` object using `build_QWAimages()`.
 
-Use one of the two calls below depending on the software version used to 
-produce your data.
+Passing the data structure directly, the ROXAS version is auto-detected
+from the settings file names, and for classic ROXAS the image EXIF data is
+read from the `fname_image` column.
 
 ```{r, eval = FALSE}
-# ROXAS: image EXIF data is collected separately from the image files
+df_settings <- collect_settings_data(df_structure)
+```
+
+Alternatively, the settings (and, for classic ROXAS, image) file paths can be
+supplied individually, and the version can be set explicitly:
+
+```{r, eval = FALSE}
 df_settings <- collect_settings_data(files_settings = df_structure$fname_settings,
                                      files_images = df_structure$fname_image,
                                      roxas_version = "roxas")
-
-# ROXAS AI: image EXIF data is already part of the JSON metadata files
-df_settings <- collect_settings_data(files_settings = df_structure$fname_settings,
-                                     roxas_version = "roxas_ai")
 ```
 
 Datetime columns are read as raw character strings to avoid locale- and
@@ -347,18 +350,36 @@ QWA_data <- update_QWAdata(QWA_data,
 ## Step 7: Compile resources (optional)
 
 A TRIA submission must include at minimum the `QWAmetadata` `.json` and
-the `QWAdata` `.csv` files. If you want to provide additional files
-(original images, annotated images, reference series `.rwl` files,
-etc.), these must be listed in the `$resources` component of the
-`QWAmetadata` object.
+the `QWAdata` `.csv` files. If you want to provide additional
+(supplementary) files — original images, annotated images, raw ROXAS /
+ROXAS AI output, reference series `.rwl` files, etc. — these are listed
+in the `$resources` component of the `QWAmetadata` object.
 
-`add_resources()` scans a directory, infers the resource type of each
-file from its name (see `?infer_resource_type` for the full pattern
-table), and appends the result to the existing resources list. Repeat
-for each relevant directory:
+`add_resources()` scans a directory and appends the files it finds to
+`$resources` as a table with one row per file. For each file it infers
+the `resource_type` from the file name, sets the hierarchy level it
+belongs to (`linked_level`), and records an MD5 `checksum` and
+`size_bytes` for integrity checking on upload. Per-image files are also
+matched to their `image_label` (the `linked_label` column) using the
+object's `$images` component. Repeat the call for each relevant
+directory; set `recursive = TRUE` to descend into nested folders:
 
 ```{r, eval = FALSE}
 QWA_meta <- read_QWAmetadata("path/to/output_data/example_dataset_QWAmetadata.json")
-QWA_meta <- add_resources(QWA_meta, path = "path/to/submission_files")
+QWA_meta <- add_resources(QWA_meta, path = "path/to/raw_roxas_files", recursive = TRUE)
+QWA_meta <- add_resources(QWA_meta, path = "path/to/annotated_images")
+```
+
+Review the table — in particular, complete any `linked_label` values
+that were not filled automatically — and then write the object back to
+disk:
+
+```{r, eval = FALSE}
+QWA_meta$resources
 write_QWAmetadata(QWA_meta, "path/to/output_data/example_dataset_QWAmetadata.json")
 ```
+
+Listing the files does not move or compress them; how they are packaged
+for storage is handled downstream. See `vignette("resources")` for the
+full resource-type table, the meaning of each column, and how to link
+resources to the data hierarchy.

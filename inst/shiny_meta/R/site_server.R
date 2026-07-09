@@ -38,32 +38,25 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
 
 
     # SITE MAP -----------------------------------------------------------------
-    # site coordinates reactiveVal, updates IFF coord cols in site_data_out change
-    site_coordinates <- shiny::reactiveVal(NULL)
-
-    shiny::observeEvent(site_data_out(),{
-      # TODO: read valid range from tbl schema?
-      min_lng <- -180
-      max_lng <- 180
-      min_lat <- -90
-      max_lat <- 90
-
-      # get valid pairs of coordinates from table
-      site_coords <- site_data_out() |>
+    # distinct, valid (in-range) coordinate pairs from a site data frame
+    get_valid_coords <- function(df) {
+      df |>
         dplyr::select(longitude, latitude) |>
         dplyr::mutate(
           longitude = suppressWarnings(as.numeric(longitude)),
           latitude = suppressWarnings(as.numeric(latitude))
         ) |>
-        dplyr::mutate(
-          longitude = ifelse(longitude < min_lng | longitude > max_lng, NA, longitude),
-          latitude = ifelse(latitude < min_lat | latitude > max_lat, NA, latitude)
-        ) |>
-        dplyr::filter(!is.na(longitude) & !is.na(latitude)) |>
+        # TODO: read valid range from tbl schema?
+        dplyr::filter(longitude >= -180 & longitude <= 180 &
+                      latitude >= -90 & latitude <= 90) |>
         dplyr::distinct()
+    }
 
-      # update reactive
-      site_coordinates(site_coords)
+    # site coordinates reactiveVal, drives the map markers
+    site_coordinates <- shiny::reactiveVal(NULL)
+
+    shiny::observeEvent(site_data_out(), {
+      site_coordinates(get_valid_coords(site_data_out()))
     }, ignoreInit = TRUE)
 
     # render Leaflet map
@@ -91,33 +84,14 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
     # render editable table
     output$site_table <- rhandsontable::renderRHandsontable({
       shiny::validate(shiny::need(!is.null(site_data_in()), "No data to show. Load input data."))
-
-      colHeaders <- sapply(site_tbl_props, function(x) x$title)
-      colHeaders <- colHeaders[names(site_data_in())] # ensure correct order
-      tippies <- sapply(site_tbl_props, function(x) x$description)
-
-      n_rows <- nrow(site_data_in())
-      ht_height <- min(max(n_rows * ht_row_height, ht_min_height), ht_max_height)
-
-      ht <- rhandsontable::rhandsontable(
-        site_data_in(),
-        rowHeaders = TRUE,
-        contextMenu = FALSE,
-        stretchH = "all",
-        height = ht_height,
-        colHeaders = unname(colHeaders),
-        afterGetColHeader = tippy_renderer(tippies)) |>
-        rhandsontable::hot_cols(fixedColumnsLeft = 1)
-      purrr::reduce(
-        names(colHeaders),
-        function(ht, col) hot_col_wrapper(ht, colHeaders[col], site_tbl_props[[col]], site_renderers[[col]]),
-        .init = ht
-      )
+      render_meta_hot(site_data_in(), site_tbl_props, site_renderers, fixed_cols = 1)
     })
 
     # create dataframe reactive to hot updates
     site_data_out <- shiny::reactive({
-      rhandsontable::hot_to_r(input$site_table)
+      df <- rhandsontable::hot_to_r(input$site_table)
+      if (is.null(df)) df <- site_data_in() # tab never rendered: fall back to loaded data
+      df
     })
 
     site_data_export <- shiny::reactive({
@@ -128,34 +102,40 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
       df
     })
 
-    # update country column in site data based on coordinates
-    shiny::observeEvent(site_coordinates(),{
-      site_coords <- site_coordinates()
-      if (nrow(site_coords) > 0) {
-        current_df <- site_data_out()
-        site_coords$iso_codes <- country_from_coords(lng = site_coords$longitude, lat = site_coords$latitude, countries_sf)
-        countries_list <- setNames(
-          countries_info$country_iso_code,
-          countries_info$combined
-        )
-        site_coords$new_country <- ifelse(
-          is.na(site_coords$iso_codes) | site_coords$iso_codes == "-99",
-          "",  # Assign empty string for NA values
-          names(countries_list)[match(site_coords$iso_codes, countries_list)]
-        )
+    # update the country column from coordinates, but ONLY when the user edits
+    # longitude/latitude in the table (not on load or programmatic updates)
+    shiny::observeEvent(input$site_table$changes$changes, {
+      current_df <- site_data_out()
 
-        # update country column in site data
-        current_df <- current_df |>
-          dplyr::left_join(site_coords, by = c('longitude', 'latitude')) |>
-          dplyr::mutate(country_code = new_country) |>
-          dplyr::select(-iso_codes, -new_country)
-        site_data_in(current_df)
-      }
+      # 0-indexed positions of the coordinate columns in the table
+      coord_cols <- which(names(current_df) %in% c("longitude", "latitude")) - 1
+      edited_cols <- vapply(input$site_table$changes$changes,
+                            function(ch) ch[[2]] %||% -1, numeric(1))
+      if (!any(edited_cols %in% coord_cols)) return()
 
-    }, ignoreInit = TRUE)
+      site_coords <- get_valid_coords(current_df)
+      if (nrow(site_coords) == 0) return()
+
+      # look up ISO country from the edited coordinates
+      site_coords$iso_codes <- country_from_coords(
+        lng = site_coords$longitude, lat = site_coords$latitude, countries_sf)
+      ctry_lookup <- setNames(countries_info$country_iso_code, countries_info$combined)
+      site_coords$new_country <- ifelse(
+        is.na(site_coords$iso_codes) | site_coords$iso_codes == "-99",
+        "",  # empty string for unmatched / missing
+        names(ctry_lookup)[match(site_coords$iso_codes, ctry_lookup)]
+      )
+
+      # write the derived country back into the site table
+      current_df <- current_df |>
+        dplyr::left_join(site_coords, by = c('longitude', 'latitude')) |>
+        dplyr::mutate(country_code = new_country) |>
+        dplyr::select(-iso_codes, -new_country)
+      site_data_in(current_df)
+    })
 
     # import data from file: show modal for confirmation
-    shiny::observeEvent(input$file_sites,{
+    shiny::observeEvent(input$file_sites, {
       #show_ht_import_modal(ns, 'import_site_data')
     })
 
@@ -286,45 +266,25 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
     # TREE TABLE ---------------------------------------------------------------
     output$tree_table <- rhandsontable::renderRHandsontable({
       shiny::validate(shiny::need(!is.null(site_data_in()), "No data to show. Load input data."))
-
-      colHeaders <- sapply(tree_tbl_props, function(x) x$title)
-      colHeaders <- colHeaders[names(tree_data_in())] # ensure correct order
-      tippies <- sapply(tree_tbl_props, function(x) x$description)
-
-      n_rows <- nrow(tree_data_in())
-      ht_height <- min(max(n_rows * ht_row_height, ht_min_height), ht_max_height)
-
-      ht <- rhandsontable::rhandsontable(
-        tree_data_in(),
-        rowHeaders = TRUE,
-        contextMenu = FALSE,
-        stretchH = "all",
-        height = ht_height,
-        colHeaders = unname(colHeaders),
-        afterGetColHeader = tippy_renderer(tippies)) |>
-        rhandsontable::hot_cols(fixedColumnsLeft = 1)
-      purrr::reduce(
-        names(colHeaders),
-        function(ht, col) hot_col_wrapper(ht, colHeaders[col], tree_tbl_props[[col]], tree_renderers[[col]]),
-        .init = ht
-      )
+      render_meta_hot(tree_data_in(), tree_tbl_props, tree_renderers, fixed_cols = 1)
     })
 
     # create dataframe reactive to hot updates
     tree_data_out <- shiny::reactive({
-      rhandsontable::hot_to_r(input$tree_table)
+      df <- rhandsontable::hot_to_r(input$tree_table)
+      if (is.null(df)) df <- tree_data_in() # tab never rendered: fall back to loaded data
+      df
     })
 
 
     # update species info in tree table IFF speciesname or code are changed
-    shiny::observeEvent(input$tree_table,{
+    shiny::observeEvent(input$tree_table, {
 
-      # TODO: loop through multiple changes at once
       table_changes <- input$tree_table$changes$changes
       current_df <- tree_data_out()
       update_tree_data <- FALSE
 
-      for (k in length(table_changes)){
+      for (k in seq_along(table_changes)) {
         row <- table_changes[[k]][[1]] # first index can be more than 1
         col <- table_changes[[k]][[2]]
         new_val <- table_changes[[k]][[4]]
@@ -365,33 +325,13 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
     # WOODPIECE TABLE ----------------------------------------------------------
     output$wp_table <- rhandsontable::renderRHandsontable({
       shiny::validate(shiny::need(!is.null(site_data_in()), "No data to show. Load input data."))
-
-      colHeaders <- sapply(wp_tbl_props, function(x) x$title)
-      colHeaders <- colHeaders[names(wp_data_in())] # ensure correct order
-      tippies <- sapply(wp_tbl_props, function(x) x$description)
-
-      n_rows <- nrow(wp_data_in())
-      ht_height <- min(max(n_rows * ht_row_height, ht_min_height), ht_max_height)
-
-      ht <- rhandsontable::rhandsontable(
-        wp_data_in(),
-        rowHeaders = TRUE,
-        contextMenu = FALSE,
-        stretchH = "all",
-        height = ht_height,
-        colHeaders = unname(colHeaders),
-        afterGetColHeader = tippy_renderer(tippies)) |>
-        rhandsontable::hot_cols(fixedColumnsLeft = 1)
-      purrr::reduce(
-        names(colHeaders),
-        function(ht, col) hot_col_wrapper(ht, colHeaders[col], wp_tbl_props[[col]], wp_renderers[[col]]),
-        .init = ht
-      )
+      render_meta_hot(wp_data_in(), wp_tbl_props, wp_renderers, fixed_cols = 1)
     })
 
     # create dataframe reactive to hot updates
     wp_data_out <- shiny::reactive({
-      df <- rhandsontable::hot_to_r(input$wp_table) 
+      df <- rhandsontable::hot_to_r(input$wp_table)
+      if (is.null(df)) df <- wp_data_in() # tab never rendered: fall back to loaded data
 
       if (!is.null(df) && nrow(df)>0) {
         df <- df |> 
@@ -403,33 +343,13 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
     # SLIDE TABLE --------------------------------------------------------------
     output$slide_table <- rhandsontable::renderRHandsontable({
       shiny::validate(shiny::need(!is.null(site_data_in()), "No data to show. Load input data."))
-
-      colHeaders <- sapply(slide_tbl_props, function(x) x$title)
-      colHeaders <- colHeaders[names(slide_data_in())] # ensure correct order
-      tippies <- sapply(slide_tbl_props, function(x) x$description)
-
-      n_rows <- nrow(slide_data_in())
-      ht_height <- min(max(n_rows * ht_row_height, ht_min_height), ht_max_height)
-
-      ht <- rhandsontable::rhandsontable(
-        slide_data_in(),
-        rowHeaders = TRUE,
-        contextMenu = FALSE,
-        stretchH = "all",
-        height = ht_height,
-        colHeaders = unname(colHeaders),
-        afterGetColHeader = tippy_renderer(tippies)) |>
-        rhandsontable::hot_cols(fixedColumnsLeft = 1)
-      purrr::reduce(
-        names(colHeaders),
-        function(ht, col) hot_col_wrapper(ht, colHeaders[col], slide_tbl_props[[col]], slide_renderers[[col]]),
-        .init = ht
-      )
+      render_meta_hot(slide_data_in(), slide_tbl_props, slide_renderers, fixed_cols = 1)
     })
 
     # create dataframe reactive to hot updates
     slide_data_out <- shiny::reactive({
       df <- rhandsontable::hot_to_r(input$slide_table)
+      if (is.null(df)) df <- slide_data_in() # tab never rendered: fall back to loaded data
 
       if (!is.null(df) && nrow(df)>0) {
         df <- df |> 
@@ -458,51 +378,14 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
       # 4) slide table
       results$slides <- collect_hot_val_results(slide_data_out(), slide_tbl_props)
 
-
-      # convert collected results to dataframe
-      df_results <- results |>
-        purrr::map(\(x) x |>
-                     purrr::map(\(x) tibble::tibble(
-                       field = x$field,
-                       type = x$type,
-                       message = x$message
-                     )) |>
-                     purrr::list_rbind(names_to = 'fname')) |>
-        purrr::list_rbind(names_to = 'tname')
-
-      df_results$topic <- input_field_names[df_results$tname]
-
-      dplyr::bind_rows(
-        data.frame(topic = character(0), field = character(0),
-                   type = character(0), message = character(0)),
-        df_results)
+      collect_valcheck_df(results)
     })
 
 
     output$validation_check <- shiny::renderUI({
-        df_validation <- validation_checks()
-
-        if (nrow(df_validation) == 0) {
-          return(shiny::tagList(shiny::strong("All checks passed", style = paste0('color: ', prim_col, ';'))))
-        } else {
-          # generate html lists for each topic
-          html_output <- df_validation |>
-            dplyr::group_by(topic) |>
-            dplyr::summarise(
-              content = paste0("<li>", field, ": ", message, "</li>", collapse = "")
-            ) |>
-            dplyr::mutate(
-              html = paste0("<b>", topic, ":</b><ul>", content, "</ul>")
-            ) |>
-            dplyr::pull(html) |>
-            paste(collapse = "")
-
-          return(shiny::HTML(html_output))
-
-          # TODO:
-          # add warning messages before switching tab or saving data
-
-        }
+      render_valcheck_ui(validation_checks())
+      # TODO:
+      # add warning messages before switching tab or saving data
     })
 
 
@@ -521,6 +404,9 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
     # SAVE BUTTON
 
 
+    # output$testing <- shiny::renderPrint({
+    #   input$site_table$changes$changes
+    # })
 
     return(
       list(

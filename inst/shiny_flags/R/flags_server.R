@@ -98,7 +98,8 @@ flags_server <- function(id, main_session, comments_out) {
           "csv" = load_data_csv(
             path_prf = input$file_prf$datapath,
             path_rings = input$file_rings$datapath,
-            path_rxsmeta = input$file_rxsmeta$datapath
+            path_rxsmeta = input$file_rxsmeta$datapath,
+            name_rxsmeta = input$file_rxsmeta$name
           ),
           "example" = {
             # TODO: add example files to extdata

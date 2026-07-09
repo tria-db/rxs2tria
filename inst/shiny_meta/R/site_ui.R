@@ -29,8 +29,8 @@ site_ui <- function(id) {
       bslib::layout_columns(
         shiny::actionButton(ns('btn_prev'), 'Previous', icon = shiny::icon('angle-double-left')),
         shiny::actionButton(ns('btn_next'), 'Next', icon = shiny::icon('angle-double-right'))
-      ),
-      shiny::verbatimTextOutput(ns("testing"))
+      )
+      # shiny::verbatimTextOutput(ns("testing")) # debug
     ),
 
     # main content

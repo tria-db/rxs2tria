@@ -59,7 +59,7 @@ summary_ui <- function(id) {
         ),
         shiny::hr(),
 
-        shiny::verbatimTextOutput(ns("testing")),
+        # shiny::verbatimTextOutput(ns("testing")), # debug
         shiny::hr(),
 
         shiny::div(

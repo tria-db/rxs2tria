@@ -35,43 +35,39 @@ df_structure <- extract_data_structure(files, pattern)
 # ------------------------------------------------------------------------------
 # Step 3: Collect metadata from ROXAS files into QWAimages object
 # ------------------------------------------------------------------------------
-# Use one of the two calls below depending on the software version used to 
-# produce your data.
-
-# ROXAS (image EXIF data is collected separately from files_images):
-df_settings <- collect_settings_data(files_settings = df_structure$fname_settings,
-                                     files_images = df_structure$fname_image,
-                                     roxas_version = "roxas")
-
-# ROXAS AI (image EXIF data is already part of the JSON metadata files):
-df_settings <- collect_settings_data(files_settings = df_structure$fname_settings,
-                                     roxas_version = "roxas_ai")
+# The ROXAS version is auto-detected from the settings file names, and for
+# ROXAS data the image EXIF metadata is read from df_structure$fname_image.
+df_settings <- collect_settings_data(df_structure)
 
 # Datetime columns are read as strings; convert them to POSIXct with the
 # appropriate format(s) and timezone for your data.
-img_created_at_converted <- lubridate::parse_date_time(
-  df_settings$img_created_at,
-  orders = "%Y:%m:%d %H:%M:%S", # common EXIF format
-  tz = "UTC" # commonly used in EXIF tags
-)
+img_date_orders <- "%Y:%m:%d %H:%M:%S" # common EXIF format, adjust if necessary
+img_created_at_converted <- df_settings$img_created_at |> 
+  lubridate::parse_date_time(
+    orders = img_date_orders, 
+    tz = "UTC" # commonly used in EXIF tags
+  )
 df_settings$img_created_at <- img_created_at_converted
 
-settings_date_orders <- c("%d.%m.%Y %H:%M:%S", "%d/%m/%Y %H:%M") # adjust to your locale
-rxs_created_at_converted <- lubridate::parse_date_time(
-  df_settings$rxs_created_at,
-  orders = settings_date_orders,
-  tz = Sys.timezone()
-)
-df_settings$rxs_created_at <- rxs_created_at_converted
+# for ROXAS only (ROXAS AI has standardized timestamps, so already converted)
+if (roxas_version == "roxas") {
+  settings_date_orders <- c("%d.%m.%Y %H:%M:%S", "%d/%m/%Y %H:%M") # adjust to your locale
+  rxs_created_at_converted <- lubridate::parse_date_time(
+    df_settings$rxs_created_at,
+    orders = settings_date_orders,
+    tz = Sys.timezone()
+  )
+  df_settings$rxs_created_at <- rxs_created_at_converted
+}
 
 rxs_images <- build_QWAimages(df_structure, df_settings)
 rm(df_structure, df_settings)
 
 # To save the QWAimages object to a file for later, use:
-# write_QWAimages(rxs_images, "path/to/output_data/example_dataset_QWAimages.csv.gz")
+# write_QWAimages(rxs_images, "path/to/output_data/example_dataset_QWAimages.csv")
 
 # and read it in again
-# rxs_images <- read_QWAimages("path/to/output_data/example_dataset_QWAimages.csv.gz")
+# rxs_images <- read_QWAimages("path/to/output_data/example_dataset_QWAimages.csv")
 
 # ------------------------------------------------------------------------------
 # Step 3b: Additional metadata (for TRIA submission)
@@ -216,10 +212,18 @@ QWA_data <- update_QWAdata(QWA_data,
 # ------------------------------------------------------------------------------
 # A TRIA submission must comprise at least the QWAmetadata .json and the
 # QWAdata cells and rings .csv files. If you would like to provide additional
-# files with your submission, these should be described in the resources
-# component of the QWAmetadata object, which you can compile as follows.
+# (supplementary) files with your submission - e.g. original / annotated images,
+# raw ROXAS output, reference series - these are listed in the resources
+# component of the QWAmetadata object.
+# add_resources() scans a directory and records each file with its inferred
+# type, hierarchy level, and a checksum/size for integrity checking. Call it
+# once per source directory (use recursive = TRUE for nested folders). Review
+# the resulting table - especially the linked_label column - before writing.
+# See vignette("resources") for details and the full resource-type table.
 
 QWAmeta <- read_QWAmetadata("path/to/output_data/example_dataset_QWAmetadata.json")
-QWAmeta <- add_resources(QWAmeta, path = "path/to/submission_files")
+QWAmeta <- add_resources(QWAmeta, path = "path/to/submission_files", recursive = TRUE)
+
+QWAmeta$resources # review, and complete linked_label where needed
 
 write_QWAmetadata(QWAmeta, "path/to/output_data/example_dataset_QWAmetadata.json")

@@ -48,11 +48,7 @@ metadata). See the main `rxs2tria` vignette for a step-by-step walkthrough.
 ```{r build}
 files        <- get_roxas_files("path/to/ROXAS_data", roxas_version = "roxas")
 df_structure <- extract_data_structure(files, pattern = "...")
-df_settings  <- collect_settings_data(
-  files_settings = df_structure$fname_settings,
-  files_images   = df_structure$fname_image,
-  roxas_version  = "roxas"
-)
+df_settings  <- collect_settings_data(df_structure)
 
 rxs_images <- build_QWAimages(df_structure, df_settings)
 ```
