@@ -75,7 +75,7 @@ ui <- bslib::page_fluid(
     selected = tab_start,
 
     # TITLE --------------------------------------------------------------------
-    title = "TRIA: Contribute metadata",
+    title = "rxs2tria: Contribute metadata",
 
     # TAB: Start (prefilled metadata) ------------------------------------------
     bslib::nav_spacer(),

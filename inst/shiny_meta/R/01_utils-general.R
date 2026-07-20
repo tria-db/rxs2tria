@@ -237,7 +237,7 @@ show_input_modal <- function(ns){
           choices = c(
             "From local R environment" = "env",
             "From file" = "file",
-            "Load example data (for demonstration only)" = "example")
+            "Load example data" = "example")
         ),
         shiny::hr(),
         shiny::uiOutput(ns("load_details_ui"))

@@ -1237,7 +1237,7 @@ flags_server <- function(id, main_session, comments_out) {
       #tail(df)
       #rings_data_org()
       #input$enter_key
-      str(input_data$rings_data)
+      #str(input_data$rings_data)
 
     })
 

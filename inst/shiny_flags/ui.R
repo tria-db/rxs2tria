@@ -25,6 +25,7 @@ ui <- bslib::page_fluid(
     title = "rxs2tria: QWA data quality explorer",
 
     # TAB: Start (plot of the time series) -------------------------------------
+    bslib::nav_spacer(),
     bslib::nav_panel(
       "Quality check series",
       icon = shiny::icon("font-awesome", lib = "font-awesome"),

@@ -41,7 +41,7 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
     # distinct, valid (in-range) coordinate pairs from a site data frame
     get_valid_coords <- function(df) {
       df |>
-        dplyr::select(longitude, latitude) |>
+        dplyr::select(site_label, longitude, latitude) |>
         dplyr::mutate(
           longitude = suppressWarnings(as.numeric(longitude)),
           latitude = suppressWarnings(as.numeric(latitude))
@@ -72,7 +72,8 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
       # if we have both lat and longitude, add markers and zoom to new bounds
       if (!is.null(site_coords) && nrow(site_coords)>0) {
         sitemap <- sitemap |>
-          leaflet::addMarkers(lng = site_coords$longitude, lat = site_coords$latitude) |>
+          leaflet::addMarkers(lng = site_coords$longitude, lat = site_coords$latitude,
+                              label = htmltools::htmlEscape(site_coords$site_label)) |>
           leaflet::fitBounds(lng1 = min(site_coords$longitude)-5, lng2 = max(site_coords$longitude)+5,
                              lat1 = min(site_coords$latitude)-5, lat2 = max(site_coords$latitude)+5)
       }
@@ -113,7 +114,7 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
                             function(ch) ch[[2]] %||% -1, numeric(1))
       if (!any(edited_cols %in% coord_cols)) return()
 
-      site_coords <- get_valid_coords(current_df)
+      site_coords <- get_valid_coords(current_df) |> dplyr::select(-site_label)
       if (nrow(site_coords) == 0) return()
 
       # look up ISO country from the edited coordinates
@@ -245,8 +246,8 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
 
     output$networks <- DT::renderDataTable({
       shiny::req(nrow(nw_data_in()) > 0)
-
-      deleteButtonColumn(nw_data_in(), 'delbtn', ns)
+      #deleteButtonColumn(
+      nw_data_in() #, 'delbtn', ns)
 
     })
 

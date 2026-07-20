@@ -11,7 +11,6 @@ reference:
   - get_roxas_files
   - get_structure_from_filenames
   - extract_data_structure
-  - collect_image_info
   - collect_settings_data
   - build_QWAimages
 - title: "Reading raw ROXAS output data"

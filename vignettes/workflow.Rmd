@@ -165,7 +165,7 @@ write_QWAimages(rxs_images, "path/to/output_data/example_dataset_QWAimages.csv.g
 # rxs_images <- read_QWAimages("path/to/output_data/example_dataset_QWAimages.csv.gz")
 ```
 
-### Additional metadata for TRIA submission (Step 3b)
+## Additional metadata for TRIA submission (Step 3b)
 
 To provide the site-, tree-, woodpiece-, slide-, and dataset-level
 metadata required for a TRIA submission, use the interactive metadata
@@ -183,7 +183,7 @@ launch_metadata_app()
 
 ---
 
-## Step 4: Read and clean the measurement data
+# Step 4: Read and clean the measurement data
 
 `collect_raw_data()` reads the cell and ring measurement tables from all
 ROXAS output files, combines them, and performs initial cleaning:
@@ -226,7 +226,7 @@ QWA_data  # prints an overview including ring flag counts
 
 ---
 
-## Step 5: Save the QWA data
+# Step 5: Save the QWA data
 
 `write_QWAdata()` saves the `QWAdata` object to two (optionally
 compressed) CSV files following the naming convention
@@ -249,7 +249,9 @@ for a more complete submission.
 
 ---
 
-## Step 6a: Compute radial profiles (optional)
+# Step 6: Assess the measurements data quality (optional)
+
+## Compute radial profiles (Step 6a)
 
 Cell measurements can be aggregated across the ring width into
 position bins, producing a `QWAprofile` object. Two binning schemes are
@@ -282,7 +284,7 @@ prf_sector <- calculate_sector_profiles(QWA_data,
 
 ---
 
-## Step 6b: Assess ring data quality (optional)
+## Visualize measurement series and flag rings (Step 6b)
 
 The flags Shiny app provides an interactive overview of the ring
 measurements and allows you to annotate individual rings with data
@@ -315,7 +317,7 @@ launch_flags_app()
 
 ---
 
-## Step 6c: Update re-analysed images (optional)
+## Update re-analysed images (Step 6c)
 
 If data processing reveals issues in the raw data and you re-analyse
 one or more images with ROXAS or ROXAS AI, `update_QWAimages()` and
@@ -330,6 +332,8 @@ reprocessing the entire dataset.
 rxs_images <- update_QWAimages(rxs_images,
   imgs_to_update = c("IMAGELABEL1", "IMAGELABEL2"),
   settings_date_orders = settings_date_orders) # same as defined in Step 3
+# don't forget to update the component in the QWAmetadata object if necessary:
+QWA_meta$images <- rxs_images
 ```
 
 3. Update the `QWAdata` object. For the updated images only, the raw
@@ -347,7 +351,7 @@ QWA_data <- update_QWAdata(QWA_data,
 
 ---
 
-## Step 7: Compile resources (optional)
+# Step 7: Compile resources (optional)
 
 A TRIA submission must include at minimum the `QWAmetadata` `.json` and
 the `QWAdata` `.csv` files. If you want to provide additional
@@ -383,3 +387,9 @@ Listing the files does not move or compress them; how they are packaged
 for storage is handled downstream. See `vignette("resources")` for the
 full resource-type table, the meaning of each column, and how to link
 resources to the data hierarchy.
+
+# Step 8: Submit your data
+
+Once you are ready to share your prepared data files with us, reach 
+out to [tria@wsl.ch](mailto:tria@wsl.ch) to receive an 
+invitation to the file transfer server.

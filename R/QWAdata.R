@@ -507,11 +507,14 @@ QWAdata <- function(cells = NULL,
     # align types
     char_cols <- tbl_props$properties |> purrr::keep(\(x) "string" %in% x$type) |> names()
     flag_cols <- tbl_props$properties |> purrr::keep(\(x) "boolean" %in% x$type) |> names()
+    num_cols <- tbl_props$properties |> purrr::keep(\(x) "number" %in% x$type) |> names()
+    int_cols <- tbl_props$properties |> purrr::keep(\(x) "integer" %in% x$type) |> names()
     rings <- rings |> 
       dplyr::mutate(
         dplyr::across(dplyr::any_of(char_cols), as.character),
         dplyr::across(dplyr::any_of(flag_cols), as.logical),
-        dplyr::across(-dplyr::any_of(c(char_cols, flag_cols)), as.numeric)
+        dplyr::across(dplyr::any_of(num_cols), as.numeric),
+        dplyr::across(dplyr::any_of(int_cols), as.integer)
       )
     # ensure we have complete year sequences for each image (re-adds cno)
     rings <- complete_rings(new_QWAdata(cells, rings))
@@ -854,6 +857,10 @@ read_QWAdata <- function(dir = NULL, file_cells = NULL, file_rings = NULL,
   if ("rings" %in% components) {
     cli::cli_inform(c(" " = "Reading rings data from {.file {file_rings}}..."))
     rings <- vroom::vroom(file_rings, show_col_types = FALSE)
+    # back-compatibility: older files used dh_w / dh_m for what are now dhw / dhm
+    legacy <- c(dhw = "dh_w", dhm = "dh_m") # new = old
+    rings <- rings |> 
+      dplyr::rename(dplyr::any_of(legacy))
     cli::cli_inform(c("v" = "{nrow(rings)} rings read from file"))
   }
 

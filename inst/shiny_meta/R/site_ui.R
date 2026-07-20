@@ -64,7 +64,7 @@ site_ui <- function(id) {
         rhandsontable::rHandsontableOutput(ns("site_table")),
         shiny::hr(),
         shiny::p(shiny::tags$i("Are (some of the) sites part of a network? If so, please provide the network information below.")),
-        shiny::actionButton(ns('btn_add_nws'), 'Add site network', icon = shiny::icon('plus')),
+        shinyjs::disabled(shiny::actionButton(ns('btn_add_nws'), 'Add site network', icon = shiny::icon('plus'))),
         DT::DTOutput(ns("networks"))
       ),
 
