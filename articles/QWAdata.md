@@ -138,7 +138,7 @@ runs three operations in sequence and returns a new `QWAdata` object:
     | Flag | Description |
     |----|----|
     | `incomplete_ring` | Ring at the inner or outer image border; MRW unreliable or unavailable |
-    | `missing_ring` | No cells detected; ring added manually during cross-dating (e.g. wedging ring) |
+    | `missing_ring` | No cells detected; ring added manually during crossdating (e.g. wedging ring) |
     | `duplicate_ring` | Year appears in more than one image due to overlapping slides |
     | `exclude_dupl` | `TRUE` for the duplicate ring(s) not selected as the preferred source |
     | `exclude_issues` | Convenience flag combining incomplete and/or missing rings; controlled by `exclude_mode` |
@@ -186,14 +186,14 @@ explicit paths:
 
 ``` r
 
-# Using a directory — files named {dataset_name}_cells.csv.gz and
-# {dataset_name}_rings.csv.gz
+# Using a directory — files named {dataset_name}_QWAdata_cells.csv.gz and
+# {dataset_name}_QWAdata_rings.csv.gz
 write_QWAdata(QWA_data, dir = "output/", dataset_name = "my_dataset")
 
 # Or with explicit paths:
 write_QWAdata(QWA_data,
-              file_cells = "output/my_dataset_cells.csv.gz",
-              file_rings = "output/my_dataset_rings.csv.gz")
+              file_cells = "output/my_dataset_QWAdata_cells.csv.gz",
+              file_rings = "output/my_dataset_QWAdata_rings.csv.gz")
 
 # Read back:
 QWA_data <- read_QWAdata(dir = "output/", dataset_name = "my_dataset")

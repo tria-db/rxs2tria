@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">rxs2tria</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -38,6 +38,8 @@
     <li><a class="dropdown-item" href="../articles/QWAimages.html">The QWAimages class</a></li>
     <li><a class="dropdown-item" href="../articles/QWAmetadata.html">The QWAmetadata class</a></li>
     <li><a class="dropdown-item" href="../articles/QWAprofile.html">The QWAprofile class</a></li>
+    <li><a class="dropdown-item" href="../articles/reopen-dataset.html">Re-opening a TRIA dataset</a></li>
+    <li><a class="dropdown-item" href="../articles/resources.html">Adding supplementary resources</a></li>
     <li><a class="dropdown-item" href="../articles/workflow.html">Step-by-step instructions</a></li>
   </ul>
 </li>
@@ -73,7 +75,7 @@
 <p>rxs2tria is an R package to handle Quantitative Wood Anatomy (QWA)
 data, specifically data generated with the <a href="https://roxas.wsl.ch/en/" class="external-link">ROXAS</a> or <a href="https://github.com/roxas-ai/napari-roxas-ai/tree/released" class="external-link">ROXAS
 AI</a> software. The package includes functionality to prepare, quality
-check and harmonize a QWA dataset, consisting of QWA images,
+check and harmonise a QWA dataset, consisting of QWA images,
 corresponding cell and ring measurement files and accompanying metadata.
 The processed dataset may then be submitted to the <a href="https://webapps.wsl.ch/tria/" class="external-link">TRIA</a> database for intra-annual
 and anatomical tree-ring data.</p>
@@ -89,7 +91,7 @@ and not yet stable nor officially released.</p>
 <span></span>
 <span><span class="co"># or with another remote package installer, such as:</span></span>
 <span><span class="co"># devtools::install_github("tria-db/rxs2tria")</span></span>
-<span><span class="co"># remotes::install_githbu("tria-db/rxs2tria")</span></span></code></pre></div>
+<span><span class="co"># remotes::install_github("tria-db/rxs2tria")</span></span></code></pre></div>
 <div class="section level3">
 <h3 id="development-version">Development version<a class="anchor" aria-label="anchor" href="#development-version"></a>
 </h3>
@@ -101,7 +103,7 @@ development version:</p>
 <div class="section level3">
 <h3 id="troubleshooting">Troubleshooting<a class="anchor" aria-label="anchor" href="#troubleshooting"></a>
 </h3>
-<p>Ensure that the installer libarary (pak/devtools/remotes) is properly
+<p>Ensure that the installer library (pak/devtools/remotes) is properly
 installed. On Windows OS, you may need to install Rtools to build
 packages from source. Run
 <code>pkgbuild::check_build_tool(debug=TRUE)</code> to check for build
@@ -135,7 +137,7 @@ your current directory.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>

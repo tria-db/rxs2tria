@@ -9,11 +9,11 @@ ROXAS output files.
   : Identify the ROXAS (AI) files in a directory
 - [`get_structure_from_filenames()`](https://tria-db.github.io/rxs2tria/reference/get_structure_from_filenames.md)
   [`extract_data_structure()`](https://tria-db.github.io/rxs2tria/reference/get_structure_from_filenames.md)
-  : Extract the data structure from file names
-- [`collect_image_info()`](https://tria-db.github.io/rxs2tria/reference/collect_image_info.md)
-  : Read and combine image exif data
+  : Extract the hierarchical data structure from ROXAS file names
 - [`collect_settings_data()`](https://tria-db.github.io/rxs2tria/reference/collect_settings_data.md)
-  : Read and combine ROXAS (AI) settings data
+  : Read and combine ROXAS (AI) settings and image metadata
+- [`build_QWAimages()`](https://tria-db.github.io/rxs2tria/reference/build_QWAimages.md)
+  : Build a QWAimages object from raw ROXAS (AI) metadata
 
 ## Reading raw ROXAS output data
 
@@ -28,8 +28,6 @@ Functions for reading and writing ROXAS cells and rings output files.
 
 S3 class QWAimages
 
-- [`build_QWAimages()`](https://tria-db.github.io/rxs2tria/reference/build_QWAimages.md)
-  : Build a QWAimages object from raw ROXAS (AI) metadata
 - [`check_QWAimages()`](https://tria-db.github.io/rxs2tria/reference/check_QWAimages.md)
   : Validate a QWAimages object
 - [`complete_QWAimages()`](https://tria-db.github.io/rxs2tria/reference/complete_QWAimages.md)
@@ -50,10 +48,6 @@ S3 class QWAimages
 
 S3 QWAmetadata
 
-- [`add_resources()`](https://tria-db.github.io/rxs2tria/reference/add_resources.md)
-  : Add a resources table to a QWAmetadata object
-- [`collect_resources()`](https://tria-db.github.io/rxs2tria/reference/collect_resources.md)
-  : Collect resource file information from a directory
 - [`check_QWAmetadata()`](https://tria-db.github.io/rxs2tria/reference/check_QWAmetadata.md)
   : Validate a QWAmetadata object
 - [`complete_QWAmetadata()`](https://tria-db.github.io/rxs2tria/reference/complete_QWAmetadata.md)
@@ -120,6 +114,10 @@ Functions to calculate sector or band profiles from cell measurements.
 
 Other utility functions.
 
+- [`add_resources()`](https://tria-db.github.io/rxs2tria/reference/add_resources.md)
+  : Add supplementary resource files to a QWAmetadata object
+- [`collect_resources()`](https://tria-db.github.io/rxs2tria/reference/collect_resources.md)
+  : Collect resource file information from a directory
 - [`launch_flags_app()`](https://tria-db.github.io/rxs2tria/reference/launch_flags_app.md)
   : Launch the ring flags Shiny app
 - [`launch_metadata_app()`](https://tria-db.github.io/rxs2tria/reference/launch_metadata_app.md)

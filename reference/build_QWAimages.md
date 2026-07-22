@@ -23,7 +23,11 @@ build_QWAimages(df_structure, df_settings)
 
 - df_settings:
 
-  Data frame with extracted ROXAS (AI) settings data.
+  Data frame with extracted ROXAS (AI) settings data. The
+  `img_created_at` and `rxs_created_at` columns (if present and not
+  entirely `NA`) must already be converted to `POSIXct`, e.g. with
+  [`lubridate::parse_date_time()`](https://lubridate.tidyverse.org/reference/parse_date_time.html)
+  (see the `workflow` vignette).
 
 ## Value
 

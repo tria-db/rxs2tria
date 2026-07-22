@@ -1,14 +1,16 @@
 pandoc: 3.8.3
-pkgdown: 2.2.0
+pkgdown: 2.2.1
 pkgdown_sha: ~
 articles:
   QWAdata: QWAdata.html
   QWAimages: QWAimages.html
   QWAmetadata: QWAmetadata.html
   QWAprofile: QWAprofile.html
+  reopen-dataset: reopen-dataset.html
+  resources: resources.html
   rxs2tria: rxs2tria.html
   workflow: workflow.html
-last_built: 2026-05-20T16:28Z
+last_built: 2026-07-22T14:42Z
 urls:
   reference: https://tria-db.github.io/rxs2tria/reference
   article: https://tria-db.github.io/rxs2tria/articles

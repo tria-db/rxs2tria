@@ -7,9 +7,9 @@ library(rxs2tria)
 
 ## Overview
 
-A `QWAimages` object is a tibble subclass — one row per analyzed image —
+A `QWAimages` object is a tibble subclass — one row per analysed image —
 that collects everything the rest of the package needs to know about
-your raw ROXAS data: where the files live, how the images are organized
+your raw ROXAS data: where the files live, how the images are organised
 hierarchically, image EXIF properties, and the ROXAS (AI) settings used
 during analysis. It is the required input for
 [`collect_raw_data()`](https://tria-db.github.io/rxs2tria/reference/collect_raw_data.md)
@@ -38,11 +38,7 @@ which combines the output of
 
 files        <- get_roxas_files("path/to/ROXAS_data", roxas_version = "roxas")
 df_structure <- extract_data_structure(files, pattern = "...")
-df_settings  <- collect_settings_data(
-  files_settings = df_structure$fname_settings,
-  files_images   = df_structure$fname_image,
-  roxas_version  = "roxas"
-)
+df_settings  <- collect_settings_data(df_structure)
 
 rxs_images <- build_QWAimages(df_structure, df_settings)
 ```
@@ -129,7 +125,7 @@ exceed it.
 Optional columns (those not always present in ROXAS output) are `NA`
 until populated.
 [`complete_QWAimages()`](https://tria-db.github.io/rxs2tria/reference/complete_QWAimages.md)
-adds all optional columns at once, initialized to `NA`.
+adds all optional columns at once, initialised to `NA`.
 
 ------------------------------------------------------------------------
 
@@ -189,7 +185,7 @@ rxs_images_full <- complete_QWAimages(rxs_images)
 ```
 
 Returns a new `QWAimages` object with every optional column added and
-initialized to `NA`. Existing values are preserved. Use this before
+initialised to `NA`. Existing values are preserved. Use this before
 passing the object to
 [`QWAmetadata()`](https://tria-db.github.io/rxs2tria/reference/QWAmetadata.md)
 if you want to fill in optional fields manually.

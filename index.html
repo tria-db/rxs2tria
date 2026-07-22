@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="index.html">rxs2tria</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -40,6 +40,8 @@
     <li><a class="dropdown-item" href="articles/QWAimages.html">The QWAimages class</a></li>
     <li><a class="dropdown-item" href="articles/QWAmetadata.html">The QWAmetadata class</a></li>
     <li><a class="dropdown-item" href="articles/QWAprofile.html">The QWAprofile class</a></li>
+    <li><a class="dropdown-item" href="articles/reopen-dataset.html">Re-opening a TRIA dataset</a></li>
+    <li><a class="dropdown-item" href="articles/resources.html">Adding supplementary resources</a></li>
     <li><a class="dropdown-item" href="articles/workflow.html">Step-by-step instructions</a></li>
   </ul>
 </li>
@@ -62,33 +64,47 @@
 </h1></div>
 <!-- badges: start -->
 <!-- badges: end -->
-<p><code>rxs2tria</code> is an <code>R</code> package to handle Quantitative Wood Anatomy (QWA) data, specifically data generated with the <a href="https://roxas.wsl.ch/en/" class="external-link">ROXAS</a> software or its successor <a href="https://github.com/roxas-ai/napari-roxas-ai/tree/released" class="external-link">ROXAS AI</a> <em>(under development)</em>. The package includes functionality to prepare, quality check and harmonize a QWA dataset, consisting of QWA images, corresponding ROXAS output files and accompanying metadata. The processed dataset may then be submitted to the <a href="https://webapps.wsl.ch/tria/" class="external-link">TRIA</a> database for intra-annual and anatomical tree-ring data.</p>
+<p>rxs2tria is an R package to handle Quantitative Wood Anatomy (QWA) data, specifically data generated with the <a href="https://roxas.wsl.ch/en/" class="external-link">ROXAS</a> or <a href="https://github.com/roxas-ai/napari-roxas-ai/tree/released" class="external-link">ROXAS AI</a> software. The package includes functionality to prepare, quality check and harmonize a QWA dataset, consisting of QWA images, corresponding cell and ring measurement files and accompanying metadata. The processed dataset may then be submitted to the <a href="https://webapps.wsl.ch/tria/" class="external-link">TRIA</a> database for intra-annual and anatomical tree-ring data.</p>
 <p><strong>Note:</strong> This package is currently under development and not yet stable nor officially released.</p>
-<div class="section level2">
-<h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
-</h2>
-<p>You can install the development version of <code>rxs2tria</code> from <a href="https://github.com/tria-db/rxs2tria/" class="external-link">GitHub</a> with:</p>
+</div>
+<div class="section level1">
+<h1 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
+</h1>
+<p>The package is (not yet) on CRAN. You can install <code>rxs2tria</code> from <a href="https://github.com/tria-db/rxs2tria/" class="external-link">GitHub</a>:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"tria-db/rxs2tria"</span><span class="op">)</span></span>
-<span><span class="co"># or pak::pak("tria-db/rxs2tria@develop") for the develop branch</span></span></code></pre></div>
+<span></span>
+<span><span class="co"># or with another remote package installer, such as:</span></span>
+<span><span class="co"># devtools::install_github("tria-db/rxs2tria")</span></span>
+<span><span class="co"># remotes::install_githbu("tria-db/rxs2tria")</span></span></code></pre></div>
+<div class="section level2">
+<h2 id="development-version">Development version<a class="anchor" aria-label="anchor" href="#development-version"></a>
+</h2>
+<p>To get the newest features and bug fixes, you can install the development version:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"tria-db/rxs2tria@develop"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="getting-started">Getting started<a class="anchor" aria-label="anchor" href="#getting-started"></a>
+<h2 id="troubleshooting">Troubleshooting<a class="anchor" aria-label="anchor" href="#troubleshooting"></a>
 </h2>
-<p>The easiest way to get started is to follow the <code>rxs2tria</code> workflow defined in the template file. The following makes a copy of the template and saves it to your current working directory:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<p>Ensure that the installer library (pak/devtools/remotes) is properly installed. On Windows OS, you may need to install Rtools to build packages from source. Run <code>pkgbuild::check_build_tool(debug=TRUE)</code> to check for build tools, and restart RStudio/Positron after the installation is completed.</p>
+</div>
+</div>
+<div class="section level1">
+<h1 id="quick-start">Quick start<a class="anchor" aria-label="anchor" href="#quick-start"></a>
+</h1>
+<p>The easiest way to get started is to copy the rxs2tria workflow template to your working directory and fill in your dataset-specific paths and settings, then run through each step.</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://tria-db.github.io/rxs2tria/">rxs2tria</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.copy</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"templates/prepare_rxs_dataset.R"</span>, package <span class="op">=</span> <span class="st">"rxs2tria"</span><span class="op">)</span>, <span class="st">"."</span><span class="op">)</span></span></code></pre></div>
-<p>See the <a href="https://tria-db.github.io/rxs2tria/articles/rxs2tria.html">vignette</a> for a detailed introduction and example workflow. You can access it locally with:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/vignette.html" class="external-link">vignette</a></span><span class="op">(</span><span class="st">"rxs2tria"</span><span class="op">)</span></span></code></pre></div>
+<p>Follow the instructions in the template, or see the <a href="(https://tria-db.github.io/rxs2tria/articles/workflow.html)">workflow vignette</a> for more details.</p>
 </div>
-<div class="section level2">
-<h2 id="contributions">Contributions<a class="anchor" aria-label="anchor" href="#contributions"></a>
-</h2>
+<div class="section level1">
+<h1 id="contributions">Contributions<a class="anchor" aria-label="anchor" href="#contributions"></a>
+</h1>
 <p>Contributions are welcome! Please feel free to open issues or submit pull requests on the <a href="https://github.com/tria-db/rxs2tria/" class="external-link">GitHub repository</a>.</p>
 </div>
-</div>
+
   </main><aside class="col-md-3"><div class="links">
 <h2 data-toc-skip>Links</h2>
 <ul class="list-unstyled">
@@ -132,7 +148,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>

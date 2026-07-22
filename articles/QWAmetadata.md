@@ -145,7 +145,7 @@ existing values preserved:
 - **Hierarchical tables** (`$sites`, `$trees`, `$woodpieces`,
   `$slides`): if a table is absent, it is pre-filled with the IDs and
   counts derived from `$images` (the same starting point the Shiny app
-  uses), with all other columns initialized as `NA`. If a table is
+  uses), with all other columns initialised as `NA`. If a table is
   already present, only missing optional columns are added.
 - **Flat tables** (`$dataset`, `$authors`, `$funding`, `$related`): if
   absent, a one-row skeleton with all schema columns (all `NA`) is

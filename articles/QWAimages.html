@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">rxs2tria</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -38,6 +38,8 @@
     <li><a class="dropdown-item" href="../articles/QWAimages.html">The QWAimages class</a></li>
     <li><a class="dropdown-item" href="../articles/QWAmetadata.html">The QWAmetadata class</a></li>
     <li><a class="dropdown-item" href="../articles/QWAprofile.html">The QWAprofile class</a></li>
+    <li><a class="dropdown-item" href="../articles/reopen-dataset.html">Re-opening a TRIA dataset</a></li>
+    <li><a class="dropdown-item" href="../articles/resources.html">Adding supplementary resources</a></li>
     <li><a class="dropdown-item" href="../articles/workflow.html">Step-by-step instructions</a></li>
   </ul>
 </li>
@@ -76,9 +78,9 @@
 <h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
 </h2>
 <p>A <code>QWAimages</code> object is a tibble subclass — one row per
-analyzed image — that collects everything the rest of the package needs
+analysed image — that collects everything the rest of the package needs
 to know about your raw ROXAS data: where the files live, how the images
-are organized hierarchically, image EXIF properties, and the ROXAS (AI)
+are organised hierarchically, image EXIF properties, and the ROXAS (AI)
 settings used during analysis. It is the required input for
 <code><a href="../reference/collect_raw_data.html">collect_raw_data()</a></code> and the <code>$images</code> component
 inside a <code>QWAmetadata</code> object.</p>
@@ -99,11 +101,7 @@ for a step-by-step walkthrough.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">files</span>        <span class="op">&lt;-</span> <span class="fu"><a href="../reference/get_roxas_files.html">get_roxas_files</a></span><span class="op">(</span><span class="st">"path/to/ROXAS_data"</span>, roxas_version <span class="op">=</span> <span class="st">"roxas"</span><span class="op">)</span></span>
 <span><span class="va">df_structure</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/get_structure_from_filenames.html">extract_data_structure</a></span><span class="op">(</span><span class="va">files</span>, pattern <span class="op">=</span> <span class="st">"..."</span><span class="op">)</span></span>
-<span><span class="va">df_settings</span>  <span class="op">&lt;-</span> <span class="fu"><a href="../reference/collect_settings_data.html">collect_settings_data</a></span><span class="op">(</span></span>
-<span>  files_settings <span class="op">=</span> <span class="va">df_structure</span><span class="op">$</span><span class="va">fname_settings</span>,</span>
-<span>  files_images   <span class="op">=</span> <span class="va">df_structure</span><span class="op">$</span><span class="va">fname_image</span>,</span>
-<span>  roxas_version  <span class="op">=</span> <span class="st">"roxas"</span></span>
-<span><span class="op">)</span></span>
+<span><span class="va">df_settings</span>  <span class="op">&lt;-</span> <span class="fu"><a href="../reference/collect_settings_data.html">collect_settings_data</a></span><span class="op">(</span><span class="va">df_structure</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">rxs_images</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/build_QWAimages.html">build_QWAimages</a></span><span class="op">(</span><span class="va">df_structure</span>, <span class="va">df_settings</span><span class="op">)</span></span></code></pre></div>
 <p><code><a href="../reference/build_QWAimages.html">build_QWAimages()</a></code> calls <code><a href="../reference/QWAimages.html">QWAimages()</a></code>
@@ -246,7 +244,7 @@ year of the outermost complete ring in the image, used to validate that
 ring years do not exceed it.</p>
 <p>Optional columns (those not always present in ROXAS output) are
 <code>NA</code> until populated. <code><a href="../reference/complete_QWAimages.html">complete_QWAimages()</a></code> adds
-all optional columns at once, initialized to <code>NA</code>.</p>
+all optional columns at once, initialised to <code>NA</code>.</p>
 <hr>
 </div>
 <div class="section level2">
@@ -303,7 +301,7 @@ before proceeding.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">rxs_images_full</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/complete_QWAimages.html">complete_QWAimages</a></span><span class="op">(</span><span class="va">rxs_images</span><span class="op">)</span></span></code></pre></div>
 <p>Returns a new <code>QWAimages</code> object with every optional
-column added and initialized to <code>NA</code>. Existing values are
+column added and initialised to <code>NA</code>. Existing values are
 preserved. Use this before passing the object to
 <code><a href="../reference/QWAmetadata.html">QWAmetadata()</a></code> if you want to fill in optional fields
 manually.</p>
@@ -339,7 +337,7 @@ compresses automatically.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>

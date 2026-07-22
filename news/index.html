@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">rxs2tria</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -23,6 +23,8 @@
     <li><a class="dropdown-item" href="../articles/QWAimages.html">The QWAimages class</a></li>
     <li><a class="dropdown-item" href="../articles/QWAmetadata.html">The QWAmetadata class</a></li>
     <li><a class="dropdown-item" href="../articles/QWAprofile.html">The QWAprofile class</a></li>
+    <li><a class="dropdown-item" href="../articles/reopen-dataset.html">Re-opening a TRIA dataset</a></li>
+    <li><a class="dropdown-item" href="../articles/resources.html">Adding supplementary resources</a></li>
     <li><a class="dropdown-item" href="../articles/workflow.html">Step-by-step instructions</a></li>
   </ul></li>
 <li class="active nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -42,8 +44,16 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="development version" id="rxs2tria-development-version">rxs2tria (development version)<a class="anchor" aria-label="anchor" href="#rxs2tria-development-version"></a></h2>
-</div>
+<h2 class="pkg-version" data-toc-text="0.1.2" id="rxs2tria-012">rxs2tria 0.1.2<a class="anchor" aria-label="anchor" href="#rxs2tria-012"></a></h2>
+<ul><li>
+<code><a href="../reference/build_QWAimages.html">build_QWAimages()</a></code> now comes with a safeguard against uncoverted datetime columns in <code>df_settings</code>.</li>
+<li>
+<code><a href="../reference/collect_settings_data.html">collect_settings_data()</a></code> now accepts the data structure data frame directly (<code>df</code> argument), auto-detects <code>roxas_version</code> from the settings file names when not supplied, and no longer requires the file path vectors to be passed individually.</li>
+<li>
+<code><a href="../reference/collect_resources.html">collect_resources()</a></code> now records an MD5 <code>checksum</code> and <code>size_bytes</code> for each file (used to verify integrity of supplementary files on upload). Expanded documentation of the resources step, including a new <code><a href="../articles/resources.html">vignette("resources")</a></code>.</li>
+<li>New <code><a href="../articles/reopen-dataset.html">vignette("reopen-dataset")</a></code> documents how to re-open a downloaded TRIA dataset using the individual <code>read_*</code> functions.</li>
+<li>The flags app now accepts a <code>QWAmetadata</code> <code>.json</code> file directly as the images metadata input (its <code>$images</code> component is extracted), in addition to a <code>QWAimages</code> <code>.csv</code>.</li>
+</ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.1.1" id="rxs2tria-011">rxs2tria 0.1.1<a class="anchor" aria-label="anchor" href="#rxs2tria-011"></a></h2>
 <ul><li>improved output of get_roxas_files to warn instead of abort for missing files -&gt; now returns a df of the fnames</li>
@@ -63,7 +73,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

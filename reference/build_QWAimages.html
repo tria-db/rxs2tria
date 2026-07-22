@@ -11,7 +11,7 @@ collect_settings_data()) into a QWAimages object."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">rxs2tria</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -27,6 +27,8 @@ collect_settings_data()) into a QWAimages object."></head><body>
     <li><a class="dropdown-item" href="../articles/QWAimages.html">The QWAimages class</a></li>
     <li><a class="dropdown-item" href="../articles/QWAmetadata.html">The QWAmetadata class</a></li>
     <li><a class="dropdown-item" href="../articles/QWAprofile.html">The QWAprofile class</a></li>
+    <li><a class="dropdown-item" href="../articles/reopen-dataset.html">Re-opening a TRIA dataset</a></li>
+    <li><a class="dropdown-item" href="../articles/resources.html">Adding supplementary resources</a></li>
     <li><a class="dropdown-item" href="../articles/workflow.html">Step-by-step instructions</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -66,7 +68,10 @@ collect_settings_data()) into a QWAimages object."></head><body>
 
 
 <dt id="arg-df-settings">df_settings<a class="anchor" aria-label="anchor" href="#arg-df-settings"></a></dt>
-<dd><p>Data frame with extracted ROXAS (AI) settings data.</p></dd>
+<dd><p>Data frame with extracted ROXAS (AI) settings data. The
+<code>img_created_at</code> and <code>rxs_created_at</code> columns (if present and not
+entirely <code>NA</code>) must already be converted to <code>POSIXct</code>, e.g. with
+<code><a href="https://lubridate.tidyverse.org/reference/parse_date_time.html" class="external-link">lubridate::parse_date_time()</a></code> (see the <code>workflow</code> vignette).</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -96,7 +101,7 @@ dataset-level metadata to produce a full <a href="QWAmetadata.html">QWAmetadata<
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

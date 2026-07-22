@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">rxs2tria</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -23,6 +23,8 @@
     <li><a class="dropdown-item" href="../articles/QWAimages.html">The QWAimages class</a></li>
     <li><a class="dropdown-item" href="../articles/QWAmetadata.html">The QWAmetadata class</a></li>
     <li><a class="dropdown-item" href="../articles/QWAprofile.html">The QWAprofile class</a></li>
+    <li><a class="dropdown-item" href="../articles/reopen-dataset.html">Re-opening a TRIA dataset</a></li>
+    <li><a class="dropdown-item" href="../articles/resources.html">Adding supplementary resources</a></li>
     <li><a class="dropdown-item" href="../articles/workflow.html">Step-by-step instructions</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -62,21 +64,21 @@
           <code><a href="get_structure_from_filenames.html">get_structure_from_filenames()</a></code> <code><a href="get_structure_from_filenames.html">extract_data_structure()</a></code>
 
         </dt>
-        <dd>Extract the data structure from file names</dd>
-
-        <dt>
-
-          <code><a href="collect_image_info.html">collect_image_info()</a></code>
-
-        </dt>
-        <dd>Read and combine image exif data</dd>
+        <dd>Extract the hierarchical data structure from ROXAS file names</dd>
 
         <dt>
 
           <code><a href="collect_settings_data.html">collect_settings_data()</a></code>
 
         </dt>
-        <dd>Read and combine ROXAS (AI) settings data</dd>
+        <dd>Read and combine ROXAS (AI) settings and image metadata</dd>
+
+        <dt>
+
+          <code><a href="build_QWAimages.html">build_QWAimages()</a></code>
+
+        </dt>
+        <dd>Build a QWAimages object from raw ROXAS (AI) metadata</dd>
       </dl></div><div class="section level2">
       <h2 id="reading-raw-roxas-output-data">Reading raw ROXAS output data<a class="anchor" aria-label="anchor" href="#reading-raw-roxas-output-data"></a></h2>
 
@@ -111,13 +113,6 @@
 
 
       <dl><dt>
-
-          <code><a href="build_QWAimages.html">build_QWAimages()</a></code>
-
-        </dt>
-        <dd>Build a QWAimages object from raw ROXAS (AI) metadata</dd>
-
-        <dt>
 
           <code><a href="check_QWAimages.html">check_QWAimages()</a></code>
 
@@ -176,20 +171,6 @@
 
 
       <dl><dt>
-
-          <code><a href="add_resources.html">add_resources()</a></code>
-
-        </dt>
-        <dd>Add a resources table to a QWAmetadata object</dd>
-
-        <dt>
-
-          <code><a href="collect_resources.html">collect_resources()</a></code>
-
-        </dt>
-        <dd>Collect resource file information from a directory</dd>
-
-        <dt>
 
           <code><a href="check_QWAmetadata.html">check_QWAmetadata()</a></code>
 
@@ -379,6 +360,20 @@
 
       <dl><dt>
 
+          <code><a href="add_resources.html">add_resources()</a></code>
+
+        </dt>
+        <dd>Add supplementary resource files to a QWAmetadata object</dd>
+
+        <dt>
+
+          <code><a href="collect_resources.html">collect_resources()</a></code>
+
+        </dt>
+        <dd>Collect resource file information from a directory</dd>
+
+        <dt>
+
           <code><a href="launch_flags_app.html">launch_flags_app()</a></code>
 
         </dt>
@@ -407,7 +402,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

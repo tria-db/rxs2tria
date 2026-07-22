@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">rxs2tria</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -23,6 +23,8 @@
     <li><a class="dropdown-item" href="../articles/QWAimages.html">The QWAimages class</a></li>
     <li><a class="dropdown-item" href="../articles/QWAmetadata.html">The QWAmetadata class</a></li>
     <li><a class="dropdown-item" href="../articles/QWAprofile.html">The QWAprofile class</a></li>
+    <li><a class="dropdown-item" href="../articles/reopen-dataset.html">Re-opening a TRIA dataset</a></li>
+    <li><a class="dropdown-item" href="../articles/resources.html">Adding supplementary resources</a></li>
     <li><a class="dropdown-item" href="../articles/workflow.html">Step-by-step instructions</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -68,8 +70,10 @@
 
 
 <dt id="arg-dir">dir<a class="anchor" aria-label="anchor" href="#arg-dir"></a></dt>
-<dd><p>Directory to write to. Files are auto-named using <code>dataset_name</code>.
-Mutually exclusive with <code>file_cells</code>/<code>file_rings</code>.</p></dd>
+<dd><p>Directory to write to. Files are auto-named
+<code>{dataset_name}_QWAdata_cells.csv(.gz)</code> and
+<code>{dataset_name}_QWAdata_rings.csv(.gz)</code>. Mutually exclusive with
+<code>file_cells</code>/<code>file_rings</code>.</p></dd>
 
 
 <dt id="arg-file-cells-file-rings">file_cells, file_rings<a class="anchor" aria-label="anchor" href="#arg-file-cells-file-rings"></a></dt>
@@ -79,7 +83,8 @@ CSV files. Both must be provided together. Mutually exclusive with <code>dir</co
 
 <dt id="arg-dataset-name">dataset_name<a class="anchor" aria-label="anchor" href="#arg-dataset-name"></a></dt>
 <dd><p>Name prefix for auto-generated filenames when using
-<code>dir</code>. Defaults to <code>"QWAdata"</code>.</p></dd>
+<code>dir</code>. If omitted, files are named <code>QWAdata_cells.csv(.gz)</code> and
+<code>QWAdata_rings.csv(.gz)</code>.</p></dd>
 
 
 <dt id="arg-compress">compress<a class="anchor" aria-label="anchor" href="#arg-compress"></a></dt>
@@ -108,7 +113,7 @@ CSV files. Both must be provided together. Mutually exclusive with <code>dir</co
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>
