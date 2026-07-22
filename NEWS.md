@@ -1,4 +1,4 @@
-# rxs2tria (development version)
+# rxs2tria 0.1.2
 
 * `build_QWAimages()` now comes with a safeguard against uncoverted datetime 
 columns in `df_settings`.

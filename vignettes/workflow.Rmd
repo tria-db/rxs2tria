@@ -77,7 +77,8 @@ Not all groups need to be in the pattern:
 If, for example, all images belong to the same site and/or species, the
 `site_label` and/or `species_code` arguments can be supplied instead of
 including `site`/`species` groups in the pattern. Or if each tree was cored
-exactly once, there may not be a specific woodpiece identifier, and it can be left out of the pattern.
+exactly once, there may not be a specific woodpiece identifier, and it 
+can be left out of the pattern.
 
 Adapt the pattern to match your naming convention using named regex groups.
 Supported group names: site, species, tree, woodpiece, slide, image.
