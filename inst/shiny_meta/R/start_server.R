@@ -77,7 +77,7 @@ start_server <- function(id, main_session) {
             source <- glue::glue("object from current R enviornment: {input$input_name}")
             if (inherits(res, "data.frame")) {
               df <- rxs2tria::QWAimages(res) |> rxs2tria::complete_QWAimages()
-              validated <- rxs2tria::QWAmetadata(images = df) |> rxs2tria::complete_QWAmetadata()
+              validated <- rxs2tria::QWAmetadata(images = df) |> complete_QWAmetadata_quiet()
             } else { # assume list/QWAmetadata object
               validated <- rxs2tria::as_QWAmetadata(res) |> rxs2tria::complete_QWAmetadata()
             }
@@ -89,7 +89,7 @@ start_server <- function(id, main_session) {
             ext <- tools::file_ext(input$input_file$datapath)
             if (ext == "csv"){
               df <- rxs2tria::read_QWAimages(input$input_file$datapath)
-              validated <- rxs2tria::QWAmetadata(images = df) |> rxs2tria::complete_QWAmetadata()
+              validated <- rxs2tria::QWAmetadata(images = df) |> complete_QWAmetadata_quiet()
             } else {
               res <- rxs2tria::read_QWAmetadata(input$input_file$datapath)
               validated <- res |> rxs2tria::complete_QWAmetadata()

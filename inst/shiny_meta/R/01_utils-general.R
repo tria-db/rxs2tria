@@ -300,6 +300,23 @@ show_ht_import_modal <- function(ns, confirm_id){
   ))
 }
 
+# Wrapper around rxs2tria::complete_QWAmetadata() that muffles the
+# "empty data frame created from schema" warning: expected/intentional noise
+# whenever a component (dataset, authors, sites, ...) was not supplied and
+# gets filled in with a schema skeleton by complete_QWAmetadata() itself.
+# All other warnings (e.g. type conversion issues on already-supplied data)
+# still propagate normally.
+complete_QWAmetadata_quiet <- function(x) {
+  withCallingHandlers(
+    rxs2tria::complete_QWAmetadata(x),
+    warning = function(w) {
+      if (grepl("empty data frame created from schema", conditionMessage(w))) {
+        rlang::cnd_muffle(w)
+      }
+    }
+  )
+}
+
 # Safely try to run a given expression without crashing the app
 # run the expr in the given block
 # and catch errors and warnings, showing them in a modal dialog or notification

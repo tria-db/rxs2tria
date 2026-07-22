@@ -32,7 +32,7 @@ pak::pak("tria-db/rxs2tria")
 
 # or with another remote package installer, such as:
 # devtools::install_github("tria-db/rxs2tria")
-# remotes::install_githbu("tria-db/rxs2tria")
+# remotes::install_github("tria-db/rxs2tria")
 ```
 
 ## Development version
