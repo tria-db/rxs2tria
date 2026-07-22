@@ -65,7 +65,6 @@ reference:
   contents:
   - add_resources
   - collect_resources
-  - read_tria_dataset
   - launch_flags_app
   - launch_metadata_app
   - create_rwl

@@ -746,12 +746,15 @@ check_QWAdata <- function(x, meta = NULL,
 #' Cells and rings are written as (compressed) CSV files.
 #'
 #' @param x A [QWAdata] object.
-#' @param dir Directory to write to. Files are auto-named using `dataset_name`.
-#'   Mutually exclusive with `file_cells`/`file_rings`.
+#' @param dir Directory to write to. Files are auto-named
+#'   `{dataset_name}_QWAdata_cells.csv(.gz)` and
+#'   `{dataset_name}_QWAdata_rings.csv(.gz)`. Mutually exclusive with
+#'   `file_cells`/`file_rings`.
 #' @param file_cells,file_rings Explicit output paths for the cells and rings
 #'   CSV files. Both must be provided together. Mutually exclusive with `dir`.
 #' @param dataset_name Name prefix for auto-generated filenames when using
-#'   `dir`. Defaults to `"QWAdata"`.
+#'   `dir`. If omitted, files are named `QWAdata_cells.csv(.gz)` and
+#'   `QWAdata_rings.csv(.gz)`.
 #' @param compress If `TRUE` (default), write `.csv.gz` files.
 #' @param overwrite Allow to overwrite existing files? (default `FALSE`).
 #' @returns A named list of written file paths, invisibly.
@@ -771,11 +774,17 @@ write_QWAdata <- function(x, dir = NULL,
 
   if (use_dir) {
     checkmate::assert_directory_exists(dir)
-    prefix <- dataset_name %||% "QWAdata"
-    prefix <- gsub("[^[:alnum:]_-]", "_", prefix)
     ext <- if (compress) ".csv.gz" else ".csv"
-    file_cells <- file.path(dir, paste0(prefix, "_cells", ext))
-    file_rings <- file.path(dir, paste0(prefix, "_rings", ext))
+    if (is.null(dataset_name)) {
+      base_cells <- "QWAdata_cells"
+      base_rings <- "QWAdata_rings"
+    } else {
+      prefix <- gsub("[^[:alnum:]_-]", "_", dataset_name)
+      base_cells <- paste0(prefix, "_QWAdata_cells")
+      base_rings <- paste0(prefix, "_QWAdata_rings")
+    }
+    file_cells <- file.path(dir, paste0(base_cells, ext))
+    file_rings <- file.path(dir, paste0(base_rings, ext))
   } else {
     if (compress && fs::path_ext(file_cells) != "gz") {
       file_cells <- paste0(file_cells, ".gz")
@@ -832,8 +841,9 @@ read_QWAdata <- function(dir = NULL, file_cells = NULL, file_rings = NULL,
                             regexp = "\\.csv(\\.gz)?$")
 
     filter_candidates <- function(pattern) {
-      cands <- grep(pattern, csv_files, value = TRUE)
-      if (!is.null(dataset_name)) cands <- grep(dataset_name, cands, value = TRUE)
+      basenames <- fs::path_file(csv_files)
+      cands <- csv_files[grep(pattern, basenames)]
+      if (!is.null(dataset_name)) cands <- cands[grep(dataset_name, fs::path_file(cands))]
       cands
     }
 

@@ -24,9 +24,9 @@ library(rxs2tria)
 
 ## Overview
 
-A `QWAimages` object is a tibble subclass — one row per analyzed image —
+A `QWAimages` object is a tibble subclass — one row per analysed image —
 that collects everything the rest of the package needs to know about
-your raw ROXAS data: where the files live, how the images are organized
+your raw ROXAS data: where the files live, how the images are organised
 hierarchically, image EXIF properties, and the ROXAS (AI) settings used
 during analysis. It is the required input for `collect_raw_data()` and
 the `$images` component inside a `QWAmetadata` object.
@@ -126,7 +126,7 @@ exceed it.
 
 Optional columns (those not always present in ROXAS output) are `NA`
 until populated. `complete_QWAimages()` adds all optional columns
-at once, initialized to `NA`.
+at once, initialised to `NA`.
 
 ---
 
@@ -181,7 +181,7 @@ rxs_images_full <- complete_QWAimages(rxs_images)
 ```
 
 Returns a new `QWAimages` object with every optional column added and
-initialized to `NA`. Existing values are preserved. Use this before
+initialised to `NA`. Existing values are preserved. Use this before
 passing the object to `QWAmetadata()` if you want to fill in optional
 fields manually.
 

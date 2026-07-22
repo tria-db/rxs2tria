@@ -17,14 +17,17 @@ write_QWAdata(
 \arguments{
 \item{x}{A \link{QWAdata} object.}
 
-\item{dir}{Directory to write to. Files are auto-named using \code{dataset_name}.
-Mutually exclusive with \code{file_cells}/\code{file_rings}.}
+\item{dir}{Directory to write to. Files are auto-named
+\verb{\{dataset_name\}_QWAdata_cells.csv(.gz)} and
+\verb{\{dataset_name\}_QWAdata_rings.csv(.gz)}. Mutually exclusive with
+\code{file_cells}/\code{file_rings}.}
 
 \item{file_cells, file_rings}{Explicit output paths for the cells and rings
 CSV files. Both must be provided together. Mutually exclusive with \code{dir}.}
 
 \item{dataset_name}{Name prefix for auto-generated filenames when using
-\code{dir}. Defaults to \code{"QWAdata"}.}
+\code{dir}. If omitted, files are named \code{QWAdata_cells.csv(.gz)} and
+\code{QWAdata_rings.csv(.gz)}.}
 
 \item{compress}{If \code{TRUE} (default), write \code{.csv.gz} files.}
 

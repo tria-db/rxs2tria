@@ -43,43 +43,33 @@ need the raw material behind the measurements.
 
 ---
 
-## Reading a dataset in one call
+## Reading the individual files
 
-Point `read_tria_dataset()` at a directory containing the downloaded
-files. It locates the metadata, cells, and rings files by name and
-returns a named list of reconstructed objects:
+Each file is read by its corresponding `read_*` function.
+[read_QWAmetadata()] takes the path to the `.json` file directly:
 
-```{r read-bundle}
-ds <- read_tria_dataset("path/to/downloaded_dataset")
-
-ds$metadata   # a QWAmetadata object (includes the $images table)
-ds$data       # a QWAdata object (cells + rings)
-ds$profiles   # a named list of QWAprofile objects (empty if none were included)
-```
-
-If the folder holds files from more than one dataset, pass
-`dataset_name` to disambiguate. You can also read only part of a dataset
-— for example, just the metadata to inspect the images table without
-loading the (potentially large) cells CSV:
-
-```{r read-partial}
-meta <- read_tria_dataset("path/to/downloaded_dataset",
-                          components = "metadata")$metadata
-meta$images
-```
-
-### Reading files individually
-
-`read_tria_dataset()` is a convenience wrapper. You can equally call the
-underlying readers yourself, which is useful when the files are not all
-in one directory or are named unusually:
-
-```{r read-individual}
+```{r read-metadata}
 QWA_meta <- read_QWAmetadata("path/to/my_dataset_QWAmetadata.json")
+QWA_meta$images
+```
+
+[read_QWAdata()] reads the cells and rings CSVs. Point it at the
+directory holding the downloaded files and it locates both by name; if
+the folder holds files from more than one dataset, pass `dataset_name`
+to disambiguate:
+
+```{r read-data}
 QWA_data <- read_QWAdata(dir = "path/to/downloaded_dataset")
 # or with explicit paths:
 QWA_data <- read_QWAdata(file_cells = "path/to/my_dataset_cells.csv.gz",
                          file_rings = "path/to/my_dataset_rings.csv.gz")
+```
+
+If a profile file was included in the download, [read_QWAprofile()]
+reads it back into a [QWAprofile][QWAprofile()] object:
+
+```{r read-profile}
+prf <- read_QWAprofile("path/to/my_dataset_QWAprofile_sector.csv.gz")
 ```
 
 ---
@@ -89,12 +79,12 @@ QWA_data <- read_QWAdata(file_cells = "path/to/my_dataset_cells.csv.gz",
 Because the cells and rings tables carry the columns the profile
 calculation needs (`rraddistr` in cells; `mrw` and `eww` in rings, plus
 the cell parameters you select), you can compute a
-[QWAprofile][QWAprofile()] directly from a re-opened dataset — even if no
-profile was included in the download:
+[QWAprofile][QWAprofile()] directly from `QWA_data` — even if no profile
+was included in the download:
 
 ```{r profile}
 prf_sector <- calculate_sector_profiles(
-  ds$data,
+  QWA_data,
   n_sectors       = 5,
   sel_cell_params = c("la", "cwttan"),
   quant_probs     = c(0.1, 0.5, 0.9)
@@ -127,7 +117,7 @@ In the app, choose **"Load data from csv files"** and provide:
 
 Alternatively, choose **"Load data from R environment"** and refer to
 objects you have already read in, for example `prf_sector`,
-`ds$data$rings`, and `ds$metadata$images`.
+`QWA_data$rings`, and `QWA_meta$images`.
 
 ---
 
@@ -144,5 +134,3 @@ objects you have already read in, for example `prf_sector`,
   is a different workflow that operates on the raw ROXAS files, which are
   only available if they were submitted as supplementary resources (see
   `vignette("resources")`).
-```
-

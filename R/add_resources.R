@@ -312,7 +312,7 @@ collect_resources <- function(path, append_to = NULL, df_structure = NULL,
   # Exclude backup files and known junk files
   exclude <- grepl(
     "_annotated\\.cal$|_Vessels_bu\\.scl$|_Ringtraces_bu\\.txt$|^Thumbs\\.db$|^~\\$",
-    fs::path_file(files)
+    fs::path_file(files), ignore.case = TRUE
   )
   files <- files[!exclude]
 

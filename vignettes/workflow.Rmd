@@ -27,7 +27,7 @@ library(rxs2tria)
 # Step 1: Locate ROXAS files
 
 Set the path to a folder containing the ROXAS or ROXAS AI output files
-of your QWA dataset. Files may be organized in subdirectories.
+of your QWA dataset. Files may be organised in subdirectories.
 `get_roxas_files()` checks that all required files are present for
 each image and returns a data frame of their full file paths.
 
@@ -54,8 +54,8 @@ files <- get_roxas_files(path_in, roxas_version)
 
 # Step 2: Extract the data structure
 
-QWA data are organized hierarchically: each analyzed *image* was taken
-of a microsection /*slide*, each slide was cut from a *woodpiece* (e.g.
+QWA data are organised hierarchically: each analysed *image* was taken
+of a microsection/*slide*, each slide was cut from a *woodpiece* (e.g.
 a core or a wedge), and each woodpiece was sampled from a *tree* of a 
 certain *species* at a specific *site*. Typically, some or all of this 
 information is encoded in the image file names.
@@ -198,7 +198,7 @@ ring quality flags:
 - `incomplete_ring`: ring at the inner or outer image border where the
   true ring boundary is not visible; MRW is unreliable or unavailable.
 - `missing_ring`: no cells detected; ring was added manually during
-  cross-dating (typically a wedging ring).
+  crossdating (typically a wedging ring).
 - `duplicate_ring`: the same year appears in more than one image due to
   overlapping slides from the same woodpiece.
 - `exclude_dupl`: `TRUE` for the duplicate ring(s) not selected as the
@@ -284,7 +284,7 @@ prf_sector <- calculate_sector_profiles(QWA_data,
 
 ---
 
-## Visualize measurement series and flag rings (Step 6b)
+## Visualise measurement series and flag rings (Step 6b)
 
 The flags Shiny app provides an interactive overview of the ring
 measurements and allows you to annotate individual rings with data

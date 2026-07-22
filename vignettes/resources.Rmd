@@ -85,7 +85,7 @@ QWA_meta <- read_QWAmetadata("output_data/my_dataset_QWAmetadata.json")
 ```
 
 Point `add_resources()` at a directory of files. Set `recursive = TRUE`
-to descend into sub-directories (raw ROXAS output is often nested per
+to descend into subdirectories (raw ROXAS output is often nested per
 tree or slide):
 
 ```{r add-basic}
