@@ -24,6 +24,14 @@ must be a subset of \code{meta$image_label}}
 
 \item{settings_date_orders}{Character; date order string(s) passed to
 \code{\link[lubridate:parse_date_time]{lubridate::parse_date_time()}} to parse the \code{rxs_created_at} field}
+
+\item{imgs_date_tz}{Optional timezone passed to
+\code{\link[lubridate:parse_date_time]{lubridate::parse_date_time()}} to parse the \code{img_created_at} field.
+Defaults to system timezone.}
+
+\item{settings_date_tz}{Optional timezone passed to
+\code{\link[lubridate:parse_date_time]{lubridate::parse_date_time()}} to parse the \code{rxs_created_at} field.
+Defaults to system timezone.}
 }
 \value{
 An updated \link{QWAimages} object

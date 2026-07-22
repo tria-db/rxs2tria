@@ -36,7 +36,7 @@ get_roxas_files <- function(path_in, roxas_version, exclude_dirs = NULL) {
   
   # ROXAS files are identified by matching regex patterns
   if (roxas_version == "roxas") {
-    pattern_orgimg_files <- "\\.(jpg|jpeg|png|bmp|tiff)$"
+    pattern_orgimg_files <- "\\.(jpg|jpeg|png|bmp|tiff)$" 
     pattern_settings_files <- "_ROXAS_Settings\\.txt$"
     pattern_cell_files <- "_Output_Cells\\.txt$"
     pattern_ring_files <- "_Output_Rings\\.txt$"
@@ -47,7 +47,7 @@ get_roxas_files <- function(path_in, roxas_version, exclude_dirs = NULL) {
     pattern_ring_files <- "\\.rings_table\\.csv$"
   }
   # Processed image files need to be filtered out
-  imgfiles_exclude_keywords <- c("annotated", "ReferenceSeries", "Preview", 
+  imgfiles_exclude_keywords <- c("annotated", "ReferenceSeries", "Preview",
                                  "\\.cells\\.", "\\.rings\\.")
   pattern_excl_keywords <- paste(imgfiles_exclude_keywords, collapse = "|")
 
@@ -55,7 +55,7 @@ get_roxas_files <- function(path_in, roxas_version, exclude_dirs = NULL) {
     fs::path_abs(path_in),
     type = "file",
     regexp = pattern_orgimg_files,
-    recurse = TRUE) 
+    recurse = TRUE)
   files_images <- files_images |>
     stringr::str_subset(pattern = pattern_excl_keywords, negate = TRUE)
   files_settings <- fs::dir_ls(
@@ -112,8 +112,30 @@ get_roxas_files <- function(path_in, roxas_version, exclude_dirs = NULL) {
     ), by = "prefix"
   )
 
-  # Image pattern is least specific, so found files might include non-ROXAS 
-  # images such as un-analysed test images or supplementary image files 
+  # A prefix might have image files in more than one format (e.g. a
+  # downsized .png copy alongside the original .jpg), which duplicates its
+  # row in df_files. Keep only the highest-priority format and drop the
+  # rest with a warning.
+  img_duplicates <- character(0)
+  if (any(duplicated(df_files$prefix))) {
+    imgformat_priority <- c("jpg", "jpeg", "png", "bmp", "tiff")
+    img_duplicates <- df_files |>
+      dplyr::mutate(
+        ext_rank = match(
+          tolower(stringr::str_extract(.data$fname_image, "(?<=\\.)[^.]+$")),
+          imgformat_priority
+        )
+      ) |>
+      dplyr::group_by(.data$prefix) |>
+      dplyr::arrange(.data$ext_rank, .by_group = TRUE) |> # order by imgformat priority
+      dplyr::slice(-1) |> # everything but the first (i.e. highest-priority)
+      dplyr::pull("fname_image")
+    df_files <- df_files[!df_files$fname_image %in% img_duplicates, ]
+  }
+
+
+  # Image pattern is least specific, so found files might include non-ROXAS
+  # images such as un-analysed test images or supplementary image files
   # (e.g. reference plots or woodpiece scans). Drop with a warning.
   has_no_roxas <- is.na(df_files$fname_cells) & is.na(df_files$fname_rings) & is.na(df_files$fname_settings)
   imgs_no_roxas <- df_files$fname_image[has_no_roxas]
@@ -143,9 +165,16 @@ get_roxas_files <- function(path_in, roxas_version, exclude_dirs = NULL) {
   }
 
   if (any(has_no_roxas)) {
-    cli::cli_warn(c(
-      "Ignored {sum(has_no_roxas)} image file{?s} without any corresponding ROXAS files:",
+    cli::cli_inform(c(
+      "!" = "Ignored {sum(has_no_roxas)} image file{?s} without any corresponding ROXAS files:",
       cli_truncated_list(imgs_no_roxas)
+    ))
+  }
+
+  if (length(img_duplicates)) {
+    cli::cli_inform(c(
+      "!" = "Ignored {length(img_duplicates)} duplicate image file{?s} of lower-priority formats:",
+      cli_truncated_list(img_duplicates)
     ))
   }
 

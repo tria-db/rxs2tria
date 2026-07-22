@@ -105,7 +105,10 @@ collect_settings_data <- function(df = NULL,
 #' dataset-level metadata to produce a full [QWAmetadata] object).
 #'
 #' @param df_structure Data frame with all input file names and data structure.
-#' @param df_settings Data frame with extracted ROXAS (AI) settings data.
+#' @param df_settings Data frame with extracted ROXAS (AI) settings data. The
+#'   `img_created_at` and `rxs_created_at` columns (if present and not
+#'   entirely `NA`) must already be converted to `POSIXct`, e.g. with
+#'   [lubridate::parse_date_time()] (see the `workflow` vignette).
 #'
 #' @returns A [QWAimages] object with the joined image-level metadata.
 #' @seealso [extract_data_structure()], [collect_settings_data()],
@@ -128,6 +131,23 @@ build_QWAimages <- function(df_structure,
   # custom check of the hierarchy defined by the structure columns
   checkmate::assert_character(df_structure$image_label, unique = TRUE)
   check_structure(df_structure)
+
+  # datetime columns must already be converted to POSIXct: ROXAS/EXIF
+  # timestamp formats are not parsed automatically further down and would
+  # otherwise fail with a cryptic error inside align_to_schema()
+  datetime_cols <- c("img_created_at", "rxs_created_at")
+  needs_conversion <- vapply(datetime_cols, function(col) {
+    col %in% colnames(df_settings) &&
+      is.character(df_settings[[col]]) &&
+      !all(is.na(df_settings[[col]]))
+  }, logical(1))
+  if (any(needs_conversion)) {
+    cli::cli_abort(c(
+      "Datetime column{?s} {.field {datetime_cols[needs_conversion]}} in {.arg df_settings} must be converted to {.cls POSIXct} first.",
+      "i" = "Convert with {.fun lubridate::parse_date_time}, using the format(s) and timezone appropriate for your data, before calling {.fn build_QWAimages}.",
+      "i" = "See the {.emph workflow} vignette (Step 3) for an example."
+    ))
+  }
 
   df_rxsmeta <- df_structure |>
     dplyr::left_join(df_settings, by = 'fname_settings')

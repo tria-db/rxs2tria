@@ -24,10 +24,18 @@ files <- get_roxas_files(path_in, roxas_version)
 # with alphanumeric components and one woodpiece per tree (no separate woodpiece
 # identifier). If your naming includes a woodpiece identifier, you can add it
 # (e.g. by including "(?<woodpiece>[[:alnum:]]+)" between the tree and slide groups).
+# If all images are from the same site and/or species, you can also drop the site/species
+# group(s) from the pattern and supply them as the site_label/species_code
+# arguments instead.
 # See ?extract_data_structure for more information.
 
 pattern <- "(?<site>[[:alnum:]]+)_(?<species>[[:alnum:]]+)_(?<tree>[[:alnum:]]+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)"
 df_structure <- extract_data_structure(files, pattern)
+
+# e.g. if all images are from site "ABC" and species "LADE":
+# pattern <- "(?<tree>[[:alnum:]]+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)"
+# df_structure <- extract_data_structure(
+#   files, pattern, site_label = "ABC", species_code = "LADE")
 
 # Always check the result before proceeding:
 # View(df_structure)

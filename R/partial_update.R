@@ -11,6 +11,12 @@
 #'   [lubridate::parse_date_time()] to parse the `img_created_at` field
 #' @param settings_date_orders Character; date order string(s) passed to
 #'   [lubridate::parse_date_time()] to parse the `rxs_created_at` field
+#' @param imgs_date_tz Optional timezone passed to
+#'   [lubridate::parse_date_time()] to parse the `img_created_at` field. 
+#'   Defaults to system timezone.
+#' @param settings_date_tz Optional timezone passed to
+#'   [lubridate::parse_date_time()] to parse the `rxs_created_at` field. 
+#'   Defaults to system timezone.
 #' @returns An updated [QWAimages] object
 #' @export
 update_QWAimages <- function(meta, imgs_to_update, 

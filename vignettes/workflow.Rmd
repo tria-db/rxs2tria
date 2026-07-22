@@ -74,9 +74,10 @@ Each named group (`site`, `species`, `tree`, `woodpiece`, `slide`,
 `image`) that appears in the pattern is extracted and used to construct
 the full hierarchical labels. 
 Not all groups need to be in the pattern:
-If, for example, all images belong to the same site, `site_label` can
-be supplied as a fixed argument instead. Or if each tree was cored
-exactly once, there may not be a specific woodpiece identifier.
+If, for example, all images belong to the same site and/or species, the
+`site_label` and/or `species_code` arguments can be supplied instead of
+including `site`/`species` groups in the pattern. Or if each tree was cored
+exactly once, there may not be a specific woodpiece identifier, and it can be left out of the pattern.
 
 Adapt the pattern to match your naming convention using named regex groups.
 Supported group names: site, species, tree, woodpiece, slide, image.
@@ -90,6 +91,11 @@ See the documentation of `extract_data_structure()` for more information.
 ```{r, eval = FALSE}
 pattern <- "(?<site>[[:alnum:]]+)_(?<species>[[:alnum:]]+)_(?<tree>[[:alnum:]]+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)"
 df_structure <- extract_data_structure(files, pattern)
+
+# or:
+# pattern <- "(?<tree>[[:alnum:]]+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)"
+# df_structure <- extract_data_structure(
+#   files, pattern, site_label = "S22", species_code = "LADE")
 ```
 
 **Always inspect the result** with `View(df_structure)` before

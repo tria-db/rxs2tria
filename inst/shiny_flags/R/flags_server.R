@@ -1226,20 +1226,20 @@ flags_server <- function(id, main_session, comments_out) {
       
 
     # # DEBUG OUTPUT -------------------------------------------------------------
-    output$debug <- shiny::renderPrint({
-      #sel_marker()
-      #sel_subplots()
-      #flags_out()
-      #shiny::req(save_settings$initialized)
-      #images_edited()
-      #comments_out$goto_img()
-      df <- traces_to_df(input$traces_crn)
-      tail(df, 10)
-      #rings_data_org()
-      #input$enter_key
-      #str(input_data$rings_data)
+    # output$debug <- shiny::renderPrint({
+    #   #sel_marker()
+    #   #sel_subplots()
+    #   #flags_out()
+    #   #shiny::req(save_settings$initialized)
+    #   #images_edited()
+    #   #comments_out$goto_img()
+    #   df <- traces_to_df(input$traces_crn)
+    #   tail(df, 10)
+    #   #rings_data_org()
+    #   #input$enter_key
+    #   #str(input_data$rings_data)
 
-    })
+    # })
 
 
     # return module exports
