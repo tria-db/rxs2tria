@@ -318,7 +318,7 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
         if (input$sel_author_orc == "new"){
           row <- nrow(current_df) + 1
           current_df[row,] <- rxs2tria:::create_empty_df(aut_tbl_props_full, nrows=1)
-          current_df[row, "author_nr"] <- nrow(current_df) + 1
+          current_df[row, "author_nr"] <- row
         } else {
           row <- input$sel_author_orc
         }
@@ -348,38 +348,17 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
     # render editable table
     output$author_table <- rhandsontable::renderRHandsontable({
       shiny::validate(shiny::need(!is.null(author_data_in()), "No data to show."))
-
-      colHeaders <- sapply(aut_tbl_props, function(x) x$title)
-      colHeaders <- colHeaders[names(author_data_in())] # ensure correct order
-      tippies <- sapply(aut_tbl_props, function(x) x$description)
-
-      n_rows <- nrow(author_data_in())
-      ht_height <- min(max(n_rows * ht_row_height, ht_min_height), ht_max_height)
-
-      ht <- rhandsontable::rhandsontable(
-        author_data_in(),
-        rowHeaders = TRUE,
-        contextMenu = FALSE,
-        stretchH = "all",
-        height = ht_height,
-        colHeaders = unname(colHeaders),
-        afterGetColHeader = tippy_renderer(tippies)
-      )
-      purrr::reduce(
-        names(colHeaders),
-        function(ht, col) hot_col_wrapper(ht, colHeaders[col], aut_tbl_props[[col]], aut_renderers[[col]]),
-        .init = ht
-      )
-
+      render_meta_hot(author_data_in(), aut_tbl_props, aut_renderers)
     })
 
 
     # create dataframe reactive to hot updates (keeps combined country values for display)
     author_data_out <- shiny::reactive({
       df <- rhandsontable::hot_to_r(input$author_table)
-      
+      if (is.null(df)) df <- author_data_in() # tab never rendered: fall back to loaded data
+
       if (!is.null(df) && nrow(df)>0) {
-        df <- df |> 
+        df <- df |>
           dplyr::mutate(contact_person = as.logical(.data$contact_person))
       }
       df
@@ -435,33 +414,14 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
     # Render editable table
     output$funding_table <- rhandsontable::renderRHandsontable({
       shiny::validate(shiny::need(!is.null(funding_data_in()), "No data to show."))
-
-      colHeaders <- sapply(fund_tbl_props, function(x) x$title)
-      colHeaders <- colHeaders[names(funding_data_in())] # ensure correct order
-      tippies <- sapply(fund_tbl_props, function(x) x$description)
-
-      n_rows <- nrow(funding_data_in())
-      ht_height <- min(max(n_rows * ht_row_height, ht_min_height), ht_max_height)
-
-      ht <- rhandsontable::rhandsontable(
-        funding_data_in(),
-        rowHeaders = TRUE,
-        contextMenu = FALSE,
-        stretchH = "all",
-        height = ht_height,
-        colHeaders = unname(colHeaders),
-        afterGetColHeader = tippy_renderer(tippies)
-      )
-      purrr::reduce(
-        names(colHeaders),
-        function(ht, col) hot_col_wrapper(ht, colHeaders[col], fund_tbl_props[[col]], fund_renderers[[col]]),
-        .init = ht
-      )
+      render_meta_hot(funding_data_in(), fund_tbl_props, fund_renderers)
     })
 
     # create dataframe reactive to hot updates
     funding_data_out <- shiny::reactive({
-      rhandsontable::hot_to_r(input$funding_table)
+      df <- rhandsontable::hot_to_r(input$funding_table)
+      if (is.null(df)) df <- funding_data_in() # tab never rendered: fall back to loaded data
+      df
     })
 
     funding_data_export <- shiny::reactive({
@@ -569,33 +529,14 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
     # Render editable table
     output$relres_table <- rhandsontable::renderRHandsontable({
       shiny::req(relres_data_in())
-
-      colHeaders <- sapply(relres_tbl_props, function(x) x$title)
-      colHeaders <- colHeaders[names(relres_data_in())] # ensure correct order
-      tippies <- sapply(relres_tbl_props, function(x) x$description)
-
-      n_rows <- nrow(relres_data_in())
-      ht_height <- min(max(n_rows * ht_row_height, ht_min_height), ht_max_height)
-
-      ht <- rhandsontable::rhandsontable(
-        relres_data_in(),
-        rowHeaders = TRUE,
-        contextMenu = FALSE,
-        stretchH = "all",
-        height = ht_height,
-        colHeaders = unname(colHeaders),
-        afterGetColHeader = tippy_renderer(tippies)
-      )
-      purrr::reduce(
-        names(colHeaders),
-        function(ht, col) hot_col_wrapper(ht, colHeaders[col], relres_tbl_props[[col]], relres_renderers[[col]]),
-        .init = ht
-      )
+      render_meta_hot(relres_data_in(), relres_tbl_props, relres_renderers)
     })
 
     # create dataframe reactive to hot updates
     relres_data_out <- shiny::reactive({
-      rhandsontable::hot_to_r(input$relres_table)
+      df <- rhandsontable::hot_to_r(input$relres_table)
+      if (is.null(df)) df <- relres_data_in() # tab never rendered: fall back to loaded data
+      df
     })
 
     # observe add row button
@@ -649,23 +590,7 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
       # 4) related resources
       results$related <- collect_hot_val_results(relres_data_out(), relres_tbl_props)
 
-      # convert collected results to dataframe
-      df_results <- results |>
-        purrr::map(\(x) x |>
-                     purrr::map(\(x) tibble::tibble(
-                       field = x$field,
-                       type = x$type,
-                       message = x$message
-                     )) |>
-                     purrr::list_rbind(names_to = 'fname')) |>
-        purrr::list_rbind(names_to = 'tname')
-
-      df_results$topic <- input_field_names[df_results$tname]
-
-      dplyr::bind_rows(
-        data.frame(topic = character(0), field = character(0),
-                   type = character(0), message = character(0)),
-        df_results)
+      collect_valcheck_df(results)
     })
 
     # set the color of the card header based on the validation results
@@ -675,29 +600,9 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
     })
 
     output$validation_check <- shiny::renderUI({
-      df_validation <- validation_checks()
-
-      if (nrow(df_validation) == 0) {
-        return(shiny::tagList(shiny::strong("All checks passed", style = paste0('color: ', prim_col, ';'))))
-      } else {
-        # generate html lists for each topic
-        html_output <- df_validation |>
-          dplyr::group_by(topic) |>
-          dplyr::summarise(
-            content = paste0("<li>", field, ": ", message, "</li>", collapse = "")
-          ) |>
-          dplyr::mutate(
-            html = paste0("<b>", topic, ":</b><ul>", content, "</ul>")
-          ) |>
-          dplyr::pull(html) |>
-          paste(collapse = "")
-
-        return(shiny::HTML(html_output))
-
+      render_valcheck_ui(validation_checks())
       # TODO:
       # add warning messages before switching tab or saving data
-
-      }
     })
 
     # Next button

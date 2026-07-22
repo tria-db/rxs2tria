@@ -54,8 +54,9 @@ build_csv_inputs <- function(ns) {
                      accept = c(".csv")),
     shiny::fileInput(ns("file_rings"), "Upload the QWA rings data",
                      accept = c(".csv")),
-    shiny::fileInput(ns("file_rxsmeta"), "Upload the ROXAS metadata",
-                     accept = c(".csv"))
+    shiny::fileInput(ns("file_rxsmeta"),
+                     "Upload the images metadata (QWAmetadata .json or QWAimages .csv)",
+                     accept = c(".json", ".csv"))
   )
 }
 build_example_inputs <- function(ns) {
@@ -192,10 +193,16 @@ load_data_env <- function(name_prf, name_rings, name_rxsmeta,
 #' Read input data frames from csv files
 #' @param path_prf Path to profile data csv file
 #' @param path_rings Path to rings data csv file
-#' @param path_rxsmeta Path to rxsmeta data csv file
+#' @param path_rxsmeta Path to the images metadata file. Either a QWAmetadata
+#'   `.json(.gz)` file (the `$images` component is extracted) or a QWAimages
+#'   `.csv` file.
+#' @param name_rxsmeta Original file name of `path_rxsmeta`, used to detect the
+#'   file type (JSON vs CSV) when `path_rxsmeta` is an extension-less temp file
+#'   from a Shiny upload. Defaults to `path_rxsmeta`.
 #' @return A named list with three data frames: prf_data, rings_data,
 #' rxsmeta_data
 load_data_csv <- function(path_prf, path_rings, path_rxsmeta,
+                          name_rxsmeta = NULL,
                           specs = input_specs){
   if (is.null(path_prf) || is.na(path_prf) || path_prf == "") {
     prf_data_in <- NULL
@@ -217,9 +224,32 @@ load_data_csv <- function(path_prf, path_rings, path_rxsmeta,
   if (is.null(path_rxsmeta) || is.na(path_rxsmeta) || path_rxsmeta == "") {
     rxsmeta_data_in <- NULL
   } else {
-    rxsmeta_data_in <- vroom::vroom(
-      path_rxsmeta, col_types = specs$rxsmeta_data$req_cols
-    )
+    # accept either the QWAmetadata JSON (extract its $images component) or a
+    # plain QWAimages CSV, detected from the original file name where available
+    ref_name <- if (is.null(name_rxsmeta) || is.na(name_rxsmeta)) {
+      path_rxsmeta
+    } else {
+      name_rxsmeta
+    }
+    if (grepl("\\.json(\\.gz)?$", ref_name, ignore.case = TRUE)) {
+      meta <- jsonlite::read_json(path_rxsmeta, simplifyVector = TRUE)
+      if (is.null(meta$images) || !is.data.frame(meta$images) ||
+          nrow(meta$images) == 0) {
+        stop("The uploaded QWAmetadata JSON does not contain a non-empty ",
+             "'images' component.")
+      }
+      rxsmeta_data_in <- tibble::as_tibble(meta$images)
+      # backwards-compatibility rename (mirrors read_QWAmetadata())
+      if ("dbl_cwt_threshold" %in% names(rxsmeta_data_in)) {
+        rxsmeta_data_in <- rxsmeta_data_in |>
+          dplyr::rename(cluster_dbl_cwt_threshold = "dbl_cwt_threshold")
+      }
+      rxsmeta_data_in$image_label <- as.character(rxsmeta_data_in$image_label)
+    } else {
+      rxsmeta_data_in <- vroom::vroom(
+        path_rxsmeta, col_types = specs$rxsmeta_data$req_cols
+      )
+    }
     # NOTE: force correct type for optional cols as well
     rxsmeta_cols <- split(names(specs$rxsmeta_data$opt_cols),
                           specs$rxsmeta_data$opt_cols)

@@ -98,7 +98,8 @@ flags_server <- function(id, main_session, comments_out) {
           "csv" = load_data_csv(
             path_prf = input$file_prf$datapath,
             path_rings = input$file_rings$datapath,
-            path_rxsmeta = input$file_rxsmeta$datapath
+            path_rxsmeta = input$file_rxsmeta$datapath,
+            name_rxsmeta = input$file_rxsmeta$name
           ),
           "example" = {
             # TODO: add example files to extdata
@@ -526,24 +527,23 @@ flags_server <- function(id, main_session, comments_out) {
         cat("... redrawing sel ring markers\n")
         marker <- sel_marker()
         sel_wp <- sel_woodpiece()
-        if (marker$wp_label == sel_wp) {
-          # get up-to-date ywp_val and color in case of sel param, detrend, show_excl, apply_changes
-          new_marker <- update_marker_info(marker, df_selwp(), input$sel_param)
-          sel_marker(new_marker)
-          p <- draw_sel_marker(p, new_marker, current_traces, sel_subplots())
-        } else {
-          # if filtered wps or sel_wp were changed such that marker is no longer on sel trace -> remove
-          cat("... ... new sel wp trace, reset marker\n")
-          sel_marker(NULL)
-          sel_image(NULL)
-        }
+        # get up-to-date ywp_val and color in case of sel param, detrend, show_excl, apply_changes
+        # NOTE: superfluous if rerender is due to click on other woodpiece, but rerun anyway
+        new_marker <- update_marker_info(marker, df_selwp(), input$sel_param)
+        sel_marker(new_marker)
+        # plot was just fully rebuilt (awaiting_restoration), so no marker
+        # trace exists yet regardless of what input$traces_crn (possibly
+        # stale, round-tripped from a prior cycle) reports -> force add
+        p <- draw_sel_marker(p, new_marker, list(), sel_subplots())
       } else {
         cat("... no sel marker(s) to draw\n")
       }
 
       cat("... redrawing excluded markers\n")
       excl_markers <- get_excl_markers(sel_woodpiece(), df_selwp(), rings_data_edited())
-      p <- draw_excl_markers(p, excl_markers, current_traces)
+      # same reasoning as draw_sel_marker above: force add, don't trust
+      # possibly-stale current_traces for the existence check
+      p <- draw_excl_markers(p, excl_markers, list())
 
       cat("... rerender complete\n")
       awaiting_restoration(FALSE) # only do it once
@@ -1226,19 +1226,20 @@ flags_server <- function(id, main_session, comments_out) {
       
 
     # # DEBUG OUTPUT -------------------------------------------------------------
-    output$debug <- shiny::renderPrint({
-      #sel_subplots()
-      #flags_out()
-      #shiny::req(save_settings$initialized)
-      #images_edited()
-      #comments_out$goto_img()
-      #df <- traces_to_df(input$traces_crn)
-      #tail(df)
-      #rings_data_org()
-      #input$enter_key
-      str(input_data$rings_data)
+    # output$debug <- shiny::renderPrint({
+    #   #sel_marker()
+    #   #sel_subplots()
+    #   #flags_out()
+    #   #shiny::req(save_settings$initialized)
+    #   #images_edited()
+    #   #comments_out$goto_img()
+    #   df <- traces_to_df(input$traces_crn)
+    #   tail(df, 10)
+    #   #rings_data_org()
+    #   #input$enter_key
+    #   #str(input_data$rings_data)
 
-    })
+    # })
 
 
     # return module exports

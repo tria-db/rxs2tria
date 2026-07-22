@@ -9,7 +9,7 @@ validate_char_column <- function(column, col_config) {
   maxl <- ifelse(is.null(col_config$maxLength), 10000, col_config$maxLength)
   check_regex <- !is.null(col_config$pattern)
   regp <- ifelse(is.null(col_config$pattern), "", col_config$pattern)
-  check_unique <- ifelse(is.null(col_config$unqiue), FALSE, col_config$unique)
+  check_unique <- ifelse(is.null(col_config$unique), FALSE, col_config$unique)
 
   # Initialize the result list
   #validation_results <- vector("list", length(column))
@@ -168,4 +168,47 @@ collect_validator_results <- function(iv_validated, input_field_names, ns_prefix
     }
   }
   return(results)
+}
+
+# combine a named list of per-table validation results into a tidy data frame
+# (each list element is itself a named list of field/type/message entries, as
+# returned by collect_hot_val_results() / collect_validator_results()).
+# the top-level names are mapped to display topics via the global input_field_names.
+collect_valcheck_df <- function(results){
+  df_results <- results |>
+    purrr::map(\(x) x |>
+                 purrr::map(\(x) tibble::tibble(
+                   field = x$field,
+                   type = x$type,
+                   message = x$message
+                 )) |>
+                 purrr::list_rbind(names_to = 'fname')) |>
+    purrr::list_rbind(names_to = 'tname')
+
+  df_results$topic <- input_field_names[df_results$tname]
+
+  dplyr::bind_rows(
+    data.frame(topic = character(0), field = character(0),
+               type = character(0), message = character(0)),
+    df_results)
+}
+
+# render a validation summary data frame as an HTML list grouped by topic,
+# or a "All checks passed" message if there are no issues.
+render_valcheck_ui <- function(df_validation){
+  if (nrow(df_validation) == 0) {
+    return(shiny::tagList(shiny::strong("All checks passed", style = paste0('color: ', prim_col, ';'))))
+  }
+  html_output <- df_validation |>
+    dplyr::group_by(topic) |>
+    dplyr::summarise(
+      content = paste0("<li>", field, ": ", message, "</li>", collapse = "")
+    ) |>
+    dplyr::mutate(
+      html = paste0("<b>", topic, ":</b><ul>", content, "</ul>")
+    ) |>
+    dplyr::pull(html) |>
+    paste(collapse = "")
+
+  shiny::HTML(html_output)
 }
