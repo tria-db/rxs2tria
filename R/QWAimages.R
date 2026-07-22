@@ -291,6 +291,11 @@ read_QWAimages <- function(file) {
   checkmate::assert_file_exists(file)
 
   df <- vroom::vroom(file, show_col_types = FALSE)
+  # renaming backcompatibility
+  if ("dbl_cwt_threshold" %in% names(df)) {
+    df <- df |>
+      dplyr::rename(cluster_dbl_cwt_threshold = dbl_cwt_threshold)
+  }
   aligned_data <- QWAimages(df)
   cli::cli_inform(c("v" = "QWAimages read from {.file {file}}"))
   aligned_data

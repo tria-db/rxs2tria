@@ -74,7 +74,7 @@ start_server <- function(id, main_session) {
             stop("Please provide input source.")
           } else {
             res <- get_from_env(input$input_name, envir = .GlobalEnv)
-            source <- glue::glue("object {input$input_name} from current R environment")
+            source <- glue::glue("object from current R enviornment: {input$input_name}")
             if (inherits(res, "data.frame")) {
               df <- rxs2tria::QWAimages(res) |> rxs2tria::complete_QWAimages()
               validated <- rxs2tria::QWAmetadata(images = df) |> rxs2tria::complete_QWAmetadata()
@@ -82,7 +82,7 @@ start_server <- function(id, main_session) {
               validated <- rxs2tria::as_QWAmetadata(res) |> rxs2tria::complete_QWAmetadata()
             }
           }
-        } else if (input$load_type == "file"){
+        } else if (input$load_type == "file") {
           if (!shiny::isTruthy(input$input_file)) {
             stop("Please provide input source.")
           } else {
@@ -97,9 +97,10 @@ start_server <- function(id, main_session) {
             source <- glue::glue("read from file {input$input_file$name}")
           }
         } else {
-          example_file <- system.file("extdata", "20251015_TRIA_POGSTO2024_collected_metadata.json", package = "rxs2tria")
-          res <- jsonlite::read_json(example_file, simplifyVector = TRUE)
-          source <- glue::glue("using example dataset")
+          example_file <- system.file("extdata", "TRIA_example_QWAmetadata.json", package = "rxs2tria")
+          res <- rxs2tria::read_QWAmetadata(example_file)
+          validated <- res |> rxs2tria::complete_QWAmetadata()
+          source <- glue::glue("example dataset")
         }
         # generate dataset description template if empty
         if (!shiny::isTruthy(validated$dataset$description)) {
@@ -273,17 +274,20 @@ start_server <- function(id, main_session) {
     })
 
     # create dataframe reactive to hot update
-    # TODO: join with img_data_in for full columns
     image_data_out <- shiny::reactive({
       df_out <- rhandsontable::hot_to_r(input$image_table)
       if (!is.null(df_out) && nrow(df_out)>0) {
-        df_out <- df_out |> 
+        # safeguard type conversion for hot edits
+        if ("only_ew" %in% names(df_out)) {
+          df_out <- df_out |> 
             dplyr::mutate(only_ew = as.logical(.data$only_ew))
+        }
+        # merge with full img_data_in (hidden columns)
         df_in <- image_data_in()
         df_out <- df_in |> dplyr::rows_update(df_out, by = "image_label")
       }
       df_out      
-    })
+    }) |> shiny::bindEvent(input$image_table)
 
     # output$testing <- shiny::renderPrint({
     #   image_data_out()

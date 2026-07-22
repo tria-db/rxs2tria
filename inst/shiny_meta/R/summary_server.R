@@ -90,7 +90,7 @@ summary_server <- function(id, main_session, start_out, dataset_out, site_out) {
       },
       content = function(file) {
         shiny::removeModal()
-        jsonlite::write_json(data_combined(), file, pretty = TRUE)
+        jsonlite::write_json(data_combined(), file, na = "null", POSIXt = "ISO8601", digits = NA, pretty = TRUE)
       }
     )
 

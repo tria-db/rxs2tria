@@ -209,6 +209,12 @@ QWAmetadata <- function(dataset = NULL,
                         woodpieces = NULL,
                         slides = NULL,
                         images = data.frame()) {
+  if (is.data.frame(dataset) && identical(images, data.frame()))
+    cli::cli_abort(c(
+      "A data frame was passed as {.arg dataset} while {.arg images} was not supplied.",
+      "i" = "Did you mean {.code QWAmetadata(images = <your data frame>)}?"
+    ))
+
   # images: validation via QWAimages
   images <- QWAimages(images)
 
@@ -429,11 +435,11 @@ write_QWAmetadata <- function(x, file, compress = FALSE, overwrite = TRUE) {
   checkmate::assert_path_for_output(file, overwrite = overwrite)
   if (compress){
     write(
-      jsonlite::toJSON(x, na = "null", POSIXt = "ISO8601"),
+      jsonlite::toJSON(x, na = "null", POSIXt = "ISO8601", digits = NA),
       gzfile(file)
     )
   } else {
-    jsonlite::write_json(x, file, na = "null", POSIXt = "ISO8601", pretty = TRUE)
+    jsonlite::write_json(x, file, na = "null", POSIXt = "ISO8601", digits = NA, pretty = TRUE)
   }
   
   cli::cli_inform(c("v" = "QWAmetadata written to {.file {file}}"))
@@ -449,6 +455,14 @@ write_QWAmetadata <- function(x, file, compress = FALSE, overwrite = TRUE) {
 read_QWAmetadata <- function(file) {
   checkmate::assert_file_exists(file)
   raw <- jsonlite::read_json(file, simplifyVector = TRUE)
+
+  # renaming backcompatibility
+  if ("images" %in% names(raw)){
+    if ("dbl_cwt_threshold" %in% names(raw$images)) {
+      raw$images <- raw$images |>
+        dplyr::rename(cluster_dbl_cwt_threshold = dbl_cwt_threshold)
+    }
+  }
 
   aligned_data <- as_QWAmetadata(raw)
   cli::cli_inform(c("v" = "QWAmetadata read from {.file {file}}"))

@@ -8,19 +8,21 @@ start_ui <- function(id) {
       title = "Instructions",
 
       # card to load input data ------------------------------------------------
+      shiny::tags$p(
+        "You can start a new submission from the raw ROXAS metadata collected
+        into a", shiny::code('QWAimages'), "object, or continue editing a", 
+        shiny::code('QWAmetadata'), "object. Load data either from file or from 
+        the current R environment."),
+       
+      shiny::actionButton(ns("btn_input"), "Load input data", icon = shiny::icon('file-arrow-up')),
+
       bslib::card(
         class = 'card-note',
-        bslib::card_header(class = 'bg-secondary', 'Input data'),
-        shiny::span("You can start a new submission from the dataframe of
-             raw metadata inferred from images and ROXAS settings
-             files with the", shiny::code('rxs2tria'), 'package, or continue by
-             loading a partially completed metadata file.'),
-       shiny::actionButton(ns("btn_input"), "Load input data")
+        bslib::card_header(
+          class = 'bg-primary',
+          shiny::span(shiny::icon("exclamation", style = "color: white"),'Note')),
+        "For large datasets, allow some time for each tab to load."
       ),
-
-      shiny::tags$p(
-        shiny::icon("info", class = "me-1"),
-        "For large datasets, allow some time for each tab to load."),
 
       # show selected data source ----------------------------------------------
       shiny::hr(class = "hr-slim"),
@@ -110,7 +112,7 @@ start_ui <- function(id) {
     ), # end of accordion
 
 
-    shiny::verbatimTextOutput(ns("testing")),
+    # shiny::verbatimTextOutput(ns("testing")), # debug
     shiny::br()
   ) # end of layout_sidebar
 

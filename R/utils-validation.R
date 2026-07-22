@@ -1,10 +1,39 @@
 #' @noRd
+rv_msg <- function(rv) {
+  switch(rv,
+    "roxas" = "ROXAS",
+    "roxas_ai" = "ROXAS AI",
+    cli::cli_abort("Invalid roxas version {.var {rv}}")
+  )
+}
+
+#' @noRd
 cli_truncated_list <- function(x, max_show = 5, bullet = " ") {
   shown <- x[seq_len(min(length(x), max_show))]
   n_more <- length(x) - length(shown)
   c(
     setNames(shown, rep(bullet, length(shown))),
     if (n_more > 0) setNames(glue::glue("... and {n_more} more"), bullet)
+  )
+}
+
+#' @noRd
+cli_truncated_groups <- function(
+  groups, max_show_out = 3, max_show_in = 3,
+  bullet_out = "*", bullet_in = " ") {
+  shown_out <- groups[seq_len(min(length(groups), max_show_out))]
+  hidden_out <- groups[seq_len(length(groups))[-seq_len(length(shown_out))]]
+  n_more_groups <- length(hidden_out)
+  n_more_files <- sum(lengths(hidden_out))
+  inner <- lapply(names(shown_out), function(id) {
+    files <- shown_out[[id]]
+    header <- setNames(paste0("'", id, "' (n = ", length(files), ")"), bullet_out)
+    c(header, cli_truncated_list(files, max_show = max_show_in, bullet = bullet_in))
+  })
+  c(
+    unlist(inner, use.names = TRUE),
+    if (n_more_groups > 0) 
+      glue::glue("... and {n_more_groups} more group{ifelse(n_more_groups==1,'','s')} ({n_more_files} item{ifelse(n_more_files==1,'','s')})")
   )
 }
 
@@ -151,7 +180,7 @@ create_empty_df <- function(tbl_props, nrows = 0) {
   empty_df <- vroom::vroom(I("\n"), col_names = col_names, col_types = r_col_types)
 
   # add dummy rows if nrows > 0
-  if (nrows > 0){
+  if (nrows > 0) {
     char_cols <- col_names[col_types == "string"] # NOTE: we have at least one char column in all our tables
     bool_cols <- col_names[col_types == "boolean"]
     empty_df[1:nrows, char_cols] <- "" # dummy value to add char rows
@@ -193,10 +222,19 @@ convert_column <- function(x, target_class) {
 #' @noRd
 align_to_schema <- function(df, tbl_props, schema = NULL, add_opt = FALSE,
                             mute_info = FALSE, ignore_colnames = FALSE
-                            ) {
+                            ) {  
   # get target empty df to align data to
   target_structure <- create_empty_df(tbl_props, nrows = 0)
   target_cols <- names(target_structure)
+
+  if (is.null(df)) {
+    cli::cli_warn(c("!" = "{.field {schema}} empty data frame created from schema"))
+    return(target_structure)
+  }
+
+  # replace empty strings with NA
+  df <- df |> 
+    dplyr::mutate(dplyr::across(dplyr::where(is.character), ~ dplyr::na_if(.,"")))
 
   aligned_data <- df
 
@@ -252,9 +290,7 @@ align_to_schema <- function(df, tbl_props, schema = NULL, add_opt = FALSE,
       }
     }
     
-    if (is.null(df)) {
-      cli::cli_warn(c("!" = "{.field {schema}} empty data frame created from schema"))
-    } else if (length(msg)>0) {
+    if (length(msg)>0) {
       cli::cli_warn(c("!" = "{.field {schema}} data frame aligned to schema with {length(msg)%/%2} warning{?s}", msg))
     } else {
       cli::cli_inform(c("i" = "{.field {schema}} data frame aligned with schema"))

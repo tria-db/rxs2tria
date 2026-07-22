@@ -9,7 +9,10 @@ build_QWAimages(df_structure, df_settings)
 \arguments{
 \item{df_structure}{Data frame with all input file names and data structure.}
 
-\item{df_settings}{Data frame with extracted ROXAS (AI) settings data.}
+\item{df_settings}{Data frame with extracted ROXAS (AI) settings data. The
+\code{img_created_at} and \code{rxs_created_at} columns (if present and not
+entirely \code{NA}) must already be converted to \code{POSIXct}, e.g. with
+\code{\link[lubridate:parse_date_time]{lubridate::parse_date_time()}} (see the \code{workflow} vignette).}
 }
 \value{
 A \link{QWAimages} object with the joined image-level metadata.

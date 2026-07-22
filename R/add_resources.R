@@ -195,33 +195,97 @@ infer_resource_type <- function(filename) {
 
 #' Collect resource file information from a directory
 #'
-#' Scans a directory for files and returns a data frame listing each file with
-#' its inferred resource type. Optionally appends to an existing resources
-#' data frame, making it easy to build a resource list incrementally from
-#' multiple directories (e.g., processed outputs + raw ROXAS files + images).
+#' Scans a directory for files and returns a data frame ("resources table")
+#' listing each file together with its inferred resource type, the hierarchy
+#' level and entity it belongs to, and a checksum and size used for integrity
+#' checking during submission. Files can be collected incrementally from
+#' several directories by passing the previous result to `append_to`, so a
+#' single table can describe processed outputs, raw ROXAS files, and images
+#' that live in different folders.
 #'
-#' Resource types are inferred from file names via `infer_resource_type()`.
-#' See that function's documentation for the full pattern table.
+#' This function produces a *manifest* of individual files. It does not move,
+#' copy, rename, or compress anything --- the files stay where they are and are
+#' only referenced by their path in `fname_resource`. How the listed files are
+#' ultimately packaged and stored (e.g. grouped into archives in the TRIA
+#' storage bucket) is handled downstream and does not need to be described
+#' here.
+#'
+#' See `vignette("resources")` for a worked example and the complete list of
+#' recognised resource types.
+#'
+#' @details
+#' # Resource types
+#'
+#' The `resource_type` of each file is inferred from its name by matching it
+#' against the known ROXAS, ROXAS AI, and QWA naming conventions (for example
+#' `*_Output_Cells.txt` becomes `"roxas_output_cells"`, `*.metadata.json`
+#' becomes `"rai_metadata"`). Patterns are checked most-specific first. Files
+#' that match no known pattern are typed as `"other"` and, unless
+#' `include_unmatched = TRUE`, dropped from the result. Known backup and junk
+#' files (ROXAS `_bu` backups, `Thumbs.db`, Office lock files) are always
+#' excluded. The full pattern table is documented in `vignette("resources")`.
+#'
+#' # Hierarchy level and linked entity
+#'
+#' Every resource type has a default `linked_level` describing the level of the
+#' data hierarchy the file pertains to: `"dataset"` (applies to the whole
+#' submission, e.g. a reference chronology), `"woodpiece"`, `"slide"`,
+#' `"image"`, or `"analysis"` (per-image ROXAS analysis files such as
+#' shapefiles or annotated images). `linked_label` identifies *which* entity at
+#' that level the file belongs to (e.g. a specific `image_label`).
+#'
+#' `linked_label` is filled automatically for `image`- and `analysis`-level
+#' resources when `df_structure` is supplied (see below); all other rows start
+#' as `NA` and should be reviewed and completed manually where relevant.
+#'
+#' # Automatic label matching
+#'
+#' When `df_structure` (a data structure table from [extract_data_structure()],
+#' or the `$images` component of a [QWAmetadata] object) is provided, each
+#' unlabelled `image`/`analysis` resource is matched to an image by testing
+#' whether its file name starts with an image's base name. The longest matching
+#' base name wins, which prevents false matches between labels that share a
+#' prefix (e.g. `S22_L1` vs `S22_L10`). Resources that cannot be matched are
+#' left as `NA`, and the number of successful matches is reported.
 #'
 #' @param path Path to a directory to scan for files.
 #' @param append_to Optional resources data frame from a previous call to
-#'   `collect_resources()`. When provided, the new resources are appended to it.
-#' @param df_structure Optional data frame with label columns (e.g. from
-#'   [extract_data_structure()]). Reserved for future use to auto-populate
-#'   `linked_label` from matching file names.
+#'   `collect_resources()`. When provided, the new resources are appended to it
+#'   (validated against the resources schema first).
+#' @param df_structure Optional data frame with the label columns
+#'   `org_img_name` and `image_label` (e.g. from [extract_data_structure()] or
+#'   the `$images` component of a [QWAmetadata] object). Used to auto-populate
+#'   `linked_label` for `image`- and `analysis`-level resources.
 #' @param recursive If `TRUE`, recurse into sub-directories (default `FALSE`).
-#' @param include_unmatched If `TRUE`, resources that could not be matched
-#'   to a specific type are included as "other" (default `FALSE`).
+#' @param include_unmatched If `TRUE`, files that could not be matched to a
+#'   specific type are kept with `resource_type = "other"` (default `FALSE`,
+#'   i.e. such files are dropped).
 #'
-#' @returns A [tibble][tibble::tibble] with columns:
+#' @returns A [tibble][tibble::tibble] with one row per file and columns:
 #'   - `resource_name`: base file name.
-#'   - `resource_type`: inferred resource type string.
+#'   - `resource_type`: inferred resource type string (see Details).
 #'   - `linked_level`: default hierarchy level for this type (`"dataset"`,
 #'     `"woodpiece"`, `"slide"`, `"image"`, or `"analysis"`).
-#'   - `linked_label`: label of the linked entity (`NA`; fill in manually).
-#'   - `fname_resource`: absolute file path.
+#'   - `linked_label`: label of the linked entity, auto-filled from
+#'     `df_structure` where possible, otherwise `NA` (fill in manually).
+#'   - `fname_resource`: absolute path to the file on your machine.
+#'   - `checksum`: MD5 checksum of the file contents.
+#'   - `size_bytes`: file size in bytes.
 #'
-#' @seealso [add_resources()]
+#' @seealso [add_resources()] to attach the result to a [QWAmetadata] object;
+#'   `vignette("resources")` for the full workflow and resource-type table.
+#' @examples
+#' \dontrun{
+#' # Collect the processed outputs, then append raw ROXAS files and images
+#' # scanned recursively from a second directory:
+#' res <- collect_resources("path/to/output_data")
+#' res <- collect_resources("path/to/raw_roxas_files",
+#'                          append_to = res, recursive = TRUE)
+#'
+#' # Auto-fill linked_label for per-image resources using a data structure:
+#' res <- collect_resources("path/to/raw_roxas_files",
+#'                          df_structure = my_structure, recursive = TRUE)
+#' }
 #' @export
 collect_resources <- function(path, append_to = NULL, df_structure = NULL,
                               recursive = FALSE, include_unmatched = FALSE) {
@@ -248,7 +312,7 @@ collect_resources <- function(path, append_to = NULL, df_structure = NULL,
   # Exclude backup files and known junk files
   exclude <- grepl(
     "_annotated\\.cal$|_Vessels_bu\\.scl$|_Ringtraces_bu\\.txt$|^Thumbs\\.db$|^~\\$",
-    fs::path_file(files)
+    fs::path_file(files), ignore.case = TRUE
   )
   files <- files[!exclude]
 
@@ -261,7 +325,9 @@ collect_resources <- function(path, append_to = NULL, df_structure = NULL,
       resource_type  = types,
       linked_level   = unname(.resource_linked_levels[types]),
       linked_label   = NA_character_,
-      fname_resource = as.character(files)
+      fname_resource = as.character(files),
+      checksum       = unname(tools::md5sum(files)),
+      size_bytes     = as.numeric(fs::file_size(files))
     )
     df <- df |> dplyr::bind_rows(new_res)
     if (!include_unmatched){
@@ -304,18 +370,40 @@ collect_resources <- function(path, append_to = NULL, df_structure = NULL,
 }
 
 
-#' Add a resources table to a QWAmetadata object
+#' Add supplementary resource files to a QWAmetadata object
 #'
-#' Stores a resources data frame (typically created by [collect_resources()])
-#' as the `$resources` component of a [QWAmetadata] object. Appended to any
-#' previously stored resources, `$images` used to infer linked labels.
+#' Scans a directory and records the files it finds in the `$resources`
+#' component of a [QWAmetadata] object. This is the convenient entry point for
+#' listing the supplementary files (original and annotated images, raw ROXAS
+#' output, reference series, etc.) you wish to submit alongside the required
+#' `QWAmetadata` and `QWAdata` files.
 #'
-#' @param x A [QWAmetadata] object.
+#' `add_resources()` is a thin wrapper around [collect_resources()]: it scans
+#' `path`, appends the newly found files to any resources already stored in
+#' `x$resources`, and uses the object's own `$images` component as the data
+#' structure for auto-filling `linked_label` on per-image resources. Call it
+#' once per directory to build up the table across several source folders.
+#'
+#' Only a *listing* of files is produced --- the files themselves are not
+#' modified or copied. See [collect_resources()] for the meaning of each column
+#' and `vignette("resources")` for the full workflow, including how to review
+#' and complete `linked_label` and the complete resource-type table.
+#'
+#' @param x A [QWAmetadata] object. Its `$images` component, if present, is
+#'   used to auto-fill `linked_label` for `image`- and `analysis`-level files.
 #' @param path Path to a directory to scan for files.
 #' @param recursive If `TRUE`, recurse into sub-directories (default `FALSE`).
-#' @param include_unmatched If `TRUE`, resources that could not be matched
-#'   to a specific type are included as "other" (default `FALSE`).
+#' @param include_unmatched If `TRUE`, files that could not be matched to a
+#'   specific type are kept with `resource_type = "other"` (default `FALSE`).
 #' @returns The [QWAmetadata] object with the `$resources` component updated.
+#' @examples
+#' \dontrun{
+#' QWA_meta <- read_QWAmetadata("output_data/my_dataset_QWAmetadata.json")
+#' QWA_meta <- add_resources(QWA_meta, path = "raw_roxas_files", recursive = TRUE)
+#' # review / complete the table, then persist:
+#' QWA_meta$resources
+#' write_QWAmetadata(QWA_meta, "output_data/my_dataset_QWAmetadata.json")
+#' }
 #'
 #' @seealso [collect_resources()], [QWAmetadata()]
 #' @export

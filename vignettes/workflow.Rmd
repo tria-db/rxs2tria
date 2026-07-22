@@ -27,7 +27,7 @@ library(rxs2tria)
 # Step 1: Locate ROXAS files
 
 Set the path to a folder containing the ROXAS or ROXAS AI output files
-of your QWA dataset. Files may be organized in subdirectories.
+of your QWA dataset. Files may be organised in subdirectories.
 `get_roxas_files()` checks that all required files are present for
 each image and returns a data frame of their full file paths.
 
@@ -54,8 +54,8 @@ files <- get_roxas_files(path_in, roxas_version)
 
 # Step 2: Extract the data structure
 
-QWA data are organized hierarchically: each analyzed *image* was taken
-of a microsection /*slide*, each slide was cut from a *woodpiece* (e.g.
+QWA data are organised hierarchically: each analysed *image* was taken
+of a microsection/*slide*, each slide was cut from a *woodpiece* (e.g.
 a core or a wedge), and each woodpiece was sampled from a *tree* of a 
 certain *species* at a specific *site*. Typically, some or all of this 
 information is encoded in the image file names.
@@ -74,9 +74,11 @@ Each named group (`site`, `species`, `tree`, `woodpiece`, `slide`,
 `image`) that appears in the pattern is extracted and used to construct
 the full hierarchical labels. 
 Not all groups need to be in the pattern:
-If, for example, all images belong to the same site, `site_label` can
-be supplied as a fixed argument instead. Or if each tree was cored
-exactly once, there may not be a specific woodpiece identifier.
+If, for example, all images belong to the same site and/or species, the
+`site_label` and/or `species_code` arguments can be supplied instead of
+including `site`/`species` groups in the pattern. Or if each tree was cored
+exactly once, there may not be a specific woodpiece identifier, and it 
+can be left out of the pattern.
 
 Adapt the pattern to match your naming convention using named regex groups.
 Supported group names: site, species, tree, woodpiece, slide, image.
@@ -90,6 +92,11 @@ See the documentation of `extract_data_structure()` for more information.
 ```{r, eval = FALSE}
 pattern <- "(?<site>[[:alnum:]]+)_(?<species>[[:alnum:]]+)_(?<tree>[[:alnum:]]+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)"
 df_structure <- extract_data_structure(files, pattern)
+
+# or:
+# pattern <- "(?<tree>[[:alnum:]]+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)"
+# df_structure <- extract_data_structure(
+#   files, pattern, site_label = "S22", species_code = "LADE")
 ```
 
 **Always inspect the result** with `View(df_structure)` before
@@ -106,18 +113,21 @@ AI metadata) and, for classic ROXAS, also extracts EXIF data from the
 image files. The result is combined with the data structure from Step 2
 into a `QWAimages` object using `build_QWAimages()`.
 
-Use one of the two calls below depending on the software version used to 
-produce your data.
+Passing the data structure directly, the ROXAS version is auto-detected
+from the settings file names, and for classic ROXAS the image EXIF data is
+read from the `fname_image` column.
 
 ```{r, eval = FALSE}
-# ROXAS: image EXIF data is collected separately from the image files
+df_settings <- collect_settings_data(df_structure)
+```
+
+Alternatively, the settings (and, for classic ROXAS, image) file paths can be
+supplied individually, and the version can be set explicitly:
+
+```{r, eval = FALSE}
 df_settings <- collect_settings_data(files_settings = df_structure$fname_settings,
                                      files_images = df_structure$fname_image,
                                      roxas_version = "roxas")
-
-# ROXAS AI: image EXIF data is already part of the JSON metadata files
-df_settings <- collect_settings_data(files_settings = df_structure$fname_settings,
-                                     roxas_version = "roxas_ai")
 ```
 
 Datetime columns are read as raw character strings to avoid locale- and
@@ -162,7 +172,7 @@ write_QWAimages(rxs_images, "path/to/output_data/example_dataset_QWAimages.csv.g
 # rxs_images <- read_QWAimages("path/to/output_data/example_dataset_QWAimages.csv.gz")
 ```
 
-### Additional metadata for TRIA submission (Step 3b)
+## Additional metadata for TRIA submission (Step 3b)
 
 To provide the site-, tree-, woodpiece-, slide-, and dataset-level
 metadata required for a TRIA submission, use the interactive metadata
@@ -175,12 +185,12 @@ completed submissions can be reloaded and continued at any time.
 launch_metadata_app()
 
 # After exporting and closing the app, optionally read the result back:
-# QWA_metadata <- read_QWAmetadata("path/to/output_data/example_dataset_QWAmetadata.json")
+# QWA_meta <- read_QWAmetadata("path/to/output_data/example_dataset_QWAmetadata.json")
 ```
 
 ---
 
-## Step 4: Read and clean the measurement data
+# Step 4: Read and clean the measurement data
 
 `collect_raw_data()` reads the cell and ring measurement tables from all
 ROXAS output files, combines them, and performs initial cleaning:
@@ -195,7 +205,7 @@ ring quality flags:
 - `incomplete_ring`: ring at the inner or outer image border where the
   true ring boundary is not visible; MRW is unreliable or unavailable.
 - `missing_ring`: no cells detected; ring was added manually during
-  cross-dating (typically a wedging ring).
+  crossdating (typically a wedging ring).
 - `duplicate_ring`: the same year appears in more than one image due to
   overlapping slides from the same woodpiece.
 - `exclude_dupl`: `TRUE` for the duplicate ring(s) not selected as the
@@ -213,7 +223,7 @@ chronologies).
 ```{r, eval = FALSE}
 QWA_data <- collect_raw_data(rxs_images)
 # or if you already loaded the full metadata from json after completing Step 3:
-# QWA_data <- collect_raw_data(QWAmeta$images)
+# QWA_data <- collect_raw_data(QWA_meta$images)
 
 exclude_mode <- "either"
 QWA_data <- complete_QWAdata(QWA_data, rxs_images, exclude_mode)
@@ -223,7 +233,7 @@ QWA_data  # prints an overview including ring flag counts
 
 ---
 
-## Step 5: Save the QWA data
+# Step 5: Save the QWA data
 
 `write_QWAdata()` saves the `QWAdata` object to two (optionally
 compressed) CSV files following the naming convention
@@ -246,7 +256,9 @@ for a more complete submission.
 
 ---
 
-## Step 6a: Compute radial profiles (optional)
+# Step 6: Assess the measurements data quality (optional)
+
+## Compute radial profiles (Step 6a)
 
 Cell measurements can be aggregated across the ring width into
 position bins, producing a `QWAprofile` object. Two binning schemes are
@@ -279,7 +291,7 @@ prf_sector <- calculate_sector_profiles(QWA_data,
 
 ---
 
-## Step 6b: Assess ring data quality (optional)
+## Visualise measurement series and flag rings (Step 6b)
 
 The flags Shiny app provides an interactive overview of the ring
 measurements and allows you to annotate individual rings with data
@@ -312,7 +324,7 @@ launch_flags_app()
 
 ---
 
-## Step 6c: Update re-analysed images (optional)
+## Update re-analysed images (Step 6c)
 
 If data processing reveals issues in the raw data and you re-analyse
 one or more images with ROXAS or ROXAS AI, `update_QWAimages()` and
@@ -327,6 +339,8 @@ reprocessing the entire dataset.
 rxs_images <- update_QWAimages(rxs_images,
   imgs_to_update = c("IMAGELABEL1", "IMAGELABEL2"),
   settings_date_orders = settings_date_orders) # same as defined in Step 3
+# don't forget to update the component in the QWAmetadata object if necessary:
+QWA_meta$images <- rxs_images
 ```
 
 3. Update the `QWAdata` object. For the updated images only, the raw
@@ -344,21 +358,45 @@ QWA_data <- update_QWAdata(QWA_data,
 
 ---
 
-## Step 7: Compile resources (optional)
+# Step 7: Compile resources (optional)
 
 A TRIA submission must include at minimum the `QWAmetadata` `.json` and
-the `QWAdata` `.csv` files. If you want to provide additional files
-(original images, annotated images, reference series `.rwl` files,
-etc.), these must be listed in the `$resources` component of the
-`QWAmetadata` object.
+the `QWAdata` `.csv` files. If you want to provide additional
+(supplementary) files — original images, annotated images, raw ROXAS /
+ROXAS AI output, reference series `.rwl` files, etc. — these are listed
+in the `$resources` component of the `QWAmetadata` object.
 
-`add_resources()` scans a directory, infers the resource type of each
-file from its name (see `?infer_resource_type` for the full pattern
-table), and appends the result to the existing resources list. Repeat
-for each relevant directory:
+`add_resources()` scans a directory and appends the files it finds to
+`$resources` as a table with one row per file. For each file it infers
+the `resource_type` from the file name, sets the hierarchy level it
+belongs to (`linked_level`), and records an MD5 `checksum` and
+`size_bytes` for integrity checking on upload. Per-image files are also
+matched to their `image_label` (the `linked_label` column) using the
+object's `$images` component. Repeat the call for each relevant
+directory; set `recursive = TRUE` to descend into nested folders:
 
 ```{r, eval = FALSE}
-QWA_metadata <- read_QWAmetadata("path/to/output_data/example_dataset_QWAmetadata.json")
-QWA_metadata <- add_resources(QWA_metadata, path = "path/to/submission_files")
-write_QWAmetadata(QWA_metadata, "path/to/output_data/example_dataset_QWAmetadata.json")
+QWA_meta <- read_QWAmetadata("path/to/output_data/example_dataset_QWAmetadata.json")
+QWA_meta <- add_resources(QWA_meta, path = "path/to/raw_roxas_files", recursive = TRUE)
+QWA_meta <- add_resources(QWA_meta, path = "path/to/annotated_images")
 ```
+
+Review the table — in particular, complete any `linked_label` values
+that were not filled automatically — and then write the object back to
+disk:
+
+```{r, eval = FALSE}
+QWA_meta$resources
+write_QWAmetadata(QWA_meta, "path/to/output_data/example_dataset_QWAmetadata.json")
+```
+
+Listing the files does not move or compress them; how they are packaged
+for storage is handled downstream. See `vignette("resources")` for the
+full resource-type table, the meaning of each column, and how to link
+resources to the data hierarchy.
+
+# Step 8: Submit your data
+
+Once you are ready to share your prepared data files with us, reach 
+out to [tria@wsl.ch](mailto:tria@wsl.ch) to receive an 
+invitation to the file transfer server.

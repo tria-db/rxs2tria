@@ -39,8 +39,7 @@
         "type": "string",
         "minLength": 1,
         "title": "Species",
-        "description": "",
-        "otherChecks": ["check_speciescode"]
+        "description": ""
       },
       "phylogenetic_group": {
         "type": ["string", "null"],

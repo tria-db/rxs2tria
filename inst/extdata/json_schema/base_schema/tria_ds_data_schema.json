@@ -3,7 +3,6 @@
   "$id": "TODO:addurltoTRIAschema",
   "title": "TRIA dataset metadata schema",
   "description": "Schema for ...",
-  "$comment": "TODOs: check that format is sufficient to validate and pattern are not required, use htType for ht renderers (add to all? or infer via type?), use otherChecks for extra/complex validations (implement)",
   "type": "array",
   "minItems": 1,
   "maxItems": 1,

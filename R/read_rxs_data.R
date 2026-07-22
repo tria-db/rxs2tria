@@ -109,7 +109,7 @@ collect_raw_outputs <- function(df_structure, roxas_version, ftype) {
 
     colname_variants <- c(
       DHW = 'DH', # DH is hydraulically weighted mean diameter (Kolb & Sperry, 1998)
-      DWM = 'DH2' # while DH2 is mean hydraulic diameter (Tyree & Zimmermann, 2002)
+      DHM = 'DH2' # while DH2 is mean hydraulic diameter (Tyree & Zimmermann, 2002)
     )
 
     checkmate::assert_subset(c('fname_rings', 'image_label'), names(df_structure))
@@ -294,13 +294,13 @@ collect_raw_data <- function(df_meta, roxas_version = NULL) {
   df_rings_complete <- complete_rings(QWA_data)
 
   # check for cwt estimates (expected/required for conifer data)
-  # TODO: could already check in df_meta for info wrt angiosperm/confifer?
+  # TODO: could already check in df_meta for info wrt angiosperm/conifer?
   check_cwt(QWA_data$cells, warn_only = TRUE)
   
   # check dating (df_meta for outmost_year check if available)
   check_ring_years(df_rings_complete, df_meta, warn_only = TRUE)
 
-  cli::cli_alert_success("Data extracted to {.var QWAdata} object")
+  cli::cli_alert_success("Extracted cells and rings data to {.var QWAdata} object")
   
   new_QWAdata(cells = df_cells_all, rings = df_rings_complete)
 }

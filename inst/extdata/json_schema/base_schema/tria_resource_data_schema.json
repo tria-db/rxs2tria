@@ -36,10 +36,20 @@
         "$comment": "TODO: add validty check of values?"
       },
       "fname_resource": {
-        "type": ["string", "null"], 
+        "type": ["string", "null"],
         "title": "File path / name of the resource",
-        "description": "",
-        "$comment": "TODO: add validty check of values?"
+        "description": ""
+      },
+      "checksum": {
+        "type": ["string", "null"],
+        "title": "Checksum",
+        "description": "MD5 checksum of the file contents, used to verify integrity and reconcile the uploaded files against the manifest"
+      },
+      "size_bytes": {
+        "type": ["integer", "null"],
+        "minimum": 0,
+        "title": "File size (bytes)",
+        "description": "Size of the resource file in bytes"
       }
     },
     "required": ["resource_name", "resource_type"],

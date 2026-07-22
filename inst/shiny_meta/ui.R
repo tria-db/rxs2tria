@@ -75,7 +75,7 @@ ui <- bslib::page_fluid(
     selected = tab_start,
 
     # TITLE --------------------------------------------------------------------
-    title = "TRIA database: Contribute metadata",
+    title = "rxs2tria: Contribute metadata",
 
     # TAB: Start (prefilled metadata) ------------------------------------------
     bslib::nav_spacer(),
@@ -109,13 +109,11 @@ ui <- bslib::page_fluid(
                 height = "30px", style = "vertical-align:middle; margin-right: 5px;"),
         shiny::actionLink("contact_link", "Contact",
                   style = "color: white; margin-left: 5px; text-decoration: none;")
-      
     )
 
   ), # end of tabs
 
   #verbatimTextOutput("debug"), # for debugging,
-
 
 ) # end of ui
 

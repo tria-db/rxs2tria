@@ -140,7 +140,7 @@
         "enum": ["", "all", "ew", "lw"],
         "title": "Affected tissue",
         "description": "Can be used to indicate whether the data quality issue(s) affect the entire or only part of the ring",
-        "colType": "flag_opt"
+        "colType": "opt_char"
       },
       "incomplete_ring": {
         "type": ["boolean", "null"],
@@ -273,6 +273,12 @@
         "title": "Other discrete feature",
         "description": "Discrete feature flag: other discrete features.",
         "colType": "opt_flag"
+      },
+      "comment": {
+        "type": ["string", "null"],
+        "title": "Comment",
+        "description": "Additional comments (not imported to TRIA DB)",
+        "colType": "opt_char"
       }
     },
     "required": ["image_label", "year"],

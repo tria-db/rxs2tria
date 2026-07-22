@@ -11,9 +11,8 @@ reference:
   - get_roxas_files
   - get_structure_from_filenames
   - extract_data_structure
-  - collect_image_info
   - collect_settings_data
-
+  - build_QWAimages
 - title: "Reading raw ROXAS output data"
   desc: "Functions for reading and writing ROXAS cells and rings output files."
   contents:
@@ -22,7 +21,6 @@ reference:
 - title: "QWAimages"
   desc: "S3 class QWAimages"
   contents:
-  - build_QWAimages
   - check_QWAimages
   - complete_QWAimages
   - QWAimages
@@ -33,8 +31,6 @@ reference:
 - title: "QWAmetadata"
   desc: "S3 QWAmetadata"
   contents:
-  - add_resources
-  - collect_resources
   - check_QWAmetadata
   - complete_QWAmetadata
   - print.QWAmetadata
@@ -67,6 +63,8 @@ reference:
 - title: "rest"
   desc: "Other utility functions."
   contents:
+  - add_resources
+  - collect_resources
   - launch_flags_app
   - launch_metadata_app
   - create_rwl
