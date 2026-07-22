@@ -830,10 +830,18 @@ read_QWAdata <- function(dir = NULL, file_cells = NULL, file_rings = NULL,
                          components = c("cells", "rings")) {
   components <- match.arg(components, c("cells", "rings"), several.ok = TRUE)
   use_dir <- !is.null(dir)
-  use_files <- !is.null(file_cells) && !is.null(file_rings)
-  if (use_dir == use_files) {
+  any_files <- !is.null(file_cells) || !is.null(file_rings)
+  if (use_dir == any_files) {
     cli::cli_abort(
-      "Provide either {.arg dir} or both {.arg file_cells} and {.arg file_rings}.")
+      "Provide either {.arg dir} or {.arg file_cells}/{.arg file_rings}, not both or neither.")
+  }
+  if (!use_dir) {
+    required_files <- list(cells = file_cells, rings = file_rings)[components]
+    missing <- names(required_files)[vapply(required_files, is.null, logical(1))]
+    if (length(missing) > 0) {
+      cli::cli_abort(
+        "Missing {.arg file_{missing}} for requested {.arg components}.")
+    }
   }
   if (use_dir) {
     checkmate::assert_directory_exists(dir)
