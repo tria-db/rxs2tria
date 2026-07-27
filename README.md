@@ -62,8 +62,8 @@ file.copy(system.file("templates/prepare_rxs_dataset.R", package = "rxs2tria"), 
 ```
 
 Follow the instructions in the template, or see the [workflow
-vignette]((https://tria-db.github.io/rxs2tria/articles/workflow.html))
-for more details.
+vignette](https://tria-db.github.io/rxs2tria/articles/workflow.html) for
+more details.
 
 # Contributions
 
