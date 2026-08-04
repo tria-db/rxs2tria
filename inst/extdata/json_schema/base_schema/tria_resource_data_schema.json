@@ -11,7 +11,7 @@
         "type": "string",
         "minLength": 1,
         "title": "Resource name",
-        "description": ""
+        "description": "Path of the file relative to the root of the submitted directory (not just its basename), matching the path the file has inside the zip archive."
       },
       "description": {
         "type": ["string", "null"],
@@ -40,19 +40,19 @@
         "title": "File path / name of the resource",
         "description": ""
       },
-      "checksum": {
+      "status": {
         "type": ["string", "null"],
-        "title": "Checksum",
-        "description": "MD5 checksum of the file contents, used to verify integrity and reconcile the uploaded files against the manifest"
+        "enum": ["", "ok", "review", "ignore"],
+        "title": "Status",
+        "description": "Automated readiness check result: \"ok\" (ready for submission as-is), \"review\" (needs manual attention before this dataset can be zipped, see `note`), or \"ignore\" (excluded from the archive, e.g. a junk file or one already required as a core submission file)."
       },
-      "size_bytes": {
-        "type": ["integer", "null"],
-        "minimum": 0,
-        "title": "File size (bytes)",
-        "description": "Size of the resource file in bytes"
+      "note": {
+        "type": ["string", "null"],
+        "title": "Note",
+        "description": "Explanation for `status`, e.g. why a file needs review or is ignored."
       }
     },
-    "required": ["resource_name", "resource_type"],
+    "required": ["resource_name", "resource_type","linked_level","linked_label"],
     "additionalProperties": false
   }
 }

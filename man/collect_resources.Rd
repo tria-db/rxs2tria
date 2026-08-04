@@ -2,116 +2,145 @@
 % Please edit documentation in R/add_resources.R
 \name{collect_resources}
 \alias{collect_resources}
-\title{Collect resource file information from a directory}
+\alias{add_resources}
+\title{Compile resources manifest from directory}
 \usage{
-collect_resources(
-  path,
-  append_to = NULL,
-  df_structure = NULL,
-  recursive = FALSE,
-  include_unmatched = FALSE
-)
+collect_resources(path, rxs_images)
+
+add_resources(x, path)
 }
 \arguments{
 \item{path}{Path to a directory to scan for files.}
 
-\item{append_to}{Optional resources data frame from a previous call to
-\code{collect_resources()}. When provided, the new resources are appended to it
-(validated against the resources schema first).}
+\item{rxs_images}{A \link{QWAimages} object. Its \code{roxas_version} attribute is
+used to disambiguate resource-type patterns shared between classic ROXAS
+and ROXAS AI, and its \code{org_img_name}, \code{image_label}, \code{slide_label}, and
+\code{woodpiece_label} columns are used to auto-populate \code{linked_label} where
+appropriate.}
 
-\item{df_structure}{Optional data frame with the label columns
-\code{org_img_name} and \code{image_label} (e.g. from \code{\link[=extract_data_structure]{extract_data_structure()}} or
-the \verb{$images} component of a \link{QWAmetadata} object). Used to auto-populate
-\code{linked_label} for \code{image}- and \code{analysis}-level resources.}
-
-\item{recursive}{If \code{TRUE}, recurse into sub-directories (default \code{FALSE}).}
-
-\item{include_unmatched}{If \code{TRUE}, files that could not be matched to a
-specific type are kept with \code{resource_type = "other"} (default \code{FALSE},
-i.e. such files are dropped).}
+\item{x}{A \link{QWAmetadata} object. Its \verb{$images} component is fed to
+\code{collect_resources()}.}
 }
 \value{
-A \link[tibble:tibble]{tibble} with one row per file and columns:
+A data frame with one row per file and columns:
 \itemize{
-\item \code{resource_name}: base file name.
+\item \code{resource_name}: name and path of the file relative to \code{path}
 \item \code{resource_type}: inferred resource type string (see Details).
-\item \code{linked_level}: default hierarchy level for this type (\code{"dataset"},
-\code{"woodpiece"}, \code{"slide"}, \code{"image"}, or \code{"analysis"}).
-\item \code{linked_label}: label of the linked entity, auto-filled from
-\code{df_structure} where possible, otherwise \code{NA} (fill in manually).
-\item \code{fname_resource}: absolute path to the file on your machine.
-\item \code{checksum}: MD5 checksum of the file contents.
-\item \code{size_bytes}: file size in bytes.
+\item \code{linked_level}: hierarchy level for this type (e.g. \code{"dataset"},
+\code{"woodpiece"}, or \code{"image"}).
+\item \code{linked_label}: label of the linked entity, auto-filled from where
+possible, otherwise \code{NA} (fill in manually if required).
+\item \code{fname_resource}: absolute path to the file.
+\item \code{status}, \code{note}: computed by \code{\link[=check_resources]{check_resources()}}, status is \code{"ok"},
+\code{"review"}, or \code{"ignore"}, note gives further details.
+For \code{add_resources()} the input \code{x}is returned with the resources data
+frame in the \code{x$resources} component.
 }
 }
 \description{
-Scans a directory for files and returns a data frame ("resources table")
-listing each file together with its inferred resource type, the hierarchy
-level and entity it belongs to, and a checksum and size used for integrity
-checking during submission. Files can be collected incrementally from
-several directories by passing the previous result to \code{append_to}, so a
-single table can describe processed outputs, raw ROXAS files, and images
-that live in different folders.
-}
-\details{
-This function produces a \emph{manifest} of individual files. It does not move,
-copy, rename, or compress anything --- the files stay where they are and are
-only referenced by their path in \code{fname_resource}. How the listed files are
-ultimately packaged and stored (e.g. grouped into archives in the TRIA
-storage bucket) is handled downstream and does not need to be described
-here.
+Scans a directory (incl. subdirectories) for supplementary resource files
+(original and annotated images, raw ROXAS output, reference series, etc.)
+and returns a data frame listing each file together with its inferred
+resource type and the hierarchical entity it belongs to (e.g. image_label or
+woodpiece_label; if available).
+
+This function does not move, copy, rename, or compress any files. Rather it
+creates a manifest of supplementary files by leveraging the suffix naming
+conventions used by ROXAS and ROXAS AI. Therefore, it is only necessary
+if you wish to include supporting materials beyond the \link{QWAdata} and
+\link{QWAmetadata} files in your submission. In those cases, the function works
+as a sanity check to ensure only the 'right' supplementary files are
+included in the submission directory. Specifically, the found files are
+checked for validty (e.g. if there were files for which the resource type
+or label could not be inferred), with warnings raised in case of issues. To
+address such warnings, you may need to manually change the contents of the
+input directory and re-run the function (to add/remove/rename files), or
+edit the resources data frame directly (to update the values for
+\code{resource_type}, \code{linked_level}, \code{linked_label} and \code{description}).
+
+\code{add_resources()} is a thin wrapper around \code{collect_resources()}: instead of
+a \link{QWAimages} object, it takes an entire a \link{QWAmetadata} object as input
+(feeding its \verb{$images} component to \code{collect_resources()}) and returns
+the object with the resource manifest as the \verb{$resources} component.
 
 See \code{vignette("resources")} for a worked example and the complete list of
 recognised resource types.
 }
 \section{Resource types}{
-The \code{resource_type} of each file is inferred from its name by matching it
-against the known ROXAS, ROXAS AI, and QWA naming conventions (for example
-\verb{*_Output_Cells.txt} becomes \code{"roxas_output_cells"}, \verb{*.metadata.json}
-becomes \code{"rai_metadata"}). Patterns are checked most-specific first. Files
-that match no known pattern are typed as \code{"other"} and, unless
-\code{include_unmatched = TRUE}, dropped from the result. Known backup and junk
-files (ROXAS \verb{_bu} backups, \code{Thumbs.db}, Office lock files) are always
-excluded. The full pattern table is documented in \code{vignette("resources")}.
+The \code{resource_type} of each file is inferred from its name (for
+example \verb{*_Output_Cells.txt} becomes \code{"roxas_output_cells"},
+\verb{*.metadata.json} becomes \code{"rai_metadata"}). Patterns are checked most
+specific first, and \code{rxs_images}'s \code{roxas_version} is used to
+disambiguate patterns shared between classic ROXAS and ROXAS AI. Files
+that match no known pattern are typed as \code{"other"}. Known backup and junk
+files (ROXAS \verb{_bu} backups, \code{Thumbs.db}, Office lock files, ...) are typed
+as \code{"junk"}, and {rxs2tria}-generated files (\code{QWAmetadata.json}, the
+\code{QWAcells}/\code{QWArings}/\code{QWAprofile} \code{.csv(.gz)} files) are typed
+accordingly. The full pattern table is documented in \code{vignette("resources")}.
+
+Every file found is kept as a row (see \code{\link[=check_resources]{check_resources()}} for how
+\code{status}/\code{note} classify what happens to each one)---junk files will never
+be included in the file upload to the TRIA database, but are shown here too
+so the table is a complete record of the directory.
 }
 
 \section{Hierarchy level and linked entity}{
 Every resource type has a default \code{linked_level} describing the level of the
 data hierarchy the file pertains to: \code{"dataset"} (applies to the whole
 submission, e.g. a reference chronology), \code{"woodpiece"}, \code{"slide"},
-\code{"image"}, or \code{"analysis"} (per-image ROXAS analysis files such as
+\code{"image"}, or \code{"analysis"} (per-image ROXAS (AI) analysis files such as
 shapefiles or annotated images). \code{linked_label} identifies \emph{which} entity at
 that level the file belongs to (e.g. a specific \code{image_label}).
 
-\code{linked_label} is filled automatically for \code{image}- and \code{analysis}-level
-resources when \code{df_structure} is supplied (see below); all other rows start
-as \code{NA} and should be reviewed and completed manually where relevant.
+\code{linked_label} is filled automatically for \code{image}-, \code{analysis}-,
+\code{slide}-, and \code{woodpiece}-level resources using \code{rxs_images}.
 }
 
 \section{Automatic label matching}{
-When \code{df_structure} (a data structure table from \code{\link[=extract_data_structure]{extract_data_structure()}},
-or the \verb{$images} component of a \link{QWAmetadata} object) is provided, each
-unlabelled \code{image}/\code{analysis} resource is matched to an image by testing
-whether its file name starts with an image's base name. The longest matching
-base name wins, which prevents false matches between labels that share a
-prefix (e.g. \code{S22_L1} vs \code{S22_L10}). Resources that cannot be matched are
-left as \code{NA}, and the number of successful matches is reported.
+Each unlabelled \code{image}/\code{analysis} resource is matched to an image by
+testing whether its file name starts with an image's base name (from
+\code{rxs_images$org_img_name}). The longest matching base name wins, which
+prevents false matches between labels that share a prefix (e.g. \code{S22_L1}
+vs \code{S22_L10}).
+
+\code{slide}/\code{woodpiece}-level resources (e.g. \code{SLIDENAME_Preview.jpg},
+\code{WPNAME_Panorama.tif}) are typically named such that they do not fully
+match the constructed \code{slide_label}/\code{woodpiece_label}. Rather than
+matching against those constructed labels, the original identifier is
+recovered empirically: sibling images sharing a \code{slide_label} (or
+\code{woodpiece_label}) are almost always named with a common prefix followed
+by an image-specific suffix, so the longest common prefix of their
+\code{org_img_name} values recovers that original identifier without needing to
+know the naming pattern. A slide/woodpiece with only one image has no
+sibling to compare against, so instead its own trailing token (the part
+after the last separator, assumed to be the image-specific part) is
+stripped.
+
+Resources that cannot be matched are left as \code{NA}, and the number of
+successful matches is reported.
+}
+
+\section{Manual editing}{
+While \code{collect_resources()} aims to recognize the correct \code{resource_type}
+and \code{linked_label} for each file, there may be cases (e.g. special files,
+renamed files) where one or both values are not inferred correctly. Check
+the function output carefully, and make the appropriate changes in the
+input directory (and re-run the function) or in the resources table
+directly.
 }
 
 \examples{
 \dontrun{
-# Collect the processed outputs, then append raw ROXAS files and images
-# scanned recursively from a second directory:
-res <- collect_resources("path/to/output_data")
-res <- collect_resources("path/to/raw_roxas_files",
-                         append_to = res, recursive = TRUE)
+res <- collect_resources("path/to/submission_files", rxs_images = my_images)
 
-# Auto-fill linked_label for per-image resources using a data structure:
-res <- collect_resources("path/to/raw_roxas_files",
-                         df_structure = my_structure, recursive = TRUE)
+# typical workflow with an existing QWAmetadata object
+QWA_meta <- read_QWAmetadata("output_data/my_dataset_QWAmetadata.json")
+QWA_meta <- add_resources(QWA_meta, path = "input_data/submission_files")
+# review and make changes are required, then persist:
+QWA_meta$resources
+write_QWAmetadata(QWA_meta, "output_data/my_dataset_QWAmetadata.json")
 }
 }
 \seealso{
-\code{\link[=add_resources]{add_resources()}} to attach the result to a \link{QWAmetadata} object;
-\code{vignette("resources")} for the full workflow and resource-type table.
+\code{\link[=check_resources]{check_resources()}}, \code{vignette("resources")}
 }

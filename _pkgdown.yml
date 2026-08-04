@@ -18,6 +18,12 @@ reference:
   contents:
   - collect_raw_outputs
   - collect_raw_data
+- title: "Prepare supplementary data"
+  desc: "Functions for collecting and checking supplementary files"
+  contents:
+  - collect_resources
+  - add_resources
+  - check_resources
 - title: "QWAimages"
   desc: "S3 class QWAimages"
   contents:
@@ -60,12 +66,13 @@ reference:
   - read_QWAprofile
   - summary.QWAprofile
   - write_QWAprofile
+- title: "Shiny apps"
+  desc: "Commands to launch the integrated Shiny apps"
+  contents:
+  - launch_flags_app
+  - launch_metadata_app
 - title: "rest"
   desc: "Other utility functions."
   contents:
-  - add_resources
-  - collect_resources
-  - launch_flags_app
-  - launch_metadata_app
   - create_rwl
 

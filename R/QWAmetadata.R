@@ -347,6 +347,7 @@ check_QWAmetadata <- function(x) {
   })
 
   # TODO: add advanced checks: countries, species, contact person, embargo date, license, ...
+  # check_resources? -> chema check within, so remove from list above
 
   check_QWAimages(x$images)
 

@@ -1,0 +1,45 @@
+﻿identifier,resource_type,linked_level,link_required,one_per_level,priority,importance,example_names,source,comments
+QWAcells\.csv(\.gz)?$,QWAdata_cells,dataset,,,1,required,DSName_QWAcells.csv.gz,rxs2tria,
+QWArings\.csv(\.gz)?$,QWAdata_rings,dataset,,,1,required,DSName_QWArings.csv,rxs2tria,
+QWAmetadata\.json$,QWAmetadata,dataset,,x,1,required,DSName_QWAmetadata.json,rxs2tria,
+QWAprofile\.csv(\.gz)?$,QWAprofile,dataset,,,1,optional,DSName_QWAprofile.csv,rxs2tria,
+\.rwl$,reference_series,dataset,,,1,wanted,SITE_SPECIES.rwl,processing,
+Panorama\.(png|xcf|tif|tiff)$,image_panorama,woodpiece,x,,1,optional,WPNAME_Panorama.png; WPNAME_Panorama.xcf,processing,
+(\.(scan|rxs))?\.(jpg|jpeg|png)$,image_original,image,x,x,2,wanted,IMGNAME.jpg; IMGNAME.scan.jpg; IMGNAME.scan.jpeg; IMGNAME.rxs.jpg; IMGNAME.png,processing,required to rerun
+Preview\.(jpg|jpeg)$,image_preview,slide,x,,1,nicetohave,SLIDENAME_Preview.jpg,processing,SLIDENAME__v2_Preview.jpg?
+ROXAS_Output_Summary.*\.xlsx$,roxas_full_output_summary,dataset,,,1,optional,_ROXAS_Output_Summary__DSNAME.xlsx,roxas,
+_ReferenceSeries(Long|_Original)?\.(jpg|jpeg|gif)$,image_refseries,analysis,x,,1,nicetohave,IMGNAME_ReferenceSeries.jpg; IMGNAME_ReferenceSeries.gif; IMGNAME_ReferenceSeries_Original.jpg; IMGNAME_ReferenceSeriesLong.jpg,roxas,
+_annotated\.(jpg|jpeg|png)$,roxas_image_annotated,analysis,x,x,1,nicetohave,IMGNAME_annotated.jpg,roxas,
+_annotated_cells\.(jpg|jpeg)$,roxas_image_annotated_cells,analysis,x,x,1,nicetohave,IMGNAME_annotated_cells.jpg,roxas,
+_annotated_twin\.(jpg|jpeg)$,roxas_image_annotated_twin,analysis,x,x,1,wanted,IMGNAME_annotated_twin.jpg,roxas,
+_Output_Cells\.txt$,roxas_output_cells,analysis,x,x,1,wanted,IMGNAME_Output_Cells.txt,roxas,
+_Output_Rings\.txt$,roxas_output_rings,analysis,x,x,1,wanted,IMGNAME_Output_Rings.txt,roxas,
+_Output\.xlsx$,roxas_output_xlsx,analysis,x,x,1,nicetohave,IMGNAME_Output.xlsx,roxas,
+_Output_Summary\.txt$,roxas_output_summary,analysis,x,x,1,nicetohave,IMGNAME_Output_Summary.txt,roxas,
+_ROXAS_Settings\.txt$,roxas_settings,analysis,x,x,1,wanted,IMGNAME_ROXAS_Settings.txt,roxas,required to rerun
+_Vessels\.scl$,roxas_shapefile_vessels,analysis,x,x,1,wanted,IMGNAME_Vessels.scl,roxas,required to rerun
+_Vessels_bu\.scl$,junk,,,,1,remove,IMGNAME_Vessels_bu.scl,roxas,
+_RingTraces\.txt$,roxas_shapefile_ringtraces,analysis,x,x,1,wanted,IMGNAME_RingTraces.txt,roxas,required to rerun
+_RingTraces_bu\.txt$,junk,,,,1,remove,IMGNAME_RingTraces_bu.txt,roxas,Ringtraces?
+\.cal$,roxas_cal,analysis,x,x,2,wanted,IMGNAME.cal,roxas,required to rerun
+_AOI(_[0-9]+)*\.out$,roxas_AOI,analysis,x,,1,optional,IMGNAME_AOI.out; IMGNAME_AOI_40.out; IMGNAME_AOI_50_25.out; etc,roxas,required to rerun?
+_AOE\.out$,roxas_AOE,analysis,x,,1,optional,IMGNAME_AOE.out,roxas,required to rerun?
+_AOEClass\.txt$,roxas_AOEClass,analysis,x,,1,optional,IMGNAME_AOEClass.txt,roxas,required to rerun?
+_CellWallThickness\.out$,roxas_CWT,analysis,x,x,1,optional,IMGNAME_CellWallThickness.out,roxas,required to rerun?
+_RingInclination\.out$,roxas_ringinclination,analysis,x,x,1,optional,IMGNAME_RingInclination.out,roxas,required to rerun?
+_JunkObjects[0-9]*\.scl$,roxas_junkobjects,analysis,x,,1,optional,IMGNAME_JunkObjects.scl; IMGNAME_JunkObjects2.scl; etc,roxas,required to rerun?
+_proj\.rpf$,roxas_proj,analysis,x,x,1,optional,IMGNAME_proj.rpf,roxas,
+\.metadata\.json$,rai_metadata,analysis,x,x,1,wanted,IMGNAME.metadata.json,roxas_ai,required to rerun
+\.cells_table\.csv$,rai_cells_table,analysis,x,x,1,wanted,IMGNAME.cells_table.csv ,roxas_ai,or txt? only in old versions?
+\.rings_table\.csv$,rai_rings_table,analysis,x,x,1,wanted,IMGNAME.rings_table.csv,roxas_ai,or txt? only in old versions?
+\.cells\.png$,rai_image_cells,analysis,x,x,1,wanted,IMGNAME.cells.png,roxas_ai,required to rerun
+\.rings\.(tif|tiff)$,rai_image_rings,analysis,x,x,1,wanted,IMGNAME.rings.tiff,roxas_ai,required to rerun
+_annotated\.(jpg|jpeg|png)$,rai_image_annotated,analysis,x,x,1,wanted,IMGNAME_annotated.jpg,roxas_ai,distinguish from roxas_image_annotated by roxas_version
+^Thumbs\.db$,junk,,,,0,remove,Thumbs.db,system,
+_annotated\.cal$,junk,,,,0,remove,IMGNAME_annotated.cal,roxas,
+Preview\.cal$,junk,,,,0,remove,SLIDENAME_Preview.cal,roxas,
+_ReferenceSeries(Long|_Original)?\.cal$,junk,,,,0,remove,IMGNAME_ReferenceSeries.cal,roxas,
+_TRACHEIDMASK\.(tif|tiff)$,junk,,,,0,remove,IMGNAME_TRACHEIDMASK.tif,roxas,
+~RF([:alnum:]+)\.TMP$,junk,,,,0,remove,FILENAME~RF6c4558.TMP,system,
+^~\$,junk,,,,0,remove,~$IMGNAME_Output.xlsx,system,
+^desktop\.ini$,junk,,,,0,remove,desktop.ini,system,

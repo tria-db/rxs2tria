@@ -358,7 +358,7 @@ QWA_data <- update_QWAdata(QWA_data,
 
 ---
 
-# Step 7: Compile resources (optional)
+# Step 7: Compile supplementary resources (optional)
 
 A TRIA submission must include at minimum the `QWAmetadata` `.json` and
 the `QWAdata` `.csv` files. If you want to provide additional
@@ -366,24 +366,26 @@ the `QWAdata` `.csv` files. If you want to provide additional
 ROXAS AI output, reference series `.rwl` files, etc. — these are listed
 in the `$resources` component of the `QWAmetadata` object.
 
-`add_resources()` scans a directory and appends the files it finds to
-`$resources` as a table with one row per file. For each file it infers
-the `resource_type` from the file name, sets the hierarchy level it
-belongs to (`linked_level`), and records an MD5 `checksum` and
-`size_bytes` for integrity checking on upload. Per-image files are also
-matched to their `image_label` (the `linked_label` column) using the
-object's `$images` component. Repeat the call for each relevant
-directory; set `recursive = TRUE` to descend into nested folders:
+Not all files may be elligible as supporting material for a TRIA dataset,
+and it is important to track which file pertains to which image or slide, 
+etc. For this purpose, `add_resources()` scans a directory (including 
+nested subfolders) and records the files it finds in `$resources` as a 
+table with one row per file. For each file it infers the `resource_type`
+from the file name and sets the hierarchy level it belongs to
+(`linked_level`). Files are also matched to their `linked_label` (e.g. 
+the `image_label`) using the object's `$images` component, where possible.
 
 ```{r, eval = FALSE}
 QWA_meta <- read_QWAmetadata("path/to/output_data/example_dataset_QWAmetadata.json")
-QWA_meta <- add_resources(QWA_meta, path = "path/to/raw_roxas_files", recursive = TRUE)
-QWA_meta <- add_resources(QWA_meta, path = "path/to/annotated_images")
+QWA_meta <- add_resources(QWA_meta, path = "path/to/submission_files")
 ```
 
-Review the table — in particular, complete any `linked_label` values
-that were not filled automatically — and then write the object back to
-disk:
+Every file gets a `status` (`"ok"`, `"review"`, or `"ignore"`) and the
+console reports whether the dataset is ready to zip, or which files
+still need attention. Review the table — in particular, add a `description`
+for files where the `resource_type` could not be inferred, and complete 
+any `linked_label` values that were not filled automatically — and then
+write the object back to disk:
 
 ```{r, eval = FALSE}
 QWA_meta$resources
@@ -397,6 +399,10 @@ resources to the data hierarchy.
 
 # Step 8: Submit your data
 
-Once you are ready to share your prepared data files with us, reach 
-out to [tria@wsl.ch](mailto:tria@wsl.ch) to receive an 
-invitation to the file transfer server.
+Once you are ready to share your prepared data files with us, email
+[tria@wsl.ch](mailto:tria@wsl.ch) — either with a link to the files on a
+file transfer service of your choice, or asking for an invite link to
+WSL's own one. See `vignette("submission")` for what to upload (the
+three required files, plus a single zipped
+directory of any supplementary resources) and what happens to your
+files once we receive them.

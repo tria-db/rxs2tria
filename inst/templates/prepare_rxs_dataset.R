@@ -223,15 +223,17 @@ QWA_data <- update_QWAdata(QWA_data,
 # (supplementary) files with your submission - e.g. original / annotated images,
 # raw ROXAS output, reference series - these are listed in the resources
 # component of the QWAmetadata object.
-# add_resources() scans a directory and records each file with its inferred
-# type, hierarchy level, and a checksum/size for integrity checking. Call it
-# once per source directory (use recursive = TRUE for nested folders). Review
-# the resulting table - especially the linked_label column - before writing.
+# add_resources() scans a directory (including nested subfolders) and records
+# each file with its inferred type, hierarchy level, and a readiness status
+# ("ok", "review", or "ignore" - see vignette("resources")). Supplementary
+# files are expected to live in a single directory (see vignette("submission")),
+# so one call is normally enough. The console reports whether the dataset is
+# ready to zip, or which files still need attention.
 # See vignette("resources") for details and the full resource-type table.
 
 QWAmeta <- read_QWAmetadata("path/to/output_data/example_dataset_QWAmetadata.json")
-QWAmeta <- add_resources(QWAmeta, path = "path/to/submission_files", recursive = TRUE)
+QWAmeta <- add_resources(QWAmeta, path = "path/to/submission_files")
 
-QWAmeta$resources # review, and complete linked_label where needed
+QWAmeta$resources # review status "review" rows, and complete linked_label where needed
 
 write_QWAmetadata(QWAmeta, "path/to/output_data/example_dataset_QWAmetadata.json")

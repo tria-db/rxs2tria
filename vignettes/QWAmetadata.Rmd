@@ -163,10 +163,10 @@ existing values preserved:
 
 ## Adding resources
 
-Resources (data files to be included in the submission) are managed
-separately via `add_resources()`, which scans a directory, infers the
-resource type of each file from its name, and appends the result to
-`$resources`:
+Resources (supplementary data files to be included in the submission)
+are managed separately via `add_resources()`, which scans a directory,
+infers the resource type of each file from its name, and records the
+result in `$resources`:
 
 ```{r resources}
 QWA_metadata <- add_resources(QWA_metadata, path = "output/submission_files/")

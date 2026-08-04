@@ -1,0 +1,109 @@
+---
+title: "Submitting a dataset to TRIA"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Submitting a dataset to TRIA}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+This vignette covers the last mile of the preparation workflow: what
+exactly to upload, how to package supplementary files, and — so there
+are no surprises — what happens to your files once TRIA receives them.
+It assumes you have already been through `vignette("workflow")` and have
+a complete `QWAmetadata` object and `QWAdata` files (and, optionally,
+a validated zip of supplementary files) ready on disk.
+
+---
+
+## What to submit
+
+A submission consists of:
+
+1. **`{dataset_name}_QWAmetadata.json`** — written with
+   [write_QWAmetadata()].
+2. **`{dataset_name}_QWAcells.csv(.gz)`** and
+   **`{dataset_name}_QWArings.csv(.gz)`** — written with
+   [write_QWAdata()].
+3. Optionally, **one zip archive of supplementary resources** — original
+   and annotated images, raw ROXAS / ROXAS AI output, reference series,
+   etc. (see `vignette("resources")`).
+
+To hand over these three (or four) files, email
+[tria@wsl.ch](mailto:tria@wsl.ch) and either:
+
+- share a link to them on a file transfer service of your choice (e.g.
+  Dropbox, Google Drive, your institution's own service) — whatever you
+  already use is fine; or
+- ask for an invite link to WSL's file transfer server, if you'd rather
+  not set one up yourself.
+
+### Packaging supplementary resources
+
+Gather every supplementary file you want to submit into a **single
+directory** (nesting subfolders as preferred — e.g. per tree or slide),
+run `add_resources()`/`collect_resources()` on it, and resolve anything
+flagged `"review"` — see `vignette("resources")` for the full workflow —
+before zipping that directory for upload.
+
+Doing this yourself first means naming problems (an unrecognised file, a
+missing `linked_label`) surface on your end, where you can still rename
+or annotate things, rather than during our ingestion checks. We re-run
+the same checks on our side regardless — if you provide a `$resources`
+manifest, we match it against the actual file list in your archive
+(falling back to our own inference for anything unmatched, and flagging
+any discrepancy, e.g. a `resource_type` that doesn't match the file's
+actual extension); if you don't, we build the manifest from scratch.
+
+---
+
+## What happens after you submit
+
+We make a small number of server-side adjustments to your files during
+ingestion, so that what ends up in the TRIA database differs slightly
+from what you uploaded. None of these require any action on your part —
+they're listed here purely so the shape of the final record isn't a
+surprise.
+
+### `QWAcells.csv`
+
+Derived cell measurements (`tca`, `rwd2`, `dcwt`, `cwtall_adj`, `cdrad`,
+`cdtan`, `cdratio`, `sector100` — added via [complete_measures()]) are
+**removed**. They are trivially recomputed from the raw measurements, so 
+we don't store a second, potentially stale copy.
+
+### `QWAmetadata.json`
+
+| Field | Change | When |
+|---|---|---|
+| `$dataset$ds_access` | Removed | On ingestion |
+| `$dataset$citation` | Added (includes the newly minted DOI if the dataset is made public) | On ingestion |
+| `$dataset$version` | Added | On ingestion |
+| `$dataset$doi` | Added | When the dataset is registered / made public |
+| `$images[*].fname_image`, `fname_cells`, `fname_rings`, `fname_settings` | Removed | On ingestion |
+| `$resources[*].fname_resource` | Removed | On ingestion |
+| `$resources` | Completed (resource types/labels reconciled against the uploaded archive; storage key added) | On ingestion |
+
+The `fname_*` / `fname_resource` columns hold absolute paths from your
+own machine — meaningful while you're preparing the data, meaningless
+(and potentially revealing local file-system structure) once archived,
+so they are always stripped rather than carried into the database.
+
+---
+
+## Where this fits in the workflow
+
+This is Step 8 of `vignette("workflow")`. See `vignette("QWAmetadata")`
+and `vignette("resources")` for how each component of `QWAmetadata` is
+built up in the first place.
