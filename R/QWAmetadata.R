@@ -183,7 +183,8 @@ new_QWAmetadata <- function(dataset = NULL,
 #' @param related Data frame with related publications or datasets. Typically 
 #'   provided via metadata Shiny app.
 #' @param resources Data frame listing all raw data files to be submitted as
-#'   part of the dataset. Typically created by [collect_resources()].
+#'   part of the dataset. Typically created by [compile_resources()] or 
+#'   [add_resources()].
 #' @param sites Data frame with site-level metadata. Typically provided via
 #'   metadata Shiny app.
 #' @param trees Data frame with tree-level metadata. Typically provided via
@@ -463,6 +464,11 @@ read_QWAmetadata <- function(file) {
       raw$images <- raw$images |>
         dplyr::rename(cluster_dbl_cwt_threshold = dbl_cwt_threshold)
     }
+  }
+
+  # back-compatibility: older files have no ds_title, fall back to ds_name
+  if ("dataset" %in% names(raw) && is.null(raw$dataset$ds_title)) {
+    raw$dataset$ds_title <- raw$dataset$ds_name
   }
 
   aligned_data <- as_QWAmetadata(raw)

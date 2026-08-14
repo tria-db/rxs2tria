@@ -214,6 +214,18 @@
         "description": "Technical quality flag: ring is cut off at the tangential image border.",
         "colType": "opt_flag"
       },
+      "irreg_thickness": {
+        "type": ["boolean", "null"],
+        "title": "Irregular/unequal thickness",
+        "description": "Technical quality flag: irregular/unequal thickness.",
+        "colType": "opt_flag"
+      },
+      "air_bubbles": {
+        "type": ["boolean", "null"],
+        "title": "Air bubble(s)",
+        "description": "Technical quality flag: air bubble(s).",
+        "colType": "opt_flag"
+      },
       "tyloses": {
         "type": ["boolean", "null"],
         "title": "Tyloses",
@@ -266,6 +278,18 @@
         "type": ["boolean", "null"],
         "title": "Trabeculae",
         "description": "Discrete feature flag: presence of trabeculae.",
+        "colType": "opt_flag"
+      },
+      "blue_cells": {
+        "type": ["boolean", "null"],
+        "title": "Blue cells",
+        "description": "Discrete feature flag: blue cells.",
+        "colType": "opt_flag"
+      },
+      "red_cells": {
+        "type": ["boolean", "null"],
+        "title": "Red cells",
+        "description": "Discrete feature flag: red cells.",
         "colType": "opt_flag"
       },
       "other_discrete": {

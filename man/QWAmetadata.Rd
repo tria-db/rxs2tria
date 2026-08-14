@@ -34,7 +34,8 @@ metadata Shiny app.}
 provided via metadata Shiny app.}
 
 \item{resources}{Data frame listing all raw data files to be submitted as
-part of the dataset. Typically created by \code{\link[=collect_resources]{collect_resources()}}.}
+part of the dataset. Typically created by \code{\link[=compile_resources]{compile_resources()}} or
+\code{\link[=add_resources]{add_resources()}}.}
 
 \item{sites}{Data frame with site-level metadata. Typically provided via
 metadata Shiny app.}

@@ -1,11 +1,11 @@
 #' Compile resources manifest from directory
 #'
 #' @description
-#' Scans a directory (incl. subdirectories) for supplementary resource files 
-#' (original and annotated images, raw ROXAS output, reference series, etc.) 
-#' and returns a data frame listing each file together with its inferred
-#' resource type and the hierarchical entity it belongs to (e.g. image_label or
-#' woodpiece_label; if available).
+#' Scans a directory (incl. subdirectories), or a zip archive, for
+#' supplementary resource files (original and annotated images, raw ROXAS
+#' output, reference series, etc.) and returns a data frame listing each file
+#' together with its inferred resource type and the hierarchical entity it
+#' belongs to (e.g. image_label or woodpiece_label; if available).
 #'
 #' This function does not move, copy, rename, or compress any files. Rather it
 #' creates a manifest of supplementary files by leveraging the suffix naming 
@@ -21,9 +21,9 @@
 #' edit the resources data frame directly (to update the values for 
 #' `resource_type`, `linked_level`, `linked_label` and `description`).
 #'
-#' `add_resources()` is a thin wrapper around `collect_resources()`: instead of
+#' `add_resources()` is a thin wrapper around `compile_resources()`: instead of
 #' a [QWAimages] object, it takes an entire a [QWAmetadata] object as input
-#' (feeding its `$images` component to `collect_resources()`) and returns
+#' (feeding its `$images` component to `compile_resources()`) and returns
 #' the object with the resource manifest as the `$resources` component. 
 #' 
 #' See `vignette("resources")` for a worked example and the complete list of
@@ -42,6 +42,9 @@
 #' as `"junk"`, and \pkg{rxs2tria}-generated files (`QWAmetadata.json`, the
 #' `QWAcells`/`QWArings`/`QWAprofile` `.csv(.gz)` files) are typed
 #' accordingly. The full pattern table is documented in `vignette("resources")`.
+#' `"junk"` can also be set manually on a real (non-junk) file you want
+#' permanently excluded without deleting it from `path` -- see Reconciling
+#' below for why this is preferable to deleting its row from the table.
 #'
 #' Every file found is kept as a row (see [check_resources()] for how
 #' `status`/`note` classify what happens to each one)---junk files will never
@@ -86,52 +89,114 @@
 #'
 #' # Manual editing
 #'
-#' While `collect_resources()` aims to recognize the correct `resource_type`
+#' While `compile_resources()` aims to recognize the correct `resource_type`
 #' and `linked_label` for each file, there may be cases (e.g. special files,
 #' renamed files) where one or both values are not inferred correctly. Check
 #' the function output carefully, and make the appropriate changes in the
 #' input directory (and re-run the function) or in the resources table
 #' directly.
 #'
-#' @param path Path to a directory to scan for files.
+#' # Reconciling against an existing table or archive
+#'
+#' Pass a previous resources table as `res` (or, via `add_resources()`, rely
+#' on `x$resources` already being set) to avoid losing manual edits made
+#' since it was created, and/or to re-verify an already-packaged archive
+#' against it (e.g. a submission zip, before uploading it):
+#' - Any file both in `res` and found in `path` keeps its
+#'   `resource_type`/`linked_level`/`linked_label`/`description` from `res`
+#'   rather than having them re-inferred, so manual edits survive a re-run.
+#' - A file `res` lists (with `status` other than `"ignore"`) that is *not*
+#'   found in `path` aborts the call -- `res` no longer matches what's
+#'   actually there, and either the table or `path` needs fixing before
+#'   proceeding.
+#' - A file found in `path` that `res` doesn't know about is, by default,
+#'   left out of the returned table entirely (just reported as a count) --
+#'   `res` is trusted as the complete list. Pass `add_new_files = TRUE` to
+#'   add it instead, freshly typed, e.g. after deliberately adding files to
+#'   `path` and wanting them picked up.
+#'
+#' Because an unlisted file is always treated as "not yet seen" rather than
+#' "deliberately excluded," deleting a row from `res` does not permanently
+#' exclude that file -- it just resets it to unseen, and it reappears (or, by
+#' default, is silently ignored again) next time. To permanently exclude a
+#' real file without removing it from `path`, set its `resource_type` to
+#' `"junk"` instead of deleting its row; that status is stable across
+#' re-runs for as long as the file exists in `path`, and only disappears
+#' once the file itself is actually removed.
+#'
+#' @param path Path to a directory to scan for files, or to an existing
+#'   (non-nested) zip archive to read the file list from directly. Reading a
+#'   zip archive requires the \pkg{zip} package, and does not extract any
+#'   files -- `fname_resource` is `NA` for resources found this way.
 #' @param rxs_images A [QWAimages] object. Its `roxas_version` attribute is
 #'   used to disambiguate resource-type patterns shared between classic ROXAS
 #'   and ROXAS AI, and its `org_img_name`, `image_label`, `slide_label`, and
 #'  `woodpiece_label` columns are used to auto-populate `linked_label` where
 #'   appropriate.
+#' @param res An existing resources data frame (e.g. from a previous
+#'   `compile_resources()` call), or `NULL` (the default) to build the table
+#'   from scratch. When supplied, it is treated as the source of truth: see
+#'   Reconciling below.
+#' @param add_new_files Logical; if `TRUE`, files found in `path` that
+#'   aren't declared in `res` are added as new, freshly-typed rows instead
+#'   of being left out. Ignored if `res` is `NULL`. Default `FALSE`.
 #'
 #' @returns A data frame with one row per file and columns:
 #'   - `resource_name`: name and path of the file relative to `path`
+#'   - `description`: normally `NA`, can be filled manually if required to 
+#'      provide justification for "other" supplementary files that should
+#'      be included in the upload
 #'   - `resource_type`: inferred resource type string (see Details).
 #'   - `linked_level`: hierarchy level for this type (e.g. `"dataset"`,
 #'     `"woodpiece"`, or `"image"`).
 #'   - `linked_label`: label of the linked entity, auto-filled from where 
 #'      possible, otherwise `NA` (fill in manually if required).
-#'   - `fname_resource`: absolute path to the file.
+#'   - `fname_resource`: absolute path to the file, or `NA` for a resource
+#'     read from a zip archive.
 #'   - `status`, `note`: computed by [check_resources()], status is `"ok"`,
 #'     `"review"`, or `"ignore"`, note gives further details.
 #'   For `add_resources()` the input `x`is returned with the resources data
 #'   frame in the `x$resources` component.
 #'
+#'   Returns `NULL` (or, via `add_resources()`, leaves `x$resources` as
+#'   `NULL`) if no files are found in `path` and no `res` was supplied.
+#'   Aborts instead of returning if `res` lists a file (with `status` other
+#'   than `"ignore"`) that isn't found in `path` -- see Reconciling above.
+#'
 #' @seealso [check_resources()], `vignette("resources")`
 #' @examples
 #' \dontrun{
-#' res <- collect_resources("path/to/submission_files", rxs_images = my_images)
-#' 
+#' res <- compile_resources("path/to/submission_files", rxs_images = my_images)
+#'
 #' # typical workflow with an existing QWAmetadata object
 #' QWA_meta <- read_QWAmetadata("output_data/my_dataset_QWAmetadata.json")
 #' QWA_meta <- add_resources(QWA_meta, path = "input_data/submission_files")
 #' # review and make changes are required, then persist:
 #' QWA_meta$resources
 #' write_QWAmetadata(QWA_meta, "output_data/my_dataset_QWAmetadata.json")
+#'
+#' # re-run after adding files -- x$resources is reused automatically, so
+#' # manual edits survive; add_new_files = TRUE picks up the new ones too
+#' QWA_meta <- add_resources(QWA_meta, path = "input_data/submission_files",
+#'                            add_new_files = TRUE)
+#'
+#' # re-verify an already-zipped submission against its manifest before
+#' # upload -- errors if a file the manifest expects is missing from the zip
+#' compile_resources("output_data/submission_files.zip",
+#'   rxs_images = QWA_meta$images, res = QWA_meta$resources)
 #' }
 #' @export
-collect_resources <- function(path, rxs_images) {
-  checkmate::assert_directory_exists(path)
+compile_resources <- function(path, rxs_images, res = NULL, add_new_files = FALSE) {
+  checkmate::assert(
+    checkmate::check_directory_exists(path),
+    checkmate::check_file_exists(path, extension = "zip")
+  )
   checkmate::assert_class(rxs_images, "QWAimages")
   checkmate::assert_names(names(rxs_images),
                           must.include = c("org_img_name", "image_label",
                           "slide_label", "woodpiece_label"))
+  checkmate::assert_data_frame(res, null.ok = TRUE)
+  checkmate::assert_flag(add_new_files)
 
   roxas_version <- attr(rxs_images, "roxas_version")
 
@@ -140,86 +205,125 @@ collect_resources <- function(path, rxs_images) {
   tbl_schema  <- resolve_schema(schema_obj, schema_path)
   tbl_props   <- get_tbl_props(tbl_schema)
 
-  files <- fs::dir_ls(path, recurse = TRUE, type = "file")
+  if (fs::is_dir(path)) {
+    files <- fs::dir_ls(path, recurse = TRUE, type = "file")
+    resource_name <- as.character(fs::path_rel(files, start = path)) # name rel to input path
+    fname_resource <- as.character(files) # full paths for info
+  } else {
+    rlang::check_installed("zip", reason = "to read resources directly from a zip archive.")
+    entries <- zip::zip_list(path)
+    if (any(grepl("\\.zip$", entries$filename, ignore.case = TRUE))) {
+      cli::cli_warn("{.path {path}} contains a nested zip archive; its contents cannot be inspected.")
+    }
+    # directory entries are conventionally stored with a trailing "/"
+    if ("type" %in% names(entries)) { # for zip version > 2.3.3 we have type
+      resource_name <- entries |>
+        dplyr::filter(.data$type == "file") |> 
+        dplyr::pull(.data$filename)
+    } else { # backcomp
+      resource_name <- entries |> 
+        dplyr::filter(!stringr::str_detect(.data$filename, "/$")) |> 
+        dplyr::pull(.data$filename)
+    }
+    fname_resource <- rep(NA_character_, length(resource_name)) # no abs filepaths
+  }
 
-  if (length(files) == 0) {
+  if (length(resource_name) == 0) {
     cli::cli_alert_info("No files found in {.path {path}}")
-    return(create_empty_df(tbl_props))
+    # nothing scanned and no table to reconcile against -- NULL so a next
+    # call starts fresh rather than treating an empty table as meaningful
+    if (is.null(res)) return(NULL)
+    # otherwise fall through so res's "ok"/"review" rows are still checked
+    # against this (empty) scan, e.g. to catch an entirely empty archive
+    new_res <- create_empty_df(tbl_props)
+  } else {
+    new_res <- infer_resource_types(resource_name, roxas_version = roxas_version)
+    new_res$fname_resource <- fname_resource
+    new_res$linked_label <- NA_character_ # default: unmatched
+
+    # auto-fill linked_label for image/analysis/slide/woodpiece-level resources
+    to_match <- new_res$linked_level %in% c("analysis", "image", "slide", "woodpiece")
+
+    if (any(to_match)) {
+      # Strip image extensions from org_img_name to obtain base label pattern.
+      # Handles classic ROXAS (.jpg) and ROXAS AI (.scan.jpg).
+      img_bases <- sub("(\\.scan)?\\.(jpg|jpeg|png|tif|tiff)$", "",
+                       rxs_images$org_img_name, ignore.case = TRUE)
+
+      # image/analysis match against each image's own base name; slide/woodpiece
+      # match against a prefix derived from their sibling images (see
+      # .derive_level_prefixes()) since there is no "original" slide/woodpiece
+      # name stored anywhere -- only the fully constructed labels.
+      lookups <- list(
+        image     = list(prefix = img_bases, label = as.character(rxs_images$image_label)),
+        analysis  = list(prefix = img_bases, label = as.character(rxs_images$image_label)),
+        slide     = .derive_level_prefixes(img_bases, rxs_images$slide_label),
+        woodpiece = .derive_level_prefixes(img_bases, rxs_images$woodpiece_label)
+      )
+
+      # matched against each file's own basename -- org_img_name never includes
+      # a directory component, so the relative-path resource_name must be
+      # stripped back down to its basename before testing startsWith()
+      new_res$linked_label[to_match] <- mapply(
+        function(rname, lvl) {
+          lut <- lookups[[lvl]]
+          keep <- !is.na(lut$prefix)
+          hits <- which(startsWith(rname, lut$prefix[keep]))
+          if (length(hits) == 0L) return(NA_character_)
+          # Longest match wins to avoid false positives (e.g. "S22_L1" vs "S22_L10")
+          best <- hits[which.max(nchar(lut$prefix[keep][hits]))]
+          as.character(lut$label[keep][[best]])
+        },
+        as.character(fs::path_file(new_res$resource_name[to_match])),
+        new_res$linked_level[to_match],
+        USE.NAMES = FALSE
+      )
+
+      # n_matched <- sum(!is.na(new_res$linked_label[to_match]))
+      # cli::cli_inform(c("i" = "Matched {n_matched}/{sum(to_match)} resource{?s} to a data-structure label")) # the check will list unmatched anyway
+    }
+
+    # ensure we have all schema columns
+    new_res <- create_empty_df(tbl_props) |>
+      dplyr::bind_rows(new_res)
   }
 
-  new_res <- infer_resource_types(files, roxas_version = roxas_version)
-  new_res$linked_label <- NA_character_
-
-  # resource_name is the path relative to the scanned directory
-  new_res$resource_name <- as.character(fs::path_rel(new_res$fname_resource, start = path))
-
-  # auto-fill linked_label for image/analysis/slide/woodpiece-level resources
-  to_match <- new_res$linked_level %in% c("analysis", "image", "slide", "woodpiece")
-
-  if (any(to_match)) {
-    # Strip image extensions from org_img_name to obtain base label pattern.
-    # Handles classic ROXAS (.jpg) and ROXAS AI (.scan.jpg).
-    img_bases <- sub("(\\.scan)?\\.(jpg|jpeg|png|tif|tiff)$", "",
-                     rxs_images$org_img_name, ignore.case = TRUE)
-
-    # image/analysis match against each image's own base name; slide/woodpiece
-    # match against a prefix derived from their sibling images (see
-    # .derive_level_prefixes()) since there is no "original" slide/woodpiece
-    # name stored anywhere -- only the fully constructed labels.
-    lookups <- list(
-      image     = list(prefix = img_bases, label = as.character(rxs_images$image_label)),
-      analysis  = list(prefix = img_bases, label = as.character(rxs_images$image_label)),
-      slide     = .derive_level_prefixes(img_bases, rxs_images$slide_label),
-      woodpiece = .derive_level_prefixes(img_bases, rxs_images$woodpiece_label)
-    )
-
-    # matched against each file's own basename -- org_img_name never includes
-    # a directory component, so the relative-path resource_name must be
-    # stripped back down to its basename before testing startsWith()
-    new_res$linked_label[to_match] <- mapply(
-      function(rname, lvl) {
-        lut <- lookups[[lvl]]
-        keep <- !is.na(lut$prefix)
-        hits <- which(startsWith(rname, lut$prefix[keep]))
-        if (length(hits) == 0L) return(NA_character_)
-        # Longest match wins to avoid false positives (e.g. "S22_L1" vs "S22_L10")
-        best <- hits[which.max(nchar(lut$prefix[keep][hits]))]
-        as.character(lut$label[keep][[best]])
-      },
-      as.character(fs::path_file(new_res$resource_name[to_match])),
-      new_res$linked_level[to_match],
-      USE.NAMES = FALSE
-    )
-
-    n_matched <- sum(!is.na(new_res$linked_label[to_match]))
-    cli::cli_inform(c("i" = "Matched {n_matched}/{sum(to_match)} resource{?s} to a data-structure label"))
+  # reconcile the compiled new_res against input res, if given -- see
+  # check_resources() for the actual reconciliation logic
+  if (!is.null(res)) {
+    check_resources(res, rxs_images, new_res = new_res, add_new_files = add_new_files)
+  } else {
+    check_resources(new_res, rxs_images)
   }
-
-  # ensure we have all schema columns
-  new_res <- create_empty_df(tbl_props) |>
-    dplyr::bind_rows(new_res)
-
-  check_resources(new_res, rxs_images)
 }
 
-#' @rdname collect_resources
-#' @param x A [QWAmetadata] object. Its `$images` component is fed to 
-#'   `collect_resources()`.
+#' @rdname compile_resources
+#' @param x A [QWAmetadata] object. Its `$images` component is fed to
+#'   `compile_resources()` as `rxs_images`, and its `$resources` component
+#'   (if any) is fed to `compile_resources()` as `res`, unless
+#'   `reset_resources = TRUE`.
+#' @param reset_resources Logical; if `TRUE`, ignore `$resources` and rebuild the
+#'   table from scratch, as if it were `NULL`. Default `FALSE`.
 #' @export
-add_resources <- function(x, path) {
+add_resources <- function(x, path, reset_resources = FALSE, add_new_files = FALSE) {
   checkmate::assert_class(x, "QWAmetadata")
-  checkmate::assert_directory_exists(path)
-  x$resources <- collect_resources(path = path, rxs_images = x$images)
+  checkmate::assert_flag(reset_resources)
+  res <- if (isTRUE(reset_resources)) NULL else x$resources
+  x$resources <- compile_resources(path = path, rxs_images = x$images, res = res,
+                                    add_new_files = add_new_files)
   x
 }
 
 #' Validate a resources manifest and compute status for each file
 #'
 #' Runs a series of checks on a resources data frame (e.g. `x$resources`, or
-#' the output of [collect_resources()]) and annotates every row with a
+#' the output of [compile_resources()]) and annotates every row with a
 #' `status`:
 #' - `"ignore"`: a junk file (ROXAS `_bu` backups, `Thumbs.db`, Office lock
-#'   files, ...). Never part of TRIA upload, so we will ignore such files.
+#'   files, ...), or any other file manually marked `resource_type = "junk"`
+#'   to permanently exclude it without deleting it from `path` (see
+#'   [compile_resources()]). Never part of TRIA upload, so we will ignore
+#'   such files.
 #' - `"review"`: needs manual attention before this file can be included in
 #'   submission. Covers an unrecognised (`"other"`) supplementary file without
 #'   `description` (add one to justify including it as-is, or fix
@@ -234,18 +338,88 @@ add_resources <- function(x, path) {
 #' or, once none remain, a message confirms the directory of supplementary
 #' files is ready to be zipped for submission.
 #'
-#' [collect_resources()] runs this automatically, call it directly to re-run 
+#' [compile_resources()] runs this automatically, call it directly to re-run
 #' the checks, e.g. after manually editing a resources table.
 #'
-#' @param res A resources data frame.
+#' Pass `new_res` (a freshly-scanned table, e.g. from [compile_resources()]'s
+#' own scanning step) to reconcile `res` against it before checking: `res` is
+#' treated as ground truth for any file also found in `new_res`, a file
+#' `new_res` doesn't know about but `res` lists (with `status` other than
+#' `"ignore"`) aborts the call, a `res` row whose file is gone and was
+#' already `"ignore"` is dropped quietly (so reporting reflects what's
+#' actually there rather than stale junk references), and a file `new_res`
+#' finds that `res` doesn't list is left out unless `add_new_files = TRUE`.
+#' This is what lets [compile_resources()] point `path` at a zip archive to
+#' re-verify a submission is still complete right before uploading it.
+#'
+#' @param res A resources data frame, treated as ground truth wherever it
+#'   overlaps with `new_res` (see above).
 #' @param rxs_images A [QWAimages] object, used to validate `linked_label`
-#'   values (see [collect_resources()]).
-#' @returns `res` with `status` and `note` (re)computed for every row.
-#' @seealso [collect_resources()], [add_resources()]
+#'   values (see [compile_resources()]).
+#' @param new_res A freshly-scanned resources data frame to reconcile `res`
+#'   against, or `NULL` (the default) to just check `res` as-is.
+#' @param add_new_files Logical; if `TRUE`, files in `new_res` not declared
+#'   in `res` are added as new rows instead of being left out. Ignored if
+#'   `new_res` is `NULL`. Default `FALSE`.
+#' @returns `res` (reconciled against `new_res` first, if supplied) with
+#'   `status` and `note` (re)computed for every row.
+#' @seealso [compile_resources()], [add_resources()]
 #' @export
-check_resources <- function(res, rxs_images) {
+check_resources <- function(res, rxs_images, new_res = NULL, add_new_files = FALSE) {
   checkmate::assert_data_frame(res)
   checkmate::assert_class(rxs_images, "QWAimages")
+  checkmate::assert_data_frame(new_res, null.ok = TRUE)
+  checkmate::assert_flag(add_new_files)
+
+  if (!is.null(new_res)) {
+    df_comp <- new_res |> dplyr::full_join(
+      res, by = "resource_name", suffix = c("", ".usr"), keep = TRUE
+    )
+
+    # found in the fresh scan, not declared in res
+    new_files <- df_comp$resource_name[is.na(df_comp$resource_name.usr)]
+    usr_overwrites <- df_comp |>
+      dplyr::filter(!is.na(.data$resource_name.usr) &
+        !is.na(.data$resource_name)) |>
+      dplyr::filter(.data$resource_type != .data$resource_type.usr |
+        .data$linked_level != .data$linked_level.usr |
+        .data$linked_label != .data$linked_label.usr) |> nrow()
+
+    # declared in res, not found in the fresh scan
+    vanished <- df_comp |> dplyr::filter(is.na(.data$resource_name))
+    # only a problem if it mattered for submission, junk is ok
+    missing_files <- vanished |> dplyr::filter(.data$status.usr != "ignore")
+
+    if (nrow(missing_files) > 0) {
+      cli::cli_abort(c(
+        "Input resource table contains resources not found in the files just scanned",
+        "i" = "Either remove the following {nrow(missing_files)} file{?s} from the table or add them back:",
+        cli_truncated_list(missing_files$resource_name.usr)
+      ))
+    }
+
+    already_gone <- vanished$resource_name.usr[vanished$status.usr == "ignore"]
+    res <- res[!res$resource_name %in% already_gone, ]
+
+    # by default, files not declared in res are ignored (res is trusted as
+    # the complete list); add_new_files = TRUE merges them in as new,
+    # freshly-typed rows instead -- e.g. after adding files to path and
+    # wanting them picked up without losing manual edits on the rest
+    if (isTRUE(add_new_files) && length(new_files) > 0) {
+      res <- dplyr::bind_rows(res, new_res[new_res$resource_name %in% new_files, ])
+    }
+
+    if (length(new_files) + usr_overwrites +  length(already_gone) > 0) {
+      cli::cli_inform(c(
+        if (usr_overwrites > 0) c("i" = "{usr_overwrites} resource{?s} have manual corrections in resource table"),
+        if (length(already_gone)> 0) c("i" = '{length(already_gone)} file{?s} with status "ignored" already deleted in dir/archive, dropped from resource table'),
+        if (length(new_files) > 0 && !isTRUE(add_new_files))
+          c("i" = "{length(new_files)} file{?s} found not declared in input resource table, ignored (rerun {.code compile_resources} with {.code add_new_files = TRUE} to add them)"),
+        if (length(new_files) > 0 && isTRUE(add_new_files))
+          c("i" = "{length(new_files)} new file{?s} added to the resource table")
+      ))
+    }
+  }
 
   schema_path <- system.file(schema_rel_path("resources"), package = "rxs2tria")
   schema_obj  <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
@@ -254,7 +428,7 @@ check_resources <- function(res, rxs_images) {
   res_meta <- dplyr::left_join(res, .resource_type_meta(), by = "resource_type")
   roxas_version <- attr(rxs_images, "roxas_version")
 
-  is_junk      <- res$resource_type == "junk"
+  is_junk <- res$resource_type == "junk"
   is_generated <- res$resource_type %in% c(
     "QWAdata_cells", "QWAdata_rings", "QWAmetadata", "QWAprofile")
 
@@ -266,7 +440,7 @@ check_resources <- function(res, rxs_images) {
     TRUE                   ~ "ok"
   )
   res$note <- dplyr::case_when(
-    is_junk              ~ "System/backup file, always excluded from the archive",
+    is_junk              ~ "Junk, or manually excluded; always excluded from the archive",
     is_generated         ~ "Generated by rxs2tria",
     nzchar(review_note)  ~ review_note,
     TRUE                 ~ NA_character_
@@ -295,12 +469,12 @@ load_resource_types <- function() {
 #' for unrecognised files. Patterns are tried in ascending `priority` order
 #' (most specific first) and the first match wins.
 #'
-#' @param filenames Character; one or more file names (full paths).
+#' @param filenames Character; one or more file names.
 #' @param roxas_version `"roxas"` or `"roxas_ai"`. Used to
 #'   disambiguate patterns that are specific to one ROXAS version.
 #' @returns A tibble with one row per file: `resource_name`, `fname_resource`,
 #'   `resource_type`, `linked_level`.
-#' @seealso [collect_resources()]
+#' @seealso [compile_resources()]
 #' @noRd
 infer_resource_types <- function(filenames, roxas_version) {
   checkmate::assert_choice(roxas_version, c("roxas", "roxas_ai"))
@@ -319,17 +493,16 @@ infer_resource_types <- function(filenames, roxas_version) {
     dplyr::if_else(grepl(pattern, fnames, ignore.case = TRUE), i, NA_integer_)
   }) |> purrr::reduce(dplyr::coalesce)
 
-  # add an "other" row for unmatched filenames: pulling from this row keeps
-  # linked_level as NA, without needing a separate coalesce() step.
+  # create an "other" row for any unmatched filenames
   match_idx[is.na(match_idx)] <- nrow(res_tbl) + 1L
   res_tbl[nrow(res_tbl) + 1L, "resource_type"] <- "other"
 
   tibble::tibble(
-    resource_name  = fnames,
-    fname_resource = filenames
+    resource_name  = filenames
   ) |>
     dplyr::bind_cols(res_tbl[match_idx, c("resource_type", "linked_level")])
 }
+
 
 # --- Auto-label detection -------------------------------------------------
 #' Derive an "original name" prefix for each group of a hierarchy level

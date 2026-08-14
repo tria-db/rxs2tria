@@ -119,7 +119,7 @@ QWA_data <- complete_QWAdata(QWA_data, rxs_images, exclude_mode)
 # Step 5: Save the QWA data
 # ------------------------------------------------------------------------------
 # QWAdata are saved to two (compressed) csv files with the naming convention
-# "{dataset_name}_QWAdata_cells.csv(.gz)" and "{dataset_name}_QWAdata_rings.csv(.gz)"
+# "{dataset_name}_QWAcells.csv(.gz)" and "{dataset_name}_QWArings.csv(.gz)"
 # though explicit file names may also be provided (see ?write_QWAdata).
 path_out <- "path/to/output_data"
 dataset_name <- "example_dataset"
@@ -130,8 +130,8 @@ write_QWAdata(QWA_data, dir = path_out, dataset_name = dataset_name)
 
 # ------------------------------------------------------------------------------
 # At this stage, you have the minimal components required for a TRIA submission,
-# i.e. a QWAmetadata .json file (from the Shiny app), and QWAdata_cells and
-# QWAdata_rings .csv files with the preprocessed measurements data.
+# i.e. a QWAmetadata .json file (from the Shiny app), and QWAcells and
+# QWArings .csv files with the preprocessed measurements data.
 # The following optional steps can be completed to provide more in-depth
 # quality assessment and discrete features information of the annual rings (Step 6),
 # and to compile a list of additional resources (e.g. original and/or annotated
@@ -182,8 +182,7 @@ launch_flags_app()
 
 # To read in and update the edited rings data from file or a data frame in the env:
 # QWA_data$rings <- read_QWAdata(
-#   file_rings = "path/to/output_data/example_dataset_edited_QWAdata_rings.csv",
-#   components = "rings")
+#   file_rings = "path/to/output_data/example_dataset_edited_QWArings.csv")$rings
 # QWA_data$rings <- df_rings_edited
 # Save the edits to files:
 # write_QWAdata(QWA_data, dir = path_out, dataset_name = dataset_name)

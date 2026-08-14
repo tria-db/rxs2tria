@@ -52,7 +52,8 @@ Suggests:
     shinyjs,
     shinyTree,
     shinyvalidate,
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    zip
 Config/testthat/edition: 3
 URL: https://tria-db.github.io/rxs2tria/, https://github.com/tria-db/rxs2tria/
 BugReports: https://github.com/tria-db/rxs2tria/issues

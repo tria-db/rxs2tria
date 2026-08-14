@@ -35,7 +35,7 @@ level of the QWA sampling hierarchy:
 | `$trees` | Tree-level metadata (species, DBH, age) |
 | `$woodpieces` | Woodpiece-level metadata (type: disc, core, etc.) |
 | `$slides` | Slide-level metadata (preparation method, staining) |
-| `$dataset` | Dataset name, description, license, embargo date |
+| `$dataset` | Dataset name, title, description, license, embargo date |
 | `$authors` | Author names, affiliations, contact information |
 | `$funding` | Funding sources and grant numbers |
 | `$related` | Related publications or datasets (DOIs, URLs) |

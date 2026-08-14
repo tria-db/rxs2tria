@@ -4,24 +4,36 @@
 \alias{check_resources}
 \title{Validate a resources manifest and compute status for each file}
 \usage{
-check_resources(res, rxs_images)
+check_resources(res, rxs_images, new_res = NULL, add_new_files = FALSE)
 }
 \arguments{
-\item{res}{A resources data frame.}
+\item{res}{A resources data frame, treated as ground truth wherever it
+overlaps with \code{new_res} (see above).}
 
 \item{rxs_images}{A \link{QWAimages} object, used to validate \code{linked_label}
-values (see \code{\link[=collect_resources]{collect_resources()}}).}
+values (see \code{\link[=compile_resources]{compile_resources()}}).}
+
+\item{new_res}{A freshly-scanned resources data frame to reconcile \code{res}
+against, or \code{NULL} (the default) to just check \code{res} as-is.}
+
+\item{add_new_files}{Logical; if \code{TRUE}, files in \code{new_res} not declared
+in \code{res} are added as new rows instead of being left out. Ignored if
+\code{new_res} is \code{NULL}. Default \code{FALSE}.}
 }
 \value{
-\code{res} with \code{status} and \code{note} (re)computed for every row.
+\code{res} (reconciled against \code{new_res} first, if supplied) with
+\code{status} and \code{note} (re)computed for every row.
 }
 \description{
 Runs a series of checks on a resources data frame (e.g. \code{x$resources}, or
-the output of \code{\link[=collect_resources]{collect_resources()}}) and annotates every row with a
+the output of \code{\link[=compile_resources]{compile_resources()}}) and annotates every row with a
 \code{status}:
 \itemize{
 \item \code{"ignore"}: a junk file (ROXAS \verb{_bu} backups, \code{Thumbs.db}, Office lock
-files, ...). Never part of TRIA upload, so we will ignore such files.
+files, ...), or any other file manually marked \code{resource_type = "junk"}
+to permanently exclude it without deleting it from \code{path} (see
+\code{\link[=compile_resources]{compile_resources()}}). Never part of TRIA upload, so we will ignore
+such files.
 \item \code{"review"}: needs manual attention before this file can be included in
 submission. Covers an unrecognised (\code{"other"}) supplementary file without
 \code{description} (add one to justify including it as-is, or fix
@@ -38,9 +50,20 @@ A summary is printed: files needing review are listed (with their \code{note}),
 or, once none remain, a message confirms the directory of supplementary
 files is ready to be zipped for submission.
 
-\code{\link[=collect_resources]{collect_resources()}} runs this automatically, call it directly to re-run
+\code{\link[=compile_resources]{compile_resources()}} runs this automatically, call it directly to re-run
 the checks, e.g. after manually editing a resources table.
+
+Pass \code{new_res} (a freshly-scanned table, e.g. from \code{\link[=compile_resources]{compile_resources()}}'s
+own scanning step) to reconcile \code{res} against it before checking: \code{res} is
+treated as ground truth for any file also found in \code{new_res}, a file
+\code{new_res} doesn't know about but \code{res} lists (with \code{status} other than
+\code{"ignore"}) aborts the call, a \code{res} row whose file is gone and was
+already \code{"ignore"} is dropped quietly (so reporting reflects what's
+actually there rather than stale junk references), and a file \code{new_res}
+finds that \code{res} doesn't list is left out unless \code{add_new_files = TRUE}.
+This is what lets \code{\link[=compile_resources]{compile_resources()}} point \code{path} at a zip archive to
+re-verify a submission is still complete right before uploading it.
 }
 \seealso{
-\code{\link[=collect_resources]{collect_resources()}}, \code{\link[=add_resources]{add_resources()}}
+\code{\link[=compile_resources]{compile_resources()}}, \code{\link[=add_resources]{add_resources()}}
 }

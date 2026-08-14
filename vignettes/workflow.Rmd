@@ -237,8 +237,8 @@ QWA_data  # prints an overview including ring flag counts
 
 `write_QWAdata()` saves the `QWAdata` object to two (optionally
 compressed) CSV files following the naming convention
-`{dataset_name}_QWAdata_cells.csv(.gz)` and
-`{dataset_name}_QWAdata_rings.csv(.gz)`. Explicit file names can also
+`{dataset_name}_QWAcells.csv(.gz)` and
+`{dataset_name}_QWArings.csv(.gz)`. Explicit file names can also
 be provided (see `?write_QWAdata`).
 
 ```{r, eval = FALSE}
@@ -316,8 +316,7 @@ launch_flags_app()
 
 # To update QWA_data$rings with the edited output:
 # QWA_data$rings <- read_QWAdata(
-#   file_rings = "path/to/output_data/example_dataset_edited_QWAdata_rings.csv",
-#   components = "rings")
+#   file_rings = "path/to/output_data/example_dataset_edited_QWArings.csv")$rings
 # QWA_data$rings <- df_rings_edited  # or directly from a data frame in the env
 # write_QWAdata(QWA_data, dir = path_out, dataset_name = dataset_name)
 ```

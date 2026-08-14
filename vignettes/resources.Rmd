@@ -43,14 +43,17 @@ You build the table with two functions:
 
 - `add_resources()` — the convenient entry point; scans a directory and
   updates the `$resources` component of a `QWAmetadata` object in place.
-- `collect_resources()` — the underlying worker; returns a plain
+- `compile_resources()` — the underlying worker; returns a plain
   resources table and is useful when you want to inspect or manipulate
   it directly before attaching it.
 
 As described in `vignette("submission")`, a submission's supplementary
 files are expected to live in a **single directory** (which you zip up
 before uploading) — the functions scan it recursively, so you may use
-your preferred nested file structure within that directory.
+your preferred nested file structure within that directory. Both
+functions also accept a path to an already-zipped (non-nested) archive
+directly, instead of a directory — see [Re-checking an existing table or
+archive] below.
 
 ---
 
@@ -64,7 +67,7 @@ Each row has the following columns:
 | `resource_type` | The kind of file, inferred from its name (see below). |
 | `linked_level` | Level of the data hierarchy the file pertains to: `"dataset"`, `"woodpiece"`, `"slide"`, `"image"`, or `"analysis"`. |
 | `linked_label` | Which entity at that level the file belongs to (e.g. a specific `image_label`). Auto-filled for `image`/`analysis`/`slide`/`woodpiece` levels where possible, otherwise `NA`. |
-| `fname_resource` | Absolute path to the file on your machine (will always be removed before upload to TRIA). |
+| `fname_resource` | Absolute path to the file on your machine, or `NA` if it was found by scanning a zip archive directly (will always be removed before upload to TRIA). |
 | `status` | `"ok"`, `"review"`, or `"ignore"` — see [Readiness status] below. |
 | `note` | Explanation for `status` (why a file needs review, or is ignored). |
 
@@ -94,10 +97,9 @@ QWA_meta <- add_resources(QWA_meta, path = "submission_files")
 ```
 
 Inspect the result — the console already told you if anything needs
-review (see [Readiness status]). Remove or fix stray files in the directory
-itself, then rerun the function to create an updated resources table. Then
-complete any resource types or labels that require manual edits (see 
-[Manual editing]), and write the object back to disk:
+review (see [Readiness status]). Complete any resource types or labels
+that require manual edits (see [Manual editing]), then write the object
+back to disk:
 
 ```{r inspect-write}
 QWA_meta$resources
@@ -108,10 +110,10 @@ write_QWAmetadata(QWA_meta, "output_data/my_dataset_QWAmetadata.json")
 ### Working with the table directly
 
 If you prefer to assemble and edit the table before attaching it, use
-`collect_resources()`. It takes the same arguments:
+`compile_resources()`. It takes the same arguments:
 
 ```{r collect-direct}
-res <- collect_resources("submission_files", rxs_images = QWA_meta$images)
+res <- compile_resources("submission_files", rxs_images = QWA_meta$images)
 
 # edit `res` as needed, then attach it:
 QWA_meta$resources <- res
@@ -124,10 +126,54 @@ name identically (see below), and its labels auto-populate `linked_label`
 
 ---
 
+## Re-checking an existing table or archive
+
+Both functions accept a previous resources table (`res` for
+`compile_resources()`; automatic via `x$resources` for `add_resources()`)
+to re-check against, and `path` can point to a zip archive instead of a
+directory — useful to re-verify an already-packaged submission zip is
+still complete right before uploading it:
+
+```{r recheck-zip}
+QWA_meta <- add_resources(QWA_meta, path = "submission_files.zip")
+```
+
+When a previous table is available, it's treated as ground truth rather
+than re-inferred from scratch:
+
+- A file listed in the table **and** still found in `path` keeps its
+  `resource_type`/`linked_level`/`linked_label`/`description` exactly as
+  they are — any manual edits you made survive the re-run.
+- A file the table lists (and hasn't marked `"ignore"`) that is **not**
+  found in `path` aborts the call: the table no longer matches what's
+  actually there, and either needs fixing or the file needs to be put
+  back.
+- A file found in `path` that the table doesn't know about is, by
+  default, left out — the table is trusted as the complete list, and you
+  just get a console count of how many were skipped. Pass
+  `add_new_files = TRUE` (on either function) to pick these up instead,
+  freshly typed, e.g. right after you've added new files to the
+  directory:
+
+```{r recheck-add-new}
+QWA_meta <- add_resources(QWA_meta, path = "submission_files",
+                           add_new_files = TRUE)
+```
+
+Because an untracked file is always treated as "not yet seen" rather
+than "deliberately excluded," simply deleting its row from the table
+does not permanently exclude it — a later re-run (with `add_new_files =
+TRUE`) would just pick it up again. To permanently exclude a real file
+without removing it from `path`, set its `resource_type` to `"junk"`
+instead of deleting its row (see [Readiness status] below) — that stays
+stable across re-runs for as long as the file exists in `path`.
+
+---
+
 ## Readiness status
 
 Every row is assigned a `status` by [check_resources()] (run
-automatically by `collect_resources()`/`add_resources()`, and re-runnable
+automatically by `compile_resources()`/`add_resources()`, and re-runnable
 by hand after you edit the table):
 
 - **`"ok"`** — recognised, passes every check, ready to submit as-is.
@@ -142,14 +188,16 @@ by hand after you edit the table):
   once per level, a resource type specific to the other ROXAS version,
   or a `linked_label` that doesn't match any known label.
 - **`"ignore"`** — a junk file (ROXAS `_bu` backups, stray
-  calibration/preview files, `Thumbs.db`, `desktop.ini`, Office lock
-  files, ...). Never part of what gets zipped as supplementary resources.
-  You may want to remove these files from the directory yourself to
-  decrease the submission file size. But if you don't remove them, they
-  will in any case be ignored when we upload the dataset to TRIA. If a
-  file doesn't match any built-in junk pattern but you'd still like it
-  ignored, set its `resource_type` to `"junk"` yourself — it gets the
-  same treatment.
+  calibration/preview files, `Thumbs.db`, `desktop.ini`, `.DS_Store`,
+  Office lock files, ...). Never part of what gets zipped as
+  supplementary resources. You may want to remove these files from the
+  directory yourself to decrease the submission file size. But if you
+  don't remove them, they will in any case be ignored when we upload the
+  dataset to TRIA. If a file doesn't match any built-in junk pattern but
+  you'd still like it permanently excluded, set its `resource_type` to
+  `"junk"` yourself — it gets the same treatment, and (unlike deleting
+  its row) stays excluded across re-runs, see [Re-checking an existing
+  table or archive].
 
 The console message tells you where things stand: once no row needs
 review, you'll see a confirmation that the dataset is ready to zip;
@@ -250,10 +298,10 @@ Files that do not match anything are left as `NA` — which is why
 resource types that normally need a `linked_label` are flagged
 `status = "review"` until one is filled in (see [Readiness status]).
 
-With `collect_resources()`, `rxs_images` is a required argument:
+With `compile_resources()`, `rxs_images` is a required argument:
 
 ```{r collect-structure}
-res <- collect_resources("submission_files", rxs_images = QWA_meta$images)
+res <- compile_resources("submission_files", rxs_images = QWA_meta$images)
 ```
 
 `dataset`-level resources are never inferred — a dataset-level file
@@ -281,7 +329,7 @@ names.
 The resources schema also allows a free-text `description` per file,
 useful when a resource needs context that its type does not convey — or
 to justify why an unrecognised (`"other"`) file should be submitted
-as-is. It is not created by `collect_resources()`; add it yourself when
+as-is. It is not created by `compile_resources()`; add it yourself when
 helpful:
 
 ```{r description}

@@ -43,3 +43,5 @@ _TRACHEIDMASK\.(tif|tiff)$,junk,,,,0,remove,IMGNAME_TRACHEIDMASK.tif,roxas,
 ~RF([:alnum:]+)\.TMP$,junk,,,,0,remove,FILENAME~RF6c4558.TMP,system,
 ^~\$,junk,,,,0,remove,~$IMGNAME_Output.xlsx,system,
 ^desktop\.ini$,junk,,,,0,remove,desktop.ini,system,
+\.DS_Store$,junk,,,,0,remove,.DS_Store,system,
+^\._,junk,,,,0,remove,._IMGNAME.jpg,system,AppleDouble resource-fork sidecar files; also covers __MACOSX/ zip entries since matching is on basename

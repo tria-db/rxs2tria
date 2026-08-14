@@ -53,18 +53,21 @@ To hand over these three (or four) files, email
 
 Gather every supplementary file you want to submit into a **single
 directory** (nesting subfolders as preferred — e.g. per tree or slide),
-run `add_resources()`/`collect_resources()` on it, and resolve anything
+run `add_resources()`/`compile_resources()` on it, and resolve anything
 flagged `"review"` — see `vignette("resources")` for the full workflow —
 before zipping that directory for upload.
 
 Doing this yourself first means naming problems (an unrecognised file, a
 missing `linked_label`) surface on your end, where you can still rename
 or annotate things, rather than during our ingestion checks. We re-run
-the same checks on our side regardless — if you provide a `$resources`
-manifest, we match it against the actual file list in your archive
-(falling back to our own inference for anything unmatched, and flagging
-any discrepancy, e.g. a `resource_type` that doesn't match the file's
-actual extension); if you don't, we build the manifest from scratch.
+`compile_resources()` on our side regardless, pointed directly at your
+uploaded zip. If you provide a `$resources` manifest, it's trusted as
+ground truth for anything it lists that's still in the zip; if the zip is
+missing a file the manifest expects (anything not already marked
+`"ignore"`), that's treated as a real inconsistency and ingestion stops
+until it's resolved. Extra files in the zip the manifest doesn't mention
+are left out rather than guessed at. If you don't provide a manifest, we
+build one from scratch the same way `compile_resources()` would for you.
 
 ---
 
@@ -93,7 +96,7 @@ we don't store a second, potentially stale copy.
 | `$dataset$doi` | Added | When the dataset is registered / made public |
 | `$images[*].fname_image`, `fname_cells`, `fname_rings`, `fname_settings` | Removed | On ingestion |
 | `$resources[*].fname_resource` | Removed | On ingestion |
-| `$resources` | Completed (resource types/labels reconciled against the uploaded archive; storage key added) | On ingestion |
+| `$resources` | Checked against the uploaded archive (see [Packaging supplementary resources] above); storage key added | On ingestion |
 
 The `fname_*` / `fname_resource` columns hold absolute paths from your
 own machine — meaningful while you're preparing the data, meaningless

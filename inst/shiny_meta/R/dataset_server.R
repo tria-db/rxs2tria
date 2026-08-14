@@ -42,6 +42,9 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
         if (shiny::isTruthy(ds_data$ds_name)) {
           shiny::updateTextInput(session, "ds_name", value = ds_data$ds_name)
         }
+        if (shiny::isTruthy(ds_data$ds_title)) {
+          shiny::updateTextAreaInput(session, "ds_title", value = ds_data$ds_title)
+        }
         if (shiny::isTruthy(ds_data$acknowledgements)) {
           shiny::updateTextAreaInput(
             session, "acknowledgements", value = ds_data$acknowledgements
@@ -96,6 +99,8 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
     iv_gen <- shinyvalidate::InputValidator$new()
     iv_gen$add_rule("ds_name", shinyvalidate::sv_required())
     iv_gen$add_rule("ds_name", max_char_limit, limit = 64)
+    iv_gen$add_rule("ds_title", shinyvalidate::sv_required())
+    iv_gen$add_rule("ds_title", max_char_limit, limit = 300)
     iv_gen$add_rule("description", shinyvalidate::sv_required())
     iv_gen$add_rule(
       "description",
@@ -630,6 +635,7 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
     ds_data_out <- shiny::reactive({
       tibble::tibble(
         ds_name = input$ds_name,
+        ds_title = input$ds_title,
         description = input$description,
         ds_access = input$ds_access,
         ds_license = input$ds_license,
