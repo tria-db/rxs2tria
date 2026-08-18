@@ -16,7 +16,7 @@
 check_incomplete_innermost <- function(cells.innermost, res){
   # first check that we do have cell data for the year in question,
   # if not, it means the cells were manually excluded and it is def incomplete
-  if (nrow(cells.innermost) < 1 || all(is.na(cells.innermost$xpix))){
+  if (nrow(cells.innermost) < 1 || all(is.na(cells.innermost$xpix)) || all(is.na(cells.innermost$raddistr)) || is.na(res)){
     return(list(mae = NA, medYleft = NA, medYright = NA, mindist = NA,
                 incomplete_inner = TRUE, incomplete_innerv2 = TRUE))
   }
