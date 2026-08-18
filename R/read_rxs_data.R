@@ -284,6 +284,21 @@ collect_raw_data <- function(df_meta, roxas_version = NULL) {
   # these dfs have correct required columns and types per definition
   # except if there was an issue with one or more files -> warning message
 
+  # check for missing values in required columns:
+  check_missing_cells <- checkmate::check_data_frame(
+      df_cells_all[c("image_label","year","xpix","ypix")], any.missing = FALSE)
+  check_missing_rings <- checkmate::check_data_frame(
+      df_rings_all[c("image_label","year")], any.missing = FALSE)
+
+  if (!isTRUE(check_missing_cells)) {
+    cli::cli_warn(c("Missing required values detected in {.field cells} data",
+    check_missing_cells))
+  }
+  if (!isTRUE(check_missing_rings)) {
+    cli::cli_warn(c("Missing required values detected in {.field rings} data",
+    check_missing_rings))
+  }
+
   # forcibly remove any error codes and "negative" values that are actually outliers
   QWA_data <- remove_outliers(
     new_QWAdata(cells = df_cells_all, rings = df_rings_all),
