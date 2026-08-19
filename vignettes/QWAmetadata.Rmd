@@ -39,7 +39,7 @@ level of the QWA sampling hierarchy:
 | `$authors` | Author names, affiliations, contact information |
 | `$funding` | Funding sources and grant numbers |
 | `$related` | Related publications or datasets (DOIs, URLs) |
-| `$resources` | Files to include in the submission |
+| `$resources` | Describes the submitted `QWAcells`/`QWArings` files; added by TRIA at publish time, leave `NULL` |
 
 `$images` is the only required component. All others are optional and
 can be populated incrementally. The hierarchical components (`$sites`,
@@ -156,21 +156,20 @@ existing values preserved:
   absent, a one-row skeleton with all schema columns (all `NA`) is
   created so you can see the expected fields. If already present, only
   missing optional columns are added.
-- **`$resources`**: not modified by `complete_QWAmetadata()`; use
-  `add_resources()` to populate this component.
+- **`$resources`**: not modified by `complete_QWAmetadata()` -- it's
+  populated by TRIA at publish time, not by this package.
 
 ---
 
-## Adding resources
+## Supplementary resources
 
-Resources (supplementary data files to be included in the submission)
-are managed separately via `add_resources()`, which scans a directory,
-infers the resource type of each file from its name, and records the
-result in `$resources`:
-
-```{r resources}
-QWA_metadata <- add_resources(QWA_metadata, path = "output/submission_files/")
-```
+Supplementary data files (original/annotated images, raw ROXAS output,
+reference series, etc.) are **not** tracked via `$resources` -- that
+component describes only the submitted `QWAcells`/`QWArings` files, and
+is added by TRIA at publish time. The supplementary-file manifest is a
+separate, standalone artifact built with `compile_resources()` and
+written to its own CSV, submitted alongside a zip of the files
+themselves. See `vignette("resources")` for the full workflow.
 
 ---
 

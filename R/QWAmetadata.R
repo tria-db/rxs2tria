@@ -182,9 +182,11 @@ new_QWAmetadata <- function(dataset = NULL,
 #'   metadata Shiny app.
 #' @param related Data frame with related publications or datasets. Typically 
 #'   provided via metadata Shiny app.
-#' @param resources Data frame listing all raw data files to be submitted as
-#'   part of the dataset. Typically created by [compile_resources()] or 
-#'   [add_resources()].
+#' @param resources Data frame describing the submitted `QWAdata` cells/rings
+#'   files. Populated by TRIA at publish time rather than by this package --
+#'   leave `NULL`. (The supplementary-file manifest built by
+#'   [compile_resources()] is a separate, standalone artifact -- see
+#'   `vignette("resources")` -- not a component of `QWAmetadata`.)
 #' @param sites Data frame with site-level metadata. Typically provided via
 #'   metadata Shiny app.
 #' @param trees Data frame with tree-level metadata. Typically provided via
@@ -413,8 +415,8 @@ complete_QWAmetadata <- function(x) {
       dplyr::summarise(n_images = dplyr::n_distinct(image_label), .groups = "drop")
   })
 
-  new_QWAmetadata(dataset, authors, funding, related, 
-    resources = x$resources, # TODO: not touching resources for now
+  new_QWAmetadata(dataset, authors, funding, related,
+    resources = x$resources, # populated by TRIA at publish time, not completed client-side
     sites, trees, woodpieces, slides, images)
 }
 

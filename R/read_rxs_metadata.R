@@ -384,7 +384,7 @@ cast_settings_types <- function(df, roxas_version) {
       )
   } else {
     df <- df |>
-      dplyr::mutate( # roxas ai creates standardized timestamps (?)
+      dplyr::mutate( # roxas ai creates standardized timestamps
         rxs_created_at = lubridate::parse_date_time(.data$rxs_created_at, orders = "ymdHMS") 
       )
   }

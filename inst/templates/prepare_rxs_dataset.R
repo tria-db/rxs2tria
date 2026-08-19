@@ -220,19 +220,17 @@ QWA_data <- update_QWAdata(QWA_data,
 # A TRIA submission must comprise at least the QWAmetadata .json and the
 # QWAdata cells and rings .csv files. If you would like to provide additional
 # (supplementary) files with your submission - e.g. original / annotated images,
-# raw ROXAS output, reference series - these are listed in the resources
-# component of the QWAmetadata object.
-# add_resources() scans a directory (including nested subfolders) and records
-# each file with its inferred type, hierarchy level, and a readiness status
-# ("ok", "review", or "ignore" - see vignette("resources")). Supplementary
-# files are expected to live in a single directory (see vignette("submission")),
-# so one call is normally enough. The console reports whether the dataset is
-# ready to zip, or which files still need attention.
-# See vignette("resources") for details and the full resource-type table.
+# raw ROXAS output, reference series - these are listed in a standalone
+# resources manifest, submitted alongside a zip of the files themselves.
+# compile_resources() scans a directory (including nested subfolders) and
+# returns a table with one row per file, its inferred type, hierarchy level,
+# and a readiness status ("ok", "review", or "ignore"; see
+# vignette("resources")). The console reports whether the supplementary manifest
+# is ready to submit, or which files still need attention.
+# See vignette("resources") for details.
 
 QWAmeta <- read_QWAmetadata("path/to/output_data/example_dataset_QWAmetadata.json")
-QWAmeta <- add_resources(QWAmeta, path = "path/to/submission_files")
+suppl_res <- compile_resources("path/to/submission_files", rxs_images = QWAmeta$images)
 
-QWAmeta$resources # review status "review" rows, and complete linked_label where needed
-
-write_QWAmetadata(QWAmeta, "path/to/output_data/example_dataset_QWAmetadata.json")
+suppl_res # review status "review" rows, make edits where needed, then (re-)compile
+vroom::vroom_write(suppl_res, "path/to/output_data/example_dataset_supplemenary_files.csv")

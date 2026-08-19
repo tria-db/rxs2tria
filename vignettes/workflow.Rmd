@@ -144,14 +144,16 @@ img_created_at_converted <- lubridate::parse_date_time(
 )
 df_settings$img_created_at <- img_created_at_converted
 
-settings_date_orders <- c("%d.%m.%Y %H:%M:%S", "%d/%m/%Y %H:%M") # adjust to your locale
-rxs_created_at_converted <- lubridate::parse_date_time(
-  df_settings$rxs_created_at,
-  orders = settings_date_orders,
-  tz = Sys.timezone()
-)
-df_settings$rxs_created_at <- rxs_created_at_converted
-
+# for ROXAS only (ROXAS AI has standardized timestamps, so already converted)
+if (roxas_version == "roxas") {
+  settings_date_orders <- c("%d.%m.%Y %H:%M:%S", "%d/%m/%Y %H:%M") # adjust to your locale
+  rxs_created_at_converted <- lubridate::parse_date_time(
+    df_settings$rxs_created_at,
+    orders = settings_date_orders,
+    tz = Sys.timezone()
+  )
+  df_settings$rxs_created_at <- rxs_created_at_converted
+}
 ```
 
 Combine the extracted data into one object:
@@ -360,48 +362,46 @@ QWA_data <- update_QWAdata(QWA_data,
 # Step 7: Compile supplementary resources (optional)
 
 A TRIA submission must include at minimum the `QWAmetadata` `.json` and
-the `QWAdata` `.csv` files. If you want to provide additional
-(supplementary) files — original images, annotated images, raw ROXAS /
-ROXAS AI output, reference series `.rwl` files, etc. — these are listed
-in the `$resources` component of the `QWAmetadata` object.
+the `QWAdata` `.csv(.gz)` files. If you want to provide additional
+(supplementary) files (original images, annotated images, raw ROXAS /
+ROXAS AI output, reference series `.rwl` files, etc.) these should 
+submitted in a single zip alongside a standalone resources manifest 
+listing all the files in the zip.
 
 Not all files may be elligible as supporting material for a TRIA dataset,
-and it is important to track which file pertains to which image or slide, 
-etc. For this purpose, `add_resources()` scans a directory (including 
-nested subfolders) and records the files it finds in `$resources` as a 
-table with one row per file. For each file it infers the `resource_type`
-from the file name and sets the hierarchy level it belongs to
-(`linked_level`). Files are also matched to their `linked_label` (e.g. 
-the `image_label`) using the object's `$images` component, where possible.
+and it is important to track which file pertains to which image or slide,
+etc. For this purpose, `compile_resources()` scans a directory (including
+nested subfolders) and returns a table with one row per file it finds.
+For each file it infers the `resource_type` from the file name and sets
+the hierarchy level it belongs to (`linked_level`). Files are also
+matched to their `linked_label` (e.g. the `image_label`) using a
+[QWAimages] object, where possible.
 
 ```{r, eval = FALSE}
 QWA_meta <- read_QWAmetadata("path/to/output_data/example_dataset_QWAmetadata.json")
-QWA_meta <- add_resources(QWA_meta, path = "path/to/submission_files")
+suppl_res <- compile_resources("path/to/submission_files", rxs_images = QWA_meta$images)
 ```
 
 Every file gets a `status` (`"ok"`, `"review"`, or `"ignore"`) and the
-console reports whether the dataset is ready to zip, or which files
-still need attention. Review the table — in particular, add a `description`
+console reports whether the supplementary path is ready for submission, 
+or which files still need attention. Review the table, add a `description`
 for files where the `resource_type` could not be inferred, and complete 
-any `linked_label` values that were not filled automatically — and then
-write the object back to disk:
+any `linked_label` values that were not filled automatically. Then
+write it to a CSV to submit alongside the resources zip:
 
 ```{r, eval = FALSE}
-QWA_meta$resources
-write_QWAmetadata(QWA_meta, "path/to/output_data/example_dataset_QWAmetadata.json")
+suppl_res
+vroom::vroom_write(suppl_res, "path/to/output_data/example_dataset_resources.csv")
 ```
 
-Listing the files does not move or compress them; how they are packaged
-for storage is handled downstream. See `vignette("resources")` for the
-full resource-type table, the meaning of each column, and how to link
-resources to the data hierarchy.
+See `vignette("resources")` for more details on this step, including how
+to `recompile_resources()` after making edits, and how to fun a final 
+`check_supplementary()` once you are done.
 
 # Step 8: Submit your data
 
 Once you are ready to share your prepared data files with us, email
-[tria@wsl.ch](mailto:tria@wsl.ch) — either with a link to the files on a
+[tria@wsl.ch](mailto:tria@wsl.ch)---either with a link to the files on a
 file transfer service of your choice, or asking for an invite link to
-WSL's own one. See `vignette("submission")` for what to upload (the
-three required files, plus a single zipped
-directory of any supplementary resources) and what happens to your
-files once we receive them.
+WSL's own one. See `vignette("submission")` for what to upload and what
+happens to your files once we receive them.
