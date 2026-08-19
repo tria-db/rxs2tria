@@ -119,7 +119,7 @@ QWA_data <- complete_QWAdata(QWA_data, rxs_images, exclude_mode)
 # Step 5: Save the QWA data
 # ------------------------------------------------------------------------------
 # QWAdata are saved to two (compressed) csv files with the naming convention
-# "{dataset_name}_QWAdata_cells.csv(.gz)" and "{dataset_name}_QWAdata_rings.csv(.gz)"
+# "{dataset_name}_QWAcells.csv(.gz)" and "{dataset_name}_QWArings.csv(.gz)"
 # though explicit file names may also be provided (see ?write_QWAdata).
 path_out <- "path/to/output_data"
 dataset_name <- "example_dataset"
@@ -130,8 +130,8 @@ write_QWAdata(QWA_data, dir = path_out, dataset_name = dataset_name)
 
 # ------------------------------------------------------------------------------
 # At this stage, you have the minimal components required for a TRIA submission,
-# i.e. a QWAmetadata .json file (from the Shiny app), and QWAdata_cells and
-# QWAdata_rings .csv files with the preprocessed measurements data.
+# i.e. a QWAmetadata .json file (from the Shiny app), and QWAcells and
+# QWArings .csv files with the preprocessed measurements data.
 # The following optional steps can be completed to provide more in-depth
 # quality assessment and discrete features information of the annual rings (Step 6),
 # and to compile a list of additional resources (e.g. original and/or annotated
@@ -182,8 +182,7 @@ launch_flags_app()
 
 # To read in and update the edited rings data from file or a data frame in the env:
 # QWA_data$rings <- read_QWAdata(
-#   file_rings = "path/to/output_data/example_dataset_edited_QWAdata_rings.csv",
-#   components = "rings")
+#   file_rings = "path/to/output_data/example_dataset_edited_QWArings.csv")$rings
 # QWA_data$rings <- df_rings_edited
 # Save the edits to files:
 # write_QWAdata(QWA_data, dir = path_out, dataset_name = dataset_name)
@@ -221,17 +220,17 @@ QWA_data <- update_QWAdata(QWA_data,
 # A TRIA submission must comprise at least the QWAmetadata .json and the
 # QWAdata cells and rings .csv files. If you would like to provide additional
 # (supplementary) files with your submission - e.g. original / annotated images,
-# raw ROXAS output, reference series - these are listed in the resources
-# component of the QWAmetadata object.
-# add_resources() scans a directory and records each file with its inferred
-# type, hierarchy level, and a checksum/size for integrity checking. Call it
-# once per source directory (use recursive = TRUE for nested folders). Review
-# the resulting table - especially the linked_label column - before writing.
-# See vignette("resources") for details and the full resource-type table.
+# raw ROXAS output, reference series - these are listed in a standalone
+# resources manifest, submitted alongside a zip of the files themselves.
+# compile_resources() scans a directory (including nested subfolders) and
+# returns a table with one row per file, its inferred type, hierarchy level,
+# and a readiness status ("ok", "review", or "ignore"; see
+# vignette("resources")). The console reports whether the supplementary manifest
+# is ready to submit, or which files still need attention.
+# See vignette("resources") for details.
 
 QWAmeta <- read_QWAmetadata("path/to/output_data/example_dataset_QWAmetadata.json")
-QWAmeta <- add_resources(QWAmeta, path = "path/to/submission_files", recursive = TRUE)
+suppl_res <- compile_resources("path/to/submission_files", rxs_images = QWAmeta$images)
 
-QWAmeta$resources # review, and complete linked_label where needed
-
-write_QWAmetadata(QWAmeta, "path/to/output_data/example_dataset_QWAmetadata.json")
+suppl_res # review status "review" rows, make edits where needed, then (re-)compile
+vroom::vroom_write(suppl_res, "path/to/output_data/example_dataset_supplemenary_files.csv")

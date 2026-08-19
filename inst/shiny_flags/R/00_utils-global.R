@@ -105,6 +105,8 @@ discrete_features <- c(
   "Intra-annual density fluctuations" = "iadf",
   "Traumatic resin ducts" = "traum_resin_ducts",
   "Trabeculae" = "trabeculae",
+  "Blue cells" = "blue_cells",
+  "Red cells" = "red_cells",
   "Other features" = "other_discrete"
 )
 
@@ -123,7 +125,9 @@ technical_issues <- c(
   "Compressed cells" = "compressed_cells",
   "Overlapping cells" = "overlapping_cells",
   "Broken cells" = "broken_cells",
-  "Tangentially incomplete" = "tang_incomplete"
+  "Tangentially incomplete" = "tang_incomplete",
+  "Irregular/unequal thickness" = "irreg_thickness",
+  "Air bubble(s)" = "air_bubbles"
 )
 
 other_issues <- c(

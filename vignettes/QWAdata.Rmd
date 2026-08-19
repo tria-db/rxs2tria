@@ -188,21 +188,20 @@ rings. Provide either a directory (files are named automatically) or
 explicit paths:
 
 ```{r write-read}
-# Using a directory — files named {dataset_name}_QWAdata_cells.csv.gz and
-# {dataset_name}_QWAdata_rings.csv.gz
+# Using a directory — files named {dataset_name}_QWAcells.csv.gz and
+# {dataset_name}_QWArings.csv.gz
 write_QWAdata(QWA_data, dir = "output/", dataset_name = "my_dataset")
 
 # Or with explicit paths:
 write_QWAdata(QWA_data,
-              file_cells = "output/my_dataset_QWAdata_cells.csv.gz",
-              file_rings = "output/my_dataset_QWAdata_rings.csv.gz")
+              file_cells = "output/my_dataset_QWAcells.csv.gz",
+              file_rings = "output/my_dataset_QWArings.csv.gz")
 
 # Read back:
 QWA_data <- read_QWAdata(dir = "output/", dataset_name = "my_dataset")
 
 # Read only rings (avoids loading a large cells file):
-QWA_data_rings <- read_QWAdata(dir = "output/", dataset_name = "my_dataset",
-                                components = "rings")
+QWA_data_rings <- read_QWAdata(file_rings = "output/my_dataset_QWArings.csv.gz")
 ```
 
 Compression defaults to `TRUE` for `write_QWAdata()` (unlike

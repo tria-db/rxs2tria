@@ -14,6 +14,12 @@
         "minLength": 1,
         "maxLength": 64
       },
+      "ds_title": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 300,
+        "description": "Descriptive title for the dataset, for use in citations (similar to a paper title)."
+      },
       "description": {
         "type": "string",
         "minLength": 1
@@ -36,7 +42,7 @@
         "description": "Acknowledgements"
       }
     },
-    "required": ["ds_name", "description", "ds_access", "ds_license"],
+    "required": ["ds_name", "ds_title", "description", "ds_access", "ds_license"],
     "additionalProperties": false
   }
 }

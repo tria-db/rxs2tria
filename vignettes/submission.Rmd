@@ -1,0 +1,139 @@
+---
+title: "Submitting a dataset to TRIA"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Submitting a dataset to TRIA}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+This vignette covers the last mile of the preparation workflow: what
+exactly to upload, how to package supplementary files, and what happens 
+to your files once TRIA receives them.
+It assumes you have already been through `vignette("workflow")` and have
+a complete [QWAmetadata] object and [QWAdata] files (and, optionally, a 
+validated zip of supplementary files) ready on disk.
+
+---
+
+## What to submit
+
+A submission consists of:
+
+1. **`{dataset_name}_QWAmetadata.json`**: usually the output of the
+  Shiny metadata app, or written with [write_QWAmetadata()].
+2. **`{dataset_name}_QWAcells.csv(.gz)`** and
+   **`{dataset_name}_QWArings.csv(.gz)`**: written with
+   [write_QWAdata()]. The rings file may also have been saved via the Shiny
+   flags app, if it was used for assigning data quality flags to years.
+3. Optionally, **one zip archive of supplementary resources** (original
+   and annotated images, raw ROXAS / ROXAS AI output, reference series,
+   etc.) and the **resources manifest CSV** describing it (see
+   `vignette("resources")`).
+
+To hand over these files, email [tria@wsl.ch](mailto:tria@wsl.ch) and either:
+
+- share a link to them on a file transfer service of your choice (e.g.
+  Dropbox, Google Drive, your institution's own service); or
+- ask for an invite link to WSL's file transfer server, if you'd rather
+  not set one up yourself.
+
+---
+
+## What happens after you submit
+
+We run your data through some basic validation checks, then insert it
+into the TRIA PostgreSQL database.
+This is where the structured data (measurements, metadata) live, and
+what the TRIA web platform [webapps.wsl.ch/tria] talks to. Access is
+controlled, so only the publically available (meta-)data is visible
+via the website.
+
+### S3 bucket
+For datasets that are public, we store a copy of the (meta-)data files
+as well as any supplementary data in an S3 bucket, so the data are
+easily accessible and downloadable. 
+Each dataset gets its own folder like this:
+
+```
+tria.0001/
+  data/
+    tria.0000_QWAmetadata.json
+    tria.0000_QWArings.csv.gz
+    tria.0000_QWAcells.csv.gz
+  supplementary/
+    tria.0000_supplementary_files.csv 
+    tria.0000_supplementary_data.zip
+  versions/                            <- only if there are multiple versions of the dataset
+    tria.0000_v1_QWAmetadata.json
+    tria.0000_v1_cells.csv.gz           
+```
+
+We make a small number of server-side adjustments to your raw files during
+ingestion, so that what ends up in the TRIA S3 bucket differs slightly
+from what you submitted. None of these require any action on your part,
+they're listed here purely so the shape of the final record isn't a
+surprise.
+
+### `QWAcells.csv`
+
+Derived cell measurements (`tca`, `rwd2`, `dcwt`, `cwtall_adj`, `cdrad`,
+`cdtan`, `cdratio`, `sector100`) are **removed**. They are trivially 
+recomputed from the raw measurements, so we don't store a second, 
+potentially stale copy.
+
+### `QWArings.csv`
+
+Mostly unchanged, but we remove any all `NA` columns to reduce size.
+
+### `QWAmetadata.json`
+
+| Field | Change | When |
+|---|---|---|
+| `$dataset$ds_access` | Removed | On ingestion |
+| `$dataset$citation` | Added (with DOI if available) | On ingestion |
+| `$dataset$version` | Added (for reproducibility in case of later changes) | On ingestion |
+| `$dataset$doi` | Added | When the dataset is made public and registered for a DOI |
+| `$images$fname_image`, `fname_cells`, `fname_rings`, `fname_settings` | Removed | On ingestion |
+| `$resources` | Added: two rows pointing to the submitted `QWAcells`/`QWArings` files, for reproducibility | On ingestion |
+
+The `fname_*` columns hold absolute paths from your own machine---
+meaningful while you're preparing the data, meaningless (and potentially
+revealing local file-system structure) once archived, so they are always
+stripped rather than carried into the database.
+The `$resources` itself contains onlty two rows with the info
+(incl. `s3_key` and `checksum`) of the uploaded `QWAcells` and `QWArings` 
+files (as described above). So for each `version` of the dataset, we know
+exactly which data files are the correct ones.
+Nothat the supplementary-resources manifest is a separate CSV (see
+below), not a component of `QWAmetadata.json`.
+
+### `supplementary_files.csv` and `supplementary_data.zip`
+
+Providing a submission manifest means naming problems (an unrecognised file, a
+missing `linked_label`) surface on your end, where you can still rename
+or annotate things, rather than during our ingestion checks. We re-run
+`check_supplementary()` on our side regardless, pointed directly at your
+uploaded zip. If you provide the manifest CSV, it's trusted as ground
+truth for anything it lists that's still in the zip. Extra files in the 
+zip the manifest doesn't mention are left out rather than guessed at. 
+If you don't provide a manifest, we build one from scratch the same way
+`compile_resources()` would for you. But any issues with inferring the
+resource types and linked labels would mean that we have to contact
+you for clarification---prolonging the submission process.
+
+The checked and 'cleaned' archive is re-zipped. 
+For the manifest, the columns `fname_resources`, `status`, `note` are 
+removed while `checksum`, `size_bytes` and `s3_key` added to unqiuely
+identify each resource file within the bucket archive.

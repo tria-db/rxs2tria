@@ -144,14 +144,16 @@ img_created_at_converted <- lubridate::parse_date_time(
 )
 df_settings$img_created_at <- img_created_at_converted
 
-settings_date_orders <- c("%d.%m.%Y %H:%M:%S", "%d/%m/%Y %H:%M") # adjust to your locale
-rxs_created_at_converted <- lubridate::parse_date_time(
-  df_settings$rxs_created_at,
-  orders = settings_date_orders,
-  tz = Sys.timezone()
-)
-df_settings$rxs_created_at <- rxs_created_at_converted
-
+# for ROXAS only (ROXAS AI has standardized timestamps, so already converted)
+if (roxas_version == "roxas") {
+  settings_date_orders <- c("%d.%m.%Y %H:%M:%S", "%d/%m/%Y %H:%M") # adjust to your locale
+  rxs_created_at_converted <- lubridate::parse_date_time(
+    df_settings$rxs_created_at,
+    orders = settings_date_orders,
+    tz = Sys.timezone()
+  )
+  df_settings$rxs_created_at <- rxs_created_at_converted
+}
 ```
 
 Combine the extracted data into one object:
@@ -237,8 +239,8 @@ QWA_data  # prints an overview including ring flag counts
 
 `write_QWAdata()` saves the `QWAdata` object to two (optionally
 compressed) CSV files following the naming convention
-`{dataset_name}_QWAdata_cells.csv(.gz)` and
-`{dataset_name}_QWAdata_rings.csv(.gz)`. Explicit file names can also
+`{dataset_name}_QWAcells.csv(.gz)` and
+`{dataset_name}_QWArings.csv(.gz)`. Explicit file names can also
 be provided (see `?write_QWAdata`).
 
 ```{r, eval = FALSE}
@@ -316,8 +318,7 @@ launch_flags_app()
 
 # To update QWA_data$rings with the edited output:
 # QWA_data$rings <- read_QWAdata(
-#   file_rings = "path/to/output_data/example_dataset_edited_QWAdata_rings.csv",
-#   components = "rings")
+#   file_rings = "path/to/output_data/example_dataset_edited_QWArings.csv")$rings
 # QWA_data$rings <- df_rings_edited  # or directly from a data frame in the env
 # write_QWAdata(QWA_data, dir = path_out, dataset_name = dataset_name)
 ```
@@ -358,45 +359,49 @@ QWA_data <- update_QWAdata(QWA_data,
 
 ---
 
-# Step 7: Compile resources (optional)
+# Step 7: Compile supplementary resources (optional)
 
 A TRIA submission must include at minimum the `QWAmetadata` `.json` and
-the `QWAdata` `.csv` files. If you want to provide additional
-(supplementary) files — original images, annotated images, raw ROXAS /
-ROXAS AI output, reference series `.rwl` files, etc. — these are listed
-in the `$resources` component of the `QWAmetadata` object.
+the `QWAdata` `.csv(.gz)` files. If you want to provide additional
+(supplementary) files (original images, annotated images, raw ROXAS /
+ROXAS AI output, reference series `.rwl` files, etc.) these should 
+submitted in a single zip alongside a standalone resources manifest 
+listing all the files in the zip.
 
-`add_resources()` scans a directory and appends the files it finds to
-`$resources` as a table with one row per file. For each file it infers
-the `resource_type` from the file name, sets the hierarchy level it
-belongs to (`linked_level`), and records an MD5 `checksum` and
-`size_bytes` for integrity checking on upload. Per-image files are also
-matched to their `image_label` (the `linked_label` column) using the
-object's `$images` component. Repeat the call for each relevant
-directory; set `recursive = TRUE` to descend into nested folders:
+Not all files may be elligible as supporting material for a TRIA dataset,
+and it is important to track which file pertains to which image or slide,
+etc. For this purpose, `compile_resources()` scans a directory (including
+nested subfolders) and returns a table with one row per file it finds.
+For each file it infers the `resource_type` from the file name and sets
+the hierarchy level it belongs to (`linked_level`). Files are also
+matched to their `linked_label` (e.g. the `image_label`) using a
+[QWAimages] object, where possible.
 
 ```{r, eval = FALSE}
 QWA_meta <- read_QWAmetadata("path/to/output_data/example_dataset_QWAmetadata.json")
-QWA_meta <- add_resources(QWA_meta, path = "path/to/raw_roxas_files", recursive = TRUE)
-QWA_meta <- add_resources(QWA_meta, path = "path/to/annotated_images")
+suppl_res <- compile_resources("path/to/submission_files", rxs_images = QWA_meta$images)
 ```
 
-Review the table — in particular, complete any `linked_label` values
-that were not filled automatically — and then write the object back to
-disk:
+Every file gets a `status` (`"ok"`, `"review"`, or `"ignore"`) and the
+console reports whether the supplementary path is ready for submission, 
+or which files still need attention. Review the table, add a `description`
+for files where the `resource_type` could not be inferred, and complete 
+any `linked_label` values that were not filled automatically. Then
+write it to a CSV to submit alongside the resources zip:
 
 ```{r, eval = FALSE}
-QWA_meta$resources
-write_QWAmetadata(QWA_meta, "path/to/output_data/example_dataset_QWAmetadata.json")
+suppl_res
+vroom::vroom_write(suppl_res, "path/to/output_data/example_dataset_resources.csv")
 ```
 
-Listing the files does not move or compress them; how they are packaged
-for storage is handled downstream. See `vignette("resources")` for the
-full resource-type table, the meaning of each column, and how to link
-resources to the data hierarchy.
+See `vignette("resources")` for more details on this step, including how
+to `recompile_resources()` after making edits, and how to fun a final 
+`check_supplementary()` once you are done.
 
 # Step 8: Submit your data
 
-Once you are ready to share your prepared data files with us, reach 
-out to [tria@wsl.ch](mailto:tria@wsl.ch) to receive an 
-invitation to the file transfer server.
+Once you are ready to share your prepared data files with us, email
+[tria@wsl.ch](mailto:tria@wsl.ch)---either with a link to the files on a
+file transfer service of your choice, or asking for an invite link to
+WSL's own one. See `vignette("submission")` for what to upload and what
+happens to your files once we receive them.

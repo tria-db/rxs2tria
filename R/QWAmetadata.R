@@ -182,8 +182,11 @@ new_QWAmetadata <- function(dataset = NULL,
 #'   metadata Shiny app.
 #' @param related Data frame with related publications or datasets. Typically 
 #'   provided via metadata Shiny app.
-#' @param resources Data frame listing all raw data files to be submitted as
-#'   part of the dataset. Typically created by [collect_resources()].
+#' @param resources Data frame describing the submitted `QWAdata` cells/rings
+#'   files. Populated by TRIA at publish time rather than by this package --
+#'   leave `NULL`. (The supplementary-file manifest built by
+#'   [compile_resources()] is a separate, standalone artifact -- see
+#'   `vignette("resources")` -- not a component of `QWAmetadata`.)
 #' @param sites Data frame with site-level metadata. Typically provided via
 #'   metadata Shiny app.
 #' @param trees Data frame with tree-level metadata. Typically provided via
@@ -347,6 +350,7 @@ check_QWAmetadata <- function(x) {
   })
 
   # TODO: add advanced checks: countries, species, contact person, embargo date, license, ...
+  # check_resources? -> chema check within, so remove from list above
 
   check_QWAimages(x$images)
 
@@ -411,8 +415,8 @@ complete_QWAmetadata <- function(x) {
       dplyr::summarise(n_images = dplyr::n_distinct(image_label), .groups = "drop")
   })
 
-  new_QWAmetadata(dataset, authors, funding, related, 
-    resources = x$resources, # TODO: not touching resources for now
+  new_QWAmetadata(dataset, authors, funding, related,
+    resources = x$resources, # populated by TRIA at publish time, not completed client-side
     sites, trees, woodpieces, slides, images)
 }
 
@@ -462,6 +466,11 @@ read_QWAmetadata <- function(file) {
       raw$images <- raw$images |>
         dplyr::rename(cluster_dbl_cwt_threshold = dbl_cwt_threshold)
     }
+  }
+
+  # back-compatibility: older files have no ds_title, fall back to ds_name
+  if ("dataset" %in% names(raw) && is.null(raw$dataset$ds_title)) {
+    raw$dataset$ds_title <- raw$dataset$ds_name
   }
 
   aligned_data <- as_QWAmetadata(raw)

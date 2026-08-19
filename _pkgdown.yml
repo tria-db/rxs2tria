@@ -1,23 +1,32 @@
 url: https://tria-db.github.io/rxs2tria/
 template:
   bootstrap: 5
-  bootswatch: cerulean
+  bootswatch: darkly
 reference:
-- title: "Read raw ROXAS metadata"
-  desc: >
-    Functions for reading the metadata that can be extracted from the raw ROXAS
-    output files.
+- title: "Read raw ROXAS (AI) metadata"
+  desc: "Functions for extracing metadata from the raw ROXAS (AI) output files."
   contents:
   - get_roxas_files
   - get_structure_from_filenames
   - extract_data_structure
   - collect_settings_data
   - build_QWAimages
-- title: "Reading raw ROXAS output data"
-  desc: "Functions for reading and writing ROXAS cells and rings output files."
+- title: "Read raw ROXAS (AI) output data"
+  desc: "Functions for reading the raw ROXAS (AI) cells and rings output files."
   contents:
   - collect_raw_outputs
   - collect_raw_data
+- title: "Prepare supplementary data"
+  desc: "Functions for compiling and checking supplementary files"
+  contents:
+  - compile_resources
+  - recompile_resources
+  - check_supplementary
+- title: "Shiny apps"
+  desc: "Commands to launch the integrated Shiny apps"
+  contents:
+  - launch_flags_app
+  - launch_metadata_app
 - title: "QWAimages"
   desc: "S3 class QWAimages"
   contents:
@@ -29,7 +38,7 @@ reference:
   - update_QWAimages
   - write_QWAimages
 - title: "QWAmetadata"
-  desc: "S3 QWAmetadata"
+  desc: "S3 class QWAmetadata"
   contents:
   - check_QWAmetadata
   - complete_QWAmetadata
@@ -50,7 +59,7 @@ reference:
   - update_QWAdata
   - write_QWAdata
 - title: "QWAprofiles"
-  desc: "Functions to calculate sector or band profiles from cell measurements."
+  desc: "S3 class QWAprofiles"
   contents: 
   - calculate_band_profiles
   - calculate_sector_profiles
@@ -60,12 +69,22 @@ reference:
   - read_QWAprofile
   - summary.QWAprofile
   - write_QWAprofile
-- title: "rest"
+- title: "Other"
   desc: "Other utility functions."
   contents:
-  - add_resources
-  - collect_resources
-  - launch_flags_app
-  - launch_metadata_app
   - create_rwl
-
+articles:
+- title: Tutorials
+  navbar: ~
+  contents:
+  - workflow
+  - resources
+  - submission
+  - reopen-dataset
+- title: "S3 classes"
+  desc: "Vignettes describing the S3 classes defined by the package"
+  contents:
+  - QWAdata
+  - QWAimages
+  - QWAmetadata
+  - QWAprofile
