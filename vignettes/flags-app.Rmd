@@ -1,0 +1,215 @@
+---
+title: "The ring flags Shiny app"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{The ring flags Shiny app}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+```{r setup}
+library(rxs2tria)
+```
+
+## Overview
+
+Once cell and ring measurements have been compiled and cleaned
+(with `complete_QWAdata()`, see `vignette("workflow")`), it may be
+helpful to visually inspect the resulting measurement series. 
+This allows you to check whether 
+- the automatically estimated ring flags (wedging/missing rings, 
+  radially incomplete rings, overlapping/duplicate rings) are correct;
+- there are any gaps in the coverage, e.g. due to images that were 
+  forgotten in the analysis process;
+- there are other implausible values or outliers due to quality 
+  issues (e.g. decay,   cracks, out-of-focus images) or discrete 
+  anatomical features (e.g. blue or frost rings, compression wood).
+
+The ring flags app is an interactive quality-check tool: it plots the
+ring (or aggregated cell-level) measurement series for every woodpiece
+in your dataset, lets you click through individual years, and records
+data-quality and discrete-feature flags per ring in a table alongside
+the plot. 
+
+Note that this step is optional but we highly recommend using the app
+to ensure and improve the quality of your submission.
+
+---
+
+## Launching the app
+
+```{r launch}
+launch_flags_app()
+```
+
+This requires a number of Suggested packages (`bslib`, `collapse`,
+`htmlwidgets`, `plotly`, `reactable`, `rhandsontable`, `shiny`,
+`shinyjs`), which `rxs2tria` will prompt you to install if missing.
+
+*(screenshot: app opened with no data loaded)*
+
+### Providing input data
+
+Click **Load input data** in the sidebar and choose a source (from the
+current R environment, or from CSV/JSON files) for up to three inputs:
+
+- **QWA rings data** (required): the `$rings` component of a `QWAdata`
+  object, i.e. `QWA_data$rings` from Step 4 in the workflow.
+- **Profile data** (optional): a sector `QWAprofile` object (Step 6a
+  of the workflow / see below) to allow also aggregated cell measurements 
+  as plotted QWA parameters in the time series.
+- **ROXAS images metadata** (optional): a `QWAimages` object, or the
+  `$images` component of a `QWAmetadata` `.json` (Step 3b). This enables
+  filtering by site/species, opening image files directly from the app
+  (leveraging the values in the `$fname_images` column), and the Comments
+  tab described below.
+
+*(screenshot: input source modal)*
+
+Loading new data always overwrites what's currently in the app, with a
+confirmation prompt if you have unsaved edits.
+
+#### The QWAprofiles input
+
+The optional **Profile data** input (a `QWAprofile` object) contains cell
+measurements aggregated across the ring width into *n* position bins of
+equal *relative*  width (0–100% of ring width). To create such an object,
+run the following (cf. `?calculate_sector_profiles`), before launching 
+the flags app:
+
+```{r, eval = FALSE}
+prf_sector <- calculate_sector_profiles(
+  QWA_data, 
+  n_sectors = 5,
+  sel_cell_params = c("la", "cwttan"),
+  quant_probs = c(0.1, 0.5, 0.9)) 
+# To save to file:
+# write_QWAprofile(prf_sector, "path/to/output_data/example_dataset_QWAprofile_sector5.csv.gz") 
+```
+
+---
+
+## The "Quality check series" tab
+
+### Filtering and plot settings
+
+The sidebar lets you subset the data (by species, site, and/or
+woodpiece) and configure the main plot: which QWA parameter to show
+(ring-level, or an aggregated cell-level parameter from the profile
+data, with a sector selector), an optional 32-year spline detrend, the
+type of mean curve, and whether to show rings already marked for
+exclusion.
+
+*(screenshot: sidebar filters and plot settings)*
+
+### The chronology plot
+
+The main plot shows the measurement series for the selected woodpiece
+highlighted against all others in the current filter, with optional
+sample-depth and ring-coverage subplots underneath. Click any point to
+select that ring -- clicking a point on a *different* woodpiece's trace
+switches the selection to it. Once a ring is selected, use the arrow keys
+(or the arrow buttons above the ring table) to navigate to the
+previous/next ring (up/down arrows) or the previous/next image (left/right
+arrows). The enter/esc keys toggle the table focus. When the table is
+in focus, the left/right arrows navigate across the table columns instead.
+
+*(screenshot: chronology plot with a ring selected)*
+
+### The ring flags table
+
+Below the plot, a table shows every ring of the currently selected image,
+with editable columns for:
+
+- `exclude_issues` is a the most important flag: it decides whether the ring
+  should be excluded from analysis. 
+- Four groups of checkboxes, customisable via the table's gear icon:
+  **disqualifying issues** (radially incomplete ring, wedging/missing
+  ring, crossdating, compression wood, orientation), **technical issues**
+  (out of focus, cracks, paraffin, compressed/overlapping/broken cells,
+  tangentially incomplete, irregular thickness, air bubbles), **other
+  issues** (tyloses, decay, other), and **discrete features** (blue/frost/
+  light ring, intra-annual density fluctuations, traumatic resin ducts,
+  trabeculae, blue/red cells, other).
+- `affected_tissue` (`all`/`ew`/`lw`) to further specify which part of the 
+  ring is affected by the selected flags.
+- A free-text `comment` field.
+
+In addition, there is the read-only column `duplicate_ring`, which indicates
+that the same year is also present in at least one other image. The 
+corresponding `exclude_dupl` column defines for each group of overlapping 
+years which one is the selected best. Specifically, for each distinct
+`(woodpiece_label, year)`, exactly one `image_label` has `exclude_dupl=FALSE`,
+all others are set to `TRUE`. The default selected one is the ring with the
+highest cell count, but you can change this here. Editing `exclude_dupl` for
+one ring automatically applies the corresponding change to the other overlapping 
+image(s).
+
+Click **Update excluded in plot** to refresh the plot markers after editing 
+exclusion flags.
+
+*(screenshot: ring flags table for a selected image)*
+
+If image metadata was loaded, you can also open the underlying image
+file directly (preferring an annotated version if one exists) via the
+image icon next to the selected image name.
+
+---
+
+## The "Comments" tab
+
+This tab only appears if the loaded image metadata included non-empty
+`comment` values (e.g. notes added during ROXAS AI processing, or
+manually in the metadata app's Start tab table). It lists every
+commented image with a "handled" checkbox and a button to jump straight
+to that image/ring in the main tab, plus a badge showing how many
+comments are still unhandled -- a convenient checklist to make sure
+every flagged image was actually looked at during the cleaning process.
+
+*(screenshot: comments overview table)*
+
+---
+
+## Saving your work
+
+Click **Save ring flags** (or configure the destination first via the
+gear icon next to it) to write your edits to a local CSV file and/or an
+R environment variable. If a Comments tab was shown, its "handled"
+status is saved alongside it, to the images metadata file/variable, so
+you (or a colleague) can resume exactly where you left off.
+
+*(screenshot: save settings modal)*
+
+---
+
+## Output and how it fits into the workflow
+
+The saved rings data is the `$rings` component of a `QWAdata` object,
+with the manually reviewed flag columns added or updated. Read it back
+and merge it into your `QWAdata` object to finish Step 6b of
+`vignette("workflow")`:
+
+```{r merge-back}
+QWA_data$rings <- read_QWAdata(
+  file_rings = "path/to/output_data/example_dataset_edited_QWArings.csv")$rings
+
+write_QWAdata(QWA_data, dir = path_out, dataset_name = dataset_name)
+```
+
+If reviewing the data in the app reveals that one or more images need to
+be re-analysed in ROXAS/ROXAS AI, use `update_QWAimages()` and
+`update_QWAdata()` (Step 6c) to splice in the new results rather than
+reprocessing the whole dataset -- by default this resets any manual
+flags for the updated images, since they may no longer apply to the
+re-analysed data.

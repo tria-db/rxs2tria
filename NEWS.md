@@ -1,3 +1,8 @@
+# rxs2tria (dev)
+
+* add vignettes (stubs only) for the Shiny apps
+* overhauled the supplementary resources handling. Supplementary resources info is no longer part of the `QWAmetadata` object. `compile_resources()`, `recompile_resources()` and `check_supplementary()` replace the existing functions. The output suppl resource manifest is a slim table listing and describing each file, to be submitted alongside the zip. 
+
 # rxs2tria 0.1.2
 
 * `build_QWAimages()` now comes with a safeguard against uncoverted datetime 

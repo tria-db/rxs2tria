@@ -73,16 +73,18 @@ collect_settings_data <- function(df = NULL,
   df_settings_all <- purrr::list_rbind(results)
 
   if (roxas_version == "roxas") {
+    # convert encoded meas_geometry to actual values
+    df_settings_all <- df_settings_all |> dplyr::mutate(
+      meas_geometry = dplyr::if_else(.data$meas_geometry == 1, "linear", "circular")
+    )
     # collect image EXIF metadata and bind alongside settings columns
     # NOTE: files_images and files_settings need to be in the same order
     df_images <- collect_image_info(files_images)
     df_settings_all <- dplyr::bind_cols(df_settings_all,
                                         df_images |> dplyr::select(!"fname_image"))
-  } else {
-    cli::cli_warn("ROXAS AI support is still under development, not all metadata variables may be available.")
-  }
-
-  # coerce raw character columns to their target types (shared with update_QWAimages)
+  } 
+  
+  # coerce raw character columns to their target types
   df_settings_all <- cast_settings_types(df_settings_all, roxas_version)
 
   cli::cli_alert_success(
@@ -257,40 +259,34 @@ read_roxas_settings <- function(file_settings, roxas_version) {
     # read from a single metadata json file
     raw <- jsonlite::read_json(file_settings, simplifyVector = TRUE)
     df_settings <- raw |> 
+      # reformat
       purrr::map(\(x) ifelse(is.null(x) || length(x)>1, list(x), x)) |> 
       tibble::as_tibble() |> 
       tidyr::unnest_wider(col = "scan_size", names_sep = "_") |> 
       tidyr::unnest_wider(col = "scan_exif") |>
-      dplyr::bind_rows(data.frame("Software" = character(0), # ensure we have all columns even if scan_exif is null
+      dplyr::bind_rows(data.frame("Software" = character(0), # if scan_exif is null: ensure we still have all columns
         "DateTimeOriginal" = character(0),
         "DateTimeDigitized"= character(0))) |> 
       dplyr::select(!"scan_info", !"scan_mode") |> # TODO: confirm that we can ignore these
       dplyr::rename(c(
-        # config file: instead we have rings_segmentation_model, cells_segmentation_model
-        # TODO: analysis created at will be implemented under meas_created_at
-        # TODO: sw_version - will be implemented
-        # sample_type: new
-        "spatial_resolution" = "sample_scale", # TODO: will be renamed to fit
-        # origin_calibrated: no calibrated origin atm, might be implemented later for circular samples
-        "meas_geometry" = "sample_geometry",  # TODO: will be renamed to fit
+        # keep as-is: sample_type, meas_geometry, spatial_resolution, sw_version,
+        # reference_series, rings_segmentation_model, cells_segmentation_model,
+        # cluster_dbl_cwt_threshold, relwidth_cwt_integration,
+        # lower_limit_cwt_iqr_multiplier, upper_limit_cwt_iqr_multiplier,
+        # opposite_cwt_ratio_limit, adjacent_cwt_ratio_limit
         "outmost_year" = "rings_outmost_complete_year", # TODO: note somewhere that this only corresponds to the ROXAS var if outermost ring boundary drawn, else its -1
-        # TODO: filtering attributes (similar but not identical to ROXAS vars) still to be implemented
-        # e.g. will also have cluster_dbl_cwt_threshold
-        # TODO: will there be a rwl reference file var?
         "img_filetype" = "scan_format", 
-        # TODO: img_size - will be implemented 
-        "img_width" = "scan_size_1", # TODO: these might be renamed to fit?
+        "img_width" = "scan_size_1",
         "img_height" = "scan_size_2",
-        "img_software" = "Software"
-        # DateTimeOriginal, DateTimeDigitized -> coalesce to img_created_at
+        "img_software" = "Software",
+        "rxs_created_at" = "meas_created_at"
+        # TODO: might add origin_calibrated, ref file name to roxas ai metadata?
       )) |>
       dplyr::mutate(
         fname_settings = file_settings, 
         software = "roxas_ai", 
-        sw_version = NA_character_, 
-        rxs_created_at = NA_character_, 
-        img_size = NA_integer_,
-        img_created_at = dplyr::coalesce(.data$DateTimeOriginal, .data$DateTimeDigitized)
+        img_created_at = dplyr::coalesce(.data$DateTimeOriginal, .data$DateTimeDigitized),
+        img_size = as.numeric(stringr::str_extract(.data$img_size, "^[0-9.]+")) * 10^6 # roxas_ai divides raw file size by 1'000'000
       ) |>
       dplyr::select(
         dplyr::any_of(c(
@@ -299,7 +295,10 @@ read_roxas_settings <- function(file_settings, roxas_version) {
           "img_software", "img_created_at",
           "spatial_resolution",
           "software", "sw_version", "rxs_created_at", "outmost_year",
-          "rings_segmentation_model", "cells_segmentation_model"
+          "rings_segmentation_model", "cells_segmentation_model",
+          "cluster_dbl_cwt_threshold", "relwidth_cwt_integration",
+          "lower_limit_cwt_iqr_multiplier", "upper_limit_cwt_iqr_multiplier",
+          "opposite_cwt_ratio_limit", "adjacent_cwt_ratio_limit", "reference_series"
         ))
       )
   }
@@ -364,7 +363,7 @@ collect_image_info <- function(files_images, batch_size = 50) {
 
 #' Coerce raw ROXAS (AI) settings columns to their target types
 #'
-#' After collecting the sraw ettings info from multiple files, convert the 
+#' After collecting the raw settings info from multiple files, convert the 
 #' columns to their respective type.
 #' Note: Datetime columns are parsed separately by the callers, as they may
 #' require different formats.
@@ -374,25 +373,26 @@ collect_image_info <- function(files_images, batch_size = 50) {
 #' @noRd
 # TODO: levarage schema for types?
 cast_settings_types <- function(df, roxas_version) {
-  if (roxas_version == "roxas") {
-    df <- df |>
-      dplyr::mutate(
-        meas_geometry = dplyr::if_else(.data$meas_geometry == 1, "linear", "circular"),
-        dplyr::across(c("cluster_dbl_cwt_threshold":"max_cwttan_l"), as.numeric),
-        dplyr::across(c("origin_calibrated_x", "origin_calibrated_y", 
-                        "circ_lower_limit":"max_cell_area"), as.integer)
-      )
-  } else {
-    df <- df |>
-      dplyr::mutate( # roxas ai creates standardized timestamps
-        rxs_created_at = lubridate::parse_date_time(.data$rxs_created_at, orders = "ymdHMS") 
-      )
+
+  schema_path <- system.file(schema_rel_path(roxas_version), package = "rxs2tria")
+  schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
+  tbl_schema <- resolve_schema(schema_obj, schema_path)
+  col_props <- get_tbl_props(tbl_schema)$properties
+
+  int_cols <- col_props |> purrr::keep(function(x) x$type[1] == "integer") |> names()
+  num_cols <- col_props |> purrr::keep(function(x) x$type[1] == "number") |> names()
+
+  if (roxas_version == "roxas_ai") {
+    df <- df |> dplyr::mutate( # roxas ai creates standardized timestamps
+      # TODO: what about the exif timestamps? should also be fairly standardized
+      rxs_created_at = lubridate::parse_date_time(.data$rxs_created_at, orders = "ymdHMS") 
+    )
   }
 
   df <- df |> 
     dplyr::mutate(
-      dplyr::across("spatial_resolution", as.numeric),
-      dplyr::across(c("img_width", "img_height", "img_size", "outmost_year"), as.integer),
+      dplyr::across(dplyr::any_of(num_cols), as.numeric),
+      dplyr::across(dplyr::any_of(int_cols), as.integer),
     )
   df
 }

@@ -190,6 +190,8 @@ launch_metadata_app()
 # QWA_meta <- read_QWAmetadata("path/to/output_data/example_dataset_QWAmetadata.json")
 ```
 
+See `vignette("metadata-app")` for a full walkthrough of the app.
+
 ---
 
 # Step 4: Read and clean the measurement data
@@ -322,6 +324,8 @@ launch_flags_app()
 # QWA_data$rings <- df_rings_edited  # or directly from a data frame in the env
 # write_QWAdata(QWA_data, dir = path_out, dataset_name = dataset_name)
 ```
+
+See `vignette("flags-app")` for a full walkthrough of the app.
 
 ---
 

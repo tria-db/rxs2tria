@@ -109,6 +109,10 @@
             "htType": "character",
             "dtColGroup": "cols_paths"
           },
+          "sample_type": {
+            "htType": "dropdown",
+            "dtColGroup": "cols_settings"
+          },
           "rings_segmentation_model": {
             "htType": "character",
             "dtColGroup": "cols_settings"
@@ -117,8 +121,32 @@
             "htType": "character",
             "dtColGroup": "cols_settings"
           },
-          "sample_type": {
-            "htType": "dropdown",
+          "cluster_dbl_cwt_threshold": {
+            "htType": "numeric",
+            "dtColGroup": "cols_settings"
+          },
+          "relwidth_cwt_integration": {
+            "htType": "numeric",
+            "dtColGroup": "cols_settings"
+          },
+          "lower_limit_cwt_iqr_multiplier": {
+            "htType": "numeric",
+            "dtColGroup": "cols_settings"
+          },
+          "upper_limit_cwt_iqr_multiplier": {
+            "htType": "numeric",
+            "dtColGroup": "cols_settings"
+          },
+          "opposite_cwt_ratio_limit": {
+            "htType": "numeric",
+            "dtColGroup": "cols_settings"
+          },
+          "adjacent_cwt_ratio_limit": {
+            "htType": "numeric",
+            "dtColGroup": "cols_settings"
+          },
+          "reference_series": {
+            "htType": "character",
             "dtColGroup": "cols_settings"
           },
           "comment": {

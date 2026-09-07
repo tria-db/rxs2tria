@@ -11,6 +11,12 @@
       { "$ref": "tria_image_data_schema.json"},
       {
         "properties": {
+          "sample_type": {
+            "type": ["string", "null"],
+            "enum": ["", "conifer", "angiosperm"],
+            "title": "Sample type",
+            "description": "Description"
+          },
           "rings_segmentation_model": {
             "type": ["string", "null"],
             "title": "Rings model",
@@ -21,11 +27,46 @@
             "title": "Cells model",
             "description": "Description"
           },
-          "sample_type": {
+          "cluster_dbl_cwt_threshold": {
+            "type": ["number", "null"],
+            "minimum": 0,
+            "title": "cluster_dbl_cwt_threshold",
+            "description": "Double cell wall thickness threshold [µm]"
+          },
+          "relwidth_cwt_integration": {
+            "type": ["number", "null"],
+            "minimum": 0,
+            "title": "relwidth_cwt_integration",
+            "description": ""
+          },
+          "lower_limit_cwt_iqr_multiplier": {
+            "type": ["number", "null"],
+            "minimum": 0,
+            "title": "lower_limit_cwt_iqr_multiplier",
+            "description": ""
+          },
+          "upper_limit_cwt_iqr_multiplier": {
+            "type": ["number", "null"],
+            "minimum": 0,
+            "title": "upper_limit_cwt_iqr_multiplier",
+            "description": ""
+          },
+          "opposite_cwt_ratio_limit": {
+            "type": ["number", "null"],
+            "minimum": 0,
+            "title": "opposite_cwt_ratio_limit",
+            "description": ""
+          },
+          "adjacent_cwt_ratio_limit": {
+            "type": ["number", "null"],
+            "minimum": 0,
+            "title": "adjacent_cwt_ratio_limit",
+            "description": ""
+          },
+          "reference_series": {
             "type": ["string", "null"],
-            "enum": ["", "conifer", "angiosperm"],
-            "title": "Sample type",
-            "description": "Description"
+            "title": "Reference series",
+            "description": "Name of the reference series used as dating reference"
           }
         },
         "required": ["rings_segmentation_model", "cells_segmentation_model"]
