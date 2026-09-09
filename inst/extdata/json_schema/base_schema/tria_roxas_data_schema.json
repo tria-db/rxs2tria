@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "TODO:addurltoTRIAschema",
-  "title": "roxas_data",
-  "description": "Schema for ...",
+  "title": "TRIA ROXAS analysis metadata schema",
+  "description": "Schema for ROXAS-specific analysis metadata for a TRIA dataset",
   "type": "array",
   "minItems": 1,
   "items": {
@@ -11,94 +11,101 @@
       { "$ref": "tria_image_data_schema.json"},
       {
         "properties": {
+          "outmost_year": {
+            "type": ["integer", "null"],
+            "title": "Outmost year",
+            "description": "Calendar year of the outermost ring. SH: year in which the growth began"
+          },
           "configuration_file": {
             "type": ["string", "null"],
-            "title": "Configuration",
-            "description": "ROXAS configuration file name"
+            "title": "Configuration file",
+            "description": "ROXAS configuration filename"
           },
           "origin_calibrated_x": {
             "type": ["integer", "null"],
-            "title": "Calibr. X",
-            "description": "Origin X coordinate [pixels]"
+            "title": "Calibration origin X",
+            "description": "X coordinate of the calibration origin [pixels]"
           },
           "origin_calibrated_y": {
             "type": ["integer", "null"],
-            "title": "Calibr. Y",
-            "description": "Origin Y coordinate [pixels]"
+            "title": "Calibration origin Y",
+            "description": "Y coordinate of the calibration origin [pixels]"
           },
           "circ_lower_limit": {
             "type": ["integer", "null"],
             "minimum": 0,
-            "title": "circ_lower_limit",
+            "maximum": 360,
+            "title": "Lower limit circular sample",
             "description": "Lower angular limit of circular sample sector [°]"
           },
           "circ_upper_limit": {
             "type": ["integer", "null"],
             "minimum": 0,
-            "title": "circ_upper_limit",
+            "maximum": 360,
+            "title": "Upper limit circular sample",
             "description": "Upper angular limit of circular sample sector [°]"
           },
           "min_cell_area": {
             "type": ["integer", "null"],
             "minimum": 0,
-            "title": "min_cell_area",
-            "description": "Cell area low threshold [µm²]"
+            "title": "Min cell area",
+            "description": "Lower threshold for cell area [µm²]"
           },
           "max_cell_area": {
             "type": ["integer", "null"],
             "minimum": 0,
-            "title": "max_cell_area",
-            "description": "Cell area upper threshold [µm²]"
+            "title": "Max cell area",
+            "description": "Upper threshold for cell area [µm²]"
           },
           "cluster_dbl_cwt_threshold": {
             "type": ["number", "null"],
             "minimum": 0,
-            "title": "cluster_dbl_cwt_threshold",
-            "description": "Double cell wall thickness threshold [µm]"
+            "title": "Double cwt threshold",
+            "description": "Threshold for detecting cell wall clusters [µm]"
           },
           "max_cwtrad_s": {
-            "type": ["integer", "null"],
+            "type": ["number", "null"],
             "minimum": 0,
-            "title": "max_cwtrad_s",
-            "description": "Max. radial CWT of smallest tracheids [µm]"
+            "title": "Max cwtrad of smallest tracheids",
+            "description": "Max radial cwt of smallest tracheids [µm]"
           },
           "max_cwtrad_l": {
-            "type": ["integer", "null"],
+            "type": ["number", "null"],
             "minimum": 0,
-            "title": "max_cwtrad_l",
-            "description": "Max. radial CWT of largest tracheids [µm]"
+            "title": "Max cwtrad of largest tracheids",
+            "description": "Max radial cwt of largest tracheids [µm]"
           },
           "relwidth_cwt_window": {
             "type": ["number", "null"],
             "minimum": 0,
-            "title": "relwidth_cwt_window",
-            "description": "Width of CWT retrieval window as proportion of tracheid width/height"
+            "title": "Rel width of cwt retrieval window",
+            "description": "Width of cwt retrieval window as proportion of tracheid width/height"
           },
-          "maxrel_opp_cwt": {
+          "opposite_cwt_ratio_limit": {
             "type": ["number", "null"],
             "minimum": 0,
-            "title": "maxrel_opp_cwt",
-            "description": "QC: max. ratio of two opposing CWT measurements"
+            "title": "Max ratio of opposing cwt",
+            "description": "Max ratio of the cwt of opposing walls"
           },
           "max_cwttan_s": {
             "type": ["number", "null"],
             "minimum": 0,
-            "title": "max_cwttan_s",
-            "description": "Max. tangential CWT of smallest tracheids [µm]"
+            "title": "Max cwttan of smallest tracheids",
+            "description": "Max tangential cwt of smallest tracheids [µm]"
           },
           "max_cwttan_l": {
             "type": ["number", "null"],
             "minimum": 0,
-            "title": "max_cwttan_l",
-            "description": "Max. tangential CWT of largest tracheids [µm]"
+            "title": "Max cwttan of largest tracheids",
+            "description": "Max tangential cwt of largest tracheids [µm]"
           },
           "rw_reference_file": {
             "type": ["string", "null"],
             "title": "RW reference file",
-            "description": "Name of the rwl file used as dating reference"
+            "description": "Filename of the ring width reference file"
           }
         },
-        "required": ["configuration_file"]
+        "required": []
       }
     ],
     "unevaluatedProperties": false

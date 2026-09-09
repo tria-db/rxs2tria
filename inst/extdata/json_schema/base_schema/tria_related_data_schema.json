@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "TODO:addurltoTRIAschema",
   "title": "TRIA related publications/datasets metadata schema",
-  "description": "Schema for ...",
+  "description": "Schema for data on related publications and datasets for a TRIA dataset",
   "type": "array",
   "items": {
     "type": "object",

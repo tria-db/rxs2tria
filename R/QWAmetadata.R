@@ -462,10 +462,13 @@ read_QWAmetadata <- function(file) {
 
   # renaming backcompatibility
   if ("images" %in% names(raw)){
-    if ("dbl_cwt_threshold" %in% names(raw$images)) {
-      raw$images <- raw$images |>
-        dplyr::rename(cluster_dbl_cwt_threshold = dbl_cwt_threshold)
-    }
+    raw$images <- raw$images |>
+      dplyr::rename(dplyr::any_of(c(
+        # current_name = 'old_name'
+        cluster_dbl_cwt_threshold = 'dbl_cwt_threshold',
+        opposite_cwt_ratio_limit = 'maxrel_opp_cwt',
+        rxsai_sample_type = 'sample_type'
+      )))
   }
 
   # back-compatibility: older files have no ds_title, fall back to ds_name

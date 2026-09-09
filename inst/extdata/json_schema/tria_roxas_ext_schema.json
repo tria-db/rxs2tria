@@ -33,10 +33,6 @@
             "htType": "character",
             "dtColGroup": "cols_structure"
           },
-          "band_width": {
-            "htType": "numeric",
-            "dtColGroup": "cols_settings"
-          },
           "only_ew": {
             "htType": "checkbox",
             "dtColGroup": "cols_settings"
@@ -153,7 +149,7 @@
             "htType": "numeric",
             "dtColGroup": "cols_settings"
           },
-          "maxrel_opp_cwt": {
+          "opposite_cwt_ratio_limit": {
             "htType": "numeric",
             "dtColGroup": "cols_settings"
           },
@@ -169,7 +165,7 @@
             "htType": "character",
             "dtColGroup": "cols_settings"
           },
-          "comment": {
+          "img_comment": {
             "htType": "character",
             "dtColGroup": "cols_settings"
           }

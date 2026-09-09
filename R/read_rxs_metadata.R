@@ -238,7 +238,7 @@ read_roxas_settings <- function(file_settings, roxas_version) {
         "spatial_resolution", "origin_calibrated",
         "meas_geometry", "circ_lower_limit", "circ_upper_limit", "outmost_year",
         "min_cell_area", "max_cell_area", "cluster_dbl_cwt_threshold",
-        "max_cwtrad_s", "max_cwtrad_l", "relwidth_cwt_window", "maxrel_opp_cwt",
+        "max_cwtrad_s", "max_cwtrad_l", "relwidth_cwt_window", "opposite_cwt_ratio_limit",
         "max_cwttan_s", "max_cwttan_l",
         "rw_reference_file"
       )) |>
@@ -269,11 +269,12 @@ read_roxas_settings <- function(file_settings, roxas_version) {
         "DateTimeDigitized"= character(0))) |> 
       dplyr::select(!"scan_info", !"scan_mode") |> # TODO: confirm that we can ignore these
       dplyr::rename(c(
-        # keep as-is: sample_type, meas_geometry, spatial_resolution, sw_version,
+        # keep as-is: meas_geometry, spatial_resolution, sw_version,
         # reference_series, rings_segmentation_model, cells_segmentation_model,
         # cluster_dbl_cwt_threshold, relwidth_cwt_integration,
         # lower_limit_cwt_iqr_multiplier, upper_limit_cwt_iqr_multiplier,
         # opposite_cwt_ratio_limit, adjacent_cwt_ratio_limit
+        "rxsai_sample_type" = "sample_type",
         "outmost_year" = "rings_outmost_complete_year", # TODO: note somewhere that this only corresponds to the ROXAS var if outermost ring boundary drawn, else its -1
         "img_filetype" = "scan_format", 
         "img_width" = "scan_size_1",
@@ -281,6 +282,7 @@ read_roxas_settings <- function(file_settings, roxas_version) {
         "img_software" = "Software",
         "rxs_created_at" = "meas_created_at"
         # TODO: might add origin_calibrated, ref file name to roxas ai metadata?
+        # TODO: might remove sample_type?
       )) |>
       dplyr::mutate(
         fname_settings = file_settings, 
@@ -290,7 +292,7 @@ read_roxas_settings <- function(file_settings, roxas_version) {
       ) |>
       dplyr::select(
         dplyr::any_of(c(
-          "fname_settings", "sample_type", "meas_geometry", 
+          "fname_settings", "rxsai_sample_type", "meas_geometry", 
           "img_filetype", "img_width", "img_height", "img_size",
           "img_software", "img_created_at",
           "spatial_resolution",

@@ -105,11 +105,11 @@ flags_server <- function(id, main_session, comments_out) {
             # TODO: add example files to extdata
             # path_prf <- system.file("extdata", "example_input",
             #                         "prf_data.csv", package = "rxs2tria")
-            # path_rings <- system.file("extdata", "example_input",
-            #                           "rings_data.csv", package = "rxs2tria")
+            path_rings <- system.file("extdata", "TRIA_example_QWArings.csv.gz",
+                                      package = "rxs2tria")
             # path_rxsmeta <- system.file("extdata", "example_input",
             #                             "rxsmeta_data.csv", package = "rxs2tria")
-            # load_data_csv(path_prf, path_rings, path_rxsmeta)
+            load_data_csv(path_prf = NULL, path_rings, path_rxsmeta = NULL)
           }
         )
         
@@ -155,11 +155,11 @@ flags_server <- function(id, main_session, comments_out) {
       df_comments <- input_data$rxsmeta_data
       
       # check for comments
-      if (!"comment" %in% names(df_comments)) {
-        df_comments$comment <- NA
+      if (!"img_comment" %in% names(df_comments)) {
+        df_comments$img_comment <- NA
       }
       df_comments <- df_comments |>
-        dplyr::filter(!is.na(comment) & comment != "")
+        dplyr::filter(!is.na(img_comment) & img_comment != "")
       
       if (nrow(df_comments)>0){
         # initialize/validate comment_handled column
@@ -171,7 +171,7 @@ flags_server <- function(id, main_session, comments_out) {
         df_comments <- df_comments |> 
           dplyr::select(
             dplyr::any_of(c("site_label", "species_code", "tree_label", "woodpiece_label", "slide_label")),
-            image_label, comment, comment_handled
+            image_label, img_comment, comment_handled
           )
         images_edited(df_comments)
         bslib::nav_show("tabs", target = "comments_panel", session = main_session)
@@ -847,15 +847,15 @@ flags_server <- function(id, main_session, comments_out) {
     output$selcomment <- shiny::renderUI({
       shiny::req(sel_image())
       shiny::req(shiny::isTruthy(images_edited()))
-      img_comment <- images_edited() |>
+      selimg_comment <- images_edited() |>
         dplyr::filter(image_label == sel_image())
-      shiny::req(nrow(img_comment) > 0)
+      shiny::req(nrow(selimg_comment) > 0)
 
       shiny::div(
         style = "display: flex; align-items: center; gap: 8px;",
-        shiny::em(glue::glue("Comment: {img_comment$comment}")),
+        shiny::em(glue::glue("Comment: {selimg_comment$img_comment}")),
         shiny::checkboxInput(ns("comment_handled"), "handled",
-                             value = img_comment$comment_handled)
+                             value = selimg_comment$comment_handled)
       )
     })
 

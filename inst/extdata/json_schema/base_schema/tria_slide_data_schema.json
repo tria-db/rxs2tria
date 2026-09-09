@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "TODO:addurltoTRIAschema",
   "title": "TRIA slide metadata schema",
-  "description": "Schema for ...",
+  "description": "Schema for slide-related metadata for a TRIA dataset",
   "type": "array",
   "minItems": 1,
   "items": {
@@ -13,14 +13,14 @@
         "minLength": 1,
         "readOnly": true,
         "title": "Slide label",
-        "description": "Identifying code"
+        "description": "Unique slide identifier"
       },
       "woodpiece_label": {
         "type": "string",
         "minLength": 1,
         "readOnly": true,
         "title": "Woodpiece label",
-        "description": "To which woodpiece the slide belongs"
+        "description": "Woodpiece identifier"
       },
       "n_images": {
         "type": "integer",

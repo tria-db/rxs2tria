@@ -33,10 +33,6 @@
             "htType": "character",
             "dtColGroup": "cols_structure"
           },
-          "band_width": {
-            "htType": "numeric",
-            "dtColGroup": "cols_settings"
-          },
           "only_ew": {
             "htType": "checkbox",
             "dtColGroup": "cols_settings"
@@ -109,7 +105,7 @@
             "htType": "character",
             "dtColGroup": "cols_paths"
           },
-          "sample_type": {
+          "rxsai_sample_type": {
             "htType": "dropdown",
             "dtColGroup": "cols_settings"
           },
@@ -149,7 +145,7 @@
             "htType": "character",
             "dtColGroup": "cols_settings"
           },
-          "comment": {
+          "img_comment": {
             "htType": "character",
             "dtColGroup": "cols_settings"
           }
