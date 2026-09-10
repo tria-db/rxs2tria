@@ -81,7 +81,7 @@
             "htType": "character",
             "dtColGroup": "cols_settings"
           },
-          "rxs_created_at": {
+          "meas_created_at": {
             "htType": "character",
             "dtColGroup": "cols_settings"
           },
@@ -145,7 +145,7 @@
             "htType": "numeric",
             "dtColGroup": "cols_settings"
           },
-          "relwidth_cwt_window": {
+          "relwidth_cwt_integration": {
             "htType": "numeric",
             "dtColGroup": "cols_settings"
           },

@@ -115,7 +115,7 @@
       "title": "SW version",
       "description": "QWA software version used"
     },
-    "rxs_created_at": {
+    "meas_created_at": {
       "type": ["string", "null"],
       "format": "date-time",
       "title": "Measurements created",

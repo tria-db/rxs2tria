@@ -75,11 +75,11 @@
             "title": "Max cwtrad of largest tracheids",
             "description": "Max radial cwt of largest tracheids [µm]"
           },
-          "relwidth_cwt_window": {
+          "relwidth_cwt_integration": {
             "type": ["number", "null"],
             "minimum": 0,
-            "title": "Rel width of cwt retrieval window",
-            "description": "Width of cwt retrieval window as proportion of tracheid width/height"
+            "title": "Rel width of cwt integration",
+            "description": "Relative width along cell wall for cwt estimation"
           },
           "opposite_cwt_ratio_limit": {
             "type": ["number", "null"],

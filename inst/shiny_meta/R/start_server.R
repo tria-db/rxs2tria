@@ -219,7 +219,7 @@ start_server <- function(id, main_session) {
       df <- input_meta$images |>
         dplyr::mutate(
           dplyr::across(dplyr::any_of(c(
-            "rxs_created_at","img_created_at",
+            "meas_created_at","img_created_at",
             "rings_segmentation_datetime","cells_segmentation_datetime")),
           as.character)
       )

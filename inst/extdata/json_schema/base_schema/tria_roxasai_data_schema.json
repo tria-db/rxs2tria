@@ -16,21 +16,27 @@
             "title": "Outmost year",
             "description": "Calendar year of the outermost complete ring. SH: year in which the growth began"
           },
-          "rxsai_sample_type": {
-            "type": ["string", "null"],
-            "enum": ["", "conifer", "angiosperm"],
-            "title": "Vessel clustering mode",
-            "description": "ROXAS AI sample type mode (vessel clustering measurements calculated if \"angiosperm\")"
-          },
           "rings_segmentation_model": {
             "type": ["string", "null"],
             "title": "Rings model",
             "description": "Rings segmentation model"
           },
+          "rings_segmentation_datetime": {
+            "type": ["string","null"],
+            "format": "date-time",
+            "title": "Rings created",
+            "description": "Timestamp of the rings segmentation"
+          },
           "cells_segmentation_model": {
             "type": ["string", "null"],
             "title": "Cells model",
             "description": "Cells segmentation model"
+          },
+          "cells_segmentation_datetime": {
+            "type": ["string","null"],
+            "format": "date-time",
+            "title": "Cells created",
+            "description": "Timestamp of the cells segmentation"
           },
           "cluster_dbl_cwt_threshold": {
             "type": ["number", "null"],

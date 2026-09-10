@@ -81,7 +81,7 @@
             "htType": "character",
             "dtColGroup": "cols_settings"
           },
-          "rxs_created_at": {
+          "meas_created_at": {
             "htType": "character",
             "dtColGroup": "cols_settings"
           },
@@ -105,15 +105,19 @@
             "htType": "character",
             "dtColGroup": "cols_paths"
           },
-          "rxsai_sample_type": {
-            "htType": "dropdown",
-            "dtColGroup": "cols_settings"
-          },
           "rings_segmentation_model": {
             "htType": "character",
             "dtColGroup": "cols_settings"
           },
+          "rings_segmentation_datetime": {
+            "htType": "character",
+            "dtColGroup": "cols_settings"
+          },
           "cells_segmentation_model": {
+            "htType": "character",
+            "dtColGroup": "cols_settings"
+          },
+          "cells_segmentation_datetime": {
             "htType": "character",
             "dtColGroup": "cols_settings"
           },

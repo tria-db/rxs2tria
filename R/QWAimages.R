@@ -297,7 +297,8 @@ read_QWAimages <- function(file) {
       # current_name = 'old_name'
       cluster_dbl_cwt_threshold = 'dbl_cwt_threshold',
       opposite_cwt_ratio_limit = 'maxrel_opp_cwt',
-      rxsai_sample_type = 'sample_type'
+      relwidth_cwt_integration = 'relwidth_cwt_window',
+      meas_created_at = 'rxs_created_at'
     )))
 
   aligned_data <- QWAimages(df)
