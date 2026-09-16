@@ -108,10 +108,9 @@ create_rwl <- function(df_rings, param, prf_data = NULL, sector = NULL) {
   }
 
   # extract selected and prepare for rwl
-  df_data <- df_rings |> dplyr::filter(!.data$exclude_dupl, !.data$exclude_issues)
-
-  df_data <- df_data |>
-    dplyr::select(dplyr::any_of(c("woodpiece_label", "image_label", "year", param)))
+  df_data <- df_rings |>
+    dplyr::select(dplyr::any_of(c("woodpiece_label", "image_label", "year",
+                                   "exclude_dupl", "exclude_issues", param)))
 
   if (is_prf_param) {
     df_data <- prf_data |>
@@ -120,15 +119,21 @@ create_rwl <- function(df_rings, param, prf_data = NULL, sector = NULL) {
       dplyr::right_join(df_data, by = c("image_label", "year"))
   }
 
-  df_rwl <- df_data |>
-    dplyr::select(-"image_label") |>
-    tidyr::pivot_wider(names_from = woodpiece_label, values_from = !!param) |>
+  pivot_rwl(df_data, param)
+}
+
+# build a dplR rwl object from a long-format df with woodpiece_label, year,
+# exclude_dupl, exclude_issues and value_col columns (one row per
+# woodpiece_label/year after excluding flagged rows)
+pivot_rwl <- function(df, value_col) {
+  df |>
+    dplyr::filter(!.data$exclude_dupl, !.data$exclude_issues) |>
+    dplyr::select(dplyr::all_of(c("woodpiece_label", "year", value_col))) |>
+    tidyr::pivot_wider(names_from = "woodpiece_label", values_from = !!value_col) |>
     dplyr::arrange(year) |>
     tidyr::complete(year = seq(min(year), max(year), by = 1)) |>
     tibble::column_to_rownames("year") |>
     dplR::as.rwl()
-
-  df_rwl
 }
 
 #' Scale an rwl object for Tucson-format writing

@@ -109,6 +109,10 @@ flags_ui <- function(id) {
           shiny::tags$span("Save settings", style = "font-size: 0.8em; ")
         ),
 
+        shiny::actionButton(ns("export_rwl_btn"), "Export rwl",
+                    icon = shiny::icon("file-export"),
+                    class = "btn-tert", width = "100%"),
+
       )
       
       

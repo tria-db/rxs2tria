@@ -27,7 +27,7 @@ provide justification for "other" supplementary files that should
 be included in the upload
 \item \code{resource_type}: inferred resource type string (see Details).
 \item \code{linked_level}: hierarchy level for this type (e.g. \code{"dataset"},
-\code{"woodpiece"}, or \code{"image"}).
+\code{"woodpiece"}, or \code{"analysis"}).
 \item \code{linked_label}: label of the linked entity, auto-filled from where
 possible, otherwise \code{NA} (fill in manually if required).
 \item \code{fname_resource}: absolute path to the file, or \code{NA} for a resource

@@ -2,83 +2,58 @@
 % Please edit documentation in R/create_rwl.R
 \name{create_rwl}
 \alias{create_rwl}
-\title{Create a Tucson (.rwl) file from ROXAS ring-width or profile data}
+\title{Build a dplR rwl object from ring or sector profile data}
 \usage{
-create_rwl(
-  prf_data,
-  df_rings,
-  PAR = "mrw",
-  SECTOR = NULL,
-  path_out,
-  remove_excluded = TRUE
-)
+create_rwl(df_rings, param, prf_data = NULL, sector = NULL)
 }
 \arguments{
-\item{prf_data}{A data frame containing ROXAS profile-level measurements
-(e.g. sector-based anatomical parameters).}
-
 \item{df_rings}{A data frame containing ROXAS ring-level measurements and
-logical flag columns (default: \code{QWA_data$rings}).}
+logical flag columns (the \verb{$rings} component of a \code{QWAdata} object, after
+calling \code{complete_QWAdata()} to instantiate the flag columns).}
 
-\item{PAR}{Character string specifying the parameter to export.
-Use \code{"mrw"} for mean ring width, or any valid column name present
-in \code{prf_data} for profile-level parameters.}
+\item{param}{Character string specifying the parameter to export: either
+a measurement column in \code{df_rings}, or an aggregated cell measurement in
+\code{prf_data} (e.g. \code{"la_mean"}, \code{"la_q90"}).}
 
-\item{SECTOR}{Integer specifying which sector to use when exporting
-profile-level parameters (default: 5).}
+\item{prf_data}{A data frame containing ROXAS profile-level measurements
+(aggregated cell parameters via \code{calculate_sector_profiles()}). Only
+required when \code{param} is not a \code{df_rings} column.}
 
-\item{path_out}{Character string specifying the output directory where
-the \code{.rwl} file and mapping information will be written.}
-
-\item{remove_excluded}{should rings with issues be removed?}
+\item{sector}{Integer specifying which sector to use when exporting a
+\code{prf_data} parameter. Required in that case, otherwise ignored.}
 }
 \value{
-The function is called for its side effects. It writes a Tucson-format
-\code{.rwl} file to disk and returns the final data frame invisibly.
+A \pkg{dplR} \code{rwl} object with the selected \code{param} data.
 }
 \description{
-This function creates a dendrochronological Tucson-format (\code{.rwl})
-file from ROXAS output data. Depending on the selected parameter, the
-function either uses ring-level measurements (e.g. mean ring width, \code{mrw})
-or profile-level measurements aggregated at a given sector.
-}
-\details{
-Duplicate rings and user-defined exclusions are automatically removed
-before constructing the final time series.
+This function builds a dendrochronological \pkg{dplR} \code{rwl} object (a data
+frame with years as row names and series IDs as column names) from
+annually resolved QWA data, ready for scaling (see \code{\link[=scale_for_tucson]{scale_for_tucson()}})
+and writing to \code{.rwl} with \code{dplR::write.tucson()}. Depending on the selected
+parameter, the function either uses ring-level measurements (e.g. mean
+ring width, \code{mrw}) or profile-level measurements at a given sector
+(aggregated cell parameters such as the 90th percentile lumen area,
+\code{la_q90}).
 
-The function operates in two modes:
+Duplicate rings (\code{exclude_dupl}) and user-defined ring exclusions
+(\code{exclude_issues}) are filtered out before constructing the final time
+series. These flag columns are read from \code{df_rings}, making it a required
+parameter, while \code{prf_data} (with the selected \code{sector}) is only required
+to extract a \code{param} from the profile data.
 
-\itemize{
-\item{\strong{Ring-level mode} (\code{PAR == "mrw"}):}
-Ring-width values are taken from \code{df_rings}. Rings flagged as
-duplicated (\code{exclude_issues == TRUE}) are removed. If multiple
-measurements exist for the same year and image, values are averaged.
-Ring widths are converted from micrometers to millimeters before export.
-
-\item{\strong{Profile-level mode} (\code{PAR != "mrw"}):}
-Measurements are taken from \code{prf_data} for the selected sector.
-Years flagged either as duplicated rings or excluded via
-\code{exclude_scope} are removed prior to aggregation.
-}
-
-Image identifiers are simplified to tree-level series IDs before exporting,
-and the resulting data are written to a Tucson \code{.rwl} file using
-\code{dplR::write.tucson()}.
+Series are grouped by \strong{woodpiece} (each core/sample yields one series);
+thus the \code{woodpiece_label}s become the column names.
 }
 \examples{
 \dontrun{
-# Create an RWL file from mean ring width
-create_rwl(prf_data = prf_data,
-           df_rings = QWA_data$rings,
-           PAR = "mrw",
-           path_out = tempdir())
+# Build an rwl object from mean ring width
+create_rwl(df_rings = QWA_data$rings,
+           param = "mrw")
 
-# Create an RWL file from a profile-level parameter
-create_rwl(prf_data = prf_data,
-           PAR = "cwtrad_mean",
-           df_rings = QWA_data$rings, #df_rings = read.csv(paste0(path_out, "/", "20251230_TRIA_YAM_AI_1880_rings_edited.csv"))
-           SECTOR = 5,
-           path_out = tempdir())
+# Build an rwl object from a profile-level parameter
+create_rwl(df_rings = QWA_data$rings,
+           param = "cwtrad_mean",
+           prf_data = prf_sector,
+           sector = 5)
 }
-
 }

@@ -456,6 +456,31 @@ save_modal <- function(ns, settings, have_comments) {
   )
 }
 
+# create modal to confirm/adjust an rwl export, prepopulated with the
+# auto-computed scaling factor and default file names
+export_rwl_modal <- function(ns, default_scaling, default_fname, default_mapping_fname) {
+  launch_wd <- shiny::getShinyOption("launch_wd", default = getwd())
+  wd_hint <- shiny::tags$span(
+    shiny::tags$i(glue::glue("(Current directory: {launch_wd})")),
+    style = "font-size: 0.8em; margin-top: -12px; margin-bottom: 16px; display: block;"
+  )
+  shiny::modalDialog(
+    title = "Export rwl",
+    shiny::numericInput(ns("modal_rwl_scaling"), "Scaling factor",
+      value = default_scaling, min = 0),
+    shiny::textInput(ns("modal_rwl_fname"), "Rwl file path",
+      value = default_fname),
+    shiny::textInput(ns("modal_rwl_mapping_fname"),
+      "Series ID mapping file path (leave blank to skip)",
+      value = default_mapping_fname),
+    wd_hint,
+    footer = shiny::tagList(
+      shiny::modalButton("Cancel"),
+      shiny::actionButton(ns("export_rwl_confirm"), "Confirm and export")
+    )
+  )
+}
+
 # helper function to safely write edited rings data to env / file
 # rxsmeta: rxsmeta_data data frame (or NULL); handled: named logical vector from
 # handled_comments reactiveVal (or NULL)

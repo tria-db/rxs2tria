@@ -54,6 +54,10 @@ flags_server <- function(id, main_session, comments_out) {
       varname_rxsmeta = NULL,
     )
 
+    # reactive container holding the rwl built for the export modal (frozen
+    # at the moment the export button is clicked)
+    pending_rwl_export <- shiny::reactiveVal(NULL)
+
     # LOAD INPUT DATA ----------------------------------------------------------
     # open input modal when button open_input_modal is clicked
     shiny::observe({
@@ -1223,10 +1227,88 @@ flags_server <- function(id, main_session, comments_out) {
                       rxsmeta = input_data$rxsmeta_data,
                       handled = images_edited())
     }) |> shiny::bindEvent(input$save_btn)
-      
+
+    # EXPORT RWL ---------------------------------------------------------------
+    # build the rwl for the current selection (incl. live edits and
+    # detrending, if applied) and open the export modal, prepopulated with
+    # the auto-computed scaling factor and default file names
+    shiny::observe({
+      safe_block({
+        shiny::req(rings_data_edited(), input$filt_wp, input$sel_param)
+
+        df_export <- build_chronology_df(
+          rings_data = rings_data_edited(),
+          prf_data = input_data$prf_data,
+          filt_wp = input$filt_wp,
+          sel_param = input$sel_param,
+          sel_sector = input$sel_sector,
+          show_excl = TRUE
+        )
+
+        if (input$apply_detrend) {
+          df_export <- detrend_crn(df_export, input$sel_param,
+                                   method = "Spline", nyrs = 32)
+        }
+
+        rwl <- rxs2tria:::pivot_rwl(df_export, "vals")
+        scaled <- rxs2tria::scale_for_tucson(rwl)
+        pending_rwl_export(rwl)
+
+        is_prf_param <- !is.null(input_data$prf_data) &&
+          input$sel_param %in% names(input_data$prf_data)
+        fname_base <- if (is_prf_param) {
+          glue::glue("{input$sel_param}_sctr{input$sel_sector}_scl{scaled$scaling}")
+        } else {
+          glue::glue("{input$sel_param}_scl{scaled$scaling}")
+        }
+
+        shiny::showModal(export_rwl_modal(ns,
+          default_scaling = scaled$scaling,
+          default_fname = glue::glue("{fname_base}.rwl"),
+          default_mapping_fname = glue::glue("{fname_base}_idmap.txt")
+        ))
+      },
+      err_title = "Error preparing rwl export",
+      err_message = "",
+      propagate_err = FALSE
+      )
+    }) |> shiny::bindEvent(input$export_rwl_btn)
+
+    # on confirm, apply the (possibly user-adjusted) scaling and write the
+    # rwl file, plus the series ID mapping file if a path is given
+    shiny::observe({
+      shiny::req(pending_rwl_export())
+      safe_block({
+        launch_wd <- shiny::getShinyOption("launch_wd", default = getwd())
+
+        scaling <- input$modal_rwl_scaling
+        checkmate::assert_number(scaling, lower = 0, finite = TRUE)
+        rwl_scaled <- pending_rwl_export() * scaling
+
+        fname <- fs::path_abs(input$modal_rwl_fname, start = launch_wd)
+        checkmate::assert_path_for_output(fname, overwrite = TRUE)
+
+        mapping_fname <- ""
+        if (shiny::isTruthy(input$modal_rwl_mapping_fname)) {
+          mapping_fname <- fs::path_abs(input$modal_rwl_mapping_fname, start = launch_wd)
+          checkmate::assert_path_for_output(mapping_fname, overwrite = TRUE)
+        }
+
+        dplR::write.tucson(rwl_scaled, fname = fname,
+                           mapping.fname = mapping_fname, prec = 0.001)
+
+        shiny::removeModal()
+        shiny::showNotification(paste0("Exported rwl to: ", fname), type = "message")
+      },
+      err_title = "Error exporting rwl",
+      err_message = "",
+      propagate_err = FALSE
+      )
+    }) |> shiny::bindEvent(input$export_rwl_confirm)
+
 
     # # DEBUG OUTPUT -------------------------------------------------------------
-    # output$debug <- shiny::renderPrint({
+    output$debug <- shiny::renderPrint({
     #   #sel_marker()
     #   #sel_subplots()
     #   #flags_out()
@@ -1238,8 +1320,9 @@ flags_server <- function(id, main_session, comments_out) {
     #   #rings_data_org()
     #   #input$enter_key
     #   #str(input_data$rings_data)
+      df_crn()
 
-    # })
+    })
 
 
     # return module exports
