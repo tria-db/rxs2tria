@@ -7,21 +7,17 @@
 #' @param meta a [QWAimages] object
 #' @param imgs_to_update character vector of `image_label` values to update;
 #'   must be a subset of `meta$image_label`
-#' @param imgs_date_orders Character; date order string(s) passed to
-#'   [lubridate::parse_date_time()] to parse the `img_created_at` field
 #' @param settings_date_orders Character; date order string(s) passed to
-#'   [lubridate::parse_date_time()] to parse the `rxs_created_at` field
-#' @param imgs_date_tz Optional timezone passed to
-#'   [lubridate::parse_date_time()] to parse the `img_created_at` field. 
-#'   Defaults to system timezone.
+#'   [lubridate::parse_date_time()] to parse the `meas_created_at` field for
+#'   ROXAS classic.
 #' @param settings_date_tz Optional timezone passed to
-#'   [lubridate::parse_date_time()] to parse the `rxs_created_at` field. 
+#'   [lubridate::parse_date_time()] to parse the `meas_created_at` field. 
 #'   Defaults to system timezone.
 #' @returns An updated [QWAimages] object
 #' @export
 update_QWAimages <- function(meta, imgs_to_update, 
-                             imgs_date_orders, settings_date_orders = NULL,
-                             imgs_date_tz = Sys.timezone(), settings_date_tz = Sys.timezone()
+                             settings_date_orders = NULL,
+                             settings_date_tz = Sys.timezone()
                             ) {
   checkmate::assert_class(meta, "QWAimages")
   checkmate::assert_subset(imgs_to_update, meta$image_label)
@@ -44,15 +40,9 @@ update_QWAimages <- function(meta, imgs_to_update,
   # coerce raw character columns to their target types (shared with collect_settings_data)
   df_settings_new <- cast_settings_types(df_settings_new, roxas_version)
   
-  # convert img_created_at dates to POSIXct
-    df_settings_new$img_created_at <- df_settings_new$img_created_at |> 
-      lubridate::parse_date_time(
-        orders = imgs_date_orders, # cf. lubridate::parse_date_time
-        tz = imgs_date_tz)
-
-  # convert rxs_created_at dates to POSIXct (already done for standardized roxas ai)
+  # convert meas_created_at dates to POSIXct (already done for standardized roxas ai)
   if (roxas_version == "roxas") {
-    df_settings_new$rxs_created_at <- df_settings_new$rxs_created_at |> 
+    df_settings_new$meas_created_at <- df_settings_new$meas_created_at |> 
       lubridate::parse_date_time(
         orders = settings_date_orders, # cf. lubridate::parse_date_time
         tz = settings_date_tz)

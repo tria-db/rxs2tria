@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "TODO:addurltoTRIAschema",
   "title": "TRIA woodpiece metadata schema",
-  "description": "Schema for ...",
+  "description": "Schema for woodpiece-related metadata for a TRIA dataset",
   "type": "array",
   "minItems": 1,
   "items": {
@@ -13,14 +13,14 @@
         "minLength": 1,
         "readOnly": true,
         "title": "Woodpiece label",
-        "description": ""
+        "description": "Unique woodpiece identifier"
       },
       "tree_label": {
         "type": "string",
         "minLength": 1,
         "readOnly": true,
         "title": "Tree label",
-        "description": ""
+        "description": "Tree identifier"
       },
       "n_slides": {
         "type": "integer",
@@ -42,7 +42,7 @@
       },
       "sampling_height": {
         "type": ["number", "null"],
-        "minimum": 0,
+        "minimum": -15,
         "maximum": 150,
         "unit": "m",
         "title": "Sampling height",

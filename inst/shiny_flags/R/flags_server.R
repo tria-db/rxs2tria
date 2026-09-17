@@ -54,6 +54,10 @@ flags_server <- function(id, main_session, comments_out) {
       varname_rxsmeta = NULL,
     )
 
+    # reactive container holding the rwl built for the export modal (frozen
+    # at the moment the export button is clicked)
+    pending_rwl_export <- shiny::reactiveVal(NULL)
+
     # LOAD INPUT DATA ----------------------------------------------------------
     # open input modal when button open_input_modal is clicked
     shiny::observe({
@@ -105,11 +109,11 @@ flags_server <- function(id, main_session, comments_out) {
             # TODO: add example files to extdata
             # path_prf <- system.file("extdata", "example_input",
             #                         "prf_data.csv", package = "rxs2tria")
-            # path_rings <- system.file("extdata", "example_input",
-            #                           "rings_data.csv", package = "rxs2tria")
+            path_rings <- system.file("extdata", "TRIA_example_QWArings.csv.gz",
+                                      package = "rxs2tria")
             # path_rxsmeta <- system.file("extdata", "example_input",
             #                             "rxsmeta_data.csv", package = "rxs2tria")
-            # load_data_csv(path_prf, path_rings, path_rxsmeta)
+            load_data_csv(path_prf = NULL, path_rings, path_rxsmeta = NULL)
           }
         )
         
@@ -155,11 +159,11 @@ flags_server <- function(id, main_session, comments_out) {
       df_comments <- input_data$rxsmeta_data
       
       # check for comments
-      if (!"comment" %in% names(df_comments)) {
-        df_comments$comment <- NA
+      if (!"img_comment" %in% names(df_comments)) {
+        df_comments$img_comment <- NA
       }
       df_comments <- df_comments |>
-        dplyr::filter(!is.na(comment) & comment != "")
+        dplyr::filter(!is.na(img_comment) & img_comment != "")
       
       if (nrow(df_comments)>0){
         # initialize/validate comment_handled column
@@ -171,7 +175,7 @@ flags_server <- function(id, main_session, comments_out) {
         df_comments <- df_comments |> 
           dplyr::select(
             dplyr::any_of(c("site_label", "species_code", "tree_label", "woodpiece_label", "slide_label")),
-            image_label, comment, comment_handled
+            image_label, img_comment, comment_handled
           )
         images_edited(df_comments)
         bslib::nav_show("tabs", target = "comments_panel", session = main_session)
@@ -847,15 +851,15 @@ flags_server <- function(id, main_session, comments_out) {
     output$selcomment <- shiny::renderUI({
       shiny::req(sel_image())
       shiny::req(shiny::isTruthy(images_edited()))
-      img_comment <- images_edited() |>
+      selimg_comment <- images_edited() |>
         dplyr::filter(image_label == sel_image())
-      shiny::req(nrow(img_comment) > 0)
+      shiny::req(nrow(selimg_comment) > 0)
 
       shiny::div(
         style = "display: flex; align-items: center; gap: 8px;",
-        shiny::em(glue::glue("Comment: {img_comment$comment}")),
+        shiny::em(glue::glue("Comment: {selimg_comment$img_comment}")),
         shiny::checkboxInput(ns("comment_handled"), "handled",
-                             value = img_comment$comment_handled)
+                             value = selimg_comment$comment_handled)
       )
     })
 
@@ -1223,10 +1227,110 @@ flags_server <- function(id, main_session, comments_out) {
                       rxsmeta = input_data$rxsmeta_data,
                       handled = images_edited())
     }) |> shiny::bindEvent(input$save_btn)
-      
+
+    # EXPORT RWL ---------------------------------------------------------------
+    # build the rwl for the current selection (incl. live edits and
+    # detrending, if applied) and open the export modal, prepopulated with
+    # the auto-computed scaling factor and default file names
+    shiny::observe({
+      safe_block({
+        shiny::req(rings_data_edited(), input$filt_wp, input$sel_param)
+
+        df_export <- build_chronology_df(
+          rings_data = rings_data_edited(),
+          prf_data = input_data$prf_data,
+          filt_wp = input$filt_wp,
+          sel_param = input$sel_param,
+          sel_sector = input$sel_sector,
+          show_excl = TRUE
+        )
+
+        if (input$apply_detrend) {
+          df_export <- detrend_crn(df_export, input$sel_param,
+                                   method = "Spline", nyrs = 32)
+        }
+
+        rwl <- rxs2tria:::pivot_rwl(df_export, "vals")
+        scaled <- suppressMessages(rxs2tria::scale_for_tucson(rwl))
+        pending_rwl_export(list(rwl = rwl, default_scaling = scaled$scaling))
+
+        is_prf_param <- !is.null(input_data$prf_data) &&
+          input$sel_param %in% names(input_data$prf_data)
+        fname_base <- if (is_prf_param) {
+          glue::glue("{input$sel_param}_sctr{input$sel_sector}_scl{scaled$scaling}")
+        } else {
+          glue::glue("{input$sel_param}_scl{scaled$scaling}")
+        }
+
+        shiny::showModal(export_rwl_modal(ns,
+          default_scaling = scaled$scaling,
+          default_fname = glue::glue("{fname_base}.rwl"),
+          default_mapping_fname = glue::glue("{fname_base}_idmap.txt")
+        ))
+      },
+      err_title = "Error preparing rwl export",
+      err_message = "",
+      propagate_err = FALSE
+      )
+    }) |> shiny::bindEvent(input$export_rwl_btn)
+
+    # validate the custom scaling factor, but only while it's shown (i.e.
+    # auto-scale is unchecked)
+    iv_gen <- shinyvalidate::InputValidator$new()
+    iv_gen$condition(~ !is.null(input$modal_rwl_autoscale) && !input$modal_rwl_autoscale)
+    iv_gen$add_rule("modal_rwl_scaling", shinyvalidate::sv_required())
+    iv_gen$add_rule("modal_rwl_scaling", function(value) {
+      # value is a character string (textInput), not numeric - parse first
+      num <- suppressWarnings(as.numeric(value))
+      if (is.na(num)) return("Must be a number.")
+      if (num <= 0) return("Must be greater than 0.")
+    })
+    iv_gen$enable()
+
+    # only show the scaling factor input when auto-scale is unchecked
+    shiny::observe({
+      shinyjs::toggle("modal_rwl_scaling", condition = !input$modal_rwl_autoscale)
+    }) |> shiny::bindEvent(input$modal_rwl_autoscale)
+
+    # on confirm, apply the (possibly user-adjusted) scaling and write the
+    # rwl file, plus the series ID mapping file if a path is given
+    shiny::observe({
+      shiny::req(pending_rwl_export())
+      shiny::req(iv_gen$is_valid())
+      safe_block({
+        launch_wd <- shiny::getShinyOption("launch_wd", default = getwd())
+
+        scaling <- if (input$modal_rwl_autoscale) {
+          pending_rwl_export()$default_scaling
+        } else {
+          as.numeric(input$modal_rwl_scaling)
+        }
+        rwl_scaled <- pending_rwl_export()$rwl * scaling
+
+        fname <- fs::path_abs(input$modal_rwl_fname, start = launch_wd)
+        checkmate::assert_path_for_output(fname, overwrite = TRUE)
+
+        mapping_fname <- ""
+        if (shiny::isTruthy(input$modal_rwl_mapping_fname)) {
+          mapping_fname <- fs::path_abs(input$modal_rwl_mapping_fname, start = launch_wd)
+          checkmate::assert_path_for_output(mapping_fname, overwrite = TRUE)
+        }
+
+        dplR::write.tucson(rwl_scaled, fname = fname,
+                           mapping.fname = mapping_fname, prec = 0.001)
+
+        shiny::removeModal()
+        shiny::showNotification(paste0("Exported rwl to: ", fname), type = "message")
+      },
+      err_title = "Error exporting rwl",
+      err_message = "",
+      propagate_err = FALSE
+      )
+    }) |> shiny::bindEvent(input$export_rwl_confirm)
+
 
     # # DEBUG OUTPUT -------------------------------------------------------------
-    # output$debug <- shiny::renderPrint({
+    output$debug <- shiny::renderPrint({
     #   #sel_marker()
     #   #sel_subplots()
     #   #flags_out()
@@ -1238,8 +1342,10 @@ flags_server <- function(id, main_session, comments_out) {
     #   #rings_data_org()
     #   #input$enter_key
     #   #str(input_data$rings_data)
+      #df_crn()
+      input$modal_rwl_scaling
 
-    # })
+    })
 
 
     # return module exports

@@ -1,0 +1,166 @@
+---
+title: "The metadata Shiny app"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{The metadata Shiny app}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+```{r setup}
+library(rxs2tria)
+```
+
+## Overview
+
+A TRIA submission needs metadata at every level of the sampling
+hierarchy -- site, tree, woodpiece, slide -- plus dataset-level
+information such as authors, funding, licensing, and related
+publications (see `vignette("QWAmetadata")` for the full list of
+components). Filling all of this in by hand, as data frames or JSON, is
+tedious and error-prone.
+
+The metadata Shiny app is a guided, form-based alternative: it takes the
+`QWAimages` object you already built (Step 3 of `vignette("workflow")`)
+as its starting point and walks you through the remaining components tab
+by tab. Along the way it offers lookup tools for organisations
+([ROR](https://ror.org/)), authors
+([ORCID](https://orcid.org/)) and related publications/datasets
+([Crossref](https://www.crossref.org/) DOIs), and validates your entries
+as you go. The output is a `QWAmetadata` object, exported as a `.json`
+file -- one of the three files required for every TRIA submission.
+
+The app is entirely self-contained: it does not read or write anything
+outside of what you explicitly load or export, and any partially
+completed submission can be saved and reopened later.
+
+---
+
+## Launching the app
+
+```{r launch}
+launch_metadata_app()
+```
+
+This opens the app in your system's default web browser (or the
+RStudio/Positron viewer pane). It requires a number of Suggested
+packages (`bslib`, `data.tree`, `DT`, `htmlwidgets`, `httr`, `leaflet`,
+`rcrossref`, `rhandsontable`, `sf`, `shiny`, `shinyjs`, `shinyTree`,
+`shinyvalidate`) which are only needed for this app -- `rxs2tria` will
+prompt you to install any that are missing.
+
+*(screenshot: app opened on the Start tab)*
+
+---
+
+## Walking through the tabs
+
+The app has four tabs, meant to be completed in order (a "Next"/"Previous"
+button pair in each sidebar moves between them), though you can jump
+back to fix earlier entries at any time.
+
+### 1. Start
+
+Load your input data using the **Load input data** button in the
+sidebar, from one of three sources:
+
+- **From local R environment**: point it at a `QWAimages` or
+  `QWAmetadata` object already in your R session (e.g. `rxs_images` from
+  Step 3 of `vignette("workflow")`).
+- **From file**: a `QWAimages` `.csv` file, or a `QWAmetadata`
+  `.json` file -- use the latter to resume a partially completed
+  submission.
+- **Load example data**: loads the small example dataset bundled with
+  the package, useful for trying out the app without your own data.
+
+*(screenshot: input source modal)*
+
+Once loaded, the main panel shows:
+
+- **Data structure**: an interactive tree (site > tree > woodpiece >
+  slide > image) visualising the hierarchy inferred from your image file
+  names, with the labels `rxs2tria` generated for each level.
+- **Metadata extracted from files**: a table of everything extracted
+  from the ROXAS/ROXAS AI settings and image files. Most columns are
+  read-only; `band_width`, `only_ew` and `comment` can be edited
+  directly in the table (which supports Excel-like copy/paste and
+  autofill).
+
+*(screenshot: data structure tree and metadata table)*
+
+**Check this tab carefully** -- it is the foundation for everything
+that follows. If the structure or labels look wrong, revisit Step 2
+(`extract_data_structure()`) in `vignette("workflow")` and start over.
+
+### 2. General
+
+Dataset- and author-level information, in three parts:
+
+- **Dataset information**: title, description, access rights (public or
+  restricted, with an embargo date), license (CC licenses preferred), 
+  and acknowledgements.
+- **Authors & Funding**: two editable tables for authors and their 
+  affiliations as well as funding sources. Two search tools for ROR
+  and ORCID data can help you find the relevant information.
+- **Related resources**: a table of related publications or datasets,
+  with a Crossref-backed search by DOI, citation text, or TRIA dataset
+  ID.
+
+*(screenshot: author table with ORCID search results)*
+
+A **validation check summary** in the sidebar lists any issues with the
+entries so far (e.g. missing required fields).
+
+### 3. Samples
+
+Site-, tree-, woodpiece- and slide-level metadata, in one table per
+level. Rows are pre-filled with the IDs and labels inferred from the
+`QWAimages` or (if available) taken directly from the `QWAmetadata` 
+provided as input in the Start tab. The site table also drives an 
+interactive map: any site with valid coordinates gets a marker, which is
+a quick way to spot mistyped coordinates.
+
+*(screenshot: site map with markers)*
+
+### 4. Summary
+
+A combined validation check summary across all tabs -- resolve (or
+consciously accept) any remaining issues here. Clicking **Export data
+to file** downloads the completed `QWAmetadata` object as a `.json`
+file.
+
+*(screenshot: summary tab with validation table)*
+
+---
+
+## Output and how it fits into the workflow
+
+The exported `.json` file is a `QWAmetadata` object -- see
+`vignette("QWAmetadata")` for its structure and for how to inspect,
+check, or edit it further in R. Read it back with:
+
+```{r read-back}
+QWA_meta <- read_QWAmetadata("path/to/output_data/example_dataset_QWAmetadata.json")
+```
+
+Within the overall data preparation workflow (`vignette("workflow")`),
+this app covers Step 3b, run after building the `QWAimages` object in
+Step 3 and before (or alongside) processing the measurement data in
+Steps 4-5. The resulting `.json` file is, together with the two
+`QWAdata` `.csv` files, one of the three files required for every TRIA
+submission (`vignette("submission")`).
+
+Because partially completed submissions can be saved and reopened at
+any time, you do not need to finish in one sitting -- export what you
+have, and load the `.json` back into the Start tab later to continue.

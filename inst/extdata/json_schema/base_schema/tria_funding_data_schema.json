@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "TODO:addurltoTRIAschema",
   "title": "TRIA funding metadata schema",
-  "description": "Schema for ...",
+  "description": "Schema for funding-related data for a TRIA dataset",
   "type": "array",
   "minItems": 1,
   "items": {
@@ -32,13 +32,12 @@
         "description": ""
       },
       "grant_nr": {
-        "type": "string",
-        "minLength": 1,
+        "type":  ["string", "null"],
         "title": "Grant Nr.",
         "description": "Nr. or ID of the grant"
       }
     },
-    "required": ["org_name", "org_country", "grant_nr"],
+    "required": ["org_name", "org_country"],
     "additionalProperties": false
   }
 }

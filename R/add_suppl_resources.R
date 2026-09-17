@@ -129,6 +129,9 @@ compile_resources <- function(path, rxs_images) {
 #' @export
 recompile_resources <- function(suppl_res, path, rxs_images, add_new_files = FALSE) {
   checkmate::assert_data_frame(suppl_res)
+  checkmate::assert_names(names(suppl_res),
+                          must.include = c("resource_name", "resource_type",
+                          "linked_level", "linked_label"))
   checkmate::assert(
     checkmate::check_directory_exists(path),
     checkmate::check_file_exists(path, extension = "zip")

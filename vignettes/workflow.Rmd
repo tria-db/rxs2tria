@@ -137,22 +137,15 @@ your data. Make sure to address any conversion warnings before overwriting
 the columns in `df_settings`.
 
 ```{r, eval = FALSE}
-img_created_at_converted <- lubridate::parse_date_time(
-  df_settings$img_created_at,
-  orders = "%Y:%m:%d %H:%M:%S", # common EXIF format
-  tz = "UTC" # commonly used in EXIF tags
-)
-df_settings$img_created_at <- img_created_at_converted
-
 # for ROXAS only (ROXAS AI has standardized timestamps, so already converted)
 if (roxas_version == "roxas") {
   settings_date_orders <- c("%d.%m.%Y %H:%M:%S", "%d/%m/%Y %H:%M") # adjust to your locale
-  rxs_created_at_converted <- lubridate::parse_date_time(
-    df_settings$rxs_created_at,
+  meas_created_at_converted <- lubridate::parse_date_time(
+    df_settings$meas_created_at,
     orders = settings_date_orders,
     tz = Sys.timezone()
   )
-  df_settings$rxs_created_at <- rxs_created_at_converted
+  df_settings$meas_created_at <- meas_created_at_converted
 }
 ```
 
@@ -189,6 +182,8 @@ launch_metadata_app()
 # After exporting and closing the app, optionally read the result back:
 # QWA_meta <- read_QWAmetadata("path/to/output_data/example_dataset_QWAmetadata.json")
 ```
+
+See `vignette("metadata-app")` for a full walkthrough of the app.
 
 ---
 
@@ -322,6 +317,8 @@ launch_flags_app()
 # QWA_data$rings <- df_rings_edited  # or directly from a data frame in the env
 # write_QWAdata(QWA_data, dir = path_out, dataset_name = dataset_name)
 ```
+
+See `vignette("flags-app")` for a full walkthrough of the app.
 
 ---
 

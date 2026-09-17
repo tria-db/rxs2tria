@@ -80,6 +80,8 @@ articles:
   - workflow
   - resources
   - submission
+  - metadata-app
+  - flags-app
   - reopen-dataset
 - title: "S3 classes"
   desc: "Vignettes describing the S3 classes defined by the package"

@@ -216,6 +216,7 @@ complete_QWAprofile <- function(x, QWA_data, add_params, quant_probs = NULL) {
   profile_type <- attr(x, "profile_type")
 
   # skip params already present (match by base name, ignoring _mean/_N/_qXX suffixes)
+  # TODO: what if i want to add more quantiles?
   existing_base <- unique(sub("_(mean|N|q\\d+)$", "", names(x)))
   new_params <- setdiff(add_params, existing_base)
   if (length(new_params) == 0) {

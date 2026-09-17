@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "TODO:addurltoTRIAschema",
   "title": "TRIA tree metadata schema",
-  "description": "Schema for ...",
+  "description": "Schema for tree-related metadata for a TRIA dataset",
   "type": "array",
   "minItems": 1,
   "items": {
@@ -13,14 +13,14 @@
         "minLength": 1,
         "readOnly": true,
         "title": "Tree label",
-        "description": "Identifying label for the tree (generated)"
+        "description": "Unique tree identifier"
       },
       "site_label": {
         "type": "string",
         "minLength": 1,
         "readOnly": true,
         "title": "Site label",
-        "description": "Site to which the tree belongs"
+        "description": "Site identifier"
       },
       "n_woodpieces": {
         "type": ["integer", "null"],

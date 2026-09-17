@@ -456,6 +456,57 @@ save_modal <- function(ns, settings, have_comments) {
   )
 }
 
+# create modal to confirm/adjust an rwl export, prepopulated with the
+# auto-computed scaling factor and default file names
+export_rwl_modal <- function(ns, default_scaling, default_fname, default_mapping_fname) {
+  launch_wd <- shiny::getShinyOption("launch_wd", default = getwd())
+  wd_hint <- shiny::tags$span(
+    shiny::tags$i(glue::glue("(Current directory: {launch_wd})")),
+    style = "font-size: 0.8em; margin-top: -12px; margin-bottom: 16px; display: block;"
+  )
+  shiny::modalDialog(
+    title = "Export rwl",
+    shiny::p(
+      "Exports the currently selected parameter (and sector) to an ",
+      shiny::tags$code(".rwl"), " file."
+    ),
+    shiny::tags$ul(
+      shiny::tags$li("Respects the current woodpiece filtering and detrending settings."),
+      shiny::tags$li("Duplicate and excluded rings are removed based on the latest edits."),
+      shiny::tags$li("Auto-scaling makes optimal use of the 5 available digits at ",
+        shiny::tags$code("prec = 0.001"), "."),
+      shiny::tags$li("If the woodpiece labels are too long for the Tucson format, a ",
+        "series ID map file may be saved alongside the rwl. Leave blank to force skip."),
+      shiny::tags$li(
+        "Internally uses ", shiny::tags$code("extract_rwl()"), ", ",
+        shiny::tags$code("scale_for_tucson()"), " and ",
+        shiny::tags$code("dplR::write.tucson()"), "; see their docs for details."
+      )
+    ),
+    bslib::layout_column_wrap(
+      width = 1/2,
+      shiny::checkboxInput(ns("modal_rwl_autoscale"), paste0("Auto-scale: ", default_scaling), value = TRUE),
+      shinyjs::hidden(
+        shiny::textInput(ns("modal_rwl_scaling"), "Custom scaling factor",
+          value = as.character(default_scaling))
+      )
+    ),
+    bslib::layout_column_wrap(
+      width = 1/2,
+      shiny::textInput(ns("modal_rwl_fname"), "Rwl file path",
+        value = default_fname),
+      shiny::textInput(ns("modal_rwl_mapping_fname"),
+        "Series ID map file path",
+        value = default_mapping_fname)
+    ),
+    wd_hint,
+    footer = shiny::tagList(
+      shiny::modalButton("Cancel"),
+      shiny::actionButton(ns("export_rwl_confirm"), "Confirm and export")
+    )
+  )
+}
+
 # helper function to safely write edited rings data to env / file
 # rxsmeta: rxsmeta_data data frame (or NULL); handled: named logical vector from
 # handled_comments reactiveVal (or NULL)

@@ -47,25 +47,15 @@ df_structure <- extract_data_structure(files, pattern)
 # ROXAS data the image EXIF metadata is read from df_structure$fname_image.
 df_settings <- collect_settings_data(df_structure)
 
-# Datetime columns are read as strings; convert them to POSIXct with the
-# appropriate format(s) and timezone for your data.
-img_date_orders <- "%Y:%m:%d %H:%M:%S" # common EXIF format, adjust if necessary
-img_created_at_converted <- df_settings$img_created_at |> 
-  lubridate::parse_date_time(
-    orders = img_date_orders, 
-    tz = "UTC" # commonly used in EXIF tags
-  )
-df_settings$img_created_at <- img_created_at_converted
-
 # for ROXAS only (ROXAS AI has standardized timestamps, so already converted)
 if (roxas_version == "roxas") {
   settings_date_orders <- c("%d.%m.%Y %H:%M:%S", "%d/%m/%Y %H:%M") # adjust to your locale
-  rxs_created_at_converted <- lubridate::parse_date_time(
-    df_settings$rxs_created_at,
+  meas_created_at_converted <- lubridate::parse_date_time(
+    df_settings$meas_created_at,
     orders = settings_date_orders,
     tz = Sys.timezone()
   )
-  df_settings$rxs_created_at <- rxs_created_at_converted
+  df_settings$meas_created_at <- meas_created_at_converted
 }
 
 rxs_images <- build_QWAimages(df_structure, df_settings)

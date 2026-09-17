@@ -3,6 +3,7 @@
     [
         {
             "ds_name": "POGSTO1955",
+            "ds_title": "TRIA example dataset: ROXAS data from three Scots pines in southern Siberia",
             "description":"This dataset contains 3 trees of Pinus sylvestris collected in Pogorelsky and Stolby (Russia), covering the period from 1955 to 2018. The selected trees used in this collection are a selected subset from the original collected ad archived wood.",
             "ds_access": "public",
             "ds_license": "CC BY 4.0",

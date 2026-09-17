@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "TODO:addurltoTRIAschema",
-  "title": "image_data",
-  "description": "Reference only, common properties for ROXAS and ROXAS AI schemata",
+  "title": "TRIA image (analysis) metadata schema, core attributes",
+  "description": "Schema for general (non-software-specific) image and analysis-level metadata for a TRIA dataset",
   "type": "object",
   "properties": {
     "image_label": {
@@ -37,7 +37,7 @@
       "type": ["string", "null"],
       "readOnly": true,
       "title": "Species",
-      "description": "Species code (change in trees table if needed)"
+      "description": "Species code"
     },
     "site_label": {
       "type": "string",
@@ -46,19 +46,14 @@
       "title": "Site",
       "description": "Site identifier"
     },
-    "band_width": {
-      "type": ["number", "null"],
-      "minimum": 0,
-      "title": "Bandwidth",
-      "description": "Width of the analysed band [µm]"
-    },
     "only_ew": {
       "type": ["boolean", "null"],
       "title": "Only EW",
-      "description": "Whether only earlywood was analysed"
+      "description": "Only earlywood was analysed"
     },
     "spatial_resolution": {
       "type": ["number", "null"],
+      "minimum": 0,
       "title": "Spatial resolution",
       "description": "Spatial resolution [pixels/µm]"
     },
@@ -66,18 +61,18 @@
       "type": ["string", "null"],
       "enum": ["", "linear", "circular"],
       "title": "Geometry",
-      "description": "Sample geometry: linear or circular"
+      "description": "Measured sample geometry (linear/circular)"
     },
     "org_img_name": {
       "type": "string",
       "minLength": 1,
       "title": "Original name",
-      "description": "Original image file name"
+      "description": "Original image filename"
     },
     "img_filetype": {
       "type": ["string", "null"],
       "title": "Filetype",
-      "description": "Image file type/extension"
+      "description": "Image filetype"
     },
     "img_size": {
       "type": ["integer", "null"],
@@ -112,24 +107,19 @@
       "type": "string",
       "minLength": 1,
       "enum": ["roxas", "roxas_ai"],
-      "title": "Analysis sw",
-      "description": "QWA analysis software used"
+      "title": "QWA software",
+      "description": "QWA software used to analyse the image"
     },
     "sw_version": {
       "type": ["string", "null"],
       "title": "SW version",
-      "description": "Software version used"
+      "description": "QWA software version used"
     },
-    "rxs_created_at": {
+    "meas_created_at": {
       "type": ["string", "null"],
       "format": "date-time",
-      "title": "ROXAS created",
-      "description": "Timestamp of the ROXAS analysis"
-    },
-    "outmost_year": {
-      "type": ["integer", "null"],
-      "title": "Outmost year",
-      "description": "Calendar year of the outermost ring"
+      "title": "Measurements created",
+      "description": "Timestamp of the QWA analysis"
     },
     "fname_image": {
       "type": ["string", "null"],
@@ -151,10 +141,10 @@
       "title": "File Settings",
       "description": "Settings file name"
     },
-    "comment": {
+    "img_comment": {
       "type": ["string", "null"],
       "title": "Comment",
-      "description": "Free-text comment"
+      "description": "Any comments regarding the analysed image"
     }
   },
   "required": ["image_label", "slide_label", "woodpiece_label", "tree_label", 
