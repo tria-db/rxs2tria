@@ -1,7 +1,8 @@
 # rxs2tria (dev)
 
+* overhauled and finalized the extract rwl logic: new `extract_rwl` + `scale_for_tuscon` (then write with `dplR::write.tuscon`), also added an `Export rwl` button to the flags Shiny app.
 * completed the ROXAS AI metadata attributes. renamed several ROXAS/ROXAS AI image metadata field for clarity/consistency (`maxrel_opp_cwt` -> `opposite_cwt_ratio_limit`, `relwidth_cwt_window` -> `relwidth_cwt_integration`, `comment` -> `img_comment`, `rxs_created_at` -> `meas_created_at`); backcomp: `read_QWAimages()` and `read_QWAmetadata()` convert old names automatically.
-* add vignettes (stubs only) for the Shiny apps
+* add vignette stubs for the Shiny apps
 * overhauled the supplementary resources handling. Supplementary resources info is no longer part of the `QWAmetadata` object. `compile_resources()`, `recompile_resources()` and `check_supplementary()` replace the existing functions. The output suppl resource manifest is a slim table listing and describing each file, to be submitted alongside the zip. 
 
 # rxs2tria 0.1.2

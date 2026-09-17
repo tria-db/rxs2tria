@@ -466,13 +466,39 @@ export_rwl_modal <- function(ns, default_scaling, default_fname, default_mapping
   )
   shiny::modalDialog(
     title = "Export rwl",
-    shiny::numericInput(ns("modal_rwl_scaling"), "Scaling factor",
-      value = default_scaling, min = 0),
-    shiny::textInput(ns("modal_rwl_fname"), "Rwl file path",
-      value = default_fname),
-    shiny::textInput(ns("modal_rwl_mapping_fname"),
-      "Series ID mapping file path (leave blank to skip)",
-      value = default_mapping_fname),
+    shiny::p(
+      "Exports the currently selected parameter (and sector) to an ",
+      shiny::tags$code(".rwl"), " file."
+    ),
+    shiny::tags$ul(
+      shiny::tags$li("Respects the current woodpiece filtering and detrending settings."),
+      shiny::tags$li("Duplicate and excluded rings are removed based on the latest edits."),
+      shiny::tags$li("Auto-scaling makes optimal use of the 5 available digits at ",
+        shiny::tags$code("prec = 0.001"), "."),
+      shiny::tags$li("If the woodpiece labels are too long for the Tucson format, a ",
+        "series ID map file may be saved alongside the rwl. Leave blank to force skip."),
+      shiny::tags$li(
+        "Internally uses ", shiny::tags$code("extract_rwl()"), ", ",
+        shiny::tags$code("scale_for_tucson()"), " and ",
+        shiny::tags$code("dplR::write.tucson()"), "; see their docs for details."
+      )
+    ),
+    bslib::layout_column_wrap(
+      width = 1/2,
+      shiny::checkboxInput(ns("modal_rwl_autoscale"), paste0("Auto-scale: ", default_scaling), value = TRUE),
+      shinyjs::hidden(
+        shiny::textInput(ns("modal_rwl_scaling"), "Custom scaling factor",
+          value = as.character(default_scaling))
+      )
+    ),
+    bslib::layout_column_wrap(
+      width = 1/2,
+      shiny::textInput(ns("modal_rwl_fname"), "Rwl file path",
+        value = default_fname),
+      shiny::textInput(ns("modal_rwl_mapping_fname"),
+        "Series ID map file path",
+        value = default_mapping_fname)
+    ),
     wd_hint,
     footer = shiny::tagList(
       shiny::modalButton("Cancel"),

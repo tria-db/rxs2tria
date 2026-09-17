@@ -26,7 +26,7 @@ launch_metadata_app <- function(server_run = FALSE) {
 launch_flags_app <- function() {
   rlang::check_installed(
     c("bslib", "collapse", "htmlwidgets", "plotly", "reactable",
-      "rhandsontable", "shiny", "shinyjs"),
+      "rhandsontable", "shiny", "shinyjs", "shinyvalidate"),
     reason = "required to run the flags Shiny app"
   )
   app_dir <- system.file("shiny_flags", package = "rxs2tria")

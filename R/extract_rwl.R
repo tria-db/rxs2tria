@@ -1,4 +1,4 @@
-#' Build a dplR rwl object from ring or sector profile data
+#' Extract an rwl series from ring or sector profile data
 #'
 #' @description
 #' This function builds a dendrochronological \pkg{dplR} `rwl` object (a data
@@ -38,16 +38,16 @@
 #' @examples
 #' \dontrun{
 #' # Build an rwl object from mean ring width
-#' create_rwl(df_rings = QWA_data$rings,
+#' extract_rwl(df_rings = QWA_data$rings,
 #'            param = "mrw")
 #'
 #' # Build an rwl object from a profile-level parameter
-#' create_rwl(df_rings = QWA_data$rings,
+#' extract_rwl(df_rings = QWA_data$rings,
 #'            param = "cwtrad_mean",
 #'            prf_data = prf_sector,
 #'            sector = 5)
 #' }
-create_rwl <- function(df_rings, param, prf_data = NULL, sector = NULL) {
+extract_rwl <- function(df_rings, param, prf_data = NULL, sector = NULL) {
   checkmate::assert_data_frame(df_rings)
   checkmate::assert_names(names(df_rings),
     must.include = c("year", "image_label", "slide_label", "woodpiece_label"))
@@ -143,7 +143,7 @@ pivot_rwl <- function(df, value_col) {
 #' giving 5 digits of usable range. Since QWA parameters can be on very
 #' different scales and units (e.g. μm, μm²) to the mm ring widths \pkg{dplR}
 #' expects, this function auto-scales an `rwl` object (as returned by
-#' [create_rwl()]) by a power-of-ten factor chosen to make full use of that
+#' [extract_rwl()]) by a power-of-ten factor chosen to make full use of that
 #' range, for a given `prec`.
 #'
 #' @details
@@ -153,7 +153,7 @@ pivot_rwl <- function(df, value_col) {
 #' the `.rwl` file are additionally scaled by `1 / prec`, so to recover the
 #' original values directly from the raw digits, apply `* prec / scaling`.
 #'
-#' @param rwl A \pkg{dplR} `rwl` object, e.g. as returned by [create_rwl()].
+#' @param rwl A \pkg{dplR} `rwl` object, e.g. as returned by [extract_rwl()].
 #' @param prec Numeric, the precision `dplR::write.tucson()` will be called
 #'   with: either `0.001` (default) or `0.01`.
 #'
@@ -165,7 +165,7 @@ pivot_rwl <- function(df, value_col) {
 #'
 #' @examples
 #' \dontrun{
-#' rwl <- create_rwl(df_rings = QWA_data$rings, param = "mrw")
+#' rwl <- extract_rwl(df_rings = QWA_data$rings, param = "mrw")
 #' scaled <- scale_for_tucson(rwl)
 #' dplR::write.tucson(scaled$rwl, fname = "mrw.rwl", prec = 0.001)
 #' }

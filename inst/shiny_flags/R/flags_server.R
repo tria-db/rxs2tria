@@ -1251,8 +1251,8 @@ flags_server <- function(id, main_session, comments_out) {
         }
 
         rwl <- rxs2tria:::pivot_rwl(df_export, "vals")
-        scaled <- rxs2tria::scale_for_tucson(rwl)
-        pending_rwl_export(rwl)
+        scaled <- suppressMessages(rxs2tria::scale_for_tucson(rwl))
+        pending_rwl_export(list(rwl = rwl, default_scaling = scaled$scaling))
 
         is_prf_param <- !is.null(input_data$prf_data) &&
           input$sel_param %in% names(input_data$prf_data)
@@ -1274,16 +1274,38 @@ flags_server <- function(id, main_session, comments_out) {
       )
     }) |> shiny::bindEvent(input$export_rwl_btn)
 
+    # validate the custom scaling factor, but only while it's shown (i.e.
+    # auto-scale is unchecked)
+    iv_gen <- shinyvalidate::InputValidator$new()
+    iv_gen$condition(~ !is.null(input$modal_rwl_autoscale) && !input$modal_rwl_autoscale)
+    iv_gen$add_rule("modal_rwl_scaling", shinyvalidate::sv_required())
+    iv_gen$add_rule("modal_rwl_scaling", function(value) {
+      # value is a character string (textInput), not numeric - parse first
+      num <- suppressWarnings(as.numeric(value))
+      if (is.na(num)) return("Must be a number.")
+      if (num <= 0) return("Must be greater than 0.")
+    })
+    iv_gen$enable()
+
+    # only show the scaling factor input when auto-scale is unchecked
+    shiny::observe({
+      shinyjs::toggle("modal_rwl_scaling", condition = !input$modal_rwl_autoscale)
+    }) |> shiny::bindEvent(input$modal_rwl_autoscale)
+
     # on confirm, apply the (possibly user-adjusted) scaling and write the
     # rwl file, plus the series ID mapping file if a path is given
     shiny::observe({
       shiny::req(pending_rwl_export())
+      shiny::req(iv_gen$is_valid())
       safe_block({
         launch_wd <- shiny::getShinyOption("launch_wd", default = getwd())
 
-        scaling <- input$modal_rwl_scaling
-        checkmate::assert_number(scaling, lower = 0, finite = TRUE)
-        rwl_scaled <- pending_rwl_export() * scaling
+        scaling <- if (input$modal_rwl_autoscale) {
+          pending_rwl_export()$default_scaling
+        } else {
+          as.numeric(input$modal_rwl_scaling)
+        }
+        rwl_scaled <- pending_rwl_export()$rwl * scaling
 
         fname <- fs::path_abs(input$modal_rwl_fname, start = launch_wd)
         checkmate::assert_path_for_output(fname, overwrite = TRUE)
@@ -1320,7 +1342,8 @@ flags_server <- function(id, main_session, comments_out) {
     #   #rings_data_org()
     #   #input$enter_key
     #   #str(input_data$rings_data)
-      df_crn()
+      #df_crn()
+      input$modal_rwl_scaling
 
     })
 

@@ -31,7 +31,7 @@ prf_data_multi <- tibble::tribble(
 )
 
 test_that("ring-level export aggregates images per woodpiece, drops excluded rows, and fills year gaps", {
-  df_rwl <- create_rwl(df_rings = df_rings_multi, param = "mrw")
+  df_rwl <- extract_rwl(df_rings = df_rings_multi, param = "mrw")
 
   expect_s3_class(df_rwl, "rwl")
   expect_equal(rownames(df_rwl), as.character(2001:2006))
@@ -40,7 +40,7 @@ test_that("ring-level export aggregates images per woodpiece, drops excluded row
 })
 
 test_that("profile-level export filters by sector, joins by image_label/year, and respects exclusions", {
-  df_rwl <- create_rwl(
+  df_rwl <- extract_rwl(
     df_rings = df_rings_multi, param = "la_mean",
     prf_data = prf_data_multi, sector = 1
   )
@@ -53,26 +53,26 @@ test_that("missing flag columns abort with a hint", {
   df_rings <- df_rings_multi |> dplyr::select(-exclude_issues)
 
   expect_error(
-    create_rwl(df_rings = df_rings, param = "mrw"),
+    extract_rwl(df_rings = df_rings, param = "mrw"),
     regexp = "Missing required column"
   )
 })
 
 test_that("non-existent / non-measurement param aborts", {
   expect_error(
-    create_rwl(df_rings = df_rings_multi, param = "nonexistent_param"),
+    extract_rwl(df_rings = df_rings_multi, param = "nonexistent_param"),
     regexp = "not a measurements column"
   )
 
   expect_error(
-    create_rwl(df_rings = df_rings_multi, param = "image_label", 
+    extract_rwl(df_rings = df_rings_multi, param = "image_label", 
       prf_data = prf_data_multi, sector = 1),
     regexp = "is not a measurements column"
   )
 })
 
 test_that("scale_for_tucson auto-scales to use the available digit range", {
-  df_rwl <- create_rwl(df_rings = df_rings_multi, param = "mrw")
+  df_rwl <- extract_rwl(df_rings = df_rings_multi, param = "mrw")
 
   # max_val = 230, max_representable = (10^5 - 1) * 0.001 = 99.999
   # -> optimal_scale = 99.999 / 230 = 0.43478... -> scaling = 10^floor(log10(.)) = 0.1
@@ -90,7 +90,7 @@ test_that("scale_for_tucson auto-scales to use the available digit range", {
 
 test_that("scale_for_tucson warns and falls back to scaling 1 when no positive values are available", {
   df_rings <- df_rings_multi |> dplyr::mutate(mrw = NA_real_)
-  df_rwl <- create_rwl(df_rings = df_rings, param = "mrw")
+  df_rwl <- extract_rwl(df_rings = df_rings, param = "mrw")
 
   expect_warning(
     scaled <- scale_for_tucson(df_rwl),
