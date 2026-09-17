@@ -317,6 +317,6 @@ collect_raw_data <- function(df_meta, roxas_version = NULL) {
 
   cli::cli_alert_success("Extracted cells and rings data to {.var QWAdata} object")
   
-  new_QWAdata(cells = df_cells_all, rings = df_rings_complete)
+  new_QWAdata(cells = QWA_data$cells, rings = df_rings_complete)
 }
 
