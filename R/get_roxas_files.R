@@ -17,8 +17,8 @@
 #' For ROXAS AI, the required files per image are:
 #' * The original image file (`{IMAGEID}.scan.jpg` or `.jpeg`).
 #' * The ROXAS AI metadata file (`{IMAGEID}.metadata.json`).
-#' * The cell measurements table (`{IMAGEID}.cells_table.csv`).
-#' * The ring measurements table (`{IMAGEID}.rings_table.csv`).
+#' * The cell measurements table (`{IMAGEID}.cells_table.csv` or `.txt`).
+#' * The ring measurements table (`{IMAGEID}.rings_table.csv` or `.txt`).
 #'
 #' @param path_in The path of the input directory.
 #' @param roxas_version Which software was used to create the files, either
@@ -43,8 +43,8 @@ get_roxas_files <- function(path_in, roxas_version, exclude_dirs = NULL) {
   } else {
     pattern_orgimg_files <- "\\.scan\\.(jpg|jpeg|png|bmp|tiff)$" # TODO: 'scan' might change to 'rxs' in future
     pattern_settings_files <- "\\.metadata\\.json$"
-    pattern_cell_files <- "\\.cells_table\\.csv$"
-    pattern_ring_files <- "\\.rings_table\\.csv$"
+    pattern_cell_files <- "\\.cells_table\\.(csv|txt)$"
+    pattern_ring_files <- "\\.rings_table\\.(csv|txt)$"
   }
   # Processed image files need to be filtered out
   imgfiles_exclude_keywords <- c("annotated", "ReferenceSeries", "Preview",

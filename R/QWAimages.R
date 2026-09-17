@@ -217,6 +217,7 @@ check_QWAimages <- function(x) {
   check_structure(x, warn_only = TRUE)
 
   # TODO: any additional checks?
+  # e.g.: check outmost_year is valid
 
   cli::cli_inform(c("v" = "All checks completed."))
   invisible(TRUE)

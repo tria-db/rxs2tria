@@ -397,3 +397,4 @@ check_missing_opt <- function(df, tbl_props, schema = NULL) {
 
 
 # TODO: other additional validation checks beyond the base schema
+# - example: check that outmost year in rxs_images is not in future

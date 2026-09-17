@@ -3,7 +3,8 @@
 #' @param filename filen ame to be read.
 #' @param selcols character vector of the required columns.
 #' @param colname_variants named character vector of any variant column names to rename.
-#' @param delim File delimiter (usually `"\t"` for ROXAS, `";"` for ROXAS AI).
+#' @param delim File delimiter, or `NULL` to let vroom auto-detect it (ROXAS
+#'   always uses `"\t"`; ROXAS AI files vary and are auto-detected).
 #' @returns A data frame with the raw data (relevant columns only, cleaned names).
 #' @noRd
 read_output_file <- function(filename, selcols, colname_variants, delim) {
@@ -117,7 +118,8 @@ collect_raw_outputs <- function(df_structure, roxas_version, ftype) {
     structure_cols <- c("woodpiece_label", "slide_label", "image_label")
   }
 
-  delim <- if (roxas_version == "roxas") "\t" else ";"
+  # ROXAS AI files vary in delimiter (tab, semicolon, or comma); auto-detect
+  delim <- if (roxas_version == "roxas") "\t" else NULL
 
   df_raw_all <- df_structure |> 
     dplyr::select(dplyr::all_of(c(structure_cols,fname_col))) |> 

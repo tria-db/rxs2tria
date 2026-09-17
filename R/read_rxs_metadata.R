@@ -91,6 +91,7 @@ collect_settings_data <- function(df = NULL,
   
   # coerce raw character columns to their target types
   df_settings_all <- cast_settings_types(df_settings_all, roxas_version)
+  # TODO: add a message for classic to inform about converting datetime cols?
 
   cli::cli_alert_success(
     "Extracted {rv} settings and image metadata from {nrow(df_settings_all)} file{?s}."
@@ -174,6 +175,8 @@ build_QWAimages <- function(df_structure,
   # validate against the base schema, but warn only. user may want to fix
   # things manually in the metadata app
   check_schema(df_rxsmeta, schema_obj, rv, warn_only = TRUE, greedy = FALSE)
+
+  # TODO: check outmost_year is valid?
 
   cli::cli_alert_success(
     "Extracted available {rv_msg(rv)} metadata to {.var QWAimages} object."
@@ -270,7 +273,7 @@ read_roxas_settings <- function(file_settings, roxas_version) {
       tidyr::unnest_wider(col = "scan_exif") |>
       dplyr::bind_rows(data.frame("Software" = character(0), # if scan_exif is null: ensure we still have all columns
         "DateTimeOriginal" = character(0), "DateCreated" = character(0),
-        "DateTimeDigitized"= character(0)), "CreateDate" = character(0)) |> 
+        "DateTimeDigitized"= character(0), "CreateDate" = character(0))) |> 
       dplyr::select(!"scan_info", !"scan_mode") |> # TODO: confirm that we can ignore these
       dplyr::rename(c(
         # keep as-is: meas_geometry, spatial_resolution, sw_version, 
@@ -388,16 +391,19 @@ cast_settings_types <- function(df, roxas_version) {
 
   int_cols <- col_props |> purrr::keep(function(x) x$type[1] == "integer") |> names()
   num_cols <- col_props |> purrr::keep(function(x) x$type[1] == "number") |> names()
+  str_cols <- col_props |> purrr::keep(function(x) x$type[1] == "string") |> names()
 
-  datetime_cols <- c("img_created_at", 
+  datetime_cols <- c("img_created_at",
     "rings_segmentation_datetime","cells_segmentation_datetime")
   # roxas_ai has standardized timestamps, but roxas classic does not
   if (roxas_version == "roxas_ai") {
     datetime_cols <- c(datetime_cols, "meas_created_at")
   }
 
-  df <- df |> 
+  df <- df |>
     dplyr::mutate(
+      # literal "NA" strings (e.g. unset reference_series) -> proper NA
+      dplyr::across(dplyr::any_of(str_cols), ~ dplyr::na_if(.x, "NA")),
       dplyr::across(dplyr::any_of(num_cols), as.numeric),
       dplyr::across(dplyr::any_of(int_cols), as.integer),
       dplyr::across(dplyr::any_of(datetime_cols), lubridate::ymd_hms),
