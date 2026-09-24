@@ -473,8 +473,9 @@ export_rwl_modal <- function(ns, default_scaling, default_fname, default_mapping
     shiny::tags$ul(
       shiny::tags$li("Respects the current woodpiece filtering and detrending settings."),
       shiny::tags$li("Duplicate and excluded rings are removed based on the latest edits."),
-      shiny::tags$li("Auto-scaling makes optimal use of the 5 available digits at ",
-        shiny::tags$code("prec = 0.001"), "."),
+      shiny::tags$li("The suggested scaling converts ring widths (µm) to mm; other ",
+        "parameters (or detrended series) are scaled by a power of ten to make ",
+        "optimal use of the 5 available digits at ", shiny::tags$code("prec = 0.001"), "."),
       shiny::tags$li("If the woodpiece labels are too long for the Tucson format, a ",
         "series ID map file may be saved alongside the rwl. Leave blank to force skip."),
       shiny::tags$li(
@@ -485,7 +486,7 @@ export_rwl_modal <- function(ns, default_scaling, default_fname, default_mapping
     ),
     bslib::layout_column_wrap(
       width = 1/2,
-      shiny::checkboxInput(ns("modal_rwl_autoscale"), paste0("Auto-scale: ", default_scaling), value = TRUE),
+      shiny::checkboxInput(ns("modal_rwl_autoscale"), paste0("Use suggested scaling: ", default_scaling), value = TRUE),
       shinyjs::hidden(
         shiny::textInput(ns("modal_rwl_scaling"), "Custom scaling factor",
           value = as.character(default_scaling))

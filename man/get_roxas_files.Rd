@@ -42,7 +42,7 @@ For ROXAS AI, the required files per image are:
 \itemize{
 \item The original image file (\verb{\{IMAGEID\}.scan.jpg} or \code{.jpeg}).
 \item The ROXAS AI metadata file (\verb{\{IMAGEID\}.metadata.json}).
-\item The cell measurements table (\verb{\{IMAGEID\}.cells_table.csv}).
-\item The ring measurements table (\verb{\{IMAGEID\}.rings_table.csv}).
+\item The cell measurements table (\verb{\{IMAGEID\}.cells_table.csv} or \code{.txt}).
+\item The ring measurements table (\verb{\{IMAGEID\}.rings_table.csv} or \code{.txt}).
 }
 }

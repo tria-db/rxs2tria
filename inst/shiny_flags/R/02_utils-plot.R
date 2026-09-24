@@ -83,8 +83,8 @@ build_chronology_df <- function(rings_data, prf_data,
 # helper to spline detrend data for a specific woodpiece
 fit_detrend_curve <- function(df, method = "Spline", nyrs = 32) {
   df |>
-    # ignore unselected duplicates for fit
-    dplyr::filter(!exclude_dupl) |>
+    # ignore unselected duplicates and excluded rings for fit
+    dplyr::filter(!exclude_dupl, !exclude_issues) |>
     # ensure we have no gaps in the years, e.g. between images/slides
     tidyr::complete(year = tidyr::full_seq(year, 1), explicit = FALSE) |>
     dplyr::mutate(
@@ -98,8 +98,8 @@ fit_detrend_curve <- function(df, method = "Spline", nyrs = 32) {
 }
 
 # detrend a chronology data frame
-# by woodpiece, fit on vals column but extended to estimate values also for
-# excluded_dupl / exclude_issue years
+# by woodpiece, fit on vals column (but always ignore exclude_dupl / exclude_issues),
+# extended to estimate standardised vals and sel_param for all years (incl. excluded)
 detrend_crn <- function(df, sel_param, method = "Spline", nyrs = 32){
   # get the spline fitted curves for each woodpiece, based on vals col
   fitted_curves <- df |>

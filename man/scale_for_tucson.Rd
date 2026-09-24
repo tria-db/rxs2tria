@@ -4,13 +4,16 @@
 \alias{scale_for_tucson}
 \title{Scale an rwl object for Tucson-format writing}
 \usage{
-scale_for_tucson(rwl, prec = 0.001)
+scale_for_tucson(rwl, prec = 0.001, scaling = NULL)
 }
 \arguments{
 \item{rwl}{A \pkg{dplR} \code{rwl} object, e.g. as returned by \code{\link[=extract_rwl]{extract_rwl()}}.}
 
 \item{prec}{Numeric, the precision \code{dplR::write.tucson()} will be called
 with: either \code{0.001} (default) or \code{0.01}.}
+
+\item{scaling}{Numeric power of ten to scale by, or \code{NULL} (default) to
+determine the factor automatically.}
 }
 \value{
 A list with:
@@ -22,22 +25,40 @@ A list with:
 \description{
 \code{dplR::write.tucson()} stores values as integers at a fixed precision,
 giving 5 digits of usable range. Since QWA parameters can be on very
-different scales and units (e.g. μm, μm²) to the mm ring widths \pkg{dplR}
-expects, this function auto-scales an \code{rwl} object (as returned by
-\code{\link[=extract_rwl]{extract_rwl()}}) by a power-of-ten factor chosen to make full use of that
-range, for a given \code{prec}.
+different scales and units (e.g. μm²) to the mm ring widths \pkg{dplR}
+expects, this function scales an \code{rwl} object (as returned by
+\code{\link[=extract_rwl]{extract_rwl()}}) by a power-of-ten factor. By default, the factor is chosen
+automatically to make full use of that range, for a given \code{prec}.
 }
 \details{
+For ring-width parameters in μm (e.g. \code{mrw}, \code{eww}, \code{lww}), use
+\code{scaling = 0.001} to convert the values to mm, as conventionally expected for
+the input object of \code{dplR::write.tucson()}. Auto-scaling would instead pick
+the factor maximising the represented digits at the selected \code{prec}, which
+does not generally correspond to mm.
+
+A manual \code{scaling} must be a power of ten, and must not push any value
+beyond the Tucson range at the given \code{prec}; otherwise the function aborts
+and suggests the largest factor that fits.
+
 The returned \code{scaling} factor recovers the original values: dividing the
 scaled \code{rwl} object, or values re-read with \code{dplR::read.tucson()}, by
 \code{scaling} gives back the original values. The \emph{raw} integers stored in
-the \code{.rwl} file are additionally scaled by \code{1 / prec}, so to recover the
-original values directly from the raw digits, apply \verb{* prec / scaling}.
+an \code{.rwl} file created with \code{dplR::write.tucson()} are additionally scaled by
+\code{1 / prec}, so to recover the original values directly from the raw digits,
+apply \verb{* prec / scaling}.
 }
 \examples{
 \dontrun{
+# Ring widths in mm
 rwl <- extract_rwl(df_rings = QWA_data$rings, param = "mrw")
-scaled <- scale_for_tucson(rwl)
+scaled <- scale_for_tucson(rwl, scaling = 0.001)
 dplR::write.tucson(scaled$rwl, fname = "mrw.rwl", prec = 0.001)
+
+# Other parameters, auto-scaled
+rwl <- extract_rwl(df_rings = QWA_data$rings, param = "la_q90",
+                   prf_data = prf_sector, sector = 5)
+scaled <- scale_for_tucson(rwl, prec = 0.001)
+dplR::write.tucson(scaled$rwl, fname = "la_q90.rwl", prec = 0.001)
 }
 }

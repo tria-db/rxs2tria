@@ -193,6 +193,43 @@ you (or a colleague) can resume exactly where you left off.
 
 ---
 
+## Exporting an rwl file
+
+Click **Export rwl** to write the currently plotted parameter (and
+sector, for profile parameters) to a Tucson-format `.rwl` file, e.g.
+for crossdating or chronology building in other software. The export
+respects the current woodpiece filter and detrending setting, and
+removes duplicate and excluded rings based on the latest edits in the
+app (whether already updated in plot or not).
+
+In the export dialog, you can adjust:
+
+- **Scaling**: the Tucson format stores values as integers with 5
+  digits (written at `prec = 0.001`). The suggested scaling converts
+  ring widths (`mrw`, `eww`, `lww`, in μm) to mm. For other
+  parameters, or detrended series, it picks the power of ten that
+  makes the best use of the available digits. Untick the checkbox to
+  enter a custom power of ten; values that would exceed the Tucson
+  range are rejected. The scaling factor is included in the default
+  file name, so the original values can be recovered by dividing by it.
+- **File paths** for the `.rwl` file and an optional series ID map
+  file. The map is only needed if woodpiece labels are too long for
+  the Tucson format; leave the path blank to skip it. Relative paths
+  are resolved from the directory the app was launched in.
+
+*(screenshot: export rwl modal)*
+
+The same export can be scripted outside the app with `extract_rwl()`,
+`scale_for_tucson()` and `dplR::write.tucson()`:
+
+```{r export-rwl}
+rwl <- extract_rwl(df_rings = QWA_data$rings, param = "mrw")
+scaled <- scale_for_tucson(rwl, scaling = 0.001) # μm to mm
+dplR::write.tucson(scaled$rwl, fname = "mrw.rwl", prec = 0.001)
+```
+
+---
+
 ## Output and how it fits into the workflow
 
 The saved rings data is the `$rings` component of a `QWAdata` object,

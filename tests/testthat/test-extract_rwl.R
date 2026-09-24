@@ -83,7 +83,7 @@ test_that("scale_for_tucson auto-scales to use the available digit range", {
 
   # max_representable = (10^5 - 1) * 0.01 = 999.99
   # -> optimal_scale = 999.99 / 230 = 4.3478... -> scaling = 10^floor(log10(.)) = 1
-  scaled <- scale_for_tucson(df_rwl, prec = 0.01)
+  scaled <- suppressMessages(scale_for_tucson(df_rwl, prec = 0.01))
 
   expect_equal(scaled$scaling, 1)
 })
@@ -97,4 +97,26 @@ test_that("scale_for_tucson warns and falls back to scaling 1 when no positive v
     regexp = "auto-scaling factor"
   )
   expect_equal(scaled$scaling, 1)
+})
+
+test_that("scale_for_tucson applies a manual scaling as given, without messages", {
+  df_rwl <- extract_rwl(df_rings = df_rings_multi, param = "mrw")
+
+  expect_silent(scaled <- scale_for_tucson(df_rwl, scaling = 0.001))
+  expect_equal(scaled$scaling, 0.001)
+  expect_equal(unname(scaled$rwl[["WP2"]]), c(NA, NA, 0.2, 0.21, 0.22, 0.23))
+})
+
+test_that("scale_for_tucson aborts when a manual scaling exceeds the Tucson range", {
+  df_rwl <- extract_rwl(df_rings = df_rings_multi, param = "mrw")
+
+  # max_val = 230 > max_representable = 99.999 at prec = 0.001; auto factor is 0.1
+  expect_error(
+    scale_for_tucson(df_rwl, scaling = 1),
+    regexp = "exceeds the Tucson range"
+  )
+  expect_error(
+    scale_for_tucson(df_rwl, scaling = 1),
+    regexp = "scaling = 0.1"
+  )
 })

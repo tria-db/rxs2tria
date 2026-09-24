@@ -380,7 +380,7 @@ flags_server <- function(id, main_session, comments_out) {
         show_excl = input$show_excl
       )
 
-      if (input$apply_detrend) {
+      if (input$apply_detrend) { # apply detrending (fit on included years)
         df <- detrend_crn(df, input$sel_param, method = "Spline", nyrs = 32)
       }
 
@@ -1242,7 +1242,7 @@ flags_server <- function(id, main_session, comments_out) {
           filt_wp = input$filt_wp,
           sel_param = input$sel_param,
           sel_sector = input$sel_sector,
-          show_excl = TRUE
+          show_excl = FALSE # NOTE: has no effect, exclude_issues years never included rwl
         )
 
         if (input$apply_detrend) {
@@ -1251,7 +1251,15 @@ flags_server <- function(id, main_session, comments_out) {
         }
 
         rwl <- rxs2tria:::pivot_rwl(df_export, "vals")
-        scaled <- suppressMessages(rxs2tria::scale_for_tucson(rwl))
+        # suggest mm for (non-detrended) ring widths, otherwise auto-scale
+        is_rw_param <- input$sel_param %in% c("mrw", "eww", "lww") && !input$apply_detrend
+        scaled <- if (is_rw_param) {
+          tryCatch(
+            rxs2tria::scale_for_tucson(rwl, scaling = 0.001),
+            error = function(e) NULL
+          )
+        }
+        if (is.null(scaled)) scaled <- suppressMessages(rxs2tria::scale_for_tucson(rwl))
         pending_rwl_export(list(rwl = rwl, default_scaling = scaled$scaling))
 
         is_prf_param <- !is.null(input_data$prf_data) &&
@@ -1275,7 +1283,8 @@ flags_server <- function(id, main_session, comments_out) {
     }) |> shiny::bindEvent(input$export_rwl_btn)
 
     # validate the custom scaling factor, but only while it's shown (i.e.
-    # auto-scale is unchecked)
+    # suggested scaling is unchecked); range and power-of-ten checks are
+    # delegated to scale_for_tucson()
     iv_gen <- shinyvalidate::InputValidator$new()
     iv_gen$condition(~ !is.null(input$modal_rwl_autoscale) && !input$modal_rwl_autoscale)
     iv_gen$add_rule("modal_rwl_scaling", shinyvalidate::sv_required())
@@ -1283,7 +1292,13 @@ flags_server <- function(id, main_session, comments_out) {
       # value is a character string (textInput), not numeric - parse first
       num <- suppressWarnings(as.numeric(value))
       if (is.na(num)) return("Must be a number.")
-      if (num <= 0) return("Must be greater than 0.")
+      tryCatch({
+        rxs2tria::scale_for_tucson(pending_rwl_export()$rwl, prec = 0.001, scaling = num)
+        NULL
+      }, error = function(e) {
+        msg <- cli::ansi_strip(conditionMessage(e))
+        strsplit(as.character(msg), "\n", fixed = TRUE)[[1]][1]
+      })
     })
     iv_gen$enable()
 
@@ -1343,7 +1358,7 @@ flags_server <- function(id, main_session, comments_out) {
     #   #input$enter_key
     #   #str(input_data$rings_data)
       #df_crn()
-      input$modal_rwl_scaling
+      pending_rwl_export()
 
     })
 
