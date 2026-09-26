@@ -1251,6 +1251,20 @@ flags_server <- function(id, main_session, comments_out) {
         }
 
         rwl <- rxs2tria:::pivot_rwl(df_export, "vals")
+        # short series IDs from the data structure, if available; otherwise
+        # dplR::write.tucson() truncates the names (and writes the mapping file)
+        rxsmeta <- input_data$rxsmeta_data
+        if (!is.null(rxsmeta) && all(c("woodpiece_label", "site_label") %in% names(rxsmeta))) {
+          rwl <- tryCatch(
+            rxs2tria::rename_for_tucson(rwl, rxsmeta, long.names = TRUE),
+            error = function(e) {
+              shiny::showNotification(
+                "Could not derive short series IDs, names are truncated on export.",
+                type = "warning")
+              rwl
+            }
+          )
+        }
         # suggest mm for (non-detrended) ring widths, otherwise auto-scale
         is_rw_param <- input$sel_param %in% c("mrw", "eww", "lww") && !input$apply_detrend
         scaled <- if (is_rw_param) {
@@ -1260,20 +1274,20 @@ flags_server <- function(id, main_session, comments_out) {
           )
         }
         if (is.null(scaled)) scaled <- suppressMessages(rxs2tria::scale_for_tucson(rwl))
-        pending_rwl_export(list(rwl = rwl, default_scaling = scaled$scaling))
+        default_scaling <- attr(scaled, "scaling")
+        pending_rwl_export(list(rwl = rwl, default_scaling = default_scaling))
 
         is_prf_param <- !is.null(input_data$prf_data) &&
           input$sel_param %in% names(input_data$prf_data)
         fname_base <- if (is_prf_param) {
-          glue::glue("{input$sel_param}_sctr{input$sel_sector}_scl{scaled$scaling}")
+          glue::glue("{input$sel_param}_sctr{input$sel_sector}_scl{default_scaling}")
         } else {
-          glue::glue("{input$sel_param}_scl{scaled$scaling}")
+          glue::glue("{input$sel_param}_scl{default_scaling}")
         }
 
         shiny::showModal(export_rwl_modal(ns,
-          default_scaling = scaled$scaling,
-          default_fname = glue::glue("{fname_base}.rwl"),
-          default_mapping_fname = glue::glue("{fname_base}_idmap.txt")
+          default_scaling = default_scaling,
+          default_fname = glue::glue("{fname_base}.rwl")
         ))
       },
       err_title = "Error preparing rwl export",
@@ -1320,18 +1334,17 @@ flags_server <- function(id, main_session, comments_out) {
         } else {
           as.numeric(input$modal_rwl_scaling)
         }
-        rwl_scaled <- pending_rwl_export()$rwl * scaling
+        rwl_scaled <- rxs2tria::scale_for_tucson(pending_rwl_export()$rwl,
+                                                 prec = 0.001, scaling = scaling)
 
         fname <- fs::path_abs(input$modal_rwl_fname, start = launch_wd)
         checkmate::assert_path_for_output(fname, overwrite = TRUE)
 
-        mapping_fname <- ""
-        if (shiny::isTruthy(input$modal_rwl_mapping_fname)) {
-          mapping_fname <- fs::path_abs(input$modal_rwl_mapping_fname, start = launch_wd)
-          checkmate::assert_path_for_output(mapping_fname, overwrite = TRUE)
-        }
+        # only written by dplR if it truncates the series names, i.e. if no
+        # short series IDs could be derived from the data structure
+        mapping_fname <- paste0(fs::path_ext_remove(fname), "_mapping.txt")
 
-        dplR::write.tucson(rwl_scaled, fname = fname,
+        dplR::write.tucson(rwl_scaled, fname = fname, long.names = TRUE,
                            mapping.fname = mapping_fname, prec = 0.001)
 
         shiny::removeModal()

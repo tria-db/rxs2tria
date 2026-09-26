@@ -43,7 +43,7 @@ build_env_inputs <- function(ns) {
                      value = "prf_sector"),
     shiny::textInput(ns("name_rings"), "QWA rings data",
                      value = "QWA_data$rings"),
-    shiny::textInput(ns("name_rxsmeta"), "ROXAS images metadata",
+    shiny::textInput(ns("name_rxsmeta"), "QWA images metadata",
                      value = "rxs_images")
   )
 }
@@ -457,8 +457,8 @@ save_modal <- function(ns, settings, have_comments) {
 }
 
 # create modal to confirm/adjust an rwl export, prepopulated with the
-# auto-computed scaling factor and default file names
-export_rwl_modal <- function(ns, default_scaling, default_fname, default_mapping_fname) {
+# auto-computed scaling factor and default file name
+export_rwl_modal <- function(ns, default_scaling, default_fname) {
   launch_wd <- shiny::getShinyOption("launch_wd", default = getwd())
   wd_hint <- shiny::tags$span(
     shiny::tags$i(glue::glue("(Current directory: {launch_wd})")),
@@ -476,10 +476,12 @@ export_rwl_modal <- function(ns, default_scaling, default_fname, default_mapping
       shiny::tags$li("The suggested scaling converts ring widths (µm) to mm; other ",
         "parameters (or detrended series) are scaled by a power of ten to make ",
         "optimal use of the 5 available digits at ", shiny::tags$code("prec = 0.001"), "."),
-      shiny::tags$li("If the woodpiece labels are too long for the Tucson format, a ",
-        "series ID map file may be saved alongside the rwl. Leave blank to force skip."),
+      shiny::tags$li("If possible, woodpiece labels are replaced by short IDs derived from",
+        "the QWA images metadata Otherwise, a ",
+        shiny::tags$code("_mapping.txt"), " file is saved alongside the rwl."),
       shiny::tags$li(
         "Internally uses ", shiny::tags$code("extract_rwl()"), ", ",
+        shiny::tags$code("rename_for_tucson()"), ", ",
         shiny::tags$code("scale_for_tucson()"), " and ",
         shiny::tags$code("dplR::write.tucson()"), "; see their docs for details."
       )
@@ -492,17 +494,11 @@ export_rwl_modal <- function(ns, default_scaling, default_fname, default_mapping
           value = as.character(default_scaling))
       )
     ),
-    bslib::layout_column_wrap(
-      width = 1/2,
-      shiny::textInput(ns("modal_rwl_fname"), "Rwl file path",
-        value = default_fname),
-      shiny::textInput(ns("modal_rwl_mapping_fname"),
-        "Series ID map file path",
-        value = default_mapping_fname)
-    ),
+    shiny::textInput(ns("modal_rwl_fname"), "Rwl file path",
+      value = default_fname, width = "100%"),
     wd_hint,
     footer = shiny::tagList(
-      shiny::modalButton("Cancel"),
+      shiny::modalButton("Cancel"), # TODO: download button?
       shiny::actionButton(ns("export_rwl_confirm"), "Confirm and export")
     )
   )

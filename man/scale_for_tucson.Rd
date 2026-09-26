@@ -16,11 +16,8 @@ with: either \code{0.001} (default) or \code{0.01}.}
 determine the factor automatically.}
 }
 \value{
-A list with:
-\itemize{
-\item \code{rwl}: the scaled \code{rwl} object.
-\item \code{scaling}: the scaling factor applied.
-}
+The scaled \code{rwl} object, with the applied factor as attribute
+\code{"scaling"}.
 }
 \description{
 \code{dplR::write.tucson()} stores values as integers at a fixed precision,
@@ -41,24 +38,35 @@ A manual \code{scaling} must be a power of ten, and must not push any value
 beyond the Tucson range at the given \code{prec}; otherwise the function aborts
 and suggests the largest factor that fits.
 
-The returned \code{scaling} factor recovers the original values: dividing the
-scaled \code{rwl} object, or values re-read with \code{dplR::read.tucson()}, by
-\code{scaling} gives back the original values. The \emph{raw} integers stored in
-an \code{.rwl} file created with \code{dplR::write.tucson()} are additionally scaled by
-\code{1 / prec}, so to recover the original values directly from the raw digits,
-apply \verb{* prec / scaling}.
+The applied factor is stored in the \code{"scaling"} attribute of the returned
+\code{rwl} object, and recovers the original values: dividing the scaled \code{rwl}
+object, or values re-read with \code{dplR::read.tucson()}, by \code{scaling} gives
+back the original values. The \emph{raw} integers stored in an \code{.rwl} file
+created with \code{dplR::write.tucson()} are additionally scaled by \code{1 / prec},
+so to recover the original values directly from the raw digits, apply
+\verb{* prec / scaling}. An \code{rwl} object that already has a \code{"scaling"}
+attribute is not scaled again.
+
+The attribute is kept by \code{\link[=rename_for_tucson]{rename_for_tucson()}}, so both functions can be
+applied in either order, but is dropped by most other operations (e.g.
+subsetting, arithmetic, \pkg{dplR} functions). Apply them as the last steps
+before writing.
+
+Note that \code{dplR::write.tucson()} writes negative values, and at
+\code{prec = 0.001} also values rounding to zero, as missing values.
 }
 \examples{
 \dontrun{
 # Ring widths in mm
 rwl <- extract_rwl(df_rings = QWA_data$rings, param = "mrw")
 scaled <- scale_for_tucson(rwl, scaling = 0.001)
-dplR::write.tucson(scaled$rwl, fname = "mrw.rwl", prec = 0.001)
+dplR::write.tucson(scaled, fname = "mrw.rwl", prec = 0.001)
 
 # Other parameters, auto-scaled
 rwl <- extract_rwl(df_rings = QWA_data$rings, param = "la_q90",
                    prf_data = prf_sector, sector = 5)
 scaled <- scale_for_tucson(rwl, prec = 0.001)
-dplR::write.tucson(scaled$rwl, fname = "la_q90.rwl", prec = 0.001)
+attr(scaled, "scaling")
+dplR::write.tucson(scaled, fname = "la_q90.rwl", prec = 0.001)
 }
 }

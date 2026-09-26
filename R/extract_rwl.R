@@ -157,12 +157,22 @@ pivot_rwl <- function(df, value_col) {
 #' beyond the Tucson range at the given `prec`; otherwise the function aborts
 #' and suggests the largest factor that fits.
 #'
-#' The returned `scaling` factor recovers the original values: dividing the
-#' scaled `rwl` object, or values re-read with `dplR::read.tucson()`, by
-#' `scaling` gives back the original values. The *raw* integers stored in
-#' an `.rwl` file created with `dplR::write.tucson()` are additionally scaled by
-#' `1 / prec`, so to recover the original values directly from the raw digits, 
-#' apply `* prec / scaling`.
+#' The applied factor is stored in the `"scaling"` attribute of the returned
+#' `rwl` object, and recovers the original values: dividing the scaled `rwl`
+#' object, or values re-read with `dplR::read.tucson()`, by `scaling` gives
+#' back the original values. The *raw* integers stored in an `.rwl` file
+#' created with `dplR::write.tucson()` are additionally scaled by `1 / prec`,
+#' so to recover the original values directly from the raw digits, apply
+#' `* prec / scaling`. An `rwl` object that already has a `"scaling"`
+#' attribute is not scaled again.
+#'
+#' The attribute is kept by [rename_for_tucson()], so both functions can be
+#' applied in either order, but is dropped by most other operations (e.g.
+#' subsetting, arithmetic, \pkg{dplR} functions). Apply them as the last steps
+#' before writing.
+#'
+#' Note that `dplR::write.tucson()` writes negative values, and at
+#' `prec = 0.001` also values rounding to zero, as missing values.
 #'
 #' @param rwl A \pkg{dplR} `rwl` object, e.g. as returned by [extract_rwl()].
 #' @param prec Numeric, the precision `dplR::write.tucson()` will be called
@@ -170,9 +180,8 @@ pivot_rwl <- function(df, value_col) {
 #' @param scaling Numeric power of ten to scale by, or `NULL` (default) to
 #'   determine the factor automatically.
 #'
-#' @return A list with:
-#'   - `rwl`: the scaled `rwl` object.
-#'   - `scaling`: the scaling factor applied.
+#' @return The scaled `rwl` object, with the applied factor as attribute
+#'   `"scaling"`.
 #'
 #' @export
 #'
@@ -181,17 +190,21 @@ pivot_rwl <- function(df, value_col) {
 #' # Ring widths in mm
 #' rwl <- extract_rwl(df_rings = QWA_data$rings, param = "mrw")
 #' scaled <- scale_for_tucson(rwl, scaling = 0.001)
-#' dplR::write.tucson(scaled$rwl, fname = "mrw.rwl", prec = 0.001)
+#' dplR::write.tucson(scaled, fname = "mrw.rwl", prec = 0.001)
 #'
 #' # Other parameters, auto-scaled
 #' rwl <- extract_rwl(df_rings = QWA_data$rings, param = "la_q90",
 #'                    prf_data = prf_sector, sector = 5)
 #' scaled <- scale_for_tucson(rwl, prec = 0.001)
-#' dplR::write.tucson(scaled$rwl, fname = "la_q90.rwl", prec = 0.001)
+#' attr(scaled, "scaling")
+#' dplR::write.tucson(scaled, fname = "la_q90.rwl", prec = 0.001)
 #' }
 scale_for_tucson <- function(rwl, prec = 0.001, scaling = NULL) {
-  checkmate::assert_class(rwl, "rwl")
+  rwl <- dplR::as.rwl(rwl)
   checkmate::assert_choice(prec, c(0.001, 0.01))
+  if (!is.null(attr(rwl, "scaling"))) {
+    cli::cli_abort("{.arg rwl} is already scaled (factor {.val {attr(rwl, 'scaling')}}).")
+  }
   if (!is.null(scaling)) {
     checkmate::assert_number(scaling, finite = TRUE)
     if (scaling <= 0 || abs(log10(scaling) - round(log10(scaling))) > 1e-8) {
@@ -226,7 +239,135 @@ scale_for_tucson <- function(rwl, prec = 0.001, scaling = NULL) {
     ))
   }
 
-  list(rwl = rwl * scaling, scaling = scaling)
+  rwl[] <- lapply(rwl, `*`, scaling) # to ensure it keeps class 'rwl'
+  attr(rwl, "scaling") <- scaling
+  rwl
+}
+
+
+#' Rename rwl series to short Tucson-compatible series IDs
+#'
+#' @description
+#' The Tucson format limits series IDs to 6--8 characters out of `A-Z`, `a-z`
+#' and `0-9` (see `long.names` in `dplR::write.tucson()`), which the
+#' `woodpiece_label`s used as column names by [extract_rwl()] usually exceed.
+#' `rename_for_tucson()` replaces them by short series IDs derived from the
+#' data structure, instead of the generic truncation applied by
+#' `dplR::write.tucson()`.
+#'
+#' `make_short_series_ids()` derives the underlying mapping from
+#' `woodpiece_label` to short series ID.
+#'
+#' @details
+#' The base ID of a woodpiece is its `woodpiece_label` without the site and
+#' species prefixes, reduced to the allowed characters (e.g. `YAM_LASI_122_a`
+#' becomes `122a`). The first of the following variants that yields unique IDs
+#' of at most `max_chars` characters is used for all series:
+#' 1. site label + base ID (e.g. `YAM122a`),
+#' 2. base ID only (e.g. `122a`),
+#' 3. species code + base ID (e.g. `LASI122a`).
+#'
+#' If none of them does, the function aborts.
+#'
+#' The mapping is stored in the `"mapping"` attribute of the returned `rwl`
+#' object. The attribute is kept by [scale_for_tucson()], so both functions
+#' can be applied in either order, but is dropped by most other operations
+#' (e.g. subsetting, arithmetic, \pkg{dplR} functions). Apply them as the last
+#' steps before writing. An `rwl` object that already has a `"mapping"`
+#' attribute is not renamed again.
+#'
+#' @param rwl A \pkg{dplR} `rwl` object with `woodpiece_label`s as column
+#'   names, e.g. as returned by [extract_rwl()].
+#' @param df_structure A data frame with the data structure columns
+#'   `woodpiece_label`, `site_label` and optionally `species_code`, e.g. a
+#'   [QWAimages] object.
+#' @param long.names Logical, the value `dplR::write.tucson()` will be called
+#'   with: `FALSE` (default) allows 6 characters, `TRUE` allows 8 characters
+#'   (7 if any year is before -999 or after 9999).
+#' @param max_chars Integer, the maximum number of characters per series ID.
+#'
+#' @returns
+#' - `rename_for_tucson()`: the `rwl` object with short series IDs as column
+#'   names, and a data frame with columns `woodpiece_label` and `series_id`
+#'   (in column order) as attribute `"mapping"`.
+#' - `make_short_series_ids()`: a tibble with columns `woodpiece_label` and
+#'   `series_id`, one row per woodpiece in `df_structure`.
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' rwl <- extract_rwl(df_rings = QWA_data$rings, param = "mrw")
+#' rwl_out <- rwl |>
+#'   rename_for_tucson(QWA_images, long.names = TRUE) |>
+#'   scale_for_tucson(scaling = 0.001)
+#' attr(rwl_out, "mapping")
+#' dplR::write.tucson(rwl_out, fname = "mrw.rwl", prec = 0.001,
+#'                    long.names = TRUE)
+#' }
+rename_for_tucson <- function(rwl, df_structure, long.names = FALSE) {
+  checkmate::assert_data_frame(df_structure)
+  checkmate::assert_flag(long.names)
+  rwl <- dplR::as.rwl(rwl)
+  if (!is.null(attr(rwl, "mapping"))) {
+    cli::cli_abort("{.arg rwl} is already renamed (see {.code attr(rwl, 'mapping')}).")
+  }
+
+  # name width limits as in dplR::write.tucson()
+  yrs <- as.numeric(row.names(rwl))
+  long_years <- min(yrs) < -999 || max(yrs) > 9999
+  max_chars <- if (!long.names) 6 else if (long_years) 7 else 8
+
+  df_map <- make_short_series_ids(df_structure, max_chars)
+  idx <- match(names(rwl), df_map$woodpiece_label)
+  if (anyNA(idx)) {
+    cli::cli_abort(c(
+      "No short series ID found for some {.cls rwl} columns. Do {.arg rwl} and {.arg df_structure} match?",
+      cli_truncated_list(names(rwl)[is.na(idx)])
+    ))
+  }
+  names(rwl) <- df_map$series_id[idx]
+  attr(rwl, "mapping") <- df_map[idx, c("woodpiece_label", "series_id")]
+  rwl
+}
+
+#' @rdname rename_for_tucson
+#' @export
+make_short_series_ids <- function(df_structure, max_chars = 8) {
+  checkmate::assert_data_frame(df_structure)
+  checkmate::assert_names(names(df_structure),
+    must.include = c("woodpiece_label", "site_label"))
+  checkmate::assert_count(max_chars, positive = TRUE)
+  
+  alnum <- function(x) gsub("[^A-Za-z0-9]", "", x) # charset of dplR::write.tucson()
+  
+  if (!"species_code" %in% names(df_structure)) {
+    df_structure$species_code <- NA_character_
+  }
+
+  wp <- df_structure |> 
+    dplyr::distinct(
+      .data$site_label, .data$species_code, .data$woodpiece_label
+    ) |> 
+    dplyr::mutate(
+      prefix = dplyr::if_else(is.na(.data$species_code), .data$site_label,
+        paste0(.data$site_label, "_", .data$species_code)),
+      base_series_id = alnum(stringr::str_remove(.data$woodpiece_label,
+          paste0("^", stringr::str_escape(.data$prefix)))),
+      site_series_id = paste0(alnum(.data$site_label), .data$base_series_id),
+      species_code = dplyr::coalesce(.data$species_code, ""),
+      species_series_id = paste0(alnum(.data$species_code), .data$base_series_id)
+    )
+  
+  # in order of preference: SITE+WP, WP, SPECIES+WP
+  for (variant in c("site_series_id", "base_series_id", "species_series_id")) {
+    ids <- wp[[variant]]
+    if (all(nchar(ids) <= max_chars) && !anyDuplicated(ids)) {
+      return(tibble::tibble(woodpiece_label = wp$woodpiece_label, series_id = ids))
+    }
+  }
+
+  cli::cli_abort("Could not derive unique series IDs of at most {max_chars} characters.")
 }
 
 #' Legacy: Create a Tucson (.rwl) file from ROXAS ring-width or profile data

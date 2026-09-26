@@ -11,8 +11,8 @@
        "org_name": {
         "type": "string",
         "minLength": 1,
-        "title": "Research institution",
-        "description": "Primary affiliation"
+        "title": "Funding institute",
+        "description": "Funding institue or research organization granting funds"
       },
       "rorid": {
         "type": ["string", "null"],

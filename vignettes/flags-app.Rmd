@@ -212,20 +212,24 @@ In the export dialog, you can adjust:
   enter a custom power of ten; values that would exceed the Tucson
   range are rejected. The scaling factor is included in the default
   file name, so the original values can be recovered by dividing by it.
-- **File paths** for the `.rwl` file and an optional series ID map
-  file. The map is only needed if woodpiece labels are too long for
-  the Tucson format; leave the path blank to skip it. Relative paths
-  are resolved from the directory the app was launched in.
+- **File path** for the `.rwl` file. Relative paths are resolved from
+  the directory the app was launched in. If the rxsmeta data is
+  loaded, series are named by short IDs derived from the data
+  structure (e.g. `YAM_LASI_122_a` to `YAM122a`, see
+  `rename_for_tucson()`). Otherwise, long labels are truncated by
+  `dplR::write.tucson()`, which then saves a `_mapping.txt` file
+  alongside the `.rwl`.
 
 *(screenshot: export rwl modal)*
 
 The same export can be scripted outside the app with `extract_rwl()`,
-`scale_for_tucson()` and `dplR::write.tucson()`:
+`rename_for_tucson()`, `scale_for_tucson()` and `dplR::write.tucson()`:
 
 ```{r export-rwl}
-rwl <- extract_rwl(df_rings = QWA_data$rings, param = "mrw")
-scaled <- scale_for_tucson(rwl, scaling = 0.001) # μm to mm
-dplR::write.tucson(scaled$rwl, fname = "mrw.rwl", prec = 0.001)
+rwl <- extract_rwl(df_rings = QWA_data$rings, param = "mrw") |>
+  rename_for_tucson(rxs_images, long.names = TRUE) |>
+  scale_for_tucson(scaling = 0.001) # μm to mm
+dplR::write.tucson(rwl, fname = "mrw.rwl", prec = 0.001, long.names = TRUE)
 ```
 
 ---

@@ -78,14 +78,14 @@ test_that("scale_for_tucson auto-scales to use the available digit range", {
   # -> optimal_scale = 99.999 / 230 = 0.43478... -> scaling = 10^floor(log10(.)) = 0.1
   scaled <- suppressMessages(scale_for_tucson(df_rwl))
 
-  expect_equal(scaled$scaling, 0.1)
-  expect_equal(unname(scaled$rwl[["WP2"]]), c(NA, NA, 20, 21, 22, 23))
+  expect_equal(attr(scaled, "scaling"), 0.1)
+  expect_equal(unname(scaled[["WP2"]]), c(NA, NA, 20, 21, 22, 23))
 
   # max_representable = (10^5 - 1) * 0.01 = 999.99
   # -> optimal_scale = 999.99 / 230 = 4.3478... -> scaling = 10^floor(log10(.)) = 1
   scaled <- suppressMessages(scale_for_tucson(df_rwl, prec = 0.01))
 
-  expect_equal(scaled$scaling, 1)
+  expect_equal(attr(scaled, "scaling"), 1)
 })
 
 test_that("scale_for_tucson warns and falls back to scaling 1 when no positive values are available", {
@@ -96,15 +96,15 @@ test_that("scale_for_tucson warns and falls back to scaling 1 when no positive v
     scaled <- scale_for_tucson(df_rwl),
     regexp = "auto-scaling factor"
   )
-  expect_equal(scaled$scaling, 1)
+  expect_equal(attr(scaled, "scaling"), 1)
 })
 
 test_that("scale_for_tucson applies a manual scaling as given, without messages", {
   df_rwl <- extract_rwl(df_rings = df_rings_multi, param = "mrw")
 
   expect_silent(scaled <- scale_for_tucson(df_rwl, scaling = 0.001))
-  expect_equal(scaled$scaling, 0.001)
-  expect_equal(unname(scaled$rwl[["WP2"]]), c(NA, NA, 0.2, 0.21, 0.22, 0.23))
+  expect_equal(attr(scaled, "scaling"), 0.001)
+  expect_equal(unname(scaled[["WP2"]]), c(NA, NA, 0.2, 0.21, 0.22, 0.23))
 })
 
 test_that("scale_for_tucson aborts when a manual scaling exceeds the Tucson range", {
@@ -119,4 +119,23 @@ test_that("scale_for_tucson aborts when a manual scaling exceeds the Tucson rang
     scale_for_tucson(df_rwl, scaling = 1),
     regexp = "scaling = 0.1"
   )
+})
+
+test_that("scale_for_tucson and rename_for_tucson keep each other's attributes in either order", {
+  df_rwl <- extract_rwl(df_rings = df_rings_multi, param = "mrw")
+  df_structure <- tibble::tibble(woodpiece_label = c("WP1", "WP2"), site_label = "SITE")
+
+  out1 <- df_rwl |>
+    scale_for_tucson(scaling = 0.001) |>
+    rename_for_tucson(df_structure, long.names = TRUE)
+  out2 <- df_rwl |>
+    rename_for_tucson(df_structure, long.names = TRUE) |>
+    scale_for_tucson(scaling = 0.001)
+
+  for (out in list(out1, out2)) {
+    expect_s3_class(out, "rwl")
+    expect_equal(attr(out, "scaling"), 0.001)
+    expect_equal(attr(out, "mapping")$woodpiece_label, c("WP1", "WP2"))
+    expect_equal(attr(out, "mapping")$series_id, names(out))
+  }
 })
