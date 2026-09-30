@@ -265,13 +265,12 @@ read_roxas_settings <- function(file_settings, roxas_version) {
       # reformat
       purrr::map(\(x) ifelse(is.null(x) || length(x)>1, list(x), x)) |> 
       tibble::as_tibble() |> 
-      tidyr::unnest_wider(col = "scan_size", names_sep = "_") |> 
-      tidyr::unnest_wider(col = "scan_exif") |>
+      tidyr::unnest_wider(col = dplyr::any_of("scan_size"), names_sep = "_") |> 
+      tidyr::unnest_wider(col = dplyr::any_of("scan_exif")) |>
       dplyr::bind_rows(data.frame("Software" = character(0), # if scan_exif is null: ensure we still have all columns
         "DateTimeOriginal" = character(0), "DateCreated" = character(0),
         "DateTimeDigitized"= character(0), "CreateDate" = character(0))) |> 
-      dplyr::select(!"scan_info", !"scan_mode") |> # TODO: confirm that we can ignore these
-      dplyr::rename(c(
+      dplyr::rename(dplyr::any_of(c(
         # keep as-is: meas_geometry, spatial_resolution, sw_version, 
         # meas_created_at, reference_series, 
         # rings_segmentation_model, rings_segmentation_datetime,
@@ -279,12 +278,14 @@ read_roxas_settings <- function(file_settings, roxas_version) {
         # cluster_dbl_cwt_threshold, relwidth_cwt_integration,
         # lower_limit_cwt_iqr_multiplier, upper_limit_cwt_iqr_multiplier,
         # opposite_cwt_ratio_limit, adjacent_cwt_ratio_limit
+        "meas_geometry" = "sample_geometry", # back-comp with older ROXAS AI versions
+        "spatial_resolution" = "sample_scale", # back-comp older ROXAS AI versions
         "outmost_year" = "rings_outmost_complete_year", 
         "img_filetype" = "scan_format", 
         "img_width" = "scan_size_1",
         "img_height" = "scan_size_2",
         "img_software" = "Software"
-      )) |>
+      ))) |>
       dplyr::mutate(
         fname_settings = file_settings, 
         software = "roxas_ai", 
