@@ -747,14 +747,14 @@ check_QWAdata <- function(x, meta = NULL,
 #'
 #' @param x A [QWAdata] object.
 #' @param dir Directory to write to. Files are auto-named
-#'   `{dataset_name}_QWAdata_cells.csv(.gz)` and
-#'   `{dataset_name}_QWAdata_rings.csv(.gz)`. Mutually exclusive with
+#'   `{dataset_name}_QWAcells.csv(.gz)` and
+#'   `{dataset_name}_QWArings.csv(.gz)`. Mutually exclusive with
 #'   `file_cells`/`file_rings`.
 #' @param file_cells,file_rings Explicit output paths for the cells and rings
 #'   CSV files. Both must be provided together. Mutually exclusive with `dir`.
 #' @param dataset_name Name prefix for auto-generated filenames when using
-#'   `dir`. If omitted, files are named `QWAdata_cells.csv(.gz)` and
-#'   `QWAdata_rings.csv(.gz)`.
+#'   `dir`. If omitted, files are named `QWAcells.csv(.gz)` and
+#'   `QWArings.csv(.gz)`.
 #' @param compress If `TRUE` (default), write `.csv.gz` files.
 #' @param overwrite Allow to overwrite existing files? (default `FALSE`).
 #' @returns A named list of written file paths, invisibly.
@@ -776,12 +776,12 @@ write_QWAdata <- function(x, dir = NULL,
     checkmate::assert_directory_exists(dir)
     ext <- if (compress) ".csv.gz" else ".csv"
     if (is.null(dataset_name)) {
-      base_cells <- "QWAdata_cells"
-      base_rings <- "QWAdata_rings"
+      base_cells <- "QWAcells"
+      base_rings <- "QWArings"
     } else {
       prefix <- gsub("[^[:alnum:]_-]", "_", dataset_name)
-      base_cells <- paste0(prefix, "_QWAdata_cells")
-      base_rings <- paste0(prefix, "_QWAdata_rings")
+      base_cells <- paste0(prefix, "_QWAcells")
+      base_rings <- paste0(prefix, "_QWArings")
     }
     file_cells <- file.path(dir, paste0(base_cells, ext))
     file_rings <- file.path(dir, paste0(base_rings, ext))
@@ -809,40 +809,30 @@ write_QWAdata <- function(x, dir = NULL,
 
 #' Read a QWAdata object from CSV files
 #'
-#' Reads cells and rings from (compressed) CSV files.
-#' Use the `components` argument to load only a subset, e.g. to avoid reading
-#' a large cells file when only rings are needed.
+#' Reads cells and/or rings from (compressed) CSV files. To load only one
+#' component (e.g. to avoid reading a large cells file when only rings are
+#' needed), provide only the corresponding `file_cells`/`file_rings` argument.
 #'
-#' @param dir Directory to search for cells and rings files.
-#'   Mutually exclusive with `file_cells`/`file_rings`.
-#' @param file_cells,file_rings Explicit paths to the cells and rings CSV files.
-#'   Both must be provided together. Mutually exclusive with `dir`.
+#' @param dir Directory to search for cells and rings files. Both are read if
+#'   found; if one is missing, a warning is issued and that component is
+#'   omitted. Mutually exclusive with `file_cells`/`file_rings`.
+#' @param file_cells,file_rings Explicit paths to the cells and rings CSV
+#'   files. Either or both may be given; the omitted component is `NULL` in
+#'   the returned [QWAdata] object. Mutually exclusive with `dir`.
 #' @param dataset_name Optional string to disambiguate when multiple matching
 #'   files are found in `dir`.
-#' @param components Character vector of components to read. Any subset of
-#'   `c("cells", "rings")`. Defaults to `c("cells", "rings")`.
-#'   Omitted components are `NULL` in the returned [QWAdata] object.
 #' @returns A [QWAdata] object.
 #' @seealso [write_QWAdata()], [read_QWAprofile()]
 #' @export
 read_QWAdata <- function(dir = NULL, file_cells = NULL, file_rings = NULL,
-                         dataset_name = NULL,
-                         components = c("cells", "rings")) {
-  components <- match.arg(components, c("cells", "rings"), several.ok = TRUE)
+                         dataset_name = NULL) {
   use_dir <- !is.null(dir)
   any_files <- !is.null(file_cells) || !is.null(file_rings)
   if (use_dir == any_files) {
     cli::cli_abort(
       "Provide either {.arg dir} or {.arg file_cells}/{.arg file_rings}, not both or neither.")
   }
-  if (!use_dir) {
-    required_files <- list(cells = file_cells, rings = file_rings)[components]
-    missing <- names(required_files)[vapply(required_files, is.null, logical(1))]
-    if (length(missing) > 0) {
-      cli::cli_abort(
-        "Missing {.arg file_{missing}} for requested {.arg components}.")
-    }
-  }
+
   if (use_dir) {
     checkmate::assert_directory_exists(dir)
     csv_files <- fs::dir_ls(fs::path_abs(dir), type = "file",
@@ -855,34 +845,35 @@ read_QWAdata <- function(dir = NULL, file_cells = NULL, file_rings = NULL,
       cands
     }
 
-    if ("cells" %in% components) {
-      cell_candidates <- filter_candidates("cells")
-      if (length(cell_candidates) != 1)
-        cli::cli_abort("Could not uniquely identify a cells file in {.path {dir}} ({length(cell_candidates)} matches).")
-      file_cells <- cell_candidates
+    resolve <- function(component, pattern) {
+      cands <- filter_candidates(pattern)
+      if (length(cands) > 1)
+        cli::cli_abort("Could not uniquely identify a {component} file in {.path {dir}} ({length(cands)} matches).")
+      if (length(cands) == 0) {
+        cli::cli_warn("No {component} file found in {.path {dir}}, skipping.")
+        return(NULL)
+      }
+      cands
     }
-    if ("rings" %in% components) {
-      ring_candidates <- filter_candidates("rings")
-      if (length(ring_candidates) != 1)
-        cli::cli_abort("Could not uniquely identify a rings file in {.path {dir}} ({length(ring_candidates)} matches).")
-      file_rings <- ring_candidates
-    }
+
+    file_cells <- resolve("cells", "cells")
+    file_rings <- resolve("rings", "rings")
   }
 
   rings <- NULL
   cells <- NULL
 
-  if ("rings" %in% components) {
+  if (!is.null(file_rings)) {
     cli::cli_inform(c(" " = "Reading rings data from {.file {file_rings}}..."))
     rings <- vroom::vroom(file_rings, show_col_types = FALSE)
     # back-compatibility: older files used dh_w / dh_m for what are now dhw / dhm
     legacy <- c(dhw = "dh_w", dhm = "dh_m") # new = old
-    rings <- rings |> 
+    rings <- rings |>
       dplyr::rename(dplyr::any_of(legacy))
     cli::cli_inform(c("v" = "{nrow(rings)} rings read from file"))
   }
 
-  if ("cells" %in% components) {
+  if (!is.null(file_cells)) {
     cli::cli_inform(c(" " = "Reading cells data from {.file {file_cells}}..."))
     cells <- vroom::vroom(file_cells, show_col_types = FALSE)
     cli::cli_inform(c("v" = "{nrow(cells)} cells read from file"))

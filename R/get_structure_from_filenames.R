@@ -148,6 +148,8 @@ get_structure_from_filenames <- function(
     df_structure$species <- species_code
   }
 
+  # TODO: do not allow underscores as part of the individual identifiers
+
   df_structure <- df_structure |>
     tidyr::unite('tree_label', "site":"tree",
                  sep = '_', na.rm = TRUE, remove = FALSE) |>

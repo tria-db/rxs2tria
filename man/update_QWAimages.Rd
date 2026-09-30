@@ -7,9 +7,7 @@
 update_QWAimages(
   meta,
   imgs_to_update,
-  imgs_date_orders,
   settings_date_orders = NULL,
-  imgs_date_tz = Sys.timezone(),
   settings_date_tz = Sys.timezone()
 )
 }
@@ -19,18 +17,12 @@ update_QWAimages(
 \item{imgs_to_update}{character vector of \code{image_label} values to update;
 must be a subset of \code{meta$image_label}}
 
-\item{imgs_date_orders}{Character; date order string(s) passed to
-\code{\link[lubridate:parse_date_time]{lubridate::parse_date_time()}} to parse the \code{img_created_at} field}
-
 \item{settings_date_orders}{Character; date order string(s) passed to
-\code{\link[lubridate:parse_date_time]{lubridate::parse_date_time()}} to parse the \code{rxs_created_at} field}
-
-\item{imgs_date_tz}{Optional timezone passed to
-\code{\link[lubridate:parse_date_time]{lubridate::parse_date_time()}} to parse the \code{img_created_at} field.
-Defaults to system timezone.}
+\code{\link[lubridate:parse_date_time]{lubridate::parse_date_time()}} to parse the \code{meas_created_at} field for
+ROXAS classic.}
 
 \item{settings_date_tz}{Optional timezone passed to
-\code{\link[lubridate:parse_date_time]{lubridate::parse_date_time()}} to parse the \code{rxs_created_at} field.
+\code{\link[lubridate:parse_date_time]{lubridate::parse_date_time()}} to parse the \code{meas_created_at} field.
 Defaults to system timezone.}
 }
 \value{

@@ -8,31 +8,28 @@ read_QWAdata(
   dir = NULL,
   file_cells = NULL,
   file_rings = NULL,
-  dataset_name = NULL,
-  components = c("cells", "rings")
+  dataset_name = NULL
 )
 }
 \arguments{
-\item{dir}{Directory to search for cells and rings files.
-Mutually exclusive with \code{file_cells}/\code{file_rings}.}
+\item{dir}{Directory to search for cells and rings files. Both are read if
+found; if one is missing, a warning is issued and that component is
+omitted. Mutually exclusive with \code{file_cells}/\code{file_rings}.}
 
-\item{file_cells, file_rings}{Explicit paths to the cells and rings CSV files.
-Both must be provided together. Mutually exclusive with \code{dir}.}
+\item{file_cells, file_rings}{Explicit paths to the cells and rings CSV
+files. Either or both may be given; the omitted component is \code{NULL} in
+the returned \link{QWAdata} object. Mutually exclusive with \code{dir}.}
 
 \item{dataset_name}{Optional string to disambiguate when multiple matching
 files are found in \code{dir}.}
-
-\item{components}{Character vector of components to read. Any subset of
-\code{c("cells", "rings")}. Defaults to \code{c("cells", "rings")}.
-Omitted components are \code{NULL} in the returned \link{QWAdata} object.}
 }
 \value{
 A \link{QWAdata} object.
 }
 \description{
-Reads cells and rings from (compressed) CSV files.
-Use the \code{components} argument to load only a subset, e.g. to avoid reading
-a large cells file when only rings are needed.
+Reads cells and/or rings from (compressed) CSV files. To load only one
+component (e.g. to avoid reading a large cells file when only rings are
+needed), provide only the corresponding \code{file_cells}/\code{file_rings} argument.
 }
 \seealso{
 \code{\link[=write_QWAdata]{write_QWAdata()}}, \code{\link[=read_QWAprofile]{read_QWAprofile()}}

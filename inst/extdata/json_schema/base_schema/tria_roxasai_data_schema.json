@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "TODO:addurltoTRIAschema",
-  "title": "roxas_ai_data",
-  "description": "Schema for ROXAS AI image and analysis-level metadata",
+  "title": "TRIA ROXAS AI analysis metadata schema",
+  "description": "Schema for ROXAS AI-specific analysis metadata for a TRIA dataset",
   "type": "array",
   "minItems": 1,
   "items": {
@@ -11,24 +11,76 @@
       { "$ref": "tria_image_data_schema.json"},
       {
         "properties": {
+          "outmost_year": {
+            "type": ["integer", "null"],
+            "title": "Outmost year",
+            "description": "Calendar year of the outermost complete ring. SH: year in which the growth began"
+          },
           "rings_segmentation_model": {
             "type": ["string", "null"],
             "title": "Rings model",
-            "description": "Description"
+            "description": "Rings segmentation model"
+          },
+          "rings_segmentation_datetime": {
+            "type": ["string","null"],
+            "format": "date-time",
+            "title": "Rings created",
+            "description": "Timestamp of the rings segmentation"
           },
           "cells_segmentation_model": {
             "type": ["string", "null"],
             "title": "Cells model",
-            "description": "Description"
+            "description": "Cells segmentation model"
           },
-          "sample_type": {
+          "cells_segmentation_datetime": {
+            "type": ["string","null"],
+            "format": "date-time",
+            "title": "Cells created",
+            "description": "Timestamp of the cells segmentation"
+          },
+          "cluster_dbl_cwt_threshold": {
+            "type": ["number", "null"],
+            "minimum": 0,
+            "title": "Double cwt threshold",
+            "description": "Threshold for detecting cell wall clusters [µm]"
+          },
+          "relwidth_cwt_integration": {
+            "type": ["number", "null"],
+            "minimum": 0,
+            "title": "Rel width of cwt integration",
+            "description": "Relative width along cell wall for cwt estimation"
+          },
+          "lower_limit_cwt_iqr_multiplier": {
+            "type": ["number", "null"],
+            "minimum": 0,
+            "title": "Lower cwt IQR multiplier",
+            "description": "Lower IQR multiplier to identify cwt outliers"
+          },
+          "upper_limit_cwt_iqr_multiplier": {
+            "type": ["number", "null"],
+            "minimum": 0,
+            "title": "Upper cwt IQR multiplier",
+            "description": "Upper IQR multiplier to identify cwt outliers"
+          },
+          "opposite_cwt_ratio_limit": {
+            "type": ["number", "null"],
+            "minimum": 0,
+            "title": "Max ratio of opposing cwt",
+            "description": "Max ratio of the cwt of opposing walls"
+          },
+          "adjacent_cwt_ratio_limit": {
+            "type": ["number", "null"],
+            "minimum": 0,
+            "title": "Max ratio of adjacent cwt",
+            "description": "Max ratio of the cwt of adjacent walls"
+          },
+          "reference_series": {
             "type": ["string", "null"],
-            "enum": ["", "conifer", "angiosperm"],
-            "title": "Sample type",
-            "description": "Description"
+            "title": "RW reference series",
+            "description": "Label of the ring width series used as dating reference"
           }
         },
-        "required": ["rings_segmentation_model", "cells_segmentation_model"]
+        "required": []
       }
     ],
     "unevaluatedProperties": false

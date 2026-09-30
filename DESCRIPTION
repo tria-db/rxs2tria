@@ -1,6 +1,6 @@
 Package: rxs2tria
 Title: Preprocess ROXAS (AI) data for TRIA
-Version: 0.1.2
+Version: 0.1.3
 Authors@R: c(
     person("Mara", "Naegelin", , "mara.naegelin@wsl.ch", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-0490-7510")),
@@ -52,7 +52,8 @@ Suggests:
     shinyjs,
     shinyTree,
     shinyvalidate,
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    zip
 Config/testthat/edition: 3
 URL: https://tria-db.github.io/rxs2tria/, https://github.com/tria-db/rxs2tria/
 BugReports: https://github.com/tria-db/rxs2tria/issues

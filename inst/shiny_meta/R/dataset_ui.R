@@ -74,6 +74,13 @@ dataset_ui <- function(id) {
           shiny::textAreaInput(ns("description"), "Description", rows = 6,
                         placeholder = "Provide a brief description of your dataset")
         ),
+        shiny::div(
+          shiny::textAreaInput(ns("ds_title"), "Dataset title", rows = 2, width = "100%",
+                        placeholder = "e.g., \"Multi-century QWA data of Larix decidua from a high-elevation site in the Lötschental, Switzerland\""),
+          shiny::span(shiny::tags$i(
+            "A descriptive title for use in citations (similar to a paper title). ",
+            "Should include the species, type of data, and the temporal and spatial coverage of the dataset."))
+        ),
         bslib::layout_column_wrap(
           width = 1/2,
           shiny::radioButtons(ns("ds_access"), "Dateset access rights",

@@ -36,6 +36,7 @@ ht_max_height <- 750 # max height of the ht
 input_field_names <- c(
   dataset = 'Dataset',
   ds_name = 'Dataset name',
+  ds_title = 'Dataset title',
   description = 'Dataset description',
   authors = 'Authors',
   funding = 'Funding',

@@ -17,6 +17,8 @@ calculate_sector_profiles <- function(QWA_data, n_sectors, sel_cell_params, quan
   checkmate::assert_class(QWA_data, "QWAdata")
   checkmate::assert_data_frame(QWA_data$cells, null.ok = FALSE)
 
+  # TODO: check sel_cell_params is valid subset of cell measurement col names
+
   # TODO: allow to select all params?
   # if (length(sel_cell_params) == 1 && sel_cell_params == "all"){
   #   sel_cell_params <- setdiff(

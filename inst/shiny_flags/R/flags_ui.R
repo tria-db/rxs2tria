@@ -88,17 +88,14 @@ flags_ui <- function(id) {
       ),
       shiny::hr(class = "hr-slim"),
 
-      # button to save and/or download edited data ----
-      # TODO: what about saving in between? what about saving if app crashes?
-      # shiny::downloadButton(
-      #   ns("save_data"), "Download new ring data",
-      #   class = "btn-tert"
-      # ),
-      # shiny::actionButton(
-      #   ns("close_app"), "Close app",
-      #   icon = shiny::icon("xmark"), class = "btn-danger"
-      # ),
+      # button to export rwl ----
+      shiny::actionButton(ns("export_rwl_btn"), "Export rwl",
+        icon = shiny::icon("file-export"),
+        class = "btn-tert", width = "100%"),
 
+      shiny::hr(class = "hr-slim"),
+
+      # button to save and/or download edited data ----
       shiny::tags$div(
         style = "display: flex; flex-direction: column;  gap: 4px;",
         shiny::actionButton(ns("save_btn"), "Save ring flags", icon = shiny::icon("save"),
@@ -107,9 +104,14 @@ flags_ui <- function(id) {
           style = "display: flex; align-items: center; gap: 4px;",
           shiny::actionLink(ns("save_settings_btn"), NULL, shiny::icon("gear")),
           shiny::tags$span("Save settings", style = "font-size: 0.8em; ")
-        ),
+        )
+        # TODO: what about saving if app crashes?
+        # shiny::actionButton(
+        #   ns("close_app"), "Close app",
+        #   icon = shiny::icon("xmark"), class = "btn-danger"
+        # ),
 
-      )
+     )
       
       
 

@@ -219,7 +219,7 @@ start_server <- function(id, main_session) {
       df <- input_meta$images |>
         dplyr::mutate(
           dplyr::across(dplyr::any_of(c(
-            "rxs_created_at","img_created_at",
+            "meas_created_at","img_created_at",
             "rings_segmentation_datetime","cells_segmentation_datetime")),
           as.character)
       )
@@ -249,7 +249,7 @@ start_server <- function(id, main_session) {
         colHeaders = unname(colHeaders),
         afterGetColHeader = tippy_renderer(tippies)) |>
         rhandsontable::hot_cols(fixedColumnsLeft = 1)
-      editable_cols <- c("band_width", "only_ew","comment")
+      editable_cols <- c("only_ew","img_comment")
       purrr::reduce(
         names(colHeaders),
         function(ht, col) {
@@ -306,20 +306,4 @@ start_server <- function(id, main_session) {
   }) # end of moduleServer
 }
 
-    # VALIDATION CHECKS --------------------------------------------------------
-    # TODO: any checks on band_witdh and only_ew?
-    # validation_checks <- shiny::reactive({
-    #   df_results <- data.frame(topic = character(0), field = character(0),
-    #                            type = character(0), message = character(0))
-    #   if (!input$check_raw) {
-    #     df_results <- dplyr::bind_rows(
-    #       df_results,
-    #      data.frame(topic = "Raw input data",
-    #                 field = "Inferred structure",
-    #                 type = "error",
-    #                 message = "Not confirmed"))
-    #   }
-    #
-    #   df_results
-    #
-    # })
+

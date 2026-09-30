@@ -1,3 +1,15 @@
+# rxs2tria 0.1.3
+
+
+* overhauled and finalised the extract rwl logic: new `extract_rwl()` with `scale_for_tucson()` and `rename_for_tucson()` (then write with `dplR::write.tucson()`), also added an `Export rwl` button to the flags Shiny app.
+* overhauled the supplementary resources handling. Supplementary resources info is no longer part of the `QWAmetadata` object. `compile_resources()`, `recompile_resources()` and `check_supplementary()` replace the existing functions. The output suppl resource manifest is a slim table listing and describing each file, to be submitted alongside the zip.
+* completed the ROXAS AI metadata attributes. renamed several ROXAS/ROXAS AI image metadata fields for clarity/consistency (`dbl_cwt_threshold` -> `cluster_dbl_cwt_threshold`, `maxrel_opp_cwt` -> `opposite_cwt_ratio_limit`, `relwidth_cwt_window` -> `relwidth_cwt_integration`, `comment` -> `img_comment`, `rxs_created_at` -> `meas_created_at`); backcomp: `read_QWAimages()`, `read_QWAmetadata()` and the flags app convert old names automatically. 
+* new required dataset field `ds_title`; `read_QWAmetadata()` falls back to `ds_name` for older files.
+* `read_QWAdata()` no longer has a `components` argument; pass only `file_cells` or `file_rings` to read a single component. With `dir`, a missing component now warns instead of aborting.
+* `collect_settings_data()` now requires the image file paths for ROXAS AI as well (to get the actual image file size, not always correct in ROXAS AI metadata due to compression).
+* `img_created_at` in `collect_settings_data()` is auto converted to datetime since it should be uniform in format. Now only `meas_created_at` for classical ROXAS data needs manual conversion.
+* add vignette stubs for the Shiny apps and a new `vignette("submission")`.
+
 # rxs2tria 0.1.2
 
 * `build_QWAimages()` now comes with a safeguard against uncoverted datetime 

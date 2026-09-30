@@ -54,6 +54,10 @@ flags_server <- function(id, main_session, comments_out) {
       varname_rxsmeta = NULL,
     )
 
+    # reactive container holding the rwl built for the export modal (frozen
+    # at the moment the export button is clicked)
+    pending_rwl_export <- shiny::reactiveVal(NULL)
+
     # LOAD INPUT DATA ----------------------------------------------------------
     # open input modal when button open_input_modal is clicked
     shiny::observe({
@@ -105,11 +109,11 @@ flags_server <- function(id, main_session, comments_out) {
             # TODO: add example files to extdata
             # path_prf <- system.file("extdata", "example_input",
             #                         "prf_data.csv", package = "rxs2tria")
-            # path_rings <- system.file("extdata", "example_input",
-            #                           "rings_data.csv", package = "rxs2tria")
+            path_rings <- system.file("extdata", "TRIA_example_QWArings.csv.gz",
+                                      package = "rxs2tria")
             # path_rxsmeta <- system.file("extdata", "example_input",
             #                             "rxsmeta_data.csv", package = "rxs2tria")
-            # load_data_csv(path_prf, path_rings, path_rxsmeta)
+            load_data_csv(path_prf = NULL, path_rings, path_rxsmeta = NULL)
           }
         )
         
@@ -155,11 +159,11 @@ flags_server <- function(id, main_session, comments_out) {
       df_comments <- input_data$rxsmeta_data
       
       # check for comments
-      if (!"comment" %in% names(df_comments)) {
-        df_comments$comment <- NA
+      if (!"img_comment" %in% names(df_comments)) {
+        df_comments$img_comment <- NA
       }
       df_comments <- df_comments |>
-        dplyr::filter(!is.na(comment) & comment != "")
+        dplyr::filter(!is.na(img_comment) & img_comment != "")
       
       if (nrow(df_comments)>0){
         # initialize/validate comment_handled column
@@ -171,7 +175,7 @@ flags_server <- function(id, main_session, comments_out) {
         df_comments <- df_comments |> 
           dplyr::select(
             dplyr::any_of(c("site_label", "species_code", "tree_label", "woodpiece_label", "slide_label")),
-            image_label, comment, comment_handled
+            image_label, img_comment, comment_handled
           )
         images_edited(df_comments)
         bslib::nav_show("tabs", target = "comments_panel", session = main_session)
@@ -376,7 +380,7 @@ flags_server <- function(id, main_session, comments_out) {
         show_excl = input$show_excl
       )
 
-      if (input$apply_detrend) {
+      if (input$apply_detrend) { # apply detrending (fit on included years)
         df <- detrend_crn(df, input$sel_param, method = "Spline", nyrs = 32)
       }
 
@@ -607,7 +611,6 @@ flags_server <- function(id, main_session, comments_out) {
     shiny::observe({
       shiny::removeModal()
       click_data <- plot_click()
-      print(click_data)
       new_marker <- resolve_click_marker(click_data, df_otherwps(), input$sel_param)
 
       sel_marker(new_marker)
@@ -847,15 +850,15 @@ flags_server <- function(id, main_session, comments_out) {
     output$selcomment <- shiny::renderUI({
       shiny::req(sel_image())
       shiny::req(shiny::isTruthy(images_edited()))
-      img_comment <- images_edited() |>
+      selimg_comment <- images_edited() |>
         dplyr::filter(image_label == sel_image())
-      shiny::req(nrow(img_comment) > 0)
+      shiny::req(nrow(selimg_comment) > 0)
 
       shiny::div(
         style = "display: flex; align-items: center; gap: 8px;",
-        shiny::em(glue::glue("Comment: {img_comment$comment}")),
+        shiny::em(glue::glue("Comment: {selimg_comment$img_comment}")),
         shiny::checkboxInput(ns("comment_handled"), "handled",
-                             value = img_comment$comment_handled)
+                             value = selimg_comment$comment_handled)
       )
     })
 
@@ -1223,7 +1226,134 @@ flags_server <- function(id, main_session, comments_out) {
                       rxsmeta = input_data$rxsmeta_data,
                       handled = images_edited())
     }) |> shiny::bindEvent(input$save_btn)
-      
+
+    # EXPORT RWL ---------------------------------------------------------------
+    # build the rwl for the current selection (incl. live edits and
+    # detrending, if applied) and open the export modal, prepopulated with
+    # the auto-computed scaling factor and default file names
+    shiny::observe({
+      shiny::req(rings_data_edited(), input$filt_wp, input$sel_param)
+      safe_block({
+        df_export <- build_chronology_df(
+          rings_data = rings_data_edited(),
+          prf_data = input_data$prf_data,
+          filt_wp = input$filt_wp,
+          sel_param = input$sel_param,
+          sel_sector = input$sel_sector,
+          show_excl = FALSE # NOTE: has no effect, exclude_issues years never included rwl
+        )
+
+        if (input$apply_detrend) {
+          df_export <- detrend_crn(df_export, input$sel_param,
+                                   method = "Spline", nyrs = 32)
+        }
+
+        rwl <- rxs2tria:::pivot_rwl(df_export, "vals")
+        # short series IDs from the data structure, if available; otherwise
+        # dplR::write.tucson() truncates the names (and writes the mapping file)
+        rxsmeta <- input_data$rxsmeta_data
+        if (!is.null(rxsmeta) && all(c("woodpiece_label", "site_label") %in% names(rxsmeta))) {
+          rwl <- tryCatch(
+            rxs2tria::rename_for_tucson(rwl, rxsmeta, long.names = TRUE),
+            error = function(e) {
+              shiny::showNotification(
+                "Could not derive short series IDs, names are truncated on export.",
+                type = "warning")
+              rwl
+            }
+          )
+        }
+        # suggest mm for (non-detrended) ring widths, otherwise auto-scale
+        is_rw_param <- input$sel_param %in% c("mrw", "eww", "lww") && !input$apply_detrend
+        scaled <- if (is_rw_param) {
+          tryCatch(
+            rxs2tria::scale_for_tucson(rwl, scaling = 0.001),
+            error = function(e) NULL
+          )
+        }
+        if (is.null(scaled)) scaled <- suppressMessages(rxs2tria::scale_for_tucson(rwl))
+        default_scaling <- attr(scaled, "scaling")
+        pending_rwl_export(list(rwl = rwl, default_scaling = default_scaling))
+
+        is_prf_param <- !is.null(input_data$prf_data) &&
+          input$sel_param %in% names(input_data$prf_data)
+        fname_base <- if (is_prf_param) {
+          glue::glue("{input$sel_param}_sctr{input$sel_sector}_scl{default_scaling}")
+        } else {
+          glue::glue("{input$sel_param}_scl{default_scaling}")
+        }
+
+        shiny::showModal(export_rwl_modal(ns,
+          default_scaling = default_scaling,
+          default_fname = glue::glue("{fname_base}.rwl")
+        ))
+      },
+      err_title = "Error preparing rwl export",
+      err_message = "",
+      propagate_err = FALSE
+      )
+    }) |> shiny::bindEvent(input$export_rwl_btn)
+
+    # validate the custom scaling factor, but only while it's shown (i.e.
+    # suggested scaling is unchecked); range and power-of-ten checks are
+    # delegated to scale_for_tucson()
+    iv_gen <- shinyvalidate::InputValidator$new()
+    iv_gen$condition(~ !is.null(input$modal_rwl_autoscale) && !input$modal_rwl_autoscale)
+    iv_gen$add_rule("modal_rwl_scaling", shinyvalidate::sv_required())
+    iv_gen$add_rule("modal_rwl_scaling", function(value) {
+      # value is a character string (textInput), not numeric - parse first
+      num <- suppressWarnings(as.numeric(value))
+      if (is.na(num)) return("Must be a number.")
+      tryCatch({
+        rxs2tria::scale_for_tucson(pending_rwl_export()$rwl, prec = 0.001, scaling = num)
+        NULL
+      }, error = function(e) {
+        msg <- cli::ansi_strip(conditionMessage(e))
+        strsplit(as.character(msg), "\n", fixed = TRUE)[[1]][1]
+      })
+    })
+    iv_gen$enable()
+
+    # only show the scaling factor input when auto-scale is unchecked
+    shiny::observe({
+      shinyjs::toggle("modal_rwl_scaling", condition = !input$modal_rwl_autoscale)
+    }) |> shiny::bindEvent(input$modal_rwl_autoscale)
+
+    # on confirm, apply the (possibly user-adjusted) scaling and write the
+    # rwl file, plus the series ID mapping file if a path is given
+    shiny::observe({
+      shiny::req(pending_rwl_export())
+      shiny::req(iv_gen$is_valid())
+      safe_block({
+        launch_wd <- shiny::getShinyOption("launch_wd", default = getwd())
+
+        scaling <- if (input$modal_rwl_autoscale) {
+          pending_rwl_export()$default_scaling
+        } else {
+          as.numeric(input$modal_rwl_scaling)
+        }
+        rwl_scaled <- rxs2tria::scale_for_tucson(pending_rwl_export()$rwl,
+                                                 prec = 0.001, scaling = scaling)
+
+        fname <- fs::path_abs(input$modal_rwl_fname, start = launch_wd)
+        checkmate::assert_path_for_output(fname, overwrite = TRUE)
+
+        # only written by dplR if it truncates the series names, i.e. if no
+        # short series IDs could be derived from the data structure
+        mapping_fname <- paste0(fs::path_ext_remove(fname), "_mapping.txt")
+
+        dplR::write.tucson(rwl_scaled, fname = fname, long.names = TRUE,
+                           mapping.fname = mapping_fname, prec = 0.001)
+
+        shiny::removeModal()
+        shiny::showNotification(paste0("Exported rwl to: ", fname), type = "message")
+      },
+      err_title = "Error exporting rwl",
+      err_message = "",
+      propagate_err = FALSE
+      )
+    }) |> shiny::bindEvent(input$export_rwl_confirm)
+
 
     # # DEBUG OUTPUT -------------------------------------------------------------
     # output$debug <- shiny::renderPrint({
@@ -1238,7 +1368,8 @@ flags_server <- function(id, main_session, comments_out) {
     #   #rings_data_org()
     #   #input$enter_key
     #   #str(input_data$rings_data)
-
+    #   #df_crn()
+    #   #pending_rwl_export()
     # })
 
 

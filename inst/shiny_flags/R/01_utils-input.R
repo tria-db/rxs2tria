@@ -43,7 +43,7 @@ build_env_inputs <- function(ns) {
                      value = "prf_sector"),
     shiny::textInput(ns("name_rings"), "QWA rings data",
                      value = "QWA_data$rings"),
-    shiny::textInput(ns("name_rxsmeta"), "ROXAS images metadata",
+    shiny::textInput(ns("name_rxsmeta"), "QWA images metadata",
                      value = "rxs_images")
   )
 }
@@ -165,7 +165,7 @@ load_data_env <- function(name_prf, name_rings, name_rxsmeta,
       )
 
     # NOTE: force correct type for optional cols as well
-    rsxmeta_cols <- split(names(specs$rxsmeta_data$opt_cols),
+    rxsmeta_cols <- split(names(specs$rxsmeta_data$opt_cols),
                           specs$rxsmeta_data$opt_cols)
     rxsmeta_data_in <- rxsmeta_data_in |>
       # dplyr::select(dplyr::all_of(names(specs$rxsmeta_data$req_cols)),
@@ -239,17 +239,21 @@ load_data_csv <- function(path_prf, path_rings, path_rxsmeta,
              "'images' component.")
       }
       rxsmeta_data_in <- tibble::as_tibble(meta$images)
-      # backwards-compatibility rename (mirrors read_QWAmetadata())
-      if ("dbl_cwt_threshold" %in% names(rxsmeta_data_in)) {
-        rxsmeta_data_in <- rxsmeta_data_in |>
-          dplyr::rename(cluster_dbl_cwt_threshold = "dbl_cwt_threshold")
-      }
       rxsmeta_data_in$image_label <- as.character(rxsmeta_data_in$image_label)
     } else {
       rxsmeta_data_in <- vroom::vroom(
         path_rxsmeta, col_types = specs$rxsmeta_data$req_cols
       )
     }
+    # backwards-compatibility renames (mirrors read_QWAmetadata()/read_QWAimages())
+    rxsmeta_data_in <- rxsmeta_data_in |>
+      dplyr::rename(dplyr::any_of(c(
+        cluster_dbl_cwt_threshold = 'dbl_cwt_threshold',
+        opposite_cwt_ratio_limit = 'maxrel_opp_cwt',
+        relwidth_cwt_integration = 'relwidth_cwt_window',
+        meas_created_at = 'rxs_created_at',
+        img_comment = 'comment'
+      )))
     # NOTE: force correct type for optional cols as well
     rxsmeta_cols <- split(names(specs$rxsmeta_data$opt_cols),
                           specs$rxsmeta_data$opt_cols)
@@ -452,6 +456,54 @@ save_modal <- function(ns, settings, have_comments) {
     footer = shiny::tagList(
       shiny::modalButton("Cancel"),
       shiny::actionButton(ns("save_confirm"), "Confirm and save")
+    )
+  )
+}
+
+# create modal to confirm/adjust an rwl export, prepopulated with the
+# auto-computed scaling factor and default file name
+export_rwl_modal <- function(ns, default_scaling, default_fname) {
+  launch_wd <- shiny::getShinyOption("launch_wd", default = getwd())
+  wd_hint <- shiny::tags$span(
+    shiny::tags$i(glue::glue("(Current directory: {launch_wd})")),
+    style = "font-size: 0.8em; margin-top: -12px; margin-bottom: 16px; display: block;"
+  )
+  shiny::modalDialog(
+    title = "Export rwl",
+    shiny::p(
+      "Exports the currently selected parameter (and sector) to an ",
+      shiny::tags$code(".rwl"), " file."
+    ),
+    shiny::tags$ul(
+      shiny::tags$li("Respects the current woodpiece filtering and detrending settings."),
+      shiny::tags$li("Duplicate and excluded rings are removed based on the latest edits."),
+      shiny::tags$li("The suggested scaling converts ring widths (µm) to mm; other ",
+        "parameters (or detrended series) are scaled by a power of ten to make ",
+        "optimal use of the 5 available digits at ", shiny::tags$code("prec = 0.001"), "."),
+      shiny::tags$li("If possible, woodpiece labels are replaced by short IDs derived from",
+        " the QWA images metadata. Otherwise, a ",
+        shiny::tags$code("_mapping.txt"), " file is saved alongside the rwl."),
+      shiny::tags$li(
+        "Internally uses ", shiny::tags$code("extract_rwl()"), ", ",
+        shiny::tags$code("rename_for_tucson()"), ", ",
+        shiny::tags$code("scale_for_tucson()"), " and ",
+        shiny::tags$code("dplR::write.tucson()"), "; see their docs for details."
+      )
+    ),
+    bslib::layout_column_wrap(
+      width = 1/2,
+      shiny::checkboxInput(ns("modal_rwl_autoscale"), paste0("Use suggested scaling: ", default_scaling), value = TRUE),
+      shinyjs::hidden(
+        shiny::textInput(ns("modal_rwl_scaling"), "Custom scaling factor",
+          value = as.character(default_scaling))
+      )
+    ),
+    shiny::textInput(ns("modal_rwl_fname"), "Rwl file path",
+      value = default_fname, width = "100%"),
+    wd_hint,
+    footer = shiny::tagList(
+      shiny::modalButton("Cancel"), # TODO: download button?
+      shiny::actionButton(ns("export_rwl_confirm"), "Confirm and export")
     )
   )
 }

@@ -84,7 +84,7 @@ start_ui <- function(id) {
         shiny::tags$p("This table shows all structure, settings and image metadata extracted
           from the raw files with the", shiny::code("rxs2tria"), "package."),
         shiny::tags$p(
-          "Most columns are read-only, except", shiny::code("comment"), ",", shiny::code("band_width"), "and",
+          "Most columns are read-only, except", shiny::code("img_comment"), "and",
           shiny::code("only_ew"), "(in case only EW cells were measured)."),
         shiny::tags$p(
           shiny::icon("info", class = "me-1"),
