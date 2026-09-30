@@ -30,7 +30,8 @@ specifically need the raw material behind the measurements.
 ## Reading the individual files
 
 Each file is read by its corresponding `read_*` function.
-\[read_QWAmetadata()\] takes the path to the `.json` file directly:
+[`read_QWAmetadata()`](https://tria-db.github.io/rxs2tria/reference/read_QWAmetadata.md)
+takes the path to the `.json` file directly:
 
 ``` r
 
@@ -38,21 +39,22 @@ QWA_meta <- read_QWAmetadata("path/to/my_dataset_QWAmetadata.json")
 QWA_meta$images
 ```
 
-\[read_QWAdata()\] reads the cells and rings CSVs. Point it at the
-directory holding the downloaded files and it locates both by name; if
-the folder holds files from more than one dataset, pass `dataset_name`
-to disambiguate:
+[`read_QWAdata()`](https://tria-db.github.io/rxs2tria/reference/read_QWAdata.md)
+reads the cells and rings CSVs. Point it at the directory holding the
+downloaded files and it locates both by name; if the folder holds files
+from more than one dataset, pass `dataset_name` to disambiguate:
 
 ``` r
 
 QWA_data <- read_QWAdata(dir = "path/to/downloaded_dataset")
 # or with explicit paths:
-QWA_data <- read_QWAdata(file_cells = "path/to/my_dataset_cells.csv.gz",
-                         file_rings = "path/to/my_dataset_rings.csv.gz")
+QWA_data <- read_QWAdata(file_cells = "path/to/my_dataset_QWAcells.csv.gz",
+                         file_rings = "path/to/my_dataset_QWArings.csv.gz")
 ```
 
-If a profile file was included in the download, \[read_QWAprofile()\]
-reads it back into a \[QWAprofile\]\[QWAprofile()\] object:
+If a profile file was included in the download,
+[`read_QWAprofile()`](https://tria-db.github.io/rxs2tria/reference/read_QWAprofile.md)
+reads it back into a `QWAprofile` object:
 
 ``` r
 
@@ -65,9 +67,8 @@ prf <- read_QWAprofile("path/to/my_dataset_QWAprofile_sector.csv.gz")
 
 Because the cells and rings tables carry the columns the profile
 calculation needs (`rraddistr` in cells; `mrw` and `eww` in rings, plus
-the cell parameters you select), you can compute a
-\[QWAprofile\]\[QWAprofile()\] directly from `QWA_data` — even if no
-profile was included in the download:
+the cell parameters you select), you can compute a `QWAprofile` directly
+from `QWA_data` — even if no profile was included in the download:
 
 ``` r
 

@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">rxs2tria</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -19,13 +19,14 @@
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/QWAdata.html">The QWAdata class</a></li>
-    <li><a class="dropdown-item" href="../articles/QWAimages.html">The QWAimages class</a></li>
-    <li><a class="dropdown-item" href="../articles/QWAmetadata.html">The QWAmetadata class</a></li>
-    <li><a class="dropdown-item" href="../articles/QWAprofile.html">The QWAprofile class</a></li>
-    <li><a class="dropdown-item" href="../articles/reopen-dataset.html">Re-opening a TRIA dataset</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/workflow.html">Step-by-step instructions</a></li>
     <li><a class="dropdown-item" href="../articles/resources.html">Adding supplementary resources</a></li>
-    <li><a class="dropdown-item" href="../articles/workflow.html">Step-by-step instructions</a></li>
+    <li><a class="dropdown-item" href="../articles/submission.html">Submitting a dataset to TRIA</a></li>
+    <li><a class="dropdown-item" href="../articles/metadata-app.html">The metadata Shiny app</a></li>
+    <li><a class="dropdown-item" href="../articles/flags-app.html">The ring flags Shiny app</a></li>
+    <li><a class="dropdown-item" href="../articles/reopen-dataset.html">Re-opening a TRIA dataset</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul></li>
 <li class="active nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -44,13 +45,27 @@
     </div>
 
     <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.1.3" id="rxs2tria-013">rxs2tria 0.1.3<a class="anchor" aria-label="anchor" href="#rxs2tria-013"></a></h2>
+<ul><li>overhauled and finalised the extract rwl logic: new <code><a href="../reference/extract_rwl.html">extract_rwl()</a></code> with <code><a href="../reference/scale_for_tucson.html">scale_for_tucson()</a></code> and <code><a href="../reference/rename_for_tucson.html">rename_for_tucson()</a></code> (then write with <code><a href="https://rdrr.io/pkg/dplR/man/write.tucson.html" class="external-link">dplR::write.tucson()</a></code>), also added an <code>Export rwl</code> button to the flags Shiny app.</li>
+<li>overhauled the supplementary resources handling. Supplementary resources info is no longer part of the <code>QWAmetadata</code> object. <code><a href="../reference/compile_resources.html">compile_resources()</a></code>, <code><a href="../reference/recompile_resources.html">recompile_resources()</a></code> and <code><a href="../reference/check_supplementary.html">check_supplementary()</a></code> replace the existing functions. The output suppl resource manifest is a slim table listing and describing each file, to be submitted alongside the zip.</li>
+<li>completed the ROXAS AI metadata attributes. renamed several ROXAS/ROXAS AI image metadata fields for clarity/consistency (<code>dbl_cwt_threshold</code> -&gt; <code>cluster_dbl_cwt_threshold</code>, <code>maxrel_opp_cwt</code> -&gt; <code>opposite_cwt_ratio_limit</code>, <code>relwidth_cwt_window</code> -&gt; <code>relwidth_cwt_integration</code>, <code>comment</code> -&gt; <code>img_comment</code>, <code>rxs_created_at</code> -&gt; <code>meas_created_at</code>); backcomp: <code><a href="../reference/read_QWAimages.html">read_QWAimages()</a></code>, <code><a href="../reference/read_QWAmetadata.html">read_QWAmetadata()</a></code> and the flags app convert old names automatically.</li>
+<li>new required dataset field <code>ds_title</code>; <code><a href="../reference/read_QWAmetadata.html">read_QWAmetadata()</a></code> falls back to <code>ds_name</code> for older files.</li>
+<li>
+<code><a href="../reference/read_QWAdata.html">read_QWAdata()</a></code> no longer has a <code>components</code> argument; pass only <code>file_cells</code> or <code>file_rings</code> to read a single component. With <code>dir</code>, a missing component now warns instead of aborting.</li>
+<li>
+<code><a href="../reference/collect_settings_data.html">collect_settings_data()</a></code> now requires the image file paths for ROXAS AI as well (to get the actual image file size, not always correct in ROXAS AI metadata due to compression).</li>
+<li>
+<code>img_created_at</code> in <code><a href="../reference/collect_settings_data.html">collect_settings_data()</a></code> is auto converted to datetime since it should be uniform in format. Now only <code>meas_created_at</code> for classical ROXAS data needs manual conversion.</li>
+<li>add vignette stubs for the Shiny apps and a new <code><a href="../articles/submission.html">vignette("submission")</a></code>.</li>
+</ul></div>
+    <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.1.2" id="rxs2tria-012">rxs2tria 0.1.2<a class="anchor" aria-label="anchor" href="#rxs2tria-012"></a></h2>
 <ul><li>
 <code><a href="../reference/build_QWAimages.html">build_QWAimages()</a></code> now comes with a safeguard against uncoverted datetime columns in <code>df_settings</code>.</li>
 <li>
 <code><a href="../reference/collect_settings_data.html">collect_settings_data()</a></code> now accepts the data structure data frame directly (<code>df</code> argument), auto-detects <code>roxas_version</code> from the settings file names when not supplied, and no longer requires the file path vectors to be passed individually.</li>
 <li>
-<code><a href="../reference/collect_resources.html">collect_resources()</a></code> now records an MD5 <code>checksum</code> and <code>size_bytes</code> for each file (used to verify integrity of supplementary files on upload). Expanded documentation of the resources step, including a new <code><a href="../articles/resources.html">vignette("resources")</a></code>.</li>
+<code>collect_resources()</code> now records an MD5 <code>checksum</code> and <code>size_bytes</code> for each file (used to verify integrity of supplementary files on upload). Expanded documentation of the resources step, including a new <code><a href="../articles/resources.html">vignette("resources")</a></code>.</li>
 <li>New <code><a href="../articles/reopen-dataset.html">vignette("reopen-dataset")</a></code> documents how to re-open a downloaded TRIA dataset using the individual <code>read_*</code> functions.</li>
 <li>The flags app now accepts a <code>QWAmetadata</code> <code>.json</code> file directly as the images metadata input (its <code>$images</code> component is extracted), in addition to a <code>QWAimages</code> <code>.csv</code>.</li>
 </ul></div>

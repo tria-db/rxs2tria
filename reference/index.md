@@ -1,9 +1,8 @@
 # Package index
 
-## Read raw ROXAS metadata
+## Read raw ROXAS (AI) metadata
 
-Functions for reading the metadata that can be extracted from the raw
-ROXAS output files.
+Functions for extracing metadata from the raw ROXAS (AI) output files.
 
 - [`get_roxas_files()`](https://tria-db.github.io/rxs2tria/reference/get_roxas_files.md)
   : Identify the ROXAS (AI) files in a directory
@@ -15,14 +14,35 @@ ROXAS output files.
 - [`build_QWAimages()`](https://tria-db.github.io/rxs2tria/reference/build_QWAimages.md)
   : Build a QWAimages object from raw ROXAS (AI) metadata
 
-## Reading raw ROXAS output data
+## Read raw ROXAS (AI) output data
 
-Functions for reading and writing ROXAS cells and rings output files.
+Functions for reading the raw ROXAS (AI) cells and rings output files.
 
 - [`collect_raw_outputs()`](https://tria-db.github.io/rxs2tria/reference/collect_raw_outputs.md)
   : Collect raw output data from multiple files
 - [`collect_raw_data()`](https://tria-db.github.io/rxs2tria/reference/collect_raw_data.md)
   : Collect raw cells and rings output data
+
+## Prepare supplementary data
+
+Functions for compiling and checking supplementary files
+
+- [`compile_resources()`](https://tria-db.github.io/rxs2tria/reference/compile_resources.md)
+  : Compile a supplementary resources manifest
+- [`recompile_resources()`](https://tria-db.github.io/rxs2tria/reference/recompile_resources.md)
+  : Reconcile and re-check a supplementary resources manifest
+- [`check_supplementary()`](https://tria-db.github.io/rxs2tria/reference/check_supplementary.md)
+  : Verify a supplementary resources manifest against a directory or
+  archive
+
+## Shiny apps
+
+Commands to launch the integrated Shiny apps
+
+- [`launch_flags_app()`](https://tria-db.github.io/rxs2tria/reference/launch_flags_app.md)
+  : Launch the ring flags Shiny app
+- [`launch_metadata_app()`](https://tria-db.github.io/rxs2tria/reference/launch_metadata_app.md)
+  : Launch the metadata Shiny app
 
 ## QWAimages
 
@@ -46,7 +66,7 @@ S3 class QWAimages
 
 ## QWAmetadata
 
-S3 QWAmetadata
+S3 class QWAmetadata
 
 - [`check_QWAmetadata()`](https://tria-db.github.io/rxs2tria/reference/check_QWAmetadata.md)
   : Validate a QWAmetadata object
@@ -90,7 +110,7 @@ S3 class QWAdata
 
 ## QWAprofiles
 
-Functions to calculate sector or band profiles from cell measurements.
+S3 class QWAprofiles
 
 - [`calculate_band_profiles()`](https://tria-db.github.io/rxs2tria/reference/calculate_band_profiles.md)
   : Calculate band-wise radial profiles
@@ -110,17 +130,14 @@ Functions to calculate sector or band profiles from cell measurements.
 - [`write_QWAprofile()`](https://tria-db.github.io/rxs2tria/reference/write_QWAprofile.md)
   : Write a QWAprofile object to a CSV file
 
-## rest
+## Other
 
 Other utility functions.
 
-- [`add_resources()`](https://tria-db.github.io/rxs2tria/reference/add_resources.md)
-  : Add supplementary resource files to a QWAmetadata object
-- [`collect_resources()`](https://tria-db.github.io/rxs2tria/reference/collect_resources.md)
-  : Collect resource file information from a directory
-- [`launch_flags_app()`](https://tria-db.github.io/rxs2tria/reference/launch_flags_app.md)
-  : Launch the ring flags Shiny app
-- [`launch_metadata_app()`](https://tria-db.github.io/rxs2tria/reference/launch_metadata_app.md)
-  : Launch the metadata Shiny app
-- [`create_rwl()`](https://tria-db.github.io/rxs2tria/reference/create_rwl.md)
-  : Create a Tucson (.rwl) file from ROXAS ring-width or profile data
+- [`extract_rwl()`](https://tria-db.github.io/rxs2tria/reference/extract_rwl.md)
+  : Extract an rwl series from ring or sector profile data
+- [`scale_for_tucson()`](https://tria-db.github.io/rxs2tria/reference/scale_for_tucson.md)
+  : Scale an rwl object for Tucson-format writing
+- [`rename_for_tucson()`](https://tria-db.github.io/rxs2tria/reference/rename_for_tucson.md)
+  [`make_short_series_ids()`](https://tria-db.github.io/rxs2tria/reference/rename_for_tucson.md)
+  : Rename rwl series to short Tucson-compatible series IDs

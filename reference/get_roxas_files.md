@@ -53,6 +53,6 @@ For ROXAS AI, the required files per image are:
 
 - The ROXAS AI metadata file (`{IMAGEID}.metadata.json`).
 
-- The cell measurements table (`{IMAGEID}.cells_table.csv`).
+- The cell measurements table (`{IMAGEID}.cells_table.csv` or `.txt`).
 
-- The ring measurements table (`{IMAGEID}.rings_table.csv`).
+- The ring measurements table (`{IMAGEID}.rings_table.csv` or `.txt`).

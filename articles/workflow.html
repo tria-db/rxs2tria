@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">rxs2tria</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -34,13 +34,14 @@
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="../articles/QWAdata.html">The QWAdata class</a></li>
-    <li><a class="dropdown-item" href="../articles/QWAimages.html">The QWAimages class</a></li>
-    <li><a class="dropdown-item" href="../articles/QWAmetadata.html">The QWAmetadata class</a></li>
-    <li><a class="dropdown-item" href="../articles/QWAprofile.html">The QWAprofile class</a></li>
-    <li><a class="dropdown-item" href="../articles/reopen-dataset.html">Re-opening a TRIA dataset</a></li>
+<li><a class="dropdown-item" href="../articles/workflow.html">Step-by-step instructions</a></li>
     <li><a class="dropdown-item" href="../articles/resources.html">Adding supplementary resources</a></li>
-    <li><a class="dropdown-item" href="../articles/workflow.html">Step-by-step instructions</a></li>
+    <li><a class="dropdown-item" href="../articles/submission.html">Submitting a dataset to TRIA</a></li>
+    <li><a class="dropdown-item" href="../articles/metadata-app.html">The metadata Shiny app</a></li>
+    <li><a class="dropdown-item" href="../articles/flags-app.html">The ring flags Shiny app</a></li>
+    <li><a class="dropdown-item" href="../articles/reopen-dataset.html">Re-opening a TRIA dataset</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -180,20 +181,16 @@ explicitly to <code>POSIXct</code> with the format(s) and timezone
 appropriate for your data. Make sure to address any conversion warnings
 before overwriting the columns in <code>df_settings</code>.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">img_created_at_converted</span> <span class="op">&lt;-</span> <span class="fu">lubridate</span><span class="fu">::</span><span class="fu"><a href="https://lubridate.tidyverse.org/reference/parse_date_time.html" class="external-link">parse_date_time</a></span><span class="op">(</span></span>
-<span>  <span class="va">df_settings</span><span class="op">$</span><span class="va">img_created_at</span>,</span>
-<span>  orders <span class="op">=</span> <span class="st">"%Y:%m:%d %H:%M:%S"</span>, <span class="co"># common EXIF format</span></span>
-<span>  tz <span class="op">=</span> <span class="st">"UTC"</span> <span class="co"># commonly used in EXIF tags</span></span>
-<span><span class="op">)</span></span>
-<span><span class="va">df_settings</span><span class="op">$</span><span class="va">img_created_at</span> <span class="op">&lt;-</span> <span class="va">img_created_at_converted</span></span>
-<span></span>
-<span><span class="va">settings_date_orders</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"%d.%m.%Y %H:%M:%S"</span>, <span class="st">"%d/%m/%Y %H:%M"</span><span class="op">)</span> <span class="co"># adjust to your locale</span></span>
-<span><span class="va">rxs_created_at_converted</span> <span class="op">&lt;-</span> <span class="fu">lubridate</span><span class="fu">::</span><span class="fu"><a href="https://lubridate.tidyverse.org/reference/parse_date_time.html" class="external-link">parse_date_time</a></span><span class="op">(</span></span>
-<span>  <span class="va">df_settings</span><span class="op">$</span><span class="va">rxs_created_at</span>,</span>
-<span>  orders <span class="op">=</span> <span class="va">settings_date_orders</span>,</span>
-<span>  tz <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/timezones.html" class="external-link">Sys.timezone</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span><span class="va">df_settings</span><span class="op">$</span><span class="va">rxs_created_at</span> <span class="op">&lt;-</span> <span class="va">rxs_created_at_converted</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="co"># for ROXAS only (ROXAS AI has standardised timestamps, so already converted)</span></span>
+<span><span class="kw">if</span> <span class="op">(</span><span class="va">roxas_version</span> <span class="op">==</span> <span class="st">"roxas"</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">settings_date_orders</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"%d.%m.%Y %H:%M:%S"</span>, <span class="st">"%d/%m/%Y %H:%M"</span><span class="op">)</span> <span class="co"># adjust to your locale</span></span>
+<span>  <span class="va">meas_created_at_converted</span> <span class="op">&lt;-</span> <span class="fu">lubridate</span><span class="fu">::</span><span class="fu"><a href="https://lubridate.tidyverse.org/reference/parse_date_time.html" class="external-link">parse_date_time</a></span><span class="op">(</span></span>
+<span>    <span class="va">df_settings</span><span class="op">$</span><span class="va">meas_created_at</span>,</span>
+<span>    orders <span class="op">=</span> <span class="va">settings_date_orders</span>,</span>
+<span>    tz <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/timezones.html" class="external-link">Sys.timezone</a></span><span class="op">(</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span>  <span class="va">df_settings</span><span class="op">$</span><span class="va">meas_created_at</span> <span class="op">&lt;-</span> <span class="va">meas_created_at_converted</span></span>
+<span><span class="op">}</span></span></code></pre></div>
 <p>Combine the extracted data into one object:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">rxs_images</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/build_QWAimages.html">build_QWAimages</a></span><span class="op">(</span><span class="va">df_structure</span>, <span class="va">df_settings</span><span class="op">)</span></span>
@@ -223,6 +220,8 @@ and continued at any time.</p>
 <span></span>
 <span><span class="co"># After exporting and closing the app, optionally read the result back:</span></span>
 <span><span class="co"># QWA_meta &lt;- read_QWAmetadata("path/to/output_data/example_dataset_QWAmetadata.json")</span></span></code></pre></div>
+<p>See <code><a href="../articles/metadata-app.html">vignette("metadata-app")</a></code> for a full walkthrough of
+the app.</p>
 <hr>
 </div>
 </div>
@@ -278,9 +277,9 @@ contribute to chronologies).</p>
 </h2>
 <p><code><a href="../reference/write_QWAdata.html">write_QWAdata()</a></code> saves the <code>QWAdata</code> object to
 two (optionally compressed) CSV files following the naming convention
-<code>{dataset_name}_QWAdata_cells.csv(.gz)</code> and
-<code>{dataset_name}_QWAdata_rings.csv(.gz)</code>. Explicit file names
-can also be provided (see <code><a href="../reference/write_QWAdata.html">?write_QWAdata</a></code>).</p>
+<code>{dataset_name}_QWAcells.csv(.gz)</code> and
+<code>{dataset_name}_QWArings.csv(.gz)</code>. Explicit file names can
+also be provided (see <code><a href="../reference/write_QWAdata.html">?write_QWAdata</a></code>).</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">path_out</span> <span class="op">&lt;-</span> <span class="st">"path/to/output_data"</span></span>
 <span><span class="va">dataset_name</span> <span class="op">&lt;-</span> <span class="st">"example_dataset"</span></span>
@@ -357,10 +356,11 @@ read back to update the <code>QWAdata</code> object:</p>
 <span></span>
 <span><span class="co"># To update QWA_data$rings with the edited output:</span></span>
 <span><span class="co"># QWA_data$rings &lt;- read_QWAdata(</span></span>
-<span><span class="co">#   file_rings = "path/to/output_data/example_dataset_edited_QWAdata_rings.csv",</span></span>
-<span><span class="co">#   components = "rings")</span></span>
+<span><span class="co">#   file_rings = "path/to/output_data/example_dataset_edited_QWArings.csv")$rings</span></span>
 <span><span class="co"># QWA_data$rings &lt;- df_rings_edited  # or directly from a data frame in the env</span></span>
 <span><span class="co"># write_QWAdata(QWA_data, dir = path_out, dataset_name = dataset_name)</span></span></code></pre></div>
+<p>See <code><a href="../articles/flags-app.html">vignette("flags-app")</a></code> for a full walkthrough of the
+app.</p>
 <hr>
 </div>
 <div class="section level3">
@@ -399,48 +399,51 @@ preserve them):</li>
 </div>
 </div>
 <div class="section level2">
-<h2 id="step-7-compile-resources-optional">Step 7: Compile resources (optional)<a class="anchor" aria-label="anchor" href="#step-7-compile-resources-optional"></a>
+<h2 id="step-7-compile-supplementary-resources-optional">Step 7: Compile supplementary resources (optional)<a class="anchor" aria-label="anchor" href="#step-7-compile-supplementary-resources-optional"></a>
 </h2>
 <p>A TRIA submission must include at minimum the
 <code>QWAmetadata</code> <code>.json</code> and the <code>QWAdata</code>
-<code>.csv</code> files. If you want to provide additional
-(supplementary) files — original images, annotated images, raw ROXAS /
-ROXAS AI output, reference series <code>.rwl</code> files, etc. — these
-are listed in the <code>$resources</code> component of the
-<code>QWAmetadata</code> object.</p>
-<p><code><a href="../reference/add_resources.html">add_resources()</a></code> scans a directory and appends the files
-it finds to <code>$resources</code> as a table with one row per file.
-For each file it infers the <code>resource_type</code> from the file
-name, sets the hierarchy level it belongs to
-(<code>linked_level</code>), and records an MD5 <code>checksum</code>
-and <code>size_bytes</code> for integrity checking on upload. Per-image
-files are also matched to their <code>image_label</code> (the
-<code>linked_label</code> column) using the object’s
-<code>$images</code> component. Repeat the call for each relevant
-directory; set <code>recursive = TRUE</code> to descend into nested
-folders:</p>
+<code>.csv(.gz)</code> files. If you want to provide additional
+(supplementary) files (original images, annotated images, raw ROXAS /
+ROXAS AI output, reference series <code>.rwl</code> files, etc.) these
+should be submitted in a single zip alongside a standalone resources
+manifest listing all the files in the zip.</p>
+<p>Not all files may be eligible as supporting material for a TRIA
+dataset, and it is important to track which file pertains to which image
+or slide, etc. For this purpose, <code><a href="../reference/compile_resources.html">compile_resources()</a></code> scans
+a directory (including nested subfolders) and returns a table with one
+row per file it finds. For each file it infers the
+<code>resource_type</code> from the file name and sets the hierarchy
+level it belongs to (<code>linked_level</code>). Files are also matched
+to their <code>linked_label</code> (e.g. the <code>image_label</code>)
+using a <code>QWAimages</code> object, where possible.</p>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">QWA_meta</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/read_QWAmetadata.html">read_QWAmetadata</a></span><span class="op">(</span><span class="st">"path/to/output_data/example_dataset_QWAmetadata.json"</span><span class="op">)</span></span>
-<span><span class="va">QWA_meta</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/add_resources.html">add_resources</a></span><span class="op">(</span><span class="va">QWA_meta</span>, path <span class="op">=</span> <span class="st">"path/to/raw_roxas_files"</span>, recursive <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span><span class="va">QWA_meta</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/add_resources.html">add_resources</a></span><span class="op">(</span><span class="va">QWA_meta</span>, path <span class="op">=</span> <span class="st">"path/to/annotated_images"</span><span class="op">)</span></span></code></pre></div>
-<p>Review the table — in particular, complete any
-<code>linked_label</code> values that were not filled automatically —
-and then write the object back to disk:</p>
+<span><span class="va">suppl_res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile_resources.html">compile_resources</a></span><span class="op">(</span><span class="st">"path/to/submission_files"</span>, rxs_images <span class="op">=</span> <span class="va">QWA_meta</span><span class="op">$</span><span class="va">images</span><span class="op">)</span></span></code></pre></div>
+<p>Every file gets a <code>status</code> (<code>"ok"</code>,
+<code>"review"</code>, or <code>"ignore"</code>) and the console reports
+whether the supplementary path is ready for submission, or which files
+still need attention. Review the table, add a <code>description</code>
+for files where the <code>resource_type</code> could not be inferred,
+and complete any <code>linked_label</code> values that were not filled
+automatically. Then write it to a CSV to submit alongside the resources
+zip:</p>
 <div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">QWA_meta</span><span class="op">$</span><span class="va">resources</span></span>
-<span><span class="fu"><a href="../reference/write_QWAmetadata.html">write_QWAmetadata</a></span><span class="op">(</span><span class="va">QWA_meta</span>, <span class="st">"path/to/output_data/example_dataset_QWAmetadata.json"</span><span class="op">)</span></span></code></pre></div>
-<p>Listing the files does not move or compress them; how they are
-packaged for storage is handled downstream. See
-<code><a href="../articles/resources.html">vignette("resources")</a></code> for the full resource-type table, the
-meaning of each column, and how to link resources to the data
-hierarchy.</p>
+<code class="sourceCode R"><span><span class="va">suppl_res</span></span>
+<span><span class="fu">vroom</span><span class="fu">::</span><span class="fu"><a href="https://vroom.tidyverse.org/reference/vroom_write.html" class="external-link">vroom_write</a></span><span class="op">(</span><span class="va">suppl_res</span>, <span class="st">"path/to/output_data/example_dataset_supplementary_files.csv"</span><span class="op">)</span></span></code></pre></div>
+<p>See <code><a href="../articles/resources.html">vignette("resources")</a></code> for more details on this step,
+including how to <code><a href="../reference/recompile_resources.html">recompile_resources()</a></code> after making edits,
+and how to run a final <code><a href="../reference/check_supplementary.html">check_supplementary()</a></code> once you are
+done.</p>
 </div>
 <div class="section level2">
 <h2 id="step-8-submit-your-data">Step 8: Submit your data<a class="anchor" aria-label="anchor" href="#step-8-submit-your-data"></a>
 </h2>
-<p>Once you are ready to share your prepared data files with us, reach
-out to <a href="mailto:tria@wsl.ch">tria@wsl.ch</a> to receive an
-invitation to the file transfer server.</p>
+<p>Once you are ready to share your prepared data files with us, email
+<a href="mailto:tria@wsl.ch">tria@wsl.ch</a>—either with a link to the
+files on a file transfer service of your choice, or asking for an invite
+link to WSL’s own one. See <code><a href="../articles/submission.html">vignette("submission")</a></code> for what
+to upload and what happens to your files once we receive them.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

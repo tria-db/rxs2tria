@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">rxs2tria</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -19,13 +19,14 @@
 <li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/QWAdata.html">The QWAdata class</a></li>
-    <li><a class="dropdown-item" href="../articles/QWAimages.html">The QWAimages class</a></li>
-    <li><a class="dropdown-item" href="../articles/QWAmetadata.html">The QWAmetadata class</a></li>
-    <li><a class="dropdown-item" href="../articles/QWAprofile.html">The QWAprofile class</a></li>
-    <li><a class="dropdown-item" href="../articles/reopen-dataset.html">Re-opening a TRIA dataset</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/workflow.html">Step-by-step instructions</a></li>
     <li><a class="dropdown-item" href="../articles/resources.html">Adding supplementary resources</a></li>
-    <li><a class="dropdown-item" href="../articles/workflow.html">Step-by-step instructions</a></li>
+    <li><a class="dropdown-item" href="../articles/submission.html">Submitting a dataset to TRIA</a></li>
+    <li><a class="dropdown-item" href="../articles/metadata-app.html">The metadata Shiny app</a></li>
+    <li><a class="dropdown-item" href="../articles/flags-app.html">The ring flags Shiny app</a></li>
+    <li><a class="dropdown-item" href="../articles/reopen-dataset.html">Re-opening a TRIA dataset</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -43,9 +44,9 @@
     </div>
 
     <div class="section level2">
-      <h2 id="read-raw-roxas-metadata">Read raw ROXAS metadata<a class="anchor" aria-label="anchor" href="#read-raw-roxas-metadata"></a></h2>
+      <h2 id="read-raw-roxas-ai-metadata">Read raw ROXAS (AI) metadata<a class="anchor" aria-label="anchor" href="#read-raw-roxas-ai-metadata"></a></h2>
 
-      <div class="section-desc"><p>Functions for reading the metadata that can be extracted from the raw ROXAS output files.</p></div>
+      <div class="section-desc"><p>Functions for extracing metadata from the raw ROXAS (AI) output files.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -80,9 +81,9 @@
         </dt>
         <dd>Build a QWAimages object from raw ROXAS (AI) metadata</dd>
       </dl></div><div class="section level2">
-      <h2 id="reading-raw-roxas-output-data">Reading raw ROXAS output data<a class="anchor" aria-label="anchor" href="#reading-raw-roxas-output-data"></a></h2>
+      <h2 id="read-raw-roxas-ai-output-data">Read raw ROXAS (AI) output data<a class="anchor" aria-label="anchor" href="#read-raw-roxas-ai-output-data"></a></h2>
 
-      <div class="section-desc"><p>Functions for reading and writing ROXAS cells and rings output files.</p></div>
+      <div class="section-desc"><p>Functions for reading the raw ROXAS (AI) cells and rings output files.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -102,6 +103,59 @@
 
         </dt>
         <dd>Collect raw cells and rings output data</dd>
+      </dl></div><div class="section level2">
+      <h2 id="prepare-supplementary-data">Prepare supplementary data<a class="anchor" aria-label="anchor" href="#prepare-supplementary-data"></a></h2>
+
+      <div class="section-desc"><p>Functions for compiling and checking supplementary files</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="compile_resources.html">compile_resources()</a></code>
+
+        </dt>
+        <dd>Compile a supplementary resources manifest</dd>
+
+        <dt>
+
+          <code><a href="recompile_resources.html">recompile_resources()</a></code>
+
+        </dt>
+        <dd>Reconcile and re-check a supplementary resources manifest</dd>
+
+        <dt>
+
+          <code><a href="check_supplementary.html">check_supplementary()</a></code>
+
+        </dt>
+        <dd>Verify a supplementary resources manifest against a directory or archive</dd>
+      </dl></div><div class="section level2">
+      <h2 id="shiny-apps">Shiny apps<a class="anchor" aria-label="anchor" href="#shiny-apps"></a></h2>
+
+      <div class="section-desc"><p>Commands to launch the integrated Shiny apps</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="launch_flags_app.html">launch_flags_app()</a></code>
+
+        </dt>
+        <dd>Launch the ring flags Shiny app</dd>
+
+        <dt>
+
+          <code><a href="launch_metadata_app.html">launch_metadata_app()</a></code>
+
+        </dt>
+        <dd>Launch the metadata Shiny app</dd>
       </dl></div><div class="section level2">
       <h2 id="qwaimages">QWAimages<a class="anchor" aria-label="anchor" href="#qwaimages"></a></h2>
 
@@ -163,7 +217,7 @@
       </dl></div><div class="section level2">
       <h2 id="qwametadata">QWAmetadata<a class="anchor" aria-label="anchor" href="#qwametadata"></a></h2>
 
-      <div class="section-desc"><p>S3 QWAmetadata</p></div>
+      <div class="section-desc"><p>S3 class QWAmetadata</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -286,7 +340,7 @@
       </dl></div><div class="section level2">
       <h2 id="qwaprofiles">QWAprofiles<a class="anchor" aria-label="anchor" href="#qwaprofiles"></a></h2>
 
-      <div class="section-desc"><p>Functions to calculate sector or band profiles from cell measurements.</p></div>
+      <div class="section-desc"><p>S3 class QWAprofiles</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -349,7 +403,7 @@
         </dt>
         <dd>Write a QWAprofile object to a CSV file</dd>
       </dl></div><div class="section level2">
-      <h2 id="rest">rest<a class="anchor" aria-label="anchor" href="#rest"></a></h2>
+      <h2 id="other">Other<a class="anchor" aria-label="anchor" href="#other"></a></h2>
 
       <div class="section-desc"><p>Other utility functions.</p></div>
 
@@ -360,38 +414,24 @@
 
       <dl><dt>
 
-          <code><a href="add_resources.html">add_resources()</a></code>
+          <code><a href="extract_rwl.html">extract_rwl()</a></code>
 
         </dt>
-        <dd>Add supplementary resource files to a QWAmetadata object</dd>
+        <dd>Extract an rwl series from ring or sector profile data</dd>
 
         <dt>
 
-          <code><a href="collect_resources.html">collect_resources()</a></code>
+          <code><a href="scale_for_tucson.html">scale_for_tucson()</a></code>
 
         </dt>
-        <dd>Collect resource file information from a directory</dd>
+        <dd>Scale an rwl object for Tucson-format writing</dd>
 
         <dt>
 
-          <code><a href="launch_flags_app.html">launch_flags_app()</a></code>
+          <code><a href="rename_for_tucson.html">rename_for_tucson()</a></code> <code><a href="rename_for_tucson.html">make_short_series_ids()</a></code>
 
         </dt>
-        <dd>Launch the ring flags Shiny app</dd>
-
-        <dt>
-
-          <code><a href="launch_metadata_app.html">launch_metadata_app()</a></code>
-
-        </dt>
-        <dd>Launch the metadata Shiny app</dd>
-
-        <dt>
-
-          <code><a href="create_rwl.html">create_rwl()</a></code>
-
-        </dt>
-        <dd>Create a Tucson (.rwl) file from ROXAS ring-width or profile data</dd>
+        <dd>Rename rwl series to short Tucson-compatible series IDs</dd>
       </dl></div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>

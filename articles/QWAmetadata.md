@@ -11,18 +11,18 @@ A `QWAmetadata` object is a named list that bundles all metadata
 required for a TRIA database submission. It has ten components, one per
 level of the QWA sampling hierarchy:
 
-| Component     | Description                                               |
-|---------------|-----------------------------------------------------------|
-| `$images`     | Image-level metadata; a `QWAimages` object. **Required.** |
-| `$sites`      | Site-level metadata (location, coordinates, climate)      |
-| `$trees`      | Tree-level metadata (species, DBH, age)                   |
-| `$woodpieces` | Woodpiece-level metadata (type: disc, core, etc.)         |
-| `$slides`     | Slide-level metadata (preparation method, staining)       |
-| `$dataset`    | Dataset name, description, license, embargo date          |
-| `$authors`    | Author names, affiliations, contact information           |
-| `$funding`    | Funding sources and grant numbers                         |
-| `$related`    | Related publications or datasets (DOIs, URLs)             |
-| `$resources`  | Files to include in the submission                        |
+| Component | Description |
+|----|----|
+| `$images` | Image-level metadata; a `QWAimages` object. **Required.** |
+| `$sites` | Site-level metadata (location, coordinates, climate) |
+| `$trees` | Tree-level metadata (species, DBH, age) |
+| `$woodpieces` | Woodpiece-level metadata (type: disc, core, etc.) |
+| `$slides` | Slide-level metadata (preparation method, staining) |
+| `$dataset` | Dataset name, title, description, license, embargo date |
+| `$authors` | Author names, affiliations, contact information |
+| `$funding` | Funding sources and grant numbers |
+| `$related` | Related publications or datasets (DOIs, URLs) |
+| `$resources` | Describes the submitted `QWAcells`/`QWArings` files; added by TRIA at publish time, leave `NULL` |
 
 `$images` is the only required component. All others are optional and
 can be populated incrementally. The hierarchical components (`$sites`,
@@ -152,25 +152,23 @@ existing values preserved:
   created so you can see the expected fields. If already present, only
   missing optional columns are added.
 - **`$resources`**: not modified by
-  [`complete_QWAmetadata()`](https://tria-db.github.io/rxs2tria/reference/complete_QWAmetadata.md);
-  use
-  [`add_resources()`](https://tria-db.github.io/rxs2tria/reference/add_resources.md)
-  to populate this component.
+  [`complete_QWAmetadata()`](https://tria-db.github.io/rxs2tria/reference/complete_QWAmetadata.md)
+  – it’s populated by TRIA at publish time, not by this package.
 
 ------------------------------------------------------------------------
 
-## Adding resources
+## Supplementary resources
 
-Resources (data files to be included in the submission) are managed
-separately via
-[`add_resources()`](https://tria-db.github.io/rxs2tria/reference/add_resources.md),
-which scans a directory, infers the resource type of each file from its
-name, and appends the result to `$resources`:
-
-``` r
-
-QWA_metadata <- add_resources(QWA_metadata, path = "output/submission_files/")
-```
+Supplementary data files (original/annotated images, raw ROXAS output,
+reference series, etc.) are **not** tracked via `$resources` – that
+component describes only the submitted `QWAcells`/`QWArings` files, and
+is added by TRIA at publish time. The supplementary-file manifest is a
+separate, standalone artefact built with
+[`compile_resources()`](https://tria-db.github.io/rxs2tria/reference/compile_resources.md)
+and written to its own CSV, submitted alongside a zip of the files
+themselves. See
+[`vignette("resources")`](https://tria-db.github.io/rxs2tria/articles/resources.md)
+for the full workflow.
 
 ------------------------------------------------------------------------
 

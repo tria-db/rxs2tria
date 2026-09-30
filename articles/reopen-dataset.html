@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">rxs2tria</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -34,13 +34,14 @@
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="../articles/QWAdata.html">The QWAdata class</a></li>
-    <li><a class="dropdown-item" href="../articles/QWAimages.html">The QWAimages class</a></li>
-    <li><a class="dropdown-item" href="../articles/QWAmetadata.html">The QWAmetadata class</a></li>
-    <li><a class="dropdown-item" href="../articles/QWAprofile.html">The QWAprofile class</a></li>
-    <li><a class="dropdown-item" href="../articles/reopen-dataset.html">Re-opening a TRIA dataset</a></li>
+<li><a class="dropdown-item" href="../articles/workflow.html">Step-by-step instructions</a></li>
     <li><a class="dropdown-item" href="../articles/resources.html">Adding supplementary resources</a></li>
-    <li><a class="dropdown-item" href="../articles/workflow.html">Step-by-step instructions</a></li>
+    <li><a class="dropdown-item" href="../articles/submission.html">Submitting a dataset to TRIA</a></li>
+    <li><a class="dropdown-item" href="../articles/metadata-app.html">The metadata Shiny app</a></li>
+    <li><a class="dropdown-item" href="../articles/flags-app.html">The ring flags Shiny app</a></li>
+    <li><a class="dropdown-item" href="../articles/reopen-dataset.html">Re-opening a TRIA dataset</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -100,22 +101,23 @@ measurements.</p>
 <h2 id="reading-the-individual-files">Reading the individual files<a class="anchor" aria-label="anchor" href="#reading-the-individual-files"></a>
 </h2>
 <p>Each file is read by its corresponding <code>read_*</code> function.
-[read_QWAmetadata()] takes the path to the <code>.json</code> file
-directly:</p>
+<code><a href="../reference/read_QWAmetadata.html">read_QWAmetadata()</a></code> takes the path to the <code>.json</code>
+file directly:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">QWA_meta</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/read_QWAmetadata.html">read_QWAmetadata</a></span><span class="op">(</span><span class="st">"path/to/my_dataset_QWAmetadata.json"</span><span class="op">)</span></span>
 <span><span class="va">QWA_meta</span><span class="op">$</span><span class="va">images</span></span></code></pre></div>
-<p>[read_QWAdata()] reads the cells and rings CSVs. Point it at the
-directory holding the downloaded files and it locates both by name; if
-the folder holds files from more than one dataset, pass
+<p><code><a href="../reference/read_QWAdata.html">read_QWAdata()</a></code> reads the cells and rings CSVs. Point it
+at the directory holding the downloaded files and it locates both by
+name; if the folder holds files from more than one dataset, pass
 <code>dataset_name</code> to disambiguate:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">QWA_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/read_QWAdata.html">read_QWAdata</a></span><span class="op">(</span>dir <span class="op">=</span> <span class="st">"path/to/downloaded_dataset"</span><span class="op">)</span></span>
 <span><span class="co"># or with explicit paths:</span></span>
-<span><span class="va">QWA_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/read_QWAdata.html">read_QWAdata</a></span><span class="op">(</span>file_cells <span class="op">=</span> <span class="st">"path/to/my_dataset_cells.csv.gz"</span>,</span>
-<span>                         file_rings <span class="op">=</span> <span class="st">"path/to/my_dataset_rings.csv.gz"</span><span class="op">)</span></span></code></pre></div>
-<p>If a profile file was included in the download, [read_QWAprofile()]
-reads it back into a [QWAprofile][QWAprofile()] object:</p>
+<span><span class="va">QWA_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/read_QWAdata.html">read_QWAdata</a></span><span class="op">(</span>file_cells <span class="op">=</span> <span class="st">"path/to/my_dataset_QWAcells.csv.gz"</span>,</span>
+<span>                         file_rings <span class="op">=</span> <span class="st">"path/to/my_dataset_QWArings.csv.gz"</span><span class="op">)</span></span></code></pre></div>
+<p>If a profile file was included in the download,
+<code><a href="../reference/read_QWAprofile.html">read_QWAprofile()</a></code> reads it back into a
+<code>QWAprofile</code> object:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">prf</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/read_QWAprofile.html">read_QWAprofile</a></span><span class="op">(</span><span class="st">"path/to/my_dataset_QWAprofile_sector.csv.gz"</span><span class="op">)</span></span></code></pre></div>
 <hr>
@@ -126,8 +128,8 @@ reads it back into a [QWAprofile][QWAprofile()] object:</p>
 <p>Because the cells and rings tables carry the columns the profile
 calculation needs (<code>rraddistr</code> in cells; <code>mrw</code> and
 <code>eww</code> in rings, plus the cell parameters you select), you can
-compute a [QWAprofile][QWAprofile()] directly from <code>QWA_data</code>
-— even if no profile was included in the download:</p>
+compute a <code>QWAprofile</code> directly from <code>QWA_data</code> —
+even if no profile was included in the download:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">prf_sector</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/calculate_sector_profiles.html">calculate_sector_profiles</a></span><span class="op">(</span></span>
 <span>  <span class="va">QWA_data</span>,</span>

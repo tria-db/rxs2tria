@@ -26,8 +26,8 @@ write_QWAdata(
 - dir:
 
   Directory to write to. Files are auto-named
-  `{dataset_name}_QWAdata_cells.csv(.gz)` and
-  `{dataset_name}_QWAdata_rings.csv(.gz)`. Mutually exclusive with
+  `{dataset_name}_QWAcells.csv(.gz)` and
+  `{dataset_name}_QWArings.csv(.gz)`. Mutually exclusive with
   `file_cells`/`file_rings`.
 
 - file_cells, file_rings:
@@ -38,7 +38,7 @@ write_QWAdata(
 - dataset_name:
 
   Name prefix for auto-generated filenames when using `dir`. If omitted,
-  files are named `QWAdata_cells.csv(.gz)` and `QWAdata_rings.csv(.gz)`.
+  files are named `QWAcells.csv(.gz)` and `QWArings.csv(.gz)`.
 
 - compress:
 

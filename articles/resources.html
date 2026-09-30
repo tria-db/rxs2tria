@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">rxs2tria</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -34,13 +34,14 @@
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="../articles/QWAdata.html">The QWAdata class</a></li>
-    <li><a class="dropdown-item" href="../articles/QWAimages.html">The QWAimages class</a></li>
-    <li><a class="dropdown-item" href="../articles/QWAmetadata.html">The QWAmetadata class</a></li>
-    <li><a class="dropdown-item" href="../articles/QWAprofile.html">The QWAprofile class</a></li>
-    <li><a class="dropdown-item" href="../articles/reopen-dataset.html">Re-opening a TRIA dataset</a></li>
+<li><a class="dropdown-item" href="../articles/workflow.html">Step-by-step instructions</a></li>
     <li><a class="dropdown-item" href="../articles/resources.html">Adding supplementary resources</a></li>
-    <li><a class="dropdown-item" href="../articles/workflow.html">Step-by-step instructions</a></li>
+    <li><a class="dropdown-item" href="../articles/submission.html">Submitting a dataset to TRIA</a></li>
+    <li><a class="dropdown-item" href="../articles/metadata-app.html">The metadata Shiny app</a></li>
+    <li><a class="dropdown-item" href="../articles/flags-app.html">The ring flags Shiny app</a></li>
+    <li><a class="dropdown-item" href="../articles/reopen-dataset.html">Re-opening a TRIA dataset</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -79,36 +80,40 @@
 </h2>
 <p>A TRIA submission must include at minimum three files: the
 <code>QWAmetadata</code> <code>.json</code> and the two
-<code>QWAdata</code> <code>.csv</code> files (cells and rings). Beyond
-this minimum, you may optionally submit <strong>supplementary
-resources</strong> — the original and annotated images, the raw ROXAS /
-ROXAS AI output files, reference series, and so on — so that others can
-trace, reproduce, or build on your analysis.</p>
-<p>Supplementary resources are described in the <code>$resources</code>
-component of the <code>QWAmetadata</code> object. This component is a
-table (a [tibble][tibble::tibble]) with <strong>one row per
-file</strong>. It is a <em>manifest</em>: it records what each file is,
-where it sits in the data hierarchy, and a checksum and size for
-integrity checking. Building it does <strong>not</strong> move, rename,
-or compress any files — they stay where they are on your machine and are
-referenced by path.</p>
-<p>You build the table with two functions:</p>
-<ul>
-<li>
-<code><a href="../reference/add_resources.html">add_resources()</a></code> — the convenient entry point; scans a
-directory and updates the <code>$resources</code> component of a
-<code>QWAmetadata</code> object in place.</li>
-<li>
-<code><a href="../reference/collect_resources.html">collect_resources()</a></code> — the underlying worker; returns a
-plain resources table and is useful when you want to inspect or
-manipulate it directly before attaching it.</li>
-</ul>
+<code>QWAdata</code> <code>.csv(.gz)</code> files (cells and rings).
+Beyond this minimum, you may optionally submit <strong>supplementary
+resources</strong>, e.g. the original or annotated images, the raw ROXAS
+/ ROXAS AI output files, reference series, and so on.</p>
+<p><code><a href="../reference/compile_resources.html">compile_resources()</a></code> scans a directory (or an
+already-zipped archive) and returns a <strong>manifest</strong>: a table
+with one row per file, recording what each file is, where it sits in the
+data hierarchy, and whether it is actually ready to be submitted.
+Building it does <strong>not</strong> move, rename, or compress any
+files—they stay where they are on your machine and are referenced by
+their relative path.</p>
+<p>As described in <code><a href="../articles/submission.html">vignette("submission")</a></code>, a submission’s
+supplementary files are expected to live in a <strong>single
+directory</strong> (which you zip up before uploading).
+<code><a href="../reference/compile_resources.html">compile_resources()</a></code> scans it recursively, so you may use
+your preferred nested file structure within that directory. It also
+accepts a path to an already-zipped (non-nested) archive directly. The
+files in the scanned directory or archive are automatically assigned a
+resource type and linked to the appropriate image or woodpiece, etc.,
+where appropriate. However, in some cases, you may need to correct or
+edit the inferred values (see <a href="#manual-editing">Manual
+editing</a>) or the underlying files themselves. Run
+<code><a href="../reference/recompile_resources.html">recompile_resources()</a></code> to re-check the edits and re-sync the
+file list in the table (see <a href="#reconciling-and-verifying-the-manifest">Reconciling and verifying
+the manifest</a>). Once finalised, write the manifest to a CSV and
+submit it alongside the supplementary resources zip.</p>
 <hr>
 </div>
 <div class="section level2">
 <h2 id="the-resources-table">The resources table<a class="anchor" aria-label="anchor" href="#the-resources-table"></a>
 </h2>
-<p>Each row has the following columns:</p>
+<p>In the data frame returned by <code><a href="../reference/compile_resources.html">compile_resources()</a></code> /
+<code><a href="../reference/recompile_resources.html">recompile_resources()</a></code>, each row has the following
+columns:</p>
 <table class="table">
 <colgroup>
 <col width="50%">
@@ -121,84 +126,165 @@ manipulate it directly before attaching it.</li>
 <tbody>
 <tr class="odd">
 <td><code>resource_name</code></td>
-<td>Base file name (no path).</td>
+<td>Path of the file relative to the directory / archive scanned.</td>
 </tr>
 <tr class="even">
 <td><code>resource_type</code></td>
-<td>The kind of file, inferred from its name (see below).</td>
+<td>The kind of file, inferred from its name (see <a href="#resource-types">Resource types</a>).</td>
 </tr>
 <tr class="odd">
 <td><code>linked_level</code></td>
 <td>Level of the data hierarchy the file pertains to:
-<code>"dataset"</code>, <code>"woodpiece"</code>, <code>"slide"</code>,
-<code>"image"</code>, or <code>"analysis"</code>.</td>
+<code>"dataset"</code>, <code>"site"</code>, …, or
+<code>"analysis"</code>.</td>
 </tr>
 <tr class="even">
 <td><code>linked_label</code></td>
 <td>Which entity at that level the file belongs to (e.g. a specific
 <code>image_label</code>). Auto-filled where possible, otherwise
-<code>NA</code>.</td>
+<code>NA</code> (see <a href="#linked-labels">Linked labels</a>).</td>
 </tr>
 <tr class="odd">
-<td><code>fname_resource</code></td>
-<td>Absolute path to the file on your machine.</td>
+<td><code>description</code></td>
+<td>Free-text description of the file, normally <code>NA</code>;
+required for <code>"other"</code> resources to be included (see <a href="#manual-editing">Manual editing</a>).</td>
 </tr>
 <tr class="even">
-<td><code>checksum</code></td>
-<td>MD5 checksum of the file contents.</td>
+<td><code>fname_resource</code></td>
+<td>Absolute path to the file on your machine, or <code>NA</code> if
+scanning a zip archive directly (always removed before upload to
+TRIA).</td>
 </tr>
 <tr class="odd">
-<td><code>size_bytes</code></td>
-<td>File size in bytes.</td>
+<td><code>status</code></td>
+<td>
+<code>"ok"</code>, <code>"review"</code>, or <code>"ignore"</code>
+(see <a href="#readiness-status">Readiness status</a>).</td>
+</tr>
+<tr class="even">
+<td><code>note</code></td>
+<td>Explanation for <code>status</code> (e.g., why a file needs
+review).</td>
 </tr>
 </tbody>
 </table>
-<p><code>checksum</code> and <code>size_bytes</code> are computed
-automatically. They let the TRIA ingestion process verify that the files
-you upload match this manifest exactly and detect anything missing,
-extra, or changed — you do not need to fill or check them yourself.</p>
-<p>You do not need to think about <em>how</em> these files are
-ultimately stored in the TRIA archive (e.g. whether they are grouped
-into <code>.zip</code> archives). That packaging is handled downstream
-from this manifest; your task is only to produce an accurate
-listing.</p>
+<p>Every file found in the directory or archive gets a row, thus the
+table is a complete, self-explanatory record of what you’re about to
+submit. <code>resource_name</code> includes the subdirectory path
+(e.g. <code>"tree1/slide2/IMG1_Output_Cells.txt"</code>) rather than
+just the basename, so two files with the same name in different
+subfolders stay distinguishable.</p>
 <hr>
 </div>
 <div class="section level2">
 <h2 id="basic-workflow">Basic workflow<a class="anchor" aria-label="anchor" href="#basic-workflow"></a>
 </h2>
-<p>Start from a <code>QWAmetadata</code> object — either one you built
-earlier in the preparation workflow, or one read back from disk:</p>
+<p>Point <code><a href="../reference/compile_resources.html">compile_resources()</a></code> at the directory holding your
+supplementary files (subdirectories are included).
+<code>rxs_images</code> (a <code>QWAimages</code> object) is required to
+auto-populate <code>linked_label</code> (see <a href="#linked-labels">Linked labels</a>):</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">QWA_meta</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/read_QWAmetadata.html">read_QWAmetadata</a></span><span class="op">(</span><span class="st">"output_data/my_dataset_QWAmetadata.json"</span><span class="op">)</span></span></code></pre></div>
-<p>Point <code><a href="../reference/add_resources.html">add_resources()</a></code> at a directory of files. Set
-<code>recursive = TRUE</code> to descend into subdirectories (raw ROXAS
-output is often nested per tree or slide):</p>
+<code class="sourceCode R"><span><span class="va">QWA_meta</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/read_QWAmetadata.html">read_QWAmetadata</a></span><span class="op">(</span><span class="st">"output_data/my_dataset_QWAmetadata.json"</span><span class="op">)</span></span>
+<span><span class="va">suppl_res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compile_resources.html">compile_resources</a></span><span class="op">(</span><span class="st">"path/to/supplementary_files"</span>, rxs_images <span class="op">=</span> <span class="va">QWA_meta</span><span class="op">$</span><span class="va">images</span><span class="op">)</span></span></code></pre></div>
+<p>Inspect the result. Warning messages indicate whether anything needs
+review. Complete any resource types or labels that require manual edits
+(see <a href="#manual-editing">Manual editing</a>), re-compile the
+manifest if necessary and check the finalised table against the
+submission-ready supplementary directory or archive (see <a href="#reconciling-and-verifying-the-manifest">Reconciling and verifying
+the manifest</a>). Then write the prepared manifest to a CSV to submit
+alongside the resources zip:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">QWA_meta</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/add_resources.html">add_resources</a></span><span class="op">(</span><span class="va">QWA_meta</span>, path <span class="op">=</span> <span class="st">"raw_roxas_files"</span>, recursive <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
-<p>Call it again for each additional directory; new files are appended
-to the existing table:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">QWA_meta</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/add_resources.html">add_resources</a></span><span class="op">(</span><span class="va">QWA_meta</span>, path <span class="op">=</span> <span class="st">"annotated_images"</span><span class="op">)</span></span>
-<span><span class="va">QWA_meta</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/add_resources.html">add_resources</a></span><span class="op">(</span><span class="va">QWA_meta</span>, path <span class="op">=</span> <span class="st">"reference_series"</span><span class="op">)</span></span></code></pre></div>
-<p>Inspect the result, complete any labels that need attention (see <a href="#linking-resources-to-the-data-hierarchy">Linking resources to the
-data hierarchy</a>), and write the object back to disk:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">QWA_meta</span><span class="op">$</span><span class="va">resources</span></span>
+<code class="sourceCode R"><span><span class="va">suppl_res</span></span>
 <span></span>
-<span><span class="fu"><a href="../reference/write_QWAmetadata.html">write_QWAmetadata</a></span><span class="op">(</span><span class="va">QWA_meta</span>, <span class="st">"output_data/my_dataset_QWAmetadata.json"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">vroom</span><span class="fu">::</span><span class="fu"><a href="https://vroom.tidyverse.org/reference/vroom_write.html" class="external-link">vroom_write</a></span><span class="op">(</span><span class="va">suppl_res</span>, <span class="st">"output_data/supplementary_files.csv"</span><span class="op">)</span></span></code></pre></div>
 <div class="section level3">
-<h3 id="working-with-the-table-directly">Working with the table directly<a class="anchor" aria-label="anchor" href="#working-with-the-table-directly"></a>
+<h3 id="manual-editing">Manual editing<a class="anchor" aria-label="anchor" href="#manual-editing"></a>
 </h3>
-<p>If you prefer to assemble and edit the table before attaching it, use
-<code><a href="../reference/collect_resources.html">collect_resources()</a></code>. It takes the same arguments and can
-chain across directories via <code>append_to</code>:</p>
+<p>Inference is name-based, so an unconventional file name may be typed
+as <code>"other"</code> or mis-typed. Edit the table directly to fix it
+(see also <a href="#readiness-status">Readiness status</a>):</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">suppl_res</span><span class="op">[</span><span class="va">suppl_res</span><span class="op">$</span><span class="va">resource_name</span> <span class="op">==</span> <span class="st">"tree1/slide2/odd_name.tif"</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"resource_type"</span>, <span class="st">"linked_level"</span>, <span class="st">"linked_label"</span><span class="op">)</span><span class="op">]</span> <span class="op">&lt;-</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"image_original"</span>, <span class="st">"image"</span>, <span class="st">"siteA_PISY_1_2_1"</span><span class="op">)</span></span></code></pre></div>
+<p>Set <code>resource_type</code> to <code>"junk"</code> for any files
+you want to be ignored, and fill in the <code>description</code> field
+for any <code>"other"</code> resources you want to be included.</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">suppl_res</span><span class="op">$</span><span class="va">description</span><span class="op">[</span><span class="va">suppl_res</span><span class="op">$</span><span class="va">resource_name</span> <span class="op">==</span> <span class="st">"siteA_photo.png"</span><span class="op">]</span> <span class="op">&lt;-</span></span>
+<span>  <span class="st">"Image from the site location"</span></span></code></pre></div>
+<p>Instead of or in addition to editing the data frame itself, you may
+want to make changes in the input directory or archive under
+<code>path</code> directly (adding, removing or renaming files). Then
+re-run <code><a href="../reference/compile_resources.html">compile_resources()</a></code> to create a fresh manifest, or
+run <code><a href="../reference/recompile_resources.html">recompile_resources()</a></code> with your previous manifest as
+input to keep and re-check any manual edits you have already made in the
+data frame while re-syncing it with the file list under
+<code>path</code>.</p>
+</div>
+<div class="section level3">
+<h3 id="reconciling-and-verifying-the-manifest">Reconciling and verifying the manifest<a class="anchor" aria-label="anchor" href="#reconciling-and-verifying-the-manifest"></a>
+</h3>
+<p>Three functions cover the full lifecycle:</p>
+<ul>
+<li>
+<code>compile_resources(path, rxs_images)</code>: always starts
+fresh.</li>
+<li>
+<code>recompile_resources(suppl_res, path, rxs_images, add_new_files = FALSE)</code>:
+reconciles a previous manifest against the current contents of
+<code>path</code>, so manual edits are kept and re-checked.</li>
+<li>
+<code>check_supplementary(suppl_res, path, rxs_images)</code>: a
+pass/fail check confirming a finalised manifest (i.e. including the
+<code>status</code> column) accurately describes <code>path</code> and
+is ready for submission.</li>
+</ul>
+<p>For both <code><a href="../reference/recompile_resources.html">recompile_resources()</a></code> and
+<code><a href="../reference/check_supplementary.html">check_supplementary()</a></code>, <code>suppl_res</code> is treated as
+the source of truth wherever it overlaps with what’s actually found in
+<code>path</code>:</p>
+<ul>
+<li>Any file both in <code>suppl_res</code> and found in
+<code>path</code> keeps its
+<code>resource_type</code>/<code>linked_level</code>/<code>linked_label</code>/<code>description</code>
+from <code>suppl_res</code> rather than having them re-inferred, so
+manual edits survive.</li>
+<li>A file found in <code>path</code> but not listed in
+<code>suppl_res</code> is, by default, assumed to be intentionally
+excluded and thus also left out of the returned table. When
+re-compiling, you can pass <code>add_new_files = TRUE</code> to append
+new files instead, freshly typed, e.g. after deliberately adding files
+to <code>path</code> and wanting them picked up.</li>
+<li>A file listed in <code>suppl_res</code> but no longer found in
+<code>path</code> is<br>
+dropped (with a message) if <code>status</code> was
+<code>"review"</code>, <code>"ignore"</code> or not set (e.g. in a
+hand-built manifest)—deleting it from <code>path</code> resolves the
+status issue. However, if it had <code>status = "ok"</code> in the
+manifest, an error is raised—a submission-ready file has disappeared and
+either the table or <code>path</code> needs fixing before
+proceeding.</li>
+</ul>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/collect_resources.html">collect_resources</a></span><span class="op">(</span><span class="st">"raw_roxas_files"</span>, recursive <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/collect_resources.html">collect_resources</a></span><span class="op">(</span><span class="st">"annotated_images"</span>, append_to <span class="op">=</span> <span class="va">res</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># edit `res` as needed, then attach it:</span></span>
-<span><span class="va">QWA_meta</span><span class="op">$</span><span class="va">resources</span> <span class="op">&lt;-</span> <span class="va">res</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">suppl_res</span> <span class="op">&lt;-</span> <span class="fu">vroom</span><span class="fu">::</span><span class="fu"><a href="https://vroom.tidyverse.org/reference/vroom.html" class="external-link">vroom</a></span><span class="op">(</span><span class="st">"output_data/supplementary_files.csv"</span>,</span>
+<span>                          show_col_types <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span><span class="co"># after manual edits and/or changing the supplementary dir contents:</span></span>
+<span><span class="va">suppl_res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/recompile_resources.html">recompile_resources</a></span><span class="op">(</span><span class="va">suppl_res</span>, <span class="st">"path/to/supplementary_files"</span>,</span>
+<span>                                 rxs_images <span class="op">=</span> <span class="va">QWA_meta</span><span class="op">$</span><span class="va">images</span>,</span>
+<span>                                 add_new_files <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="co"># to re-check a created supplementary zip against the finalised manifest</span></span>
+<span><span class="fu"><a href="../reference/check_supplementary.html">check_supplementary</a></span><span class="op">(</span><span class="va">suppl_res</span>, <span class="st">"supplementary_data.zip"</span>, rxs_images <span class="op">=</span> <span class="va">QWA_meta</span><span class="op">$</span><span class="va">images</span><span class="op">)</span></span>
+<span><span class="fu">vroom</span><span class="fu">::</span><span class="fu"><a href="https://vroom.tidyverse.org/reference/vroom_write.html" class="external-link">vroom_write</a></span><span class="op">(</span><span class="va">suppl_res</span>, <span class="st">"output_data/supplementary_files.csv"</span><span class="op">)</span></span></code></pre></div>
+<p>The resources manifest CSV submitted alongside the supplementary zip
+will be treated as the single point of truth. Thus any files in the zip
+but not listed in the manifest (or listed as
+<code>resource_type = "junk"</code>) will <strong>not</strong> be
+included in the TRIA upload. To be explicit about your choices and to
+limit the size of the supplementary data submission, we recommend
+removing any files you do not want to include from the supplementary
+directory before zipping, followed by re-running
+<code><a href="../reference/recompile_resources.html">recompile_resources()</a></code> to update the manifest.</p>
 <hr>
 </div>
 </div>
@@ -206,277 +292,469 @@ chain across directories via <code>append_to</code>:</p>
 <h2 id="resource-types">Resource types<a class="anchor" aria-label="anchor" href="#resource-types"></a>
 </h2>
 <p><code>resource_type</code> is inferred from each file name by
-matching it against the standard ROXAS, ROXAS AI, and QWA naming
-conventions. Patterns are tested <strong>most-specific first</strong>.
-The recognised types are:</p>
-<p><strong>QWA pipeline outputs</strong>
-(<code>linked_level = "dataset"</code>)</p>
-<table class="table">
-<thead><tr class="header">
-<th>Type</th>
-<th>File name pattern</th>
-</tr></thead>
-<tbody>
-<tr class="odd">
-<td><code>QWAdata_cells</code></td>
-<td><code>*_QWAdata_cells*.csv(.gz)</code></td>
-</tr>
-<tr class="even">
-<td><code>QWAdata_rings</code></td>
-<td><code>*_QWAdata_rings*.csv(.gz)</code></td>
-</tr>
-<tr class="odd">
-<td><code>QWAprofile</code></td>
-<td><code>*_QWAprofile*.csv(.gz)</code></td>
-</tr>
-<tr class="even">
-<td><code>QWAmetadata</code></td>
-<td>
-<code>*.json(.gz)</code> (excluding
-<code>*.metadata.json</code>)</td>
-</tr>
-<tr class="odd">
-<td><code>roxas_full_output_summary</code></td>
-<td><code>*_Output_Summary_ROXAS.xlsx</code></td>
-</tr>
-<tr class="even">
-<td><code>reference_series</code></td>
-<td><code>*.rwl</code></td>
-</tr>
-</tbody>
-</table>
-<p><strong>Classic ROXAS per-image output</strong>
-(<code>linked_level = "analysis"</code>)</p>
-<table class="table">
-<thead><tr class="header">
-<th>Type</th>
-<th>File name pattern</th>
-</tr></thead>
-<tbody>
-<tr class="odd">
-<td><code>roxas_output_cells</code></td>
-<td><code>*_Output_Cells.txt</code></td>
-</tr>
-<tr class="even">
-<td><code>roxas_output_rings</code></td>
-<td><code>*_Output_Rings.txt</code></td>
-</tr>
-<tr class="odd">
-<td><code>roxas_output_summary</code></td>
-<td><code>*_Output_Summary.txt</code></td>
-</tr>
-<tr class="even">
-<td><code>roxas_output_xlsx</code></td>
-<td><code>*_Output*.xlsx</code></td>
-</tr>
-<tr class="odd">
-<td><code>roxas_settings</code></td>
-<td><code>*_ROXAS_Settings.txt</code></td>
-</tr>
-<tr class="even">
-<td><code>roxas_shapefile_ringtraces</code></td>
-<td><code>*_RingTraces.txt</code></td>
-</tr>
-<tr class="odd">
-<td><code>roxas_shapefile_vessels</code></td>
-<td><code>*_Vessels.scl</code></td>
-</tr>
-<tr class="even">
-<td><code>roxas_junkobjects</code></td>
-<td><code>*_JunkObjects.scl</code></td>
-</tr>
-<tr class="odd">
-<td><code>roxas_AOI</code></td>
-<td><code>*_AOI.out</code></td>
-</tr>
-<tr class="even">
-<td><code>roxas_AOE</code></td>
-<td><code>*_AOE.out</code></td>
-</tr>
-<tr class="odd">
-<td><code>roxas_AOEClass</code></td>
-<td><code>*_AOEClass.txt</code></td>
-</tr>
-<tr class="even">
-<td><code>roxas_CWT</code></td>
-<td><code>*_CellWallThickness.out</code></td>
-</tr>
-<tr class="odd">
-<td><code>roxas_cal</code></td>
-<td><code>*.cal</code></td>
-</tr>
-<tr class="even">
-<td><code>roxas_proj</code></td>
-<td><code>*_proj.rpf</code></td>
-</tr>
-</tbody>
-</table>
-<p><strong>ROXAS AI per-image output</strong>
-(<code>linked_level = "analysis"</code>)</p>
-<table class="table">
-<thead><tr class="header">
-<th>Type</th>
-<th>File name pattern</th>
-</tr></thead>
-<tbody>
-<tr class="odd">
-<td><code>rai_metadata</code></td>
-<td><code>*.metadata.json</code></td>
-</tr>
-<tr class="even">
-<td><code>rai_cells_table</code></td>
-<td><code>*.cells_table.csv</code></td>
-</tr>
-<tr class="odd">
-<td><code>rai_rings_table</code></td>
-<td><code>*.rings_table.csv</code></td>
-</tr>
-<tr class="even">
-<td><code>rai_image_cells</code></td>
-<td><code>*.cells.png</code></td>
-</tr>
-<tr class="odd">
-<td><code>rai_image_rings</code></td>
-<td><code>*.rings.tif(f)</code></td>
-</tr>
-</tbody>
-</table>
-<p><strong>Images</strong></p>
+matching it against a table of naming patterns bundled with the package
+(<code>system.file("extdata", "resource_types.csv", package = "rxs2tria")</code>).
+For example <code>*_Output_Cells.txt</code> becomes
+<code>"roxas_output_cells"</code>, <code>*.metadata.json</code> becomes
+<code>"rai_metadata"</code>, etc.</p>
 <table class="table">
 <colgroup>
-<col width="33%">
-<col width="33%">
-<col width="33%">
+<col width="11%">
+<col width="5%">
+<col width="52%">
+<col width="26%">
+<col width="4%">
 </colgroup>
 <thead><tr class="header">
-<th>Type</th>
-<th>File name pattern</th>
-<th><code>linked_level</code></th>
+<th align="left">resource_type</th>
+<th align="left">linked_level</th>
+<th align="left">example_names</th>
+<th align="left">identifier</th>
+<th align="left">source</th>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td><code>roxas_image_annotated_cells</code></td>
-<td><code>*_annotated_cells.jpg/jpeg</code></td>
-<td><code>analysis</code></td>
+<td align="left">QWAdata_cells</td>
+<td align="left">dataset</td>
+<td align="left">DSName_QWAcells.csv.gz</td>
+<td align="left">QWAcells.csv(.gz)?$</td>
+<td align="left">rxs2tria</td>
 </tr>
 <tr class="even">
-<td><code>roxas_image_annotated_twin</code></td>
-<td><code>*_annotated_twin.jpg/jpeg</code></td>
-<td><code>analysis</code></td>
+<td align="left">QWAdata_rings</td>
+<td align="left">dataset</td>
+<td align="left">DSName_QWArings.csv</td>
+<td align="left">QWArings.csv(.gz)?$</td>
+<td align="left">rxs2tria</td>
 </tr>
 <tr class="odd">
-<td><code>roxas_image_annotated</code></td>
-<td><code>*_annotated.jpg/jpeg</code></td>
-<td><code>analysis</code></td>
+<td align="left">QWAmetadata</td>
+<td align="left">dataset</td>
+<td align="left">DSName_QWAmetadata.json</td>
+<td align="left">QWAmetadata.json$</td>
+<td align="left">rxs2tria</td>
 </tr>
 <tr class="even">
-<td><code>image_refseries</code></td>
-<td><code>*_ReferenceSeries.jpg/jpeg/gif</code></td>
-<td><code>image</code></td>
+<td align="left">QWAprofile</td>
+<td align="left">dataset</td>
+<td align="left">DSName_QWAprofile.csv</td>
+<td align="left">QWAprofile.csv(.gz)?$</td>
+<td align="left">rxs2tria</td>
 </tr>
 <tr class="odd">
-<td><code>image_preview</code></td>
-<td><code>*_Preview*.jpg/jpeg</code></td>
-<td><code>slide</code></td>
+<td align="left">reference_series</td>
+<td align="left">dataset</td>
+<td align="left">SITE_SPECIES.rwl</td>
+<td align="left">.rwl$</td>
+<td align="left">processing</td>
 </tr>
 <tr class="even">
-<td><code>image_panorama</code></td>
-<td><code>*panorama*.jpg/jpeg/tif/tiff</code></td>
-<td><code>woodpiece</code></td>
+<td align="left">image_panorama</td>
+<td align="left">woodpiece</td>
+<td align="left">WPNAME_Panorama.png; WPNAME_Panorama.xcf</td>
+<td align="left">Panorama.(png|xcf|tif|tiff)$</td>
+<td align="left">processing</td>
 </tr>
 <tr class="odd">
-<td><code>image_original</code></td>
-<td>any other <code>*.jpg/jpeg/tif/tiff</code>
+<td align="left">image_original</td>
+<td align="left">image</td>
+<td align="left">IMGNAME.jpg; IMGNAME.scan.jpg; IMGNAME.scan.jpeg;
+IMGNAME.rxs.jpg; IMGNAME.png</td>
+<td align="left">(.(scan|rxs))?.(jpg|jpeg|png)$</td>
+<td align="left">processing</td>
+</tr>
+<tr class="even">
+<td align="left">image_preview</td>
+<td align="left">slide</td>
+<td align="left">SLIDENAME_Preview.jpg</td>
+<td align="left">Preview.(jpg|jpeg)$</td>
+<td align="left">processing</td>
+</tr>
+<tr class="odd">
+<td align="left">roxas_full_output_summary</td>
+<td align="left">dataset</td>
+<td align="left">_ROXAS_Output_Summary__DSNAME.xlsx</td>
+<td align="left">ROXAS_Output_Summary.*.xlsx$</td>
+<td align="left">roxas</td>
+</tr>
+<tr class="even">
+<td align="left">image_refseries</td>
+<td align="left">analysis</td>
+<td align="left">IMGNAME_ReferenceSeries.jpg;
+IMGNAME_ReferenceSeries.gif; IMGNAME_ReferenceSeries_Original.jpg;
+IMGNAME_ReferenceSeriesLong.jpg</td>
+<td align="left">_ReferenceSeries(Long|_Original)?.(jpg|jpeg|gif)$</td>
+<td align="left">roxas</td>
+</tr>
+<tr class="odd">
+<td align="left">roxas_image_annotated</td>
+<td align="left">analysis</td>
+<td align="left">IMGNAME_annotated.jpg</td>
+<td align="left">_annotated.(jpg|jpeg|png)$</td>
+<td align="left">roxas</td>
+</tr>
+<tr class="even">
+<td align="left">roxas_image_annotated_cells</td>
+<td align="left">analysis</td>
+<td align="left">IMGNAME_annotated_cells.jpg</td>
+<td align="left">_annotated_cells.(jpg|jpeg)$</td>
+<td align="left">roxas</td>
+</tr>
+<tr class="odd">
+<td align="left">roxas_image_annotated_twin</td>
+<td align="left">analysis</td>
+<td align="left">IMGNAME_annotated_twin.jpg</td>
+<td align="left">_annotated_twin.(jpg|jpeg)$</td>
+<td align="left">roxas</td>
+</tr>
+<tr class="even">
+<td align="left">roxas_output_cells</td>
+<td align="left">analysis</td>
+<td align="left">IMGNAME_Output_Cells.txt</td>
+<td align="left">_Output_Cells.txt$</td>
+<td align="left">roxas</td>
+</tr>
+<tr class="odd">
+<td align="left">roxas_output_rings</td>
+<td align="left">analysis</td>
+<td align="left">IMGNAME_Output_Rings.txt</td>
+<td align="left">_Output_Rings.txt$</td>
+<td align="left">roxas</td>
+</tr>
+<tr class="even">
+<td align="left">roxas_output_xlsx</td>
+<td align="left">analysis</td>
+<td align="left">IMGNAME_Output.xlsx</td>
+<td align="left">_Output.xlsx$</td>
+<td align="left">roxas</td>
+</tr>
+<tr class="odd">
+<td align="left">roxas_output_summary</td>
+<td align="left">analysis</td>
+<td align="left">IMGNAME_Output_Summary.txt</td>
+<td align="left">_Output_Summary.txt$</td>
+<td align="left">roxas</td>
+</tr>
+<tr class="even">
+<td align="left">roxas_settings</td>
+<td align="left">analysis</td>
+<td align="left">IMGNAME_ROXAS_Settings.txt</td>
+<td align="left">_ROXAS_Settings.txt$</td>
+<td align="left">roxas</td>
+</tr>
+<tr class="odd">
+<td align="left">roxas_shapefile_vessels</td>
+<td align="left">analysis</td>
+<td align="left">IMGNAME_Vessels.scl</td>
+<td align="left">_Vessels.scl$</td>
+<td align="left">roxas</td>
+</tr>
+<tr class="even">
+<td align="left">junk</td>
+<td align="left">NA</td>
+<td align="left">IMGNAME_Vessels_bu.scl</td>
+<td align="left">_Vessels_bu.scl$</td>
+<td align="left">roxas</td>
+</tr>
+<tr class="odd">
+<td align="left">roxas_shapefile_ringtraces</td>
+<td align="left">analysis</td>
+<td align="left">IMGNAME_RingTraces.txt</td>
+<td align="left">_RingTraces.txt$</td>
+<td align="left">roxas</td>
+</tr>
+<tr class="even">
+<td align="left">junk</td>
+<td align="left">NA</td>
+<td align="left">IMGNAME_RingTraces_bu.txt</td>
+<td align="left">_RingTraces_bu.txt$</td>
+<td align="left">roxas</td>
+</tr>
+<tr class="odd">
+<td align="left">roxas_cal</td>
+<td align="left">analysis</td>
+<td align="left">IMGNAME.cal</td>
+<td align="left">.cal$</td>
+<td align="left">roxas</td>
+</tr>
+<tr class="even">
+<td align="left">roxas_AOI</td>
+<td align="left">analysis</td>
+<td align="left">IMGNAME_AOI.out; IMGNAME_AOI_40.out;
+IMGNAME_AOI_50_25.out; etc</td>
+<td align="left">
+<em>AOI(</em>[0-9]+)*.out$</td>
+<td align="left">roxas</td>
+</tr>
+<tr class="odd">
+<td align="left">roxas_AOE</td>
+<td align="left">analysis</td>
+<td align="left">IMGNAME_AOE.out</td>
+<td align="left">_AOE.out$</td>
+<td align="left">roxas</td>
+</tr>
+<tr class="even">
+<td align="left">roxas_AOEClass</td>
+<td align="left">analysis</td>
+<td align="left">IMGNAME_AOEClass.txt</td>
+<td align="left">_AOEClass.txt$</td>
+<td align="left">roxas</td>
+</tr>
+<tr class="odd">
+<td align="left">roxas_CWT</td>
+<td align="left">analysis</td>
+<td align="left">IMGNAME_CellWallThickness.out</td>
+<td align="left">_CellWallThickness.out$</td>
+<td align="left">roxas</td>
+</tr>
+<tr class="even">
+<td align="left">roxas_ringinclination</td>
+<td align="left">analysis</td>
+<td align="left">IMGNAME_RingInclination.out</td>
+<td align="left">_RingInclination.out$</td>
+<td align="left">roxas</td>
+</tr>
+<tr class="odd">
+<td align="left">roxas_junkobjects</td>
+<td align="left">analysis</td>
+<td align="left">IMGNAME_JunkObjects.scl; IMGNAME_JunkObjects2.scl;
+etc</td>
+<td align="left">_JunkObjects[0-9]*.scl$</td>
+<td align="left">roxas</td>
+</tr>
+<tr class="even">
+<td align="left">roxas_proj</td>
+<td align="left">analysis</td>
+<td align="left">IMGNAME_proj.rpf</td>
+<td align="left">_proj.rpf$</td>
+<td align="left">roxas</td>
+</tr>
+<tr class="odd">
+<td align="left">rai_metadata</td>
+<td align="left">analysis</td>
+<td align="left">IMGNAME.metadata.json</td>
+<td align="left">.metadata.json$</td>
+<td align="left">roxas_ai</td>
+</tr>
+<tr class="even">
+<td align="left">rai_cells_table</td>
+<td align="left">analysis</td>
+<td align="left">IMGNAME.cells_table.csv; IMGNAME.cells_table.txt</td>
+<td align="left">.cells_table.(csv|txt)$</td>
+<td align="left">roxas_ai</td>
+</tr>
+<tr class="odd">
+<td align="left">rai_rings_table</td>
+<td align="left">analysis</td>
+<td align="left">IMGNAME.rings_table.csv; IMGNAME.rings_table.txt</td>
+<td align="left">.rings_table.(csv|txt)$</td>
+<td align="left">roxas_ai</td>
+</tr>
+<tr class="even">
+<td align="left">rai_image_cells</td>
+<td align="left">analysis</td>
+<td align="left">IMGNAME.cells.png</td>
+<td align="left">.cells.png$</td>
+<td align="left">roxas_ai</td>
+</tr>
+<tr class="odd">
+<td align="left">rai_image_rings</td>
+<td align="left">analysis</td>
+<td align="left">IMGNAME.rings.tiff</td>
+<td align="left">.rings.(tif|tiff)$</td>
+<td align="left">roxas_ai</td>
+</tr>
+<tr class="even">
+<td align="left">rai_image_annotated</td>
+<td align="left">analysis</td>
+<td align="left">IMGNAME_annotated.jpg</td>
+<td align="left">_annotated.(jpg|jpeg|png)$</td>
+<td align="left">roxas_ai</td>
+</tr>
+<tr class="odd">
+<td align="left">junk</td>
+<td align="left">NA</td>
+<td align="left">Thumbs.db</td>
+<td align="left">^Thumbs.db$</td>
+<td align="left">system</td>
+</tr>
+<tr class="even">
+<td align="left">junk</td>
+<td align="left">NA</td>
+<td align="left">IMGNAME_annotated.cal</td>
+<td align="left">_annotated.cal$</td>
+<td align="left">roxas</td>
+</tr>
+<tr class="odd">
+<td align="left">junk</td>
+<td align="left">NA</td>
+<td align="left">SLIDENAME_Preview.cal</td>
+<td align="left">Preview.cal$</td>
+<td align="left">roxas</td>
+</tr>
+<tr class="even">
+<td align="left">junk</td>
+<td align="left">NA</td>
+<td align="left">IMGNAME_ReferenceSeries.cal</td>
+<td align="left">_ReferenceSeries(Long|_Original)?.cal$</td>
+<td align="left">roxas</td>
+</tr>
+<tr class="odd">
+<td align="left">junk</td>
+<td align="left">NA</td>
+<td align="left">IMGNAME_TRACHEIDMASK.tif</td>
+<td align="left">_TRACHEIDMASK.(tif|tiff)$</td>
+<td align="left">roxas</td>
+</tr>
+<tr class="even">
+<td align="left">junk</td>
+<td align="left">NA</td>
+<td align="left">FILENAME~RF6c4558.TMP</td>
+<td align="left">~RF[[:alnum:]]+.TMP$</td>
+<td align="left">system</td>
+</tr>
+<tr class="odd">
+<td align="left">junk</td>
+<td align="left">NA</td>
+<td align="left">~<span class="math inline">$IMGNAME_Output.xlsx                                                                                                           |^~\$                                                              |system     |
+|junk                        |NA           |desktop.ini                                                                                                                     |^desktop\.ini$</span>
 </td>
-<td><code>image</code></td>
+<td align="left">system</td>
+<td align="left"></td>
+</tr>
+<tr class="even">
+<td align="left">junk</td>
+<td align="left">NA</td>
+<td align="left">.DS_Store</td>
+<td align="left">.DS_Store$</td>
+<td align="left">system</td>
+</tr>
+<tr class="odd">
+<td align="left">junk</td>
+<td align="left">NA</td>
+<td align="left">._IMGNAME.jpg</td>
+<td align="left">^._</td>
+<td align="left">system</td>
 </tr>
 </tbody>
 </table>
+<p>Patterns are tested most specific first and the first match wins. The
+<code>roxas_version</code> attribute of the input
+<code>rxs_images</code> is used to subset the list of search patterns
+and to disambiguate patterns shared between classic ROXAS and ROXAS AI.
+Known backup and junk files (ROXAS <code>_bu</code> backups,
+<code>Thumbs.db</code>, Office lock files, hidden files, …) are typed as
+<code>"junk"</code> and will be ignored automatically. Thus you can also
+set the resource type to <code>"junk"</code> for any file you want to be
+excluded from the TRIA upload. Any rxs2tria-generated files
+(<code>QWAmetadata.json</code>, the
+<code>QWAcells</code>/<code>QWArings</code>/<code>QWAprofile</code>
+<code>.csv(.gz)</code> files) under the input <code>path</code> are also
+detected.</p>
 <p><strong>Anything else</strong> is typed as <code>"other"</code> (with
-<code>linked_level = NA</code>). By default <code>"other"</code> files
-are dropped from the table; pass <code>include_unmatched = TRUE</code>
-to keep them so you can assign a type manually.</p>
-<div class="section level3">
-<h3 id="excluded-files">Excluded files<a class="anchor" aria-label="anchor" href="#excluded-files"></a>
-</h3>
-<p>Some files are always skipped, regardless of
-<code>include_unmatched</code>, because they are backups or system
-artefacts: ROXAS <code>_bu</code> backups
-(<code>*_Vessels_bu.scl</code>, <code>*_Ringtraces_bu.txt</code>),
-annotated calibration files (<code>*_annotated.cal</code>),
-<code>Thumbs.db</code>, and Office lock files (<code>~$*</code>).</p>
+<code>linked_level = NA</code> and <code>status = "review"</code>). If
+the file should be included in the TRIA upload, provide a brief
+<code>description</code> explaining what the file is and why it is
+relevant.</p>
+<hr>
 </div>
-<div class="section level3">
-<h3 id="correcting-an-inferred-type">Correcting an inferred type<a class="anchor" aria-label="anchor" href="#correcting-an-inferred-type"></a>
-</h3>
-<p>Inference is name-based, so an unconventional file name may be typed
-as <code>"other"</code> or mis-typed. Edit the table directly to fix
-it:</p>
+<div class="section level2">
+<h2 id="linked-labels">Linked labels<a class="anchor" aria-label="anchor" href="#linked-labels"></a>
+</h2>
+<p>Every resource type has a default <code>linked_level</code>
+describing the level of the data hierarchy the file pertains to:
+<code>"dataset"</code> (applies to the whole submission, e.g. a
+reference chronology), <code>"site"</code>, … , or
+<code>"analysis"</code> (per-analysed-image ROXAS (AI) files such as
+shapefiles or annotated images). <code>linked_label</code> identifies
+<em>which</em> entity at that level the file belongs to (e.g. a specific
+<code>image_label</code>). Where possible, the label is filled
+automatically from the data structure defined in
+<code>rxs_images</code>—the <code>QWAimages</code> object or
+<code>$images</code> component of the <code>QWAmetadata</code> object
+that you pass to <code><a href="../reference/compile_resources.html">compile_resources()</a></code> /
+<code><a href="../reference/recompile_resources.html">recompile_resources()</a></code>.</p>
+<p>For <code>image</code>/<code>analysis</code> files, matching works by
+testing whether a resource’s <em>basename</em>
+(<code>resource_name</code> with any directory stripped) <strong>starts
+with</strong> an image’s base name (<code>rxs_images$org_img_name</code>
+without any extensions); the longest match wins, so labels that share a
+prefix are not confused (e.g. <code>S22_L1</code> vs
+<code>S22_L10</code>).</p>
+<p>For <code>slide</code>/<code>woodpiece</code> files
+(e.g. <code>SLIDENAME_Preview.jpg</code>,
+<code>WPNAME_Panorama.tif</code>), there is no “original”
+slide/woodpiece name stored anywhere to match against directly—only the
+constructed <code>slide_label</code>/<code>woodpiece_label</code>.
+Instead, the original identifier is recovered from the images that share
+a <code>slide_label</code> (or <code>woodpiece_label</code>): since
+sibling images are almost always named with a common prefix followed by
+an image-specific suffix, the longest common prefix of their
+<code>org_img_name</code> values recovers that original identifier,
+whatever the naming convention. A slide/woodpiece with only a single
+image has no sibling to compare against, so its trailing token (the part
+after the last separator, e.g. <code>_1</code> in
+<code>SITEA-PISY_01_2_1</code>) is stripped instead.</p>
+<p>Files that do not match anything are left as <code>NA</code>, and
+resource types that normally need a <code>linked_label</code> are
+flagged <code>status = "review"</code> until one is filled in (see <a href="#readiness-status">Readiness status</a>).</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">res</span><span class="op">$</span><span class="va">resource_type</span><span class="op">[</span><span class="va">res</span><span class="op">$</span><span class="va">resource_name</span> <span class="op">==</span> <span class="st">"odd_name.tif"</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="st">"image_original"</span></span>
-<span><span class="va">res</span><span class="op">$</span><span class="va">linked_level</span><span class="op">[</span><span class="va">res</span><span class="op">$</span><span class="va">resource_name</span> <span class="op">==</span> <span class="st">"odd_name.tif"</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="st">"image"</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">suppl_res</span><span class="op">$</span><span class="va">linked_label</span><span class="op">[</span><span class="va">suppl_res</span><span class="op">$</span><span class="va">resource_name</span> <span class="op">==</span> <span class="st">"SITEA_PISY.rwl"</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="st">"SITEA_PISY"</span></span>
+<span><span class="va">suppl_res</span><span class="op">$</span><span class="va">linked_level</span><span class="op">[</span><span class="va">suppl_res</span><span class="op">$</span><span class="va">resource_name</span> <span class="op">==</span> <span class="st">"SITEA_PISY.rwl"</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="st">"site"</span> <span class="co"># for a reference series at a specific site</span></span></code></pre></div>
+<p>Always review the auto-filled labels, too: the prefix-based matching
+is a heuristic and can occasionally miss or mismatch unconventional file
+names.</p>
 <hr>
 </div>
-</div>
 <div class="section level2">
-<h2 id="linking-resources-to-the-data-hierarchy">Linking resources to the data hierarchy<a class="anchor" aria-label="anchor" href="#linking-resources-to-the-data-hierarchy"></a>
+<h2 id="readiness-status">Readiness status<a class="anchor" aria-label="anchor" href="#readiness-status"></a>
 </h2>
-<p><code>linked_level</code> says <em>what kind</em> of entity a file
-belongs to; <code>linked_label</code> says <em>which one</em>. For
-per-image files (<code>linked_level</code> of <code>"image"</code> or
-<code>"analysis"</code>), the label can be filled automatically from a
-<strong>data structure</strong> — either the table returned by
-[extract_data_structure()] or the <code>$images</code> component of your
-<code>QWAmetadata</code> object.</p>
-<p><code><a href="../reference/add_resources.html">add_resources()</a></code> does this for you: it passes
-<code>x$images</code> as the data structure, so per-image resources are
-matched to their <code>image_label</code> without any extra step. The
-console reports how many were matched, e.g.
-<code>Matched 42/45 resources to an image label</code>.</p>
-<p>Matching works by testing whether a resource’s file name
-<strong>starts with</strong> an image’s base name; the longest match
-wins, so labels that share a prefix are not confused
-(e.g. <code>S22_L1</code> vs <code>S22_L10</code>). Files that do not
-match any image are left as <code>NA</code>.</p>
-<p>With <code><a href="../reference/collect_resources.html">collect_resources()</a></code>, supply the structure
-explicitly:</p>
+<p>Every row is assigned a <code>status</code>, computed automatically
+by
+<code><a href="../reference/compile_resources.html">compile_resources()</a></code>/<code><a href="../reference/recompile_resources.html">recompile_resources()</a></code>:</p>
+<ul>
+<li>
+<strong><code>"ok"</code></strong>: recognised, passes every check,
+ready to submit as-is. The file is of a recognised type and a linked
+label could be inferred as needed. An rxs2tria-generated file found
+among your supplementary files (<code>QWAmetadata.json</code>, the
+<code>QWAcells</code>/<code>QWArings</code>/ <code>QWAprofile</code>
+<code>.csv(.gz)</code> files) also gets <code>"ok"</code> here. You may
+include it in the zip or submit it individually, either is fine.</li>
+<li>
+<strong><code>"review"</code></strong>: needs your attention before
+this dataset can be zipped for submission. <code>note</code> says why:
+an unrecognised (<code>"other"</code>) file without a
+<code>description</code> justifying its inclusion, a missing
+<code>linked_label</code> where one is expected, more than one file of a
+type expected to occur once per level, a resource type not expected for
+this ROXAS version, or a <code>linked_label</code> that doesn’t match
+any known label.</li>
+<li>
+<strong><code>"ignore"</code></strong>: a junk file (ROXAS
+<code>_bu</code> backups, stray calibration/scan files,
+<code>Thumbs.db</code>, <code>desktop.ini</code>,
+<code>.DS_Store</code>, Office lock files, hidden files, …). Never part
+of what gets uploaded as supplementary resources to TRIA. Any file where
+you manually set the <code>resource_type</code> to <code>"junk"</code>
+gets the same treatment. However, you may want to remove these files
+from the directory yourself to decrease the submission file size.</li>
+</ul>
+<p>The console output tells you where things stand: once no row needs
+review, you’ll see a confirmation that the dataset is ready to zip;
+otherwise the files that need attention are listed together with their
+<code>note</code>. A file typed <code>"other"</code> is treated as ready
+(<code>"ok"</code>) as soon as you give it a <code>description</code>
+explaining why it belongs in the submission as-is—you don’t need to also
+assign it a “real” <code>resource_type</code> unless one actually
+applies.</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/collect_resources.html">collect_resources</a></span><span class="op">(</span><span class="st">"raw_roxas_files"</span>,</span>
-<span>                         df_structure <span class="op">=</span> <span class="va">QWA_meta</span><span class="op">$</span><span class="va">images</span>,</span>
-<span>                         recursive <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
-<p>Labels for <code>dataset</code>-, <code>woodpiece</code>-, and
-<code>slide</code>-level resources are not inferred and remain
-<code>NA</code>. Fill in the ones that matter — for example, tie a
-woodpiece panorama image to its woodpiece:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">res</span><span class="op">$</span><span class="va">linked_label</span><span class="op">[</span><span class="va">res</span><span class="op">$</span><span class="va">resource_name</span> <span class="op">==</span> <span class="st">"SITEA_PISY_01_panorama.tif"</span><span class="op">]</span> <span class="op">&lt;-</span></span>
-<span>  <span class="st">"SITEA_PISY_01"</span></span></code></pre></div>
-<p>A <code>linked_label</code> of <code>NA</code> is acceptable — it
-simply means the file is not tied to a specific entity below its level
-(a dataset-wide reference chronology is a natural example).</p>
+<code class="sourceCode R"><span><span class="va">suppl_res</span><span class="op">$</span><span class="va">resource_type</span><span class="op">[</span><span class="va">suppl_res</span><span class="op">$</span><span class="va">resource_name</span> <span class="op">==</span> <span class="st">"tree1/slide2/odd_name.tif"</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="st">"image_original"</span></span>
+<span><span class="va">suppl_res</span><span class="op">$</span><span class="va">linked_level</span><span class="op">[</span><span class="va">suppl_res</span><span class="op">$</span><span class="va">resource_name</span> <span class="op">==</span> <span class="st">"tree1/slide2/odd_name.tif"</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="st">"image"</span></span>
+<span></span>
+<span><span class="co"># re-run the checks after manually editing the table:</span></span>
+<span><span class="va">suppl_res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/recompile_resources.html">recompile_resources</a></span><span class="op">(</span><span class="va">suppl_res</span>, <span class="st">"path/to/submission_files"</span>, <span class="va">QWA_meta</span><span class="op">$</span><span class="va">images</span><span class="op">)</span></span></code></pre></div>
 <hr>
-</div>
-<div class="section level2">
-<h2 id="adding-an-optional-description">Adding an optional description<a class="anchor" aria-label="anchor" href="#adding-an-optional-description"></a>
-</h2>
-<p>The resources schema also allows a free-text <code>description</code>
-per file, useful when a resource needs context that its type does not
-convey. It is not created by <code><a href="../reference/collect_resources.html">collect_resources()</a></code>; add it
-yourself when helpful:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">res</span><span class="op">$</span><span class="va">description</span><span class="op">[</span><span class="va">res</span><span class="op">$</span><span class="va">resource_type</span> <span class="op">==</span> <span class="st">"reference_series"</span><span class="op">]</span> <span class="op">&lt;-</span></span>
-<span>  <span class="st">"Master chronology used for crossdating, EPS &gt; 0.85."</span></span></code></pre></div>
-<hr>
-</div>
-<div class="section level2">
-<h2 id="where-this-fits-in-the-workflow">Where this fits in the workflow<a class="anchor" aria-label="anchor" href="#where-this-fits-in-the-workflow"></a>
-</h2>
-<p>Compiling resources is the optional final step of the preparation
-workflow (see <code><a href="../articles/workflow.html">vignette("workflow")</a></code>, Step 7). Once
-<code>$resources</code> is populated and the <code>QWAmetadata</code>
-object is written to disk, the manifest travels with the submission and
-the listed files can be uploaded alongside the required
-<code>QWAmetadata</code> and <code>QWAdata</code> files.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

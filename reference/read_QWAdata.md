@@ -1,8 +1,9 @@
 # Read a QWAdata object from CSV files
 
-Reads cells and rings from (compressed) CSV files. Use the `components`
-argument to load only a subset, e.g. to avoid reading a large cells file
-when only rings are needed.
+Reads cells and/or rings from (compressed) CSV files. To load only one
+component (e.g. to avoid reading a large cells file when only rings are
+needed), provide only the corresponding `file_cells`/`file_rings`
+argument.
 
 ## Usage
 
@@ -11,8 +12,7 @@ read_QWAdata(
   dir = NULL,
   file_cells = NULL,
   file_rings = NULL,
-  dataset_name = NULL,
-  components = c("cells", "rings")
+  dataset_name = NULL
 )
 ```
 
@@ -20,26 +20,21 @@ read_QWAdata(
 
 - dir:
 
-  Directory to search for cells and rings files. Mutually exclusive with
-  `file_cells`/`file_rings`.
+  Directory to search for cells and rings files. Both are read if found;
+  if one is missing, a warning is issued and that component is omitted.
+  Mutually exclusive with `file_cells`/`file_rings`.
 
 - file_cells, file_rings:
 
-  Explicit paths to the cells and rings CSV files. Both must be provided
-  together. Mutually exclusive with `dir`.
+  Explicit paths to the cells and rings CSV files. Either or both may be
+  given; the omitted component is `NULL` in the returned
+  [QWAdata](https://tria-db.github.io/rxs2tria/reference/QWAdata.md)
+  object. Mutually exclusive with `dir`.
 
 - dataset_name:
 
   Optional string to disambiguate when multiple matching files are found
   in `dir`.
-
-- components:
-
-  Character vector of components to read. Any subset of
-  `c("cells", "rings")`. Defaults to `c("cells", "rings")`. Omitted
-  components are `NULL` in the returned
-  [QWAdata](https://tria-db.github.io/rxs2tria/reference/QWAdata.md)
-  object.
 
 ## Value
 

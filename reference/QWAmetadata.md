@@ -78,9 +78,13 @@ as_QWAmetadata(x)
 
 - resources:
 
-  Data frame listing all raw data files to be submitted as part of the
-  dataset. Typically created by
-  [`collect_resources()`](https://tria-db.github.io/rxs2tria/reference/collect_resources.md).
+  Data frame describing the submitted `QWAdata` cells/rings files.
+  Populated by TRIA at publish time rather than by this package – leave
+  `NULL`. (The supplementary-file manifest built by
+  [`compile_resources()`](https://tria-db.github.io/rxs2tria/reference/compile_resources.md)
+  is a separate, standalone artefact – see
+  [`vignette("resources")`](https://tria-db.github.io/rxs2tria/articles/resources.md)
+  – not a component of `QWAmetadata`.)
 
 - sites:
 
