@@ -22,7 +22,7 @@ This vignette covers the last mile of the preparation workflow: what
 exactly to upload, how to package supplementary files, and what happens 
 to your files once TRIA receives them.
 It assumes you have already been through `vignette("workflow")` and have
-a complete [QWAmetadata] object and [QWAdata] files (and, optionally, a 
+a complete `QWAmetadata` object and `QWAdata` files (and, optionally, a
 validated zip of supplementary files) ready on disk.
 
 ---
@@ -32,10 +32,10 @@ validated zip of supplementary files) ready on disk.
 A submission consists of:
 
 1. **`{dataset_name}_QWAmetadata.json`**: usually the output of the
-  Shiny metadata app, or written with [write_QWAmetadata()].
+  Shiny metadata app, or written with `write_QWAmetadata()`.
 2. **`{dataset_name}_QWAcells.csv(.gz)`** and
    **`{dataset_name}_QWArings.csv(.gz)`**: written with
-   [write_QWAdata()]. The rings file may also have been saved via the Shiny
+   `write_QWAdata()`. The rings file may also have been saved via the Shiny
    flags app, if it was used for assigning data quality flags to years.
 3. Optionally, **one zip archive of supplementary resources** (original
    and annotated images, raw ROXAS / ROXAS AI output, reference series,
@@ -56,8 +56,8 @@ To hand over these files, email [tria@wsl.ch](mailto:tria@wsl.ch) and either:
 We run your data through some basic validation checks, then insert it
 into the TRIA PostgreSQL database.
 This is where the structured data (measurements, metadata) live, and
-what the TRIA web platform [webapps.wsl.ch/tria] talks to. Access is
-controlled, so only the publically available (meta-)data is visible
+what the TRIA web platform (webapps.wsl.ch/tria) talks to. Access is
+controlled, so only the publicly available (meta-)data is visible
 via the website.
 
 ### S3 bucket
@@ -67,7 +67,7 @@ easily accessible and downloadable.
 Each dataset gets its own folder like this:
 
 ```
-tria.0001/
+tria.0000/
   data/
     tria.0000_QWAmetadata.json
     tria.0000_QWArings.csv.gz
@@ -77,7 +77,7 @@ tria.0001/
     tria.0000_supplementary_data.zip
   versions/                            <- only if there are multiple versions of the dataset
     tria.0000_v1_QWAmetadata.json
-    tria.0000_v1_cells.csv.gz           
+    tria.0000_v1_QWAcells.csv.gz           
 ```
 
 We make a small number of server-side adjustments to your raw files during
@@ -112,11 +112,11 @@ The `fname_*` columns hold absolute paths from your own machine---
 meaningful while you're preparing the data, meaningless (and potentially
 revealing local file-system structure) once archived, so they are always
 stripped rather than carried into the database.
-The `$resources` itself contains onlty two rows with the info
+The `$resources` itself contains only two rows with the info
 (incl. `s3_key` and `checksum`) of the uploaded `QWAcells` and `QWArings` 
 files (as described above). So for each `version` of the dataset, we know
 exactly which data files are the correct ones.
-Nothat the supplementary-resources manifest is a separate CSV (see
+Note that the supplementary-resources manifest is a separate CSV (see
 below), not a component of `QWAmetadata.json`.
 
 ### `supplementary_files.csv` and `supplementary_data.zip`
@@ -134,6 +134,6 @@ resource types and linked labels would mean that we have to contact
 you for clarification---prolonging the submission process.
 
 The checked and 'cleaned' archive is re-zipped. 
-For the manifest, the columns `fname_resources`, `status`, `note` are 
-removed while `checksum`, `size_bytes` and `s3_key` added to unqiuely
+For the manifest, the columns `fname_resource`, `status`, `note` are
+removed while `checksum`, `size_bytes` and `s3_key` are added to uniquely
 identify each resource file within the bucket archive.

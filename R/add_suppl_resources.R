@@ -142,6 +142,9 @@ recompile_resources <- function(suppl_res, path, rxs_images, add_new_files = FAL
                           "slide_label", "woodpiece_label"))
   checkmate::assert_flag(add_new_files)
 
+  # status is derived; a hand-built manifest may not have it yet
+  if (!"status" %in% names(suppl_res)) suppl_res$status <- NA_character_
+
   new_res <- .scan_resources(path, rxs_images)
 
   # add_new_files decides the new manifest's rows for untracked files;
@@ -163,7 +166,9 @@ recompile_resources <- function(suppl_res, path, rxs_images, add_new_files = FAL
 #'
 #' A pass/fail check confirming that your finalised manifest accurately
 #' describes the content of the supplementary archive/directory and is ready
-#' for submission.
+#' for submission. `suppl_res` must be a finalised manifest, i.e. including
+#' the `status` column produced by [compile_resources()] or
+#' [recompile_resources()].
 #' Aborts if `suppl_res` lists a file with `status == "ok"` that isn't found
 #' in `path`---a genuine inconsistency between the manifest and the archive.
 #' Returns `FALSE` (with a warning pointing you back to
@@ -186,7 +191,9 @@ recompile_resources <- function(suppl_res, path, rxs_images, add_new_files = FAL
 #' }
 #' @export
 check_supplementary <- function(suppl_res, path, rxs_images) {
-  checked <- recompile_resources(suppl_res, path, rxs_images, add_new_files = FALSE)
+  checkmate::assert_data_frame(suppl_res)
+  checkmate::assert_names(names(suppl_res), must.include = "status")
+  checked <-recompile_resources(suppl_res, path, rxs_images, add_new_files = FALSE)
   # recompile_resources() already aborts if a submission-ready ("ok")
   # resource has gone missing; the only remaining failure is lingering
   # "review" rows, already listed in detail by the call above
@@ -326,7 +333,7 @@ check_supplementary <- function(suppl_res, path, rxs_images) {
   # declared in res, not found in the fresh scan
   vanished <- df_comp |> dplyr::filter(is.na(.data$resource_name))
   # only a problem if it's something we expected to be submitted
-  missing_files <- vanished |> dplyr::filter(.data$status.usr == "ok")
+  missing_files <- vanished |> dplyr::filter(.data$status.usr %in% "ok")
 
   if (nrow(missing_files) > 0) {
     cli::cli_abort(c(
@@ -336,7 +343,7 @@ check_supplementary <- function(suppl_res, path, rxs_images) {
     ))
   }
 
-  already_gone <- vanished$resource_name.usr[vanished$status.usr != "ok"]
+  already_gone <- vanished$resource_name.usr[!vanished$status.usr %in% "ok"]
   res <- res[!res$resource_name %in% already_gone, ]
 
   if (length(new_files) + usr_overwrites + length(already_gone) > 0) {

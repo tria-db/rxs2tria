@@ -611,7 +611,6 @@ flags_server <- function(id, main_session, comments_out) {
     shiny::observe({
       shiny::removeModal()
       click_data <- plot_click()
-      print(click_data)
       new_marker <- resolve_click_marker(click_data, df_otherwps(), input$sel_param)
 
       sel_marker(new_marker)
@@ -1233,9 +1232,8 @@ flags_server <- function(id, main_session, comments_out) {
     # detrending, if applied) and open the export modal, prepopulated with
     # the auto-computed scaling factor and default file names
     shiny::observe({
+      shiny::req(rings_data_edited(), input$filt_wp, input$sel_param)
       safe_block({
-        shiny::req(rings_data_edited(), input$filt_wp, input$sel_param)
-
         df_export <- build_chronology_df(
           rings_data = rings_data_edited(),
           prf_data = input_data$prf_data,
@@ -1358,7 +1356,7 @@ flags_server <- function(id, main_session, comments_out) {
 
 
     # # DEBUG OUTPUT -------------------------------------------------------------
-    output$debug <- shiny::renderPrint({
+    # output$debug <- shiny::renderPrint({
     #   #sel_marker()
     #   #sel_subplots()
     #   #flags_out()
@@ -1370,10 +1368,9 @@ flags_server <- function(id, main_session, comments_out) {
     #   #rings_data_org()
     #   #input$enter_key
     #   #str(input_data$rings_data)
-      #df_crn()
-      pending_rwl_export()
-
-    })
+    #   #df_crn()
+    #   #pending_rwl_export()
+    # })
 
 
     # return module exports

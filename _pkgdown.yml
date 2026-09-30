@@ -7,7 +7,6 @@ reference:
   desc: "Functions for extracing metadata from the raw ROXAS (AI) output files."
   contents:
   - get_roxas_files
-  - get_structure_from_filenames
   - extract_data_structure
   - collect_settings_data
   - build_QWAimages
@@ -74,7 +73,7 @@ reference:
   contents:
   - extract_rwl
   - scale_for_tucson
-  - create_rwl
+  - rename_for_tucson
 articles:
 - title: Tutorials
   navbar: ~

@@ -82,9 +82,12 @@ build_chronology_df <- function(rings_data, prf_data,
 
 # helper to spline detrend data for a specific woodpiece
 fit_detrend_curve <- function(df, method = "Spline", nyrs = 32) {
-  df |>
+  df <- df |>
     # ignore unselected duplicates and excluded rings for fit
-    dplyr::filter(!exclude_dupl, !exclude_issues) |>
+    dplyr::filter(!exclude_dupl, !exclude_issues)
+  if (nrow(df) == 0) return(tibble::tibble(year = integer(), det_curve = numeric()))
+
+  df |>
     # ensure we have no gaps in the years, e.g. between images/slides
     tidyr::complete(year = tidyr::full_seq(year, 1), explicit = FALSE) |>
     dplyr::mutate(

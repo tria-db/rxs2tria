@@ -167,7 +167,7 @@ Supplementary data files (original/annotated images, raw ROXAS output,
 reference series, etc.) are **not** tracked via `$resources` -- that
 component describes only the submitted `QWAcells`/`QWArings` files, and
 is added by TRIA at publish time. The supplementary-file manifest is a
-separate, standalone artifact built with `compile_resources()` and
+separate, standalone artefact built with `compile_resources()` and
 written to its own CSV, submitted alongside a zip of the files
 themselves. See `vignette("resources")` for the full workflow.
 

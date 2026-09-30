@@ -30,8 +30,8 @@ _RingInclination\.out$,roxas_ringinclination,analysis,x,x,1,optional,IMGNAME_Rin
 _JunkObjects[0-9]*\.scl$,roxas_junkobjects,analysis,x,,1,optional,IMGNAME_JunkObjects.scl; IMGNAME_JunkObjects2.scl; etc,roxas,required to rerun?
 _proj\.rpf$,roxas_proj,analysis,x,x,1,optional,IMGNAME_proj.rpf,roxas,
 \.metadata\.json$,rai_metadata,analysis,x,x,1,wanted,IMGNAME.metadata.json,roxas_ai,required to rerun
-\.cells_table\.csv$,rai_cells_table,analysis,x,x,1,wanted,IMGNAME.cells_table.csv ,roxas_ai,or txt? only in old versions?
-\.rings_table\.csv$,rai_rings_table,analysis,x,x,1,wanted,IMGNAME.rings_table.csv,roxas_ai,or txt? only in old versions?
+\.cells_table\.(csv|txt)$,rai_cells_table,analysis,x,x,1,wanted,IMGNAME.cells_table.csv; IMGNAME.cells_table.txt,roxas_ai,
+\.rings_table\.(csv|txt)$,rai_rings_table,analysis,x,x,1,wanted,IMGNAME.rings_table.csv; IMGNAME.rings_table.txt,roxas_ai,
 \.cells\.png$,rai_image_cells,analysis,x,x,1,wanted,IMGNAME.cells.png,roxas_ai,required to rerun
 \.rings\.(tif|tiff)$,rai_image_rings,analysis,x,x,1,wanted,IMGNAME.rings.tiff,roxas_ai,required to rerun
 _annotated\.(jpg|jpeg|png)$,rai_image_annotated,analysis,x,x,1,wanted,IMGNAME_annotated.jpg,roxas_ai,distinguish from roxas_image_annotated by roxas_version
@@ -40,7 +40,7 @@ _annotated\.cal$,junk,,,,0,remove,IMGNAME_annotated.cal,roxas,
 Preview\.cal$,junk,,,,0,remove,SLIDENAME_Preview.cal,roxas,
 _ReferenceSeries(Long|_Original)?\.cal$,junk,,,,0,remove,IMGNAME_ReferenceSeries.cal,roxas,
 _TRACHEIDMASK\.(tif|tiff)$,junk,,,,0,remove,IMGNAME_TRACHEIDMASK.tif,roxas,
-~RF([:alnum:]+)\.TMP$,junk,,,,0,remove,FILENAME~RF6c4558.TMP,system,
+~RF[[:alnum:]]+\.TMP$,junk,,,,0,remove,FILENAME~RF6c4558.TMP,system,
 ^~\$,junk,,,,0,remove,~$IMGNAME_Output.xlsx,system,
 ^desktop\.ini$,junk,,,,0,remove,desktop.ini,system,
 \.DS_Store$,junk,,,,0,remove,.DS_Store,system,

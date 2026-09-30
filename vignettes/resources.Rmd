@@ -35,7 +35,7 @@ and returns a **manifest**: a table with one row per file, recording what
 each file is, where it sits in the data hierarchy, and whether it is 
 actually ready to be submitted. Building it does **not** move, rename, 
 or compress any files---they stay where they are on your machine and are
-referenced by their relatvie path.
+referenced by their relative path.
 
 As described in `vignette("submission")`, a submission's supplementary
 files are expected to live in a **single directory** (which you zip up
@@ -47,7 +47,7 @@ a resource type and linked to the appropriate image or woodpiece, etc.,
 where appropriate. However, in some cases, you may need to correct or
 edit the inferred values (see [Manual editing]) or the underlying files
 themselves. Run `recompile_resources()` to re-check the edits and 
-re-sync the file list in in the table (see [Reconciling and veryfing 
+re-sync the file list in the table (see [Reconciling and verifying
 the manifest]). Once finalised, write the manifest to a CSV and submit 
 it alongside the supplementary resources zip.
 
@@ -64,6 +64,7 @@ each row has the following columns:
 | `resource_type` | The kind of file, inferred from its name (see [Resource types]). |
 | `linked_level` | Level of the data hierarchy the file pertains to: `"dataset"`, `"site"`, ..., or `"analysis"`. |
 | `linked_label` | Which entity at that level the file belongs to (e.g. a specific `image_label`). Auto-filled where possible, otherwise `NA` (see [Linked labels]). |
+| `description` | Free-text description of the file, normally `NA`; required for `"other"` resources to be included (see [Manual editing]). |
 | `fname_resource` | Absolute path to the file on your machine, or `NA` if scanning a zip archive directly (always removed before upload to TRIA). |
 | `status` | `"ok"`, `"review"`, or `"ignore"` (see [Readiness status]). |
 | `note` | Explanation for `status` (e.g., why a file needs review). |
@@ -79,7 +80,7 @@ subfolders stay distinguishable.
 ## Basic workflow
 
 Point `compile_resources()` at the directory holding your supplementary
-files (subdirectories are included). `rxs_images` (a [QWAimages] object)
+files (subdirectories are included). `rxs_images` (a `QWAimages` object)
 is required to auto-populate `linked_label` (see [Linked labels]):
 
 ```{r compile-basic}
@@ -91,7 +92,7 @@ Inspect the result. Warning messages indicate whether anything needs
 review. Complete any resource types or labels that require manual edits
 (see [Manual editing]), re-compile the manifest if necessary and check
 the finalised table against the submission-ready supplementary directory 
-or archive (see [Reconciling and veryfing the manifest]). Then write the 
+or archive (see [Reconciling and verifying the manifest]). Then write the 
 prepared manifest to a CSV to submit alongside the resources zip:
 
 ```{r inspect-write}
@@ -108,8 +109,8 @@ Inference is name-based, so an unconventional file name may be typed as
 [Readiness status]):
 
 ```{r fix-type}
-res$[res$resource_name == "tree1/slide2/odd_name.tif", 
-  c("resource_type", "linked_level", "linked_label")] <- 
+suppl_res[suppl_res$resource_name == "tree1/slide2/odd_name.tif",
+  c("resource_type", "linked_level", "linked_label")] <-
     c("image_original", "image", "siteA_PISY_1_2_1")
 ```
 
@@ -118,7 +119,7 @@ fill in the `description` field for any `"other"` resources you want
 to be included.
 
 ```{r description}
-res$description[res$resource_name == "siteA_photo.png"] <-
+suppl_res$description[suppl_res$resource_name == "siteA_photo.png"] <-
   "Image from the site location"
 ```
 
@@ -130,7 +131,7 @@ make changes in the input directory or archive under
 re-check any manual edits you have already made in the data frame while 
 re-syncing it with the file list under `path`. 
 
-### Reconciling and veryfing the manifest
+### Reconciling and verifying the manifest
 
 Three functions cover the full lifecycle:
 
@@ -139,8 +140,8 @@ Three functions cover the full lifecycle:
   reconciles a previous manifest against the current contents of
   `path`, so manual edits are kept and re-checked.
 - `check_supplementary(suppl_res, path, rxs_images)`: a pass/fail check
-  confirming a finalised manifest accurately describes `path` and is
-  ready for submission.
+  confirming a finalised manifest (i.e. including the `status` column)
+  accurately describes `path` and is ready for submission.
 
 For both `recompile_resources()` and `check_supplementary()`, `suppl_res` is 
 treated as the source of truth wherever it overlaps with what's actually 
@@ -155,8 +156,9 @@ found in `path`:
   to append new files instead, freshly typed, e.g. after deliberately 
   adding files to `path` and wanting them picked up.
 - A file listed in `suppl_res` but no longer found in `path` is  
-  silently dropped if `status` was `"review"` or `"ignore"`---deleting it
-  from `path` resolves the status issue. However, if it had `status = "ok"`
+  dropped (with a message) if `status` was `"review"`, `"ignore"` or not
+  set (e.g. in a hand-built manifest)---deleting it from `path` resolves
+  the status issue. However, if it had `status = "ok"`
   in the manifest, an error is raised---a submission-ready file has 
   disappeared and either the table or `path` needs fixing before
   proceeding.
@@ -202,14 +204,14 @@ knitr::kable(tbl)
 ```
 
 Patterns are tested most specific first and the first match wins.
-The the `roxas_version` attribute of the input `rxs_images`  is used to
+The `roxas_version` attribute of the input `rxs_images`  is used to
 subset the list of search patterns and to disambiguate patterns shared 
 between classic ROXAS and ROXAS AI.
 Known backup and junk files (ROXAS `_bu` backups, `Thumbs.db`, Office 
 lock files, hidden files, ...) are typed as `"junk"` and will be ignored
 automatically. Thus you can also set the resource type to `"junk"` for
 any file you want to be excluded from the TRIA upload.
-Any \pkg{rxs2tria}-generated files (`QWAmetadata.json`, the
+Any rxs2tria-generated files (`QWAmetadata.json`, the
 `QWAcells`/`QWArings`/`QWAprofile` `.csv(.gz)` files) under the input
 `path` are also detected.
 
@@ -229,8 +231,8 @@ submission, e.g. a reference chronology), `"site"`, ... , or `"analysis"`
 `linked_label` identifies *which* entity at that level the file belongs to
 (e.g. a specific `image_label`).
 Where possible, the label is filled automatically from
-the data structure defined in`rxs_images`---the [QWAimages] object or 
-`$images` component of the [QWAmetadata] object that you pass to 
+the data structure defined in `rxs_images`---the `QWAimages` object or
+`$images` component of the `QWAmetadata` object that you pass to 
 `compile_resources()` / `recompile_resources()`.
 
 For `image`/`analysis` files, matching works by testing whether a
@@ -257,8 +259,8 @@ Files that do not match anything are left as `NA`, and resource types that
 `status = "review"` until one is filled in (see [Readiness status]).
 
 ```{r fill-label}
-res$linked_label[res$resource_name == "SITEA_PISY.rwl"] <- "SITEA_PISY"
-res$linked_level[res$resource_name == "SITEA_PISY.rwl"] <- "site" # for a reference series at a specific site
+suppl_res$linked_label[suppl_res$resource_name == "SITEA_PISY.rwl"] <- "SITEA_PISY"
+suppl_res$linked_level[suppl_res$resource_name == "SITEA_PISY.rwl"] <- "site" # for a reference series at a specific site
 ```
 
 Always review the auto-filled labels, too: the prefix-based matching is a
@@ -274,13 +276,13 @@ Every row is assigned a `status`, computed automatically by
 
 - **`"ok"`**: recognised, passes every check, ready to submit as-is.
   The file is of a recognised type and a linked label could be 
-  inferred as needed. A \pkg{rxs2tria}-generated file found among your
+  inferred as needed. An rxs2tria-generated file found among your
   supplementary files (`QWAmetadata.json`, the `QWAcells`/`QWArings`/
   `QWAprofile` `.csv(.gz)` files) also gets `"ok"` here. You may include 
   it in the zip or submit it individually, either is fine.
 - **`"review"`**: needs your attention before this dataset can be
   zipped for submission. `note` says why: an unrecognised (`"other"`)
-  file without a `description` justifying its includsion, a missing
+  file without a `description` justifying its inclusion, a missing
   `linked_label` where one is expected, more than one file of a type
   expected to occur once per level, a resource type not expected for
   this ROXAS version, or a `linked_label` that doesn't match any known
@@ -302,8 +304,8 @@ as-is---you don't need to also assign it a "real" `resource_type` unless
 one actually applies.
 
 ```{r fix-and-recheck}
-res$resource_type[res$resource_name == "tree1/slide2/odd_name.tif"] <- "image_original"
-res$linked_level[res$resource_name == "tree1/slide2/odd_name.tif"] <- "image"
+suppl_res$resource_type[suppl_res$resource_name == "tree1/slide2/odd_name.tif"] <- "image_original"
+suppl_res$linked_level[suppl_res$resource_name == "tree1/slide2/odd_name.tif"] <- "image"
 
 # re-run the checks after manually editing the table:
 suppl_res <- recompile_resources(suppl_res, "path/to/submission_files", QWA_meta$images)

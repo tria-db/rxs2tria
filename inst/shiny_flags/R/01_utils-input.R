@@ -165,7 +165,7 @@ load_data_env <- function(name_prf, name_rings, name_rxsmeta,
       )
 
     # NOTE: force correct type for optional cols as well
-    rsxmeta_cols <- split(names(specs$rxsmeta_data$opt_cols),
+    rxsmeta_cols <- split(names(specs$rxsmeta_data$opt_cols),
                           specs$rxsmeta_data$opt_cols)
     rxsmeta_data_in <- rxsmeta_data_in |>
       # dplyr::select(dplyr::all_of(names(specs$rxsmeta_data$req_cols)),
@@ -239,17 +239,21 @@ load_data_csv <- function(path_prf, path_rings, path_rxsmeta,
              "'images' component.")
       }
       rxsmeta_data_in <- tibble::as_tibble(meta$images)
-      # backwards-compatibility rename (mirrors read_QWAmetadata())
-      if ("dbl_cwt_threshold" %in% names(rxsmeta_data_in)) {
-        rxsmeta_data_in <- rxsmeta_data_in |>
-          dplyr::rename(cluster_dbl_cwt_threshold = "dbl_cwt_threshold")
-      }
       rxsmeta_data_in$image_label <- as.character(rxsmeta_data_in$image_label)
     } else {
       rxsmeta_data_in <- vroom::vroom(
         path_rxsmeta, col_types = specs$rxsmeta_data$req_cols
       )
     }
+    # backwards-compatibility renames (mirrors read_QWAmetadata()/read_QWAimages())
+    rxsmeta_data_in <- rxsmeta_data_in |>
+      dplyr::rename(dplyr::any_of(c(
+        cluster_dbl_cwt_threshold = 'dbl_cwt_threshold',
+        opposite_cwt_ratio_limit = 'maxrel_opp_cwt',
+        relwidth_cwt_integration = 'relwidth_cwt_window',
+        meas_created_at = 'rxs_created_at',
+        img_comment = 'comment'
+      )))
     # NOTE: force correct type for optional cols as well
     rxsmeta_cols <- split(names(specs$rxsmeta_data$opt_cols),
                           specs$rxsmeta_data$opt_cols)
@@ -477,7 +481,7 @@ export_rwl_modal <- function(ns, default_scaling, default_fname) {
         "parameters (or detrended series) are scaled by a power of ten to make ",
         "optimal use of the 5 available digits at ", shiny::tags$code("prec = 0.001"), "."),
       shiny::tags$li("If possible, woodpiece labels are replaced by short IDs derived from",
-        "the QWA images metadata Otherwise, a ",
+        " the QWA images metadata. Otherwise, a ",
         shiny::tags$code("_mapping.txt"), " file is saved alongside the rwl."),
       shiny::tags$li(
         "Internally uses ", shiny::tags$code("extract_rwl()"), ", ",

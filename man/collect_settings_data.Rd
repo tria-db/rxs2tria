@@ -12,14 +12,14 @@ collect_settings_data(
 )
 }
 \arguments{
-\item{df}{Data frame with the file name columns \code{fname_settings} (and
-\code{fname_image} for ROXAS), e.g. from \code{\link[=extract_data_structure]{extract_data_structure()}}. Provide
-this or \code{files_settings}/\code{files_images}, but not both.}
+\item{df}{Data frame with the file name columns \code{fname_settings} and
+\code{fname_image}, e.g. from \code{\link[=extract_data_structure]{extract_data_structure()}}. Provide this or
+\code{files_settings}/\code{files_images}, but not both.}
 
 \item{files_settings}{Vector of ROXAS settings file names.}
 
 \item{files_images}{Vector of image file names in the same order as
-\code{files_settings}. Required when \code{roxas_version = "roxas"}.}
+\code{files_settings}.}
 
 \item{roxas_version}{The version of ROXAS used to create the files, either
 \code{"roxas"} or \code{"roxas_ai"}. Auto-detected from the settings file names if
@@ -32,19 +32,17 @@ A dataframe containing the extracted data.
 Collect the TRIA-relevant attributes from a collection of ROXAS (AI) settings
 and image EXIF metadata.
 
-The settings (and, for ROXAS, image) file names can be supplied either as a
-data frame \code{df} with the columns \code{fname_settings} (and \code{fname_image}), such
-as the output of \code{\link[=extract_data_structure]{extract_data_structure()}} or \code{\link[=get_roxas_files]{get_roxas_files()}}, or as
-the individual file path vectors \code{files_settings} (and \code{files_images}).
-Exactly one of the two input styles must be used.
+The settings and image file names can be supplied either as a data frame
+\code{df} with the columns \code{fname_settings} and \code{fname_image}, such as the output
+of \code{\link[=extract_data_structure]{extract_data_structure()}} or \code{\link[=get_roxas_files]{get_roxas_files()}}, or as the individual
+file path vectors \code{files_settings} and \code{files_images}. Exactly one of the two
+input styles must be used. When passed as vectors, \code{files_images} must be in
+the same order as \code{files_settings}.
 
 For ROXAS files, image EXIF metadata are extracted from the image files and
 then joined to the settings data. For ROXAS AI files, the EXIF metadata are
-already embedded in the settings JSON files and read from there directly.
-
-Therefore, \code{\link[=collect_settings_data]{collect_settings_data()}} requires the image file paths (\code{files_images}
-or the \code{fname_image} column of \code{df}) as input if \code{roxas_version = "roxas"}.
-When passed as a vector, they must be in the same order as \code{files_settings}.
+already embedded in the settings JSON files and read from there directly;
+the image files are only used to get the actual image file size.
 
 If \code{roxas_version} is not supplied, it is auto-detected from the settings
 file names.

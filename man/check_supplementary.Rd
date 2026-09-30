@@ -26,7 +26,9 @@ appropriate.}
 \description{
 A pass/fail check confirming that your finalised manifest accurately
 describes the content of the supplementary archive/directory and is ready
-for submission.
+for submission. \code{suppl_res} must be a finalised manifest, i.e. including
+the \code{status} column produced by \code{\link[=compile_resources]{compile_resources()}} or
+\code{\link[=recompile_resources]{recompile_resources()}}.
 Aborts if \code{suppl_res} lists a file with \code{status == "ok"} that isn't found
 in \code{path}---a genuine inconsistency between the manifest and the archive.
 Returns \code{FALSE} (with a warning pointing you back to

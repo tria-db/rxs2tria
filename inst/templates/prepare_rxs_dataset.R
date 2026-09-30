@@ -47,9 +47,9 @@ df_structure <- extract_data_structure(files, pattern)
 # ROXAS data the image EXIF metadata is read from df_structure$fname_image.
 df_settings <- collect_settings_data(df_structure)
 
-# for ROXAS only (ROXAS AI has standardized timestamps, so already converted)
+# for ROXAS only (ROXAS AI has standardised timestamps, so already converted)
+settings_date_orders <- c("%d.%m.%Y %H:%M:%S", "%d/%m/%Y %H:%M") # adjust to your locale
 if (roxas_version == "roxas") {
-  settings_date_orders <- c("%d.%m.%Y %H:%M:%S", "%d/%m/%Y %H:%M") # adjust to your locale
   meas_created_at_converted <- lubridate::parse_date_time(
     df_settings$meas_created_at,
     orders = settings_date_orders,
@@ -134,7 +134,7 @@ write_QWAdata(QWA_data, dir = path_out, dataset_name = dataset_name)
 # ------------------------------------------------------------------------------
 # Cell measurements can be aggregated by radially splitting rings into
 # a) a fixed number of sectors of equal relative width, or b) bands of fixed
-# absolute width and step size (in micrometers), and then calculating
+# absolute width and step size (in micrometres), and then calculating
 # statistical aggregates (mean, and---optionally---quantiles).
 
 prf_sector <- calculate_sector_profiles(QWA_data,
@@ -165,7 +165,7 @@ prf_sector <- calculate_sector_profiles(QWA_data,
 # the rings component of a QWAdata object, and optionally: a sector QWAprofile
 # derived from cell measurements, and a QWAimages object (used only to provide
 # image-level comments if available and to allow you to open the image files under
-# $fname_images from within the app).
+# $fname_image from within the app).
 # The output (saved to file or fed back to the current R session) is the
 # QWAdata$rings component with additional columns capturing the provided flags.
 launch_flags_app()
@@ -223,4 +223,4 @@ QWAmeta <- read_QWAmetadata("path/to/output_data/example_dataset_QWAmetadata.jso
 suppl_res <- compile_resources("path/to/submission_files", rxs_images = QWAmeta$images)
 
 suppl_res # review status "review" rows, make edits where needed, then (re-)compile
-vroom::vroom_write(suppl_res, "path/to/output_data/example_dataset_supplemenary_files.csv")
+vroom::vroom_write(suppl_res, "path/to/output_data/example_dataset_supplementary_files.csv")

@@ -185,7 +185,7 @@ new_QWAmetadata <- function(dataset = NULL,
 #' @param resources Data frame describing the submitted `QWAdata` cells/rings
 #'   files. Populated by TRIA at publish time rather than by this package --
 #'   leave `NULL`. (The supplementary-file manifest built by
-#'   [compile_resources()] is a separate, standalone artifact -- see
+#'   [compile_resources()] is a separate, standalone artefact -- see
 #'   `vignette("resources")` -- not a component of `QWAmetadata`.)
 #' @param sites Data frame with site-level metadata. Typically provided via
 #'   metadata Shiny app.
@@ -461,14 +461,15 @@ read_QWAmetadata <- function(file) {
   raw <- jsonlite::read_json(file, simplifyVector = TRUE)
 
   # renaming backcompatibility
-  if ("images" %in% names(raw)){
+  if (is.data.frame(raw$images)) {
     raw$images <- raw$images |>
       dplyr::rename(dplyr::any_of(c(
         # current_name = 'old_name'
         cluster_dbl_cwt_threshold = 'dbl_cwt_threshold',
         opposite_cwt_ratio_limit = 'maxrel_opp_cwt',
         relwidth_cwt_integration = 'relwidth_cwt_window',
-        meas_created_at = 'rxs_created_at'
+        meas_created_at = 'rxs_created_at',
+        img_comment = 'comment'
       )))
   }
 

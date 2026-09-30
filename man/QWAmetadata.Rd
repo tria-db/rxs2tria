@@ -36,7 +36,7 @@ provided via metadata Shiny app.}
 \item{resources}{Data frame describing the submitted \code{QWAdata} cells/rings
 files. Populated by TRIA at publish time rather than by this package --
 leave \code{NULL}. (The supplementary-file manifest built by
-\code{\link[=compile_resources]{compile_resources()}} is a separate, standalone artifact -- see
+\code{\link[=compile_resources]{compile_resources()}} is a separate, standalone artefact -- see
 \code{vignette("resources")} -- not a component of \code{QWAmetadata}.)}
 
 \item{sites}{Data frame with site-level metadata. Typically provided via

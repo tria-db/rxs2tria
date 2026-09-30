@@ -27,7 +27,8 @@ library(rxs2tria)
 Once cell and ring measurements have been compiled and cleaned
 (with `complete_QWAdata()`, see `vignette("workflow")`), it may be
 helpful to visually inspect the resulting measurement series. 
-This allows you to check whether 
+This allows you to check whether
+
 - the automatically estimated ring flags (wedging/missing rings, 
   radially incomplete rings, overlapping/duplicate rings) are correct;
 - there are any gaps in the coverage, e.g. due to images that were 
@@ -55,7 +56,7 @@ launch_flags_app()
 
 This requires a number of Suggested packages (`bslib`, `collapse`,
 `htmlwidgets`, `plotly`, `reactable`, `rhandsontable`, `shiny`,
-`shinyjs`), which `rxs2tria` will prompt you to install if missing.
+`shinyjs`, `shinyvalidate`), which `rxs2tria` will prompt you to install if missing.
 
 *(screenshot: app opened with no data loaded)*
 
@@ -72,7 +73,7 @@ current R environment, or from CSV/JSON files) for up to three inputs:
 - **ROXAS images metadata** (optional): a `QWAimages` object, or the
   `$images` component of a `QWAmetadata` `.json` (Step 3b). This enables
   filtering by site/species, opening image files directly from the app
-  (leveraging the values in the `$fname_images` column), and the Comments
+  (leveraging the values in the `fname_image` column), and the Comments
   tab described below.
 
 *(screenshot: input source modal)*
@@ -132,7 +133,7 @@ in focus, the left/right arrows navigate across the table columns instead.
 Below the plot, a table shows every ring of the currently selected image,
 with editable columns for:
 
-- `exclude_issues` is a the most important flag: it decides whether the ring
+- `exclude_issues` is the most important flag: it decides whether the ring
   should be excluded from analysis. 
 - Four groups of checkboxes, customisable via the table's gear icon:
   **disqualifying issues** (radially incomplete ring, wedging/missing
@@ -170,7 +171,7 @@ image icon next to the selected image name.
 ## The "Comments" tab
 
 This tab only appears if the loaded image metadata included non-empty
-`comment` values (e.g. notes added during ROXAS AI processing, or
+`img_comment` values (e.g. notes added during ROXAS AI processing, or
 manually in the metadata app's Start tab table). It lists every
 commented image with a "handled" checkbox and a button to jump straight
 to that image/ring in the main tab, plus a badge showing how many

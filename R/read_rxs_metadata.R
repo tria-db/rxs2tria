@@ -4,29 +4,27 @@
 #' Collect the TRIA-relevant attributes from a collection of ROXAS (AI) settings
 #' and image EXIF metadata.
 #'
-#' The settings (and, for ROXAS, image) file names can be supplied either as a
-#' data frame `df` with the columns `fname_settings` (and `fname_image`), such
-#' as the output of [extract_data_structure()] or [get_roxas_files()], or as 
-#' the individual file path vectors `files_settings` (and `files_images`).
-#' Exactly one of the two input styles must be used.
+#' The settings and image file names can be supplied either as a data frame
+#' `df` with the columns `fname_settings` and `fname_image`, such as the output
+#' of [extract_data_structure()] or [get_roxas_files()], or as the individual
+#' file path vectors `files_settings` and `files_images`. Exactly one of the two
+#' input styles must be used. When passed as vectors, `files_images` must be in
+#' the same order as `files_settings`.
 #'
 #' For ROXAS files, image EXIF metadata are extracted from the image files and
-#' then joined to the settings data. For ROXAS AI files, the EXIF metadata are 
-#' already embedded in the settings JSON files and read from there directly.
-#'
-#' Therefore, [collect_settings_data()] requires the image file paths (`files_images`
-#' or the `fname_image` column of `df`) as input if `roxas_version = "roxas"`. 
-#' When passed as a vector, they must be in the same order as `files_settings`.
+#' then joined to the settings data. For ROXAS AI files, the EXIF metadata are
+#' already embedded in the settings JSON files and read from there directly;
+#' the image files are only used to get the actual image file size.
 #'
 #' If `roxas_version` is not supplied, it is auto-detected from the settings
 #' file names.
 #'
-#' @param df Data frame with the file name columns `fname_settings` (and
-#'   `fname_image` for ROXAS), e.g. from [extract_data_structure()]. Provide
-#'   this or `files_settings`/`files_images`, but not both.
+#' @param df Data frame with the file name columns `fname_settings` and
+#'   `fname_image`, e.g. from [extract_data_structure()]. Provide this or
+#'   `files_settings`/`files_images`, but not both.
 #' @param files_settings Vector of ROXAS settings file names.
 #' @param files_images Vector of image file names in the same order as
-#'   `files_settings`. Required when `roxas_version = "roxas"`.
+#'   `files_settings`.
 #' @param roxas_version The version of ROXAS used to create the files, either
 #'   `"roxas"` or `"roxas_ai"`. Auto-detected from the settings file names if
 #'   not supplied.
@@ -47,7 +45,7 @@ collect_settings_data <- function(df = NULL,
     checkmate::assert_subset("fname_settings", colnames(df),
                              .var.name = "columns of `df`")
     files_settings <- df$fname_settings
-    files_images <- df$fname_image # NULL if column absent (e.g. roxas_ai)
+    files_images <- df$fname_image
   } else if (is.null(files_settings)) {
     cli::cli_abort(
       "Supply either {.arg df} or {.arg files_settings}.")
@@ -59,12 +57,10 @@ collect_settings_data <- function(df = NULL,
   # auto-detect the roxas version from the settings file names if not supplied
   roxas_version <- roxas_version %||% detect_roxas_version(files_settings)
   checkmate::assert_choice(roxas_version, c("roxas","roxas_ai"))
-  # if (roxas_version == "roxas") {
-    checkmate::assert_character(
-      files_images, len = length(files_settings), any.missing = FALSE,
-      .var.name = "df$fname_image (or files_images)"
-    )
-  # }
+  checkmate::assert_character(
+    files_images, len = length(files_settings), any.missing = FALSE,
+    .var.name = "df$fname_image (or files_images)"
+  )
 
   rv <- rv_msg(roxas_version)
   results <- files_settings |>
@@ -143,7 +139,7 @@ build_QWAimages <- function(df_structure,
   # datetime columns must already be converted to POSIXct: ROXAS classic
   # timestamp formats are not parsed automatically further down and would
   # otherwise fail with a cryptic error inside align_to_schema()
-  datetime_cols <- c("img_created_at", "neas_created_at")
+  datetime_cols <- c("img_created_at", "meas_created_at")
   needs_conversion <- vapply(datetime_cols, function(col) {
     col %in% colnames(df_settings) &&
       is.character(df_settings[[col]]) &&

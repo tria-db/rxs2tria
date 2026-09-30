@@ -158,7 +158,7 @@ input_specs <- list(
   rxsmeta_data = list(
     req_cols = c(image_label = "c"),
     opt_cols = c(woodpiece_label = "c",
-                 species_code = "c", site_label = "c", comment = "c", comment_handled = "l",
+                 species_code = "c", site_label = "c", img_comment = "c", comment_handled = "l",
                  fname_image = "c", fname_annotated = "c", fname_annotated_twin = "c")
   )
 )

@@ -22,24 +22,12 @@ update_QWAimages <- function(meta, imgs_to_update,
   checkmate::assert_class(meta, "QWAimages")
   checkmate::assert_subset(imgs_to_update, meta$image_label)
 
-  # files_to_update <- meta |>
-  #   dplyr::filter(image_label %in% imgs_to_update) |> 
-  #   dplyr::pull(fname_settings)
-
-  roxas_version <- attr(meta, "roxas_version")
+  roxas_version <- attr(meta, "roxas_version") # TODO: check roxas version ok?
 
   # read in settings files again
-  # rv_file <- if (roxas_version == "roxas") "ROXAS settings" else "ROXAS AI metadata"
-  # results <- files_to_update |>
-  #   purrr::map(\(x) read_roxas_settings(x, roxas_version = roxas_version),
-  #              .progress = list(name = glue::glue("Reading {rv_file} files..."), clear = TRUE))
-  # df_settings_new <- purrr::list_rbind(results)
   df_settings_new <- collect_settings_data(meta |>
     dplyr::filter(image_label %in% imgs_to_update))
 
-  # coerce raw character columns to their target types (shared with collect_settings_data)
-  df_settings_new <- cast_settings_types(df_settings_new, roxas_version)
-  
   # convert meas_created_at dates to POSIXct (already done for standardized roxas ai)
   if (roxas_version == "roxas") {
     df_settings_new$meas_created_at <- df_settings_new$meas_created_at |> 

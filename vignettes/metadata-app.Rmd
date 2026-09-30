@@ -93,7 +93,7 @@ Once loaded, the main panel shows:
   names, with the labels `rxs2tria` generated for each level.
 - **Metadata extracted from files**: a table of everything extracted
   from the ROXAS/ROXAS AI settings and image files. Most columns are
-  read-only; `band_width`, `only_ew` and `comment` can be edited
+  read-only; `only_ew` and `img_comment` can be edited
   directly in the table (which supports Excel-like copy/paste and
   autofill).
 
@@ -108,7 +108,7 @@ that follows. If the structure or labels look wrong, revisit Step 2
 Dataset- and author-level information, in three parts:
 
 - **Dataset information**: title, description, access rights (public or
-  restricted, with an embargo date), license (CC licenses preferred), 
+  restricted, with an embargo date), licence (CC licences preferred), 
   and acknowledgements.
 - **Authors & Funding**: two editable tables for authors and their 
   affiliations as well as funding sources. Two search tools for ROR
