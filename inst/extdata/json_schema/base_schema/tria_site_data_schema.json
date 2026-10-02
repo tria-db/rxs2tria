@@ -38,14 +38,14 @@
         "minimum": -90,
         "maximum": 90,
         "title": "Latitude",
-        "description": "Latitude of the site in decimal degrees (WGS84)"
+        "description": "Latitude of the site in decimal degrees (WGS84), e.g. 46.802361. Use a dot as decimal separator; southern hemisphere is negative."
       },
       "longitude": {
         "type": "number",
         "minimum": -180,
         "maximum": 180,
         "title": "Longitude",
-        "description": "Longitude of the site in decimal degrees (WGS84)"
+        "description": "Longitude of the site in decimal degrees (WGS84), e.g. 9.835444. Use a dot as decimal separator; west of Greenwich is negative."
       },
       "country_code": {
         "type": "string",
@@ -65,14 +65,14 @@
         "minimum": 0,
         "maximum": 360,
         "title": "Aspect",
-        "description": "Orientation of the slope at the site (degrees from north)"
+        "description": "Direction the slope faces, in degrees clockwise from north (0-360), e.g. 0 = N, 90 = E, 180 = S, 270 = W. Leave empty for flat terrain."
       },
       "slope": {
         "type": ["number","null"],
         "minimum": 0,
         "maximum": 90,
         "title": "Slope",
-        "description": "Slope of the terrain at the site (in degrees)"
+        "description": "Slope of the terrain at the site in degrees (0 = flat, 90 = vertical)."
       },
       "topography": {
         "type": ["string","null"],

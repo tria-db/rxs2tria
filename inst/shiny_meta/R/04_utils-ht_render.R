@@ -357,7 +357,7 @@ hot_col_wrapper <- function(ht, col, col_config, renderer_js = NULL) {
     character    = ht |> rhandsontable::hot_col(col, renderer = renderer_js, readOnly = readOnly),
     text         = ht |> rhandsontable::hot_col(col, renderer = renderer_js, readOnly = readOnly),
     numeric      = ht |> rhandsontable::hot_col(col, type = 'numeric',
-                     format = if (col_config$type[1] == 'integer') '0.' else NULL,
+                     format = col_config$htFormat %||% (if (col_config$type[1] == 'integer') '0.' else NULL),
                      renderer = renderer_js, readOnly = readOnly, allowInvalid = FALSE),
     dropdown     = ht |> rhandsontable::hot_col(col, type = 'dropdown',
                      source = col_config$enum, renderer = renderer_js, readOnly = readOnly),
@@ -409,6 +409,7 @@ render_meta_hot <- function(data, tbl_props, renderers = NULL, fixed_cols = 0) {
 
   ht <- rhandsontable::rhandsontable(
     data,
+    digits = NA, # full precision in JSON (rhandsontable default rounds to 4 digits)
     rowHeaders = TRUE,
     contextMenu = FALSE,
     stretchH = "all",

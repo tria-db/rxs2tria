@@ -222,6 +222,7 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
 
       # run the ORCID API request with the input search string
       res_df <- orcid_api_request(search_string = input$orcid_search_string)
+      if (is.null(res_df)) return()
       res_df$search_terms <- input$orcid_search_string
 
       # update the reactiveVal
@@ -230,41 +231,42 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
 
     # run ORCID API search on author table
     shiny::observeEvent(input$btn_orcid_tbl, {
-      current_df <- author_data_out()
-      results_combined <- list()
-      for (row in 1:nrow(current_df)){
-        # short break every 10th run to avoid crashing the API
-        if (row > 10 && row %% 10 == 0) {Sys.sleep(0.6)}
+      safe_block({
+        current_df <- author_data_out()
+        results_combined <- list()
+        for (row in seq_len(nrow(current_df))){
+          # short break every 10th run to avoid crashing the API
+          if (row > 10 && row %% 10 == 0) {Sys.sleep(0.6)}
 
-        # run a name based api request for each row with values
-        last_name <- current_df$last_name[row]
-        first_name <- current_df$first_name[row]
-        if (last_name != "" || first_name != ""){
-          results <- orcid_api_request(last_name = last_name, first_name = first_name)
-          results_combined[[paste(last_name, first_name)]] <- results
+          # run a name based api request for each row with values
+          last_name <- current_df$last_name[row]
+          first_name <- current_df$first_name[row]
+          if (shiny::isTruthy(last_name) || shiny::isTruthy(first_name)){
+            results <- orcid_api_request(last_name = last_name, first_name = first_name)
+            results_combined[[paste(last_name, first_name)]] <- results
 
-          # if the result is unique, update the author table
-          if (nrow(results) == 1){
-            current_df[row, c("last_name", "first_name", "orcid")] <- results[, c("last_name", "first_name", "orcid_id")]
-            # only update email if the field is NA or empty
-            if (is.na(current_df[row, "email"]) || current_df[row, "email"] == "") {
-              current_df[row, "email"] <- results$email
-            }
-            # only update org_name if the field is NA or empty
-            if (is.na(current_df[row, "org_name"]) || current_df[row, "org_name"] == "") {
-              current_df[row, "org_name"] <- results$org_name
+            # if the result is unique, update the author table
+            if (!is.null(results) && nrow(results) == 1){
+              current_df[row, c("last_name", "first_name", "orcid")] <- results[, c("last_name", "first_name", "orcid_id")]
+              # only update email if the field is NA or empty
+              if (is.na(current_df[row, "email"]) || current_df[row, "email"] == "") {
+                current_df[row, "email"] <- results$email
+              }
+              # only update org_name if the field is NA or empty
+              if (is.na(current_df[row, "org_name"]) || current_df[row, "org_name"] == "") {
+                current_df[row, "org_name"] <- results$org_name
+              }
             }
           }
         }
-      }
 
-      # combine the results and update the reactives
-      if (length(results_combined) > 0){
-        res_df <- dplyr::bind_rows(results_combined, .id = 'search_terms')
-        orcid_df(res_df)
-        author_data_in(current_df)
-      }
-
+        # combine the results and update the reactives
+        if (length(results_combined) > 0){
+          res_df <- dplyr::bind_rows(results_combined, .id = 'search_terms')
+          orcid_df(res_df)
+          author_data_in(current_df)
+        }
+      }, err_title = "ORCID Search Error", err_message = "An error occurred while searching ORCIDs for the author table:", propagate_err = FALSE)
     })
 
     # render instructions
@@ -314,33 +316,35 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
 
     # transfer ORCID data to author table on confirm transfer
     shiny::observeEvent(input$btn_trans_orcid, {
-      if (!is.null(input$sel_author_orc) && !is.null(input$orcid_results_rows_selected)) {
-        # get the ORCID data of the selected row (NOTE: only 1 row can be selected)
-        sel_orcid_data <- orcid_df()[input$orcid_results_rows_selected,]
-        sel_orcid_data$org_name <- gsub('\n','<br>',stringr::str_wrap(sel_orcid_data$org_name, width = 50))
-        # update in the author data table for the selected author (NOTE: only 1 can be selected)
-        current_df <- author_data_out()
-        if (input$sel_author_orc == "new"){
-          row <- nrow(current_df) + 1
-          current_df[row,] <- rxs2tria:::create_empty_df(aut_tbl_props_full, nrows=1)
-          current_df[row, "author_nr"] <- row
-        } else {
-          row <- input$sel_author_orc
-        }
-        current_df[row, c("last_name", "first_name", "orcid")] <- sel_orcid_data[, c("last_name", "first_name", "orcid_id")]
-        # only update email if the field is NA or empty
-        if (is.na(current_df[row, "email"]) || current_df[row, "email"] == "") {
-          current_df[row, "email"] <- sel_orcid_data$email
-        }
-        # only update org_name if the field is NA or empty
-        if (is.na(current_df[row, "org_name"]) || current_df[row, "org_name"] == "") {
-          current_df[row, "org_name"] <- sel_orcid_data$org_name
-        }
-        author_data_in(current_df)
-      }
-
       # close the modal
       shiny::removeModal()
+
+      safe_block({
+        if (!is.null(input$sel_author_orc) && !is.null(input$orcid_results_rows_selected)) {
+          # get the ORCID data of the selected row (NOTE: only 1 row can be selected)
+          sel_orcid_data <- orcid_df()[input$orcid_results_rows_selected,]
+          sel_orcid_data$org_name <- gsub('\n','<br>',stringr::str_wrap(sel_orcid_data$org_name, width = 50))
+          # update in the author data table for the selected author (NOTE: only 1 can be selected)
+          current_df <- author_data_out()
+          if (input$sel_author_orc == "new"){
+            row <- nrow(current_df) + 1
+            current_df[row,] <- rxs2tria:::create_empty_df(aut_tbl_props_full, nrows=1)
+            current_df[row, "author_nr"] <- row
+          } else {
+            row <- input$sel_author_orc
+          }
+          current_df[row, c("last_name", "first_name", "orcid")] <- sel_orcid_data[, c("last_name", "first_name", "orcid_id")]
+          # only update email if the field is NA or empty
+          if (is.na(current_df[row, "email"]) || current_df[row, "email"] == "") {
+            current_df[row, "email"] <- sel_orcid_data$email
+          }
+          # only update org_name if the field is NA or empty
+          if (is.na(current_df[row, "org_name"]) || current_df[row, "org_name"] == "") {
+            current_df[row, "org_name"] <- sel_orcid_data$org_name
+          }
+          author_data_in(current_df)
+        }
+      }, err_title = "ORCID Transfer Error", err_message = "An error occurred while transferring ORCID data:", propagate_err = FALSE)
     })
 
 

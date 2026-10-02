@@ -24,7 +24,8 @@ dataset_ui <- function(id) {
           class = 'bg-primary',
           shiny::span(shiny::icon("exclamation", style = "color: white"),'Note')),
         "The author numbers provided here will be used as
-        the order of authorship."
+        the order of authorship. Hover over the table column headers to see a
+        description of the expected input."
       ),
       shiny::hr(),
       shiny::tags$ol(

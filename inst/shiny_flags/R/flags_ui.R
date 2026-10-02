@@ -184,12 +184,32 @@ flags_ui <- function(id) {
             "Open image file"
           ),
           shiny::tags$span(style = "color: #aaa;", "|"),
-          shiny::actionLink(ns("tbl_settings"), NULL, icon = shiny::icon("gear"))
+          bslib::tooltip(
+            shiny::actionLink(ns("tbl_settings"), NULL, icon = shiny::icon("gear")),
+            "Select table columns"
+          )
         )
       ),
       bslib::card_body(
         class = "p-0",
         fillable = FALSE,
+        shiny::tags$details(
+          class = "small px-2 pt-1",
+          shiny::tags$summary("Help: table columns and buttons"),
+          shiny::tags$ul(
+            shiny::tags$li(shiny::strong("duplicate_ring:"), " ring also appears in an overlapping image (read-only)."),
+            shiny::tags$li(shiny::strong("exclude_dupl:"), " for duplicate rings, which copy is not used. Only one copy per ring is kept;
+                           unticking here uses the ring from this image and excludes it in the other image."),
+            shiny::tags$li(shiny::strong("exclude_issues:"), " exclude the ring from the analysis because of quality issues
+                           (e.g. incomplete_ring, cracks, decay, ...). Specify the ", shiny::strong("affected_tissue"),
+                           " (all, ew or lw) and tick the relevant issue columns to document the reason."),
+            shiny::tags$li(shiny::icon("angles-left"), shiny::icon("angle-left"), shiny::icon("angle-right"), shiny::icon("angles-right"),
+                           " go to the earlier/next image or ring (or use the arrow keys: left/right for images, up/down for rings;
+                           press Esc first to leave the table, Enter to select the ring in the table); ",
+                           shiny::icon("image"), " open the image file; ",
+                           shiny::icon("gear"), " select which flag columns are shown.")
+          )
+        ),
         rhandsontable::rHandsontableOutput(ns("img_flags"))
       ),
       bslib::card_footer(

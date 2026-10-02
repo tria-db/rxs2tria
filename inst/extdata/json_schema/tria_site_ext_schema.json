@@ -12,8 +12,8 @@
           "n_trees": { "htType": "numeric", "otherChecks": ["check_counts"] },
           "site_name": { "htType": "character", "unique": true },
           "site_desc": { "htType": "text" },
-          "latitude": { "htType": "numeric" },
-          "longitude": { "htType": "numeric" },
+          "latitude": { "htType": "numeric", "htFormat": { "mantissa": 6, "trimMantissa": true } },
+          "longitude": { "htType": "numeric", "htFormat": { "mantissa": 6, "trimMantissa": true } },
           "country_code": { 
             "htType": "autocomplete", 
             "options" : "country_codes_names", 

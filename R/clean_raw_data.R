@@ -146,7 +146,7 @@ flag_incomplete_rings <- function(df_rings_log, df_cells_all, df_meta){
 
   # add a column to flag the incomplete border rings
   df_rings_log |>
-    dplyr::mutate(incomplete_ring = (outermost_ring & is.na(mrw)) | (incomplete_inner),
+    dplyr::mutate(incomplete_ring = (outermost_ring & (is.na(mrw) | mrw == 0 | cno < 5)) | (incomplete_inner),
                   incomplete_fct_check = incomplete_inner != incomplete_innerv2, # TODO: check if this ever occurs and for what reason
                   incomplete_ring = dplyr::if_else(is.na(incomplete_ring), FALSE, incomplete_ring))
 }
