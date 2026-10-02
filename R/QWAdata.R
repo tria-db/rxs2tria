@@ -356,14 +356,18 @@ complete_flags <- function(x, meta, exclude_mode = c("either","incomplete_only")
 
   if ("missing_ring" %in% flag_cols_missing) {
     df_rings_log <- df_rings_log |>
-      dplyr::mutate(missing_ring = is.na(.data$cno) | (.data$cno < 5) | dplyr::coalesce(.data$mrw < 10, FALSE), # TODO: (should never have NA cno anymore because we replace with 0), but mrw might be NA for incomplete rings -> coalesce. make thresholds function params?
+      dplyr::mutate(missing_ring = !.data$incomplete_ring &                  # wedging ring: cannot assess for incomplete in image 
+                                    dplyr::coalesce(.data$mrw < 10, FALSE) | # close to 0 mrw, or close to 0 cno if mrw is na
+                                    (.data$cno < 5 & is.na(.data$mrw)),      # a wide ring with no cells usually has other issues
                     no_MRW_other = is.na(.data$mrw) & !(.data$outermost_ring | .data$innermost_ring)) # TODO: check if this ever occurs and for what reason
-    # for missing rings, we want some measures set to 0
-    missing_to_zero <- c("mrw","ra","eww","lww")
+    # for missing rings, we want area and width set to 0
+    missing_to_zero <- c("mrw","ra")
     df_rings_log <- df_rings_log |>
       dplyr::mutate(
         dplyr::across(dplyr::any_of(missing_to_zero),
-          \(x) dplyr::if_else(.data$missing_ring & is.na(x) & .data$cno < 5, 0, x))
+          \(x) dplyr::if_else(.data$missing_ring & is.na(x) & .data$cno < 5, 0, x)),
+        dplyr::across(dplyr::any_of(c("eww","lww")), # if mrw is 0 -> eww and lww also 0
+         \(x) dplyr::if_else(is.na(x) & dplyr::coalesce(.data$mrw == 0, FALSE), 0, x))
       )
   }
 

@@ -25,8 +25,8 @@
           "tree_health_status": { "htType": "dropdown" },
           "tree_origin": { "htType": "dropdown" },
           "wood_origin": { "htType": "dropdown" },
-          "tree_latitude": { "htType": "numeric" },
-          "tree_longitude": { "htType": "numeric" },
+          "tree_latitude": { "htType": "numeric", "htFormat": { "mantissa": 6, "trimMantissa": true } },
+          "tree_longitude": { "htType": "numeric", "htFormat": { "mantissa": 6, "trimMantissa": true } },
           "tree_comment": { "htType": "text" }
         }
       } 

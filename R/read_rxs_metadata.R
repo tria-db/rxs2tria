@@ -256,6 +256,11 @@ read_roxas_settings <- function(file_settings, roxas_version) {
                                   patterns = c(origin_calibrated_x = "[^/]+",
                                                "[ ]*/[ ]*",
                                                origin_calibrated_y = ".+")) |>
+      # some settings files wrap the file name in (many) double quotes
+      dplyr::mutate(
+        rw_reference_file = stringr::str_remove_all(.data$rw_reference_file, '"') |>
+          stringr::str_trim() |>
+          dplyr::na_if("")) |>
       dplyr::relocate("fname_settings", "software", "sw_version")
 
   } else { # ROXAS AI

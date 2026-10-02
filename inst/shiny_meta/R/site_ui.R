@@ -11,7 +11,8 @@ site_ui <- function(id) {
         bslib::card_header(
           class = 'bg-primary',
           shiny::span(shiny::icon("exclamation", style = "color: white"),'Note')),
-        "The tables here are partially filled with information from the input data you provided in the Start tab."
+        "The tables here are partially filled with information from the input data you provided in the Start tab.
+        Hover over the column headers to see a description of the expected input."
       ),
       shiny::hr(),
       shiny::tags$ol(
