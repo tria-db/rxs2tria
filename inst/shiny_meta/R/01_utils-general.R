@@ -49,9 +49,9 @@ input_field_names <- c(
 # GLOBAL OPTIONS ---------------------------------------------------------------
 # whether app should be run in example mode or not
 # can be set via launch_metadata_app(example_run = ...), or directly
-# via options(rxs2xcell.shinymeta.example_run = ...) if running on server
-#example_run <- getOption("rxs2xcell.shinymeta.example_run", TRUE)
-server_run <- getOption("rxs2xcell.shinymeta.server_run", FALSE)
+# via options(rxs2tria.shinymeta.example_run = ...) if running on server
+#example_run <- getOption("rxs2tria.shinymeta.example_run", TRUE)
+server_run <- getOption("rxs2tria.shinymeta.server_run", FALSE)
 
 
 # UTILS -------------------------------------------------------------------------

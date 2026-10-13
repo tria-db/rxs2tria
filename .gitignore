@@ -7,13 +7,12 @@
 .quarto
 .env
 .vscode/*
-archive/*
-explorations/*
-out/*
-main.R
+.claude/*
+CLAUDE.md
 docs
 inst/doc
-.RDataTmp
+out/*
+explorations/*
 logs_MN.R
 scripts_MAN.R
 example_workflow.R
