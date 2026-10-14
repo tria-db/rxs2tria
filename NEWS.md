@@ -1,3 +1,8 @@
+# rxs2tria (development version)
+
+* `compile_resources()` and `recompile_resources()` are renamed to `compile_supplementary()` and `recompile_supplementary()`; `vignette("resources")` is now `vignette("supplementary")`.
+* JSON schemas moved: `json_schema/base_schema/` is now `json_schema/core/`; the Shiny metadata app extensions `tria_*_ext_schema.json` are now `app_*_schema.json`.
+
 # rxs2tria 0.1.3
 
 

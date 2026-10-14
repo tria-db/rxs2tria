@@ -47,21 +47,21 @@ cli_truncated_groups <- function(
 #' @noRd
 schema_rel_path <- function(schema) {
   switch(schema,
-    "QWAmetadata" = "extdata/json_schema/base_schema/tria_metadata_schema.json",
-    "shiny_meta" = "extdata/json_schema/tria_shinyext_schema.json",
-    "dataset" = "extdata/json_schema/base_schema/tria_ds_data_schema.json",
-    "authors" = "extdata/json_schema/base_schema/tria_author_data_schema.json",
-    "funding" = "extdata/json_schema/base_schema/tria_funding_data_schema.json",
-    "related" = "extdata/json_schema/base_schema/tria_related_data_schema.json",
-    "resources" = "extdata/json_schema/base_schema/tria_resource_data_schema.json",
-    "sites" = "extdata/json_schema/base_schema/tria_site_data_schema.json",
-    "trees" = "extdata/json_schema/base_schema/tria_tree_data_schema.json",
-    "woodpieces" = "extdata/json_schema/base_schema/tria_woodpiece_data_schema.json",
-    "slides" = "extdata/json_schema/base_schema/tria_slide_data_schema.json",
-    "roxas" = "extdata/json_schema/base_schema/tria_roxas_data_schema.json",
-    "roxas_ai" = "extdata/json_schema/base_schema/tria_roxasai_data_schema.json",
-    "cells" = "extdata/json_schema/base_schema/tria_cell_data_schema.json",
-    "rings" = "extdata/json_schema/base_schema/tria_ring_data_schema.json"
+    "QWAmetadata" = "extdata/json_schema/core/tria_metadata_schema.json",
+    "shiny_meta" = "extdata/json_schema/app_metadata_schema.json",
+    "dataset" = "extdata/json_schema/core/tria_ds_data_schema.json",
+    "authors" = "extdata/json_schema/core/tria_author_data_schema.json",
+    "funding" = "extdata/json_schema/core/tria_funding_data_schema.json",
+    "related" = "extdata/json_schema/core/tria_related_data_schema.json",
+    "supplementary" = "extdata/json_schema/core/tria_resource_data_schema.json",
+    "sites" = "extdata/json_schema/core/tria_site_data_schema.json",
+    "trees" = "extdata/json_schema/core/tria_tree_data_schema.json",
+    "woodpieces" = "extdata/json_schema/core/tria_woodpiece_data_schema.json",
+    "slides" = "extdata/json_schema/core/tria_slide_data_schema.json",
+    "roxas" = "extdata/json_schema/core/tria_roxas_data_schema.json",
+    "roxas_ai" = "extdata/json_schema/core/tria_roxasai_data_schema.json",
+    "cells" = "extdata/json_schema/core/tria_cell_data_schema.json",
+    "rings" = "extdata/json_schema/core/tria_ring_data_schema.json"
   )
 }
 

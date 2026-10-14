@@ -11,7 +11,7 @@
 #' materials in addition to the required [QWAdata] and [QWAmetadata] files. It
 #' compiles a manifest of the supplementary resources---it does not move, copy,
 #' rename, or compress any files. TRIA limits the kind of supplementary files
-#' which can be submitted (see `vignette("resources")` for a full list), for any
+#' which can be submitted (see `vignette("supplementary")` for a full list), for any
 #' other submitted files the contributor is required to provide a description of
 #' what it is and why it is relevant. Thus the purpose of the manifest is to
 #' ensure that only the *right* supplementary files are included in the
@@ -30,7 +30,7 @@
 #' input directory (adding/removing/renaming files), or edit the data frame directly (editing the 
 #' values for `resource_type`, `linked_level`, `linked_label` or `description`). 
 #' **Do not** edit the derived `status`/`note` columns.
-#' After your edits, use [recompile_resources()] to reconcile the updated
+#' After your edits, use [recompile_supplementary()] to reconcile the updated
 #' manifest against the current contents of `path` and re-derive the `status`/`note` 
 #' columns without losing any manual edits.
 #' 
@@ -39,7 +39,7 @@
 #' save the resulting table to a CSV (e.g. `vroom::vroom_write()`) and submit 
 #' it alongside the supplementary zip archive.
 #'
-#' See `vignette("resources")` for a worked example and the complete list of
+#' See `vignette("supplementary")` for a worked example and the complete list of
 #' recognised resource types.
 #'
 #' @param path Path to a directory to scan for files, or to an existing
@@ -69,16 +69,16 @@
 #'
 #'   Returns `NULL` if no files are found in `path`.
 #'
-#' @seealso [recompile_resources()], [check_supplementary()], `vignette("resources")`
+#' @seealso [recompile_supplementary()], [check_supplementary()], `vignette("supplementary")`
 #' @examples
 #' \dontrun{
-#' suppl_res <- compile_resources("path/to/submission_files", rxs_images = my_images)
+#' suppl_res <- compile_supplementary("path/to/submission_files", rxs_images = my_images)
 #' # review and make changes are required, then persist as a standalone CSV
 #' # to submit alongside the resources zip:
 #' vroom::vroom_write(suppl_res, "output_data/submission_files_resources.csv")
 #' }
 #' @export
-compile_resources <- function(path, rxs_images) {
+compile_supplementary <- function(path, rxs_images) {
   checkmate::assert(
     checkmate::check_directory_exists(path),
     checkmate::check_file_exists(path, extension = "zip")
@@ -102,32 +102,32 @@ compile_resources <- function(path, rxs_images) {
 #'
 #' @description
 #' Re-scans `path` and reconciles the result against `suppl_res`, an existing
-#' manifest (e.g. the output of a previous [compile_resources()]/
-#' `recompile_resources()` call, or one read back in from a CSV). Use this
+#' manifest (e.g. the output of a previous [compile_supplementary()]/
+#' `recompile_supplementary()` call, or one read back in from a CSV). Use this
 #' after making manual edits and/or adding or removing files in `path` to
 #' create a re-checked manifest up-to-date with the contents of `path`.
 #'
 #' `suppl_res` is treated as the source of truth wherever it overlaps with
-#' what's actually found in `path`, see `vignette("resources")` for details.
+#' what's actually found in `path`, see `vignette("supplementary")` for details.
 #'
-#' @inheritParams compile_resources
+#' @inheritParams compile_supplementary
 #' @param suppl_res An existing resources data frame.
 #' @param add_new_files Logical; if `TRUE`, files found in `path` that
 #'   aren't declared in `suppl_res` are added as new, freshly-typed rows
 #'   instead of being left out. Default `FALSE`.
-#' @returns A data frame, see [compile_resources()]. Aborts instead of
+#' @returns A data frame, see [compile_supplementary()]. Aborts instead of
 #'   returning if `suppl_res` lists a file with `status == "ok"` that isn't
 #'   found in `path`.
-#' @seealso [compile_resources()], [check_supplementary()], `vignette("resources")`
+#' @seealso [compile_supplementary()], [check_supplementary()], `vignette("supplementary")`
 #' @examples
 #' \dontrun{
 #' # re-run after adding more files to path: manual edits on suppl_res survive;
 #' # add_new_files = TRUE also picks up the new ones
-#' suppl_res <- recompile_resources(suppl_res, "path/to/submission_files",
+#' suppl_res <- recompile_supplementary(suppl_res, "path/to/submission_files",
 #'                                  rxs_images = my_images, add_new_files = TRUE)
 #' }
 #' @export
-recompile_resources <- function(suppl_res, path, rxs_images, add_new_files = FALSE) {
+recompile_supplementary <- function(suppl_res, path, rxs_images, add_new_files = FALSE) {
   checkmate::assert_data_frame(suppl_res)
   checkmate::assert_names(names(suppl_res),
                           must.include = c("resource_name", "resource_type",
@@ -167,25 +167,25 @@ recompile_resources <- function(suppl_res, path, rxs_images, add_new_files = FAL
 #' A pass/fail check confirming that your finalised manifest accurately
 #' describes the content of the supplementary archive/directory and is ready
 #' for submission. `suppl_res` must be a finalised manifest, i.e. including
-#' the `status` column produced by [compile_resources()] or
-#' [recompile_resources()].
+#' the `status` column produced by [compile_supplementary()] or
+#' [recompile_supplementary()].
 #' Aborts if `suppl_res` lists a file with `status == "ok"` that isn't found
 #' in `path`---a genuine inconsistency between the manifest and the archive.
 #' Returns `FALSE` (with a warning pointing you back to
-#' [recompile_resources()]) if any resource still needs review, or `TRUE` if
+#' [recompile_supplementary()]) if any resource still needs review, or `TRUE` if
 #' everything is ready.
 #'
-#' @inheritParams compile_resources
+#' @inheritParams compile_supplementary
 #' @param suppl_res An existing resources data frame.
 #' @returns `TRUE`/`FALSE` (invisibly), or aborts -- see Description.
-#' @seealso [recompile_resources()], [compile_resources()], `vignette("resources")`
+#' @seealso [recompile_supplementary()], [compile_supplementary()], `vignette("supplementary")`
 #' @examples
 #' \dontrun{
 #' # verify a finalized manifest against an already-zipped submission
 #' suppl_res <- vroom::vroom("output_data/supplementary_files.csv",
 #'                           show_col_types = FALSE)
 #' if (!check_supplementary(suppl_res, "supplementary_data.zip", rxs_images = my_images)) {
-#'   suppl_res <- recompile_resources(suppl_res, "supplementary_data", rxs_images = my_images)
+#'   suppl_res <- recompile_supplementary(suppl_res, "supplementary_data", rxs_images = my_images)
 #'   # fix the flagged resource(s) in suppl_res, then check again
 #' }
 #' }
@@ -193,8 +193,8 @@ recompile_resources <- function(suppl_res, path, rxs_images, add_new_files = FAL
 check_supplementary <- function(suppl_res, path, rxs_images) {
   checkmate::assert_data_frame(suppl_res)
   checkmate::assert_names(names(suppl_res), must.include = "status")
-  checked <-recompile_resources(suppl_res, path, rxs_images, add_new_files = FALSE)
-  # recompile_resources() already aborts if a submission-ready ("ok")
+  checked <-recompile_supplementary(suppl_res, path, rxs_images, add_new_files = FALSE)
+  # recompile_supplementary() already aborts if a submission-ready ("ok")
   # resource has gone missing; the only remaining failure is lingering
   # "review" rows, already listed in detail by the call above
   n_review <- sum(checked$status == "review")
@@ -218,7 +218,7 @@ check_supplementary <- function(suppl_res, path, rxs_images) {
 .scan_resources <- function(path, rxs_images) {
   roxas_version <- attr(rxs_images, "roxas_version")
 
-  schema_path <- system.file(schema_rel_path("resources"), package = "rxs2tria")
+  schema_path <- system.file(schema_rel_path("supplementary"), package = "rxs2tria")
   schema_obj  <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
   tbl_schema  <- resolve_schema(schema_obj, schema_path)
   tbl_props   <- get_tbl_props(tbl_schema)
@@ -302,7 +302,7 @@ check_supplementary <- function(suppl_res, path, rxs_images) {
 #' Reconcile an existing manifest against a freshly-scanned one
 #'
 #' Given `res` (an existing manifest, possibly already merged with untracked
-#' new files -- see [recompile_resources()]) and `new_res` (a fresh scan of
+#' new files -- see [recompile_supplementary()]) and `new_res` (a fresh scan of
 #' the same location), aborts if `res` lists a `status == "ok"` file no
 #' longer found in `new_res`, silently drops any other `res` row no longer
 #' found in `new_res`, and reports (but doesn't act on) files found in
@@ -350,7 +350,7 @@ check_supplementary <- function(suppl_res, path, rxs_images) {
     cli::cli_inform(c(
       if (usr_overwrites > 0) c("i" = "{usr_overwrites} resource{?s} have manual corrections in resource table"),
       if (length(already_gone) > 0) c("i" = '{length(already_gone)} file{?s} no longer found in dir/archive (not marked "ok"), dropped from resource table'),
-      if (length(new_files) > 0) c("i" = "{length(new_files)} file{?s} found not declared in input resource table, ignored (use {.code recompile_resources()} with {.code add_new_files = TRUE} to add them)")
+      if (length(new_files) > 0) c("i" = "{length(new_files)} file{?s} found not declared in input resource table, ignored (use {.code recompile_supplementary()} with {.code add_new_files = TRUE} to add them)")
     ))
   }
 
@@ -363,7 +363,7 @@ check_supplementary <- function(suppl_res, path, rxs_images) {
 #' - `"ignore"`: a junk file (ROXAS `_bu` backups, `Thumbs.db`, Office lock
 #'   files, ...), or any other file manually marked `resource_type = "junk"`
 #'   to permanently exclude it without deleting it from `path` (see
-#'   [recompile_resources()]). Never part of TRIA upload, so we will ignore
+#'   [recompile_supplementary()]). Never part of TRIA upload, so we will ignore
 #'   such files.
 #' - `"review"`: needs manual attention before this file can be included in
 #'   submission. Covers an unrecognised (`"other"`) supplementary file without
@@ -388,7 +388,7 @@ check_supplementary <- function(suppl_res, path, rxs_images) {
   checkmate::assert_data_frame(res)
   checkmate::assert_class(rxs_images, "QWAimages")
 
-  schema_path <- system.file(schema_rel_path("resources"), package = "rxs2tria")
+  schema_path <- system.file(schema_rel_path("supplementary"), package = "rxs2tria")
   schema_obj  <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
   check_schema(res, schema_obj, "resources", warn_only = TRUE, greedy = FALSE)
 
@@ -429,7 +429,7 @@ load_resource_types <- function() {
 #' Infer resource type from a file name
 #'
 #' Matches file names against the naming patterns listed in
-#' `inst/extdata/resource_types.csv` (see also `vignette("resources")`) and
+#' `inst/extdata/resource_types.csv` (see also `vignette("supplementary")`) and
 #' returns the corresponding `resource_type` and relevant info, or `"other"`
 #' for unrecognised files. Patterns are tried in ascending `priority` order
 #' (most specific first) and the first match wins.
@@ -439,7 +439,7 @@ load_resource_types <- function() {
 #'   disambiguate patterns that are specific to one ROXAS version.
 #' @returns A tibble with one row per file: `resource_name`, `fname_resource`,
 #'   `resource_type`, `linked_level`.
-#' @seealso [compile_resources()]
+#' @seealso [compile_supplementary()]
 #' @noRd
 infer_resource_types <- function(filenames, roxas_version) {
   checkmate::assert_choice(roxas_version, c("roxas", "roxas_ai"))

@@ -284,6 +284,6 @@
       }
     },
     "required": ["image_label", "year", "xpix", "ypix"],
-    "additionalProperties": false
+    "additionalProperties": true
   }
 }

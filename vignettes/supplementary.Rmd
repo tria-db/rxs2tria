@@ -30,7 +30,7 @@ this minimum, you may optionally submit **supplementary resources**, e.g.
 the original or annotated images, the raw ROXAS / ROXAS AI output files,
 reference series, and so on.
 
-`compile_resources()` scans a directory (or an already-zipped archive)
+`compile_supplementary()` scans a directory (or an already-zipped archive)
 and returns a **manifest**: a table with one row per file, recording what
 each file is, where it sits in the data hierarchy, and whether it is 
 actually ready to be submitted. Building it does **not** move, rename, 
@@ -39,14 +39,14 @@ referenced by their relative path.
 
 As described in `vignette("submission")`, a submission's supplementary
 files are expected to live in a **single directory** (which you zip up
-before uploading). `compile_resources()` scans it recursively, so you
+before uploading). `compile_supplementary()` scans it recursively, so you
 may use your preferred nested file structure within that directory. It
 also accepts a path to an already-zipped (non-nested) archive directly.
 The files in the scanned directory or archive are automatically assigned
 a resource type and linked to the appropriate image or woodpiece, etc., 
 where appropriate. However, in some cases, you may need to correct or
 edit the inferred values (see [Manual editing]) or the underlying files
-themselves. Run `recompile_resources()` to re-check the edits and 
+themselves. Run `recompile_supplementary()` to re-check the edits and 
 re-sync the file list in the table (see [Reconciling and verifying
 the manifest]). Once finalised, write the manifest to a CSV and submit 
 it alongside the supplementary resources zip.
@@ -55,7 +55,7 @@ it alongside the supplementary resources zip.
 
 ## The resources table
 
-In the data frame returned by `compile_resources()` / `recompile_resources()`,
+In the data frame returned by `compile_supplementary()` / `recompile_supplementary()`,
 each row has the following columns:
 
 | Column | Meaning |
@@ -79,13 +79,13 @@ subfolders stay distinguishable.
 
 ## Basic workflow
 
-Point `compile_resources()` at the directory holding your supplementary
+Point `compile_supplementary()` at the directory holding your supplementary
 files (subdirectories are included). `rxs_images` (a `QWAimages` object)
 is required to auto-populate `linked_label` (see [Linked labels]):
 
 ```{r compile-basic}
 QWA_meta <- read_QWAmetadata("output_data/my_dataset_QWAmetadata.json")
-suppl_res <- compile_resources("path/to/supplementary_files", rxs_images = QWA_meta$images)
+suppl_res <- compile_supplementary("path/to/supplementary_files", rxs_images = QWA_meta$images)
 ```
 
 Inspect the result. Warning messages indicate whether anything needs
@@ -126,8 +126,8 @@ suppl_res$description[suppl_res$resource_name == "siteA_photo.png"] <-
 Instead of or in addition to editing the data frame itself, you may want to
 make changes in the input directory or archive under
 `path` directly (adding, removing or renaming files). Then re-run
-`compile_resources()` to create a fresh manifest, or run
-`recompile_resources()` with your previous manifest as input to keep and
+`compile_supplementary()` to create a fresh manifest, or run
+`recompile_supplementary()` with your previous manifest as input to keep and
 re-check any manual edits you have already made in the data frame while 
 re-syncing it with the file list under `path`. 
 
@@ -135,15 +135,15 @@ re-syncing it with the file list under `path`.
 
 Three functions cover the full lifecycle:
 
-- `compile_resources(path, rxs_images)`: always starts fresh.
-- `recompile_resources(suppl_res, path, rxs_images, add_new_files = FALSE)`:
+- `compile_supplementary(path, rxs_images)`: always starts fresh.
+- `recompile_supplementary(suppl_res, path, rxs_images, add_new_files = FALSE)`:
   reconciles a previous manifest against the current contents of
   `path`, so manual edits are kept and re-checked.
 - `check_supplementary(suppl_res, path, rxs_images)`: a pass/fail check
   confirming a finalised manifest (i.e. including the `status` column)
   accurately describes `path` and is ready for submission.
 
-For both `recompile_resources()` and `check_supplementary()`, `suppl_res` is 
+For both `recompile_supplementary()` and `check_supplementary()`, `suppl_res` is 
 treated as the source of truth wherever it overlaps with what's actually 
 found in `path`:
 
@@ -167,7 +167,7 @@ found in `path`:
 suppl_res <- vroom::vroom("output_data/supplementary_files.csv",
                           show_col_types = FALSE)
 # after manual edits and/or changing the supplementary dir contents:
-suppl_res <- recompile_resources(suppl_res, "path/to/supplementary_files",
+suppl_res <- recompile_supplementary(suppl_res, "path/to/supplementary_files",
                                  rxs_images = QWA_meta$images,
                                  add_new_files = TRUE)
 # to re-check a created supplementary zip against the finalised manifest
@@ -181,7 +181,7 @@ in the manifest (or listed as `resource_type = "junk"`) will **not** be
 included in the TRIA upload. To be explicit about your choices and to limit 
 the size of the supplementary data submission, we recommend removing any files 
 you do not want to include from the supplementary directory before zipping, 
-followed by re-running `recompile_resources()` to update the manifest.
+followed by re-running `recompile_supplementary()` to update the manifest.
 
 ---
 
@@ -233,7 +233,7 @@ submission, e.g. a reference chronology), `"site"`, ... , or `"analysis"`
 Where possible, the label is filled automatically from
 the data structure defined in `rxs_images`---the `QWAimages` object or
 `$images` component of the `QWAmetadata` object that you pass to 
-`compile_resources()` / `recompile_resources()`.
+`compile_supplementary()` / `recompile_supplementary()`.
 
 For `image`/`analysis` files, matching works by testing whether a
 resource's *basename* (`resource_name` with any directory stripped)
@@ -272,7 +272,7 @@ names.
 ## Readiness status
 
 Every row is assigned a `status`, computed automatically by
-`compile_resources()`/`recompile_resources()`:
+`compile_supplementary()`/`recompile_supplementary()`:
 
 - **`"ok"`**: recognised, passes every check, ready to submit as-is.
   The file is of a recognised type and a linked label could be 
@@ -308,7 +308,7 @@ suppl_res$resource_type[suppl_res$resource_name == "tree1/slide2/odd_name.tif"] 
 suppl_res$linked_level[suppl_res$resource_name == "tree1/slide2/odd_name.tif"] <- "image"
 
 # re-run the checks after manually editing the table:
-suppl_res <- recompile_resources(suppl_res, "path/to/submission_files", QWA_meta$images)
+suppl_res <- recompile_supplementary(suppl_res, "path/to/submission_files", QWA_meta$images)
 ```
 
 ---

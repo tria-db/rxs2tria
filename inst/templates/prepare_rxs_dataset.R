@@ -212,15 +212,15 @@ QWA_data <- update_QWAdata(QWA_data,
 # (supplementary) files with your submission - e.g. original / annotated images,
 # raw ROXAS output, reference series - these are listed in a standalone
 # resources manifest, submitted alongside a zip of the files themselves.
-# compile_resources() scans a directory (including nested subfolders) and
+# compile_supplementary() scans a directory (including nested subfolders) and
 # returns a table with one row per file, its inferred type, hierarchy level,
 # and a readiness status ("ok", "review", or "ignore"; see
-# vignette("resources")). The console reports whether the supplementary manifest
+# vignette("supplementary")). The console reports whether the supplementary manifest
 # is ready to submit, or which files still need attention.
-# See vignette("resources") for details.
+# See vignette("supplementary") for details.
 
 QWAmeta <- read_QWAmetadata("path/to/output_data/example_dataset_QWAmetadata.json")
-suppl_res <- compile_resources("path/to/submission_files", rxs_images = QWAmeta$images)
+suppl_res <- compile_supplementary("path/to/submission_files", rxs_images = QWAmeta$images)
 
 suppl_res # review status "review" rows, make edits where needed, then (re-)compile
 vroom::vroom_write(suppl_res, "path/to/output_data/example_dataset_supplementary_files.csv")

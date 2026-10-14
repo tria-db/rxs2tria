@@ -2,7 +2,7 @@
   "$id": "https://example.com/schemas/extended_funding.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "allOf": [
-    { "$ref": "base_schema/tria_funding_data_schema.json"},
+    { "$ref": "core/tria_funding_data_schema.json"},
     { 
       "type": "array",
       "items": {
