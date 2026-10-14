@@ -174,7 +174,7 @@ get_schema <- function(schema_name = "metadata"){
     "slides"      = "slide_data",
     schema_name   # pass through for "metadata", "cell_data", etc.
   )
-  schema_files <- list.files(system.file("extdata", "json_schema/base_schema",
+  schema_files <- list.files(system.file("extdata", "json_schema/core",
                                          package = "rxs2tria"), full.names = TRUE)
   # find file matching the pattern (sort for most recent version if multiple matches)
   schema_filepath <- grep(sort(schema_files, decreasing = TRUE), pattern = file_pattern, value = TRUE)[1]

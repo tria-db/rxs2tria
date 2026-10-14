@@ -6,7 +6,6 @@
 ^LICENSE\.md$
 ^explorations$
 ^out$
-^archive$
 ^_pkgdown\.yml$
 ^docs$
 ^pkgdown$

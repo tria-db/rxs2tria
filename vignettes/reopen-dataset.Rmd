@@ -133,4 +133,4 @@ objects you have already read in, for example `prf_sector`,
   preprocessing pipeline (`get_roxas_files()`, `collect_raw_data()`, …)
   is a different workflow that operates on the raw ROXAS files, which are
   only available if they were submitted as supplementary resources (see
-  `vignette("resources")`).
+  `vignette("supplementary")`).

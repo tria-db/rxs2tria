@@ -185,8 +185,8 @@ new_QWAmetadata <- function(dataset = NULL,
 #' @param resources Data frame describing the submitted `QWAdata` cells/rings
 #'   files. Populated by TRIA at publish time rather than by this package --
 #'   leave `NULL`. (The supplementary-file manifest built by
-#'   [compile_resources()] is a separate, standalone artefact -- see
-#'   `vignette("resources")` -- not a component of `QWAmetadata`.)
+#'   [compile_supplementary()] is a separate, standalone artefact -- see
+#'   `vignette("supplementary")` -- not a component of `QWAmetadata`.)
 #' @param sites Data frame with site-level metadata. Typically provided via
 #'   metadata Shiny app.
 #' @param trees Data frame with tree-level metadata. Typically provided via
@@ -225,7 +225,7 @@ QWAmetadata <- function(dataset = NULL,
   authors <- align_component(authors, "authors")
   funding <- align_component(funding, "funding")
   related <- align_component(related, "related")
-  resources <- align_component(resources, "resources")
+  resources <- align_component(resources, "supplementary")
   sites <- align_component(sites, "sites")
   trees <- align_component(trees, "trees")
   woodpieces <- align_component(woodpieces, "woodpieces")
@@ -322,10 +322,11 @@ check_QWAmetadata <- function(x) {
   checkmate::assert_class(x, "QWAmetadata")
 
   components <- c("dataset", "authors", "funding", "related",
-                  "resources", "sites", "trees", "woodpieces", "slides")
+                  "sites", "trees", "woodpieces", "slides")
   for (comp in components) { # check against schema, missing optional cols
     check_component(x[[comp]], comp)
   }
+  check_component(x$resources, "supplementary")
 
   # hierarchy consistency checks against x$images
   check_hierarchy(x$sites, "sites", "site_label", x$images, function(d) {

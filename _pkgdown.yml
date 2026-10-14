@@ -18,8 +18,8 @@ reference:
 - title: "Prepare supplementary data"
   desc: "Functions for compiling and checking supplementary files"
   contents:
-  - compile_resources
-  - recompile_resources
+  - compile_supplementary
+  - recompile_supplementary
   - check_supplementary
 - title: "Shiny apps"
   desc: "Commands to launch the integrated Shiny apps"

@@ -367,7 +367,7 @@ listing all the files in the zip.
 
 Not all files may be eligible as supporting material for a TRIA dataset,
 and it is important to track which file pertains to which image or slide,
-etc. For this purpose, `compile_resources()` scans a directory (including
+etc. For this purpose, `compile_supplementary()` scans a directory (including
 nested subfolders) and returns a table with one row per file it finds.
 For each file it infers the `resource_type` from the file name and sets
 the hierarchy level it belongs to (`linked_level`). Files are also
@@ -376,7 +376,7 @@ matched to their `linked_label` (e.g. the `image_label`) using a
 
 ```{r, eval = FALSE}
 QWA_meta <- read_QWAmetadata("path/to/output_data/example_dataset_QWAmetadata.json")
-suppl_res <- compile_resources("path/to/submission_files", rxs_images = QWA_meta$images)
+suppl_res <- compile_supplementary("path/to/submission_files", rxs_images = QWA_meta$images)
 ```
 
 Every file gets a `status` (`"ok"`, `"review"`, or `"ignore"`) and the
@@ -391,8 +391,8 @@ suppl_res
 vroom::vroom_write(suppl_res, "path/to/output_data/example_dataset_supplementary_files.csv")
 ```
 
-See `vignette("resources")` for more details on this step, including how
-to `recompile_resources()` after making edits, and how to run a final
+See `vignette("supplementary")` for more details on this step, including how
+to `recompile_supplementary()` after making edits, and how to run a final
 `check_supplementary()` once you are done.
 
 # Step 8: Submit your data

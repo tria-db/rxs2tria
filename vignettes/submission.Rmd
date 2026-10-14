@@ -40,7 +40,7 @@ A submission consists of:
 3. Optionally, **one zip archive of supplementary resources** (original
    and annotated images, raw ROXAS / ROXAS AI output, reference series,
    etc.) and the **resources manifest CSV** describing it (see
-   `vignette("resources")`).
+   `vignette("supplementary")`).
 
 To hand over these files, email [tria@wsl.ch](mailto:tria@wsl.ch) and either:
 
@@ -129,7 +129,7 @@ uploaded zip. If you provide the manifest CSV, it's trusted as ground
 truth for anything it lists that's still in the zip. Extra files in the 
 zip the manifest doesn't mention are left out rather than guessed at. 
 If you don't provide a manifest, we build one from scratch the same way
-`compile_resources()` would for you. But any issues with inferring the
+`compile_supplementary()` would for you. But any issues with inferring the
 resource types and linked labels would mean that we have to contact
 you for clarification---prolonging the submission process.
 
