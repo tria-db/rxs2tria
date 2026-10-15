@@ -2,34 +2,99 @@
 % Please edit documentation in R/calculate_profiles.R
 \name{calculate_sector_profiles}
 \alias{calculate_sector_profiles}
-\title{Calculate sector-wise radial profiles}
+\alias{calculate_band_profiles}
+\title{Calculate radial profiles}
 \usage{
 calculate_sector_profiles(
   QWA_data,
   n_sectors,
   sel_cell_params,
-  quant_probs = NULL
+  quant_probs = NULL,
+  apply_exclusions = FALSE,
+  tissue = c("all", "affected")
+)
+
+calculate_band_profiles(
+  QWA_data,
+  bandwidth,
+  stepsize,
+  sel_cell_params,
+  quant_probs = NULL,
+  band_rebound = TRUE,
+  apply_exclusions = FALSE,
+  tissue = c("all", "affected")
 )
 }
 \arguments{
-\item{QWA_data}{A \link{QWAdata} object with a non-\code{NULL} \verb{$cells} component.}
+\item{QWA_data}{A \link{QWAdata} object with a non-\code{NULL} \verb{$cells} component
+(and \verb{$rings} component for \code{calculate_band_profiles()}).}
 
 \item{n_sectors}{Number of equal-width sectors to divide each ring into.}
 
-\item{sel_cell_params}{Character vector of cell parameter column names to
-include in the profiles (e.g. \code{c("la", "cwttan")}).}
+\item{sel_cell_params}{Character vector of cell parameters to include in
+the profiles (either a subset of the measurement column names of
+\code{QWA_data$cells}, e.g. \code{c("la", "cwtrad")}, or \code{"all"}). NOTE: using
+\code{"all"} results in a large number of columns in the returned \code{QWAprofile}.}
 
-\item{quant_probs}{Numeric vector of quantile probabilities to calculate
-(e.g. \code{c(0.25, 0.5, 0.75)}). \code{NULL} or empty -> means only.}
+\item{quant_probs}{Numeric vector of distinct quantile probabilities in
+[0, 1] (e.g. \code{c(0.25, 0.5, 0.75)}). Set \code{NULL} or empty to derive only
+means.}
+
+\item{apply_exclusions}{If \code{TRUE}, the cells of excluded rings
+(\code{exclude_dupl}, \code{exclude_issues} in \verb{$rings}) are filtered out, returning
+'clean' measurement series ready for analyses. Default \code{FALSE}.}
+
+\item{tissue}{Only used with \code{apply_exclusions = TRUE}. \code{"all"} (default)
+removes all cells of excluded rings; \code{"affected"} removes only the
+earlywood or latewood cells (by \code{ew_lw}) of rings with \code{exclude_issues}
+and \code{affected_tissue} \code{"ew"} or \code{"lw"}, respectively.}
+
+\item{bandwidth}{Width of each band in microns.}
+
+\item{stepsize}{Step size between band starts in microns.}
+
+\item{band_rebound}{If \code{TRUE} (default), the last band is shifted so its end
+coincides exactly with the ring width (\code{mrw}).}
 }
 \value{
-A \link{QWAprofile} object with \code{profile_type = "sector"}.
+A \link{QWAprofile} object with \code{profile_type = "sector"} or
+\code{profile_type = "band"}.
 }
 \description{
-Divides each ring into \code{n_sectors} equal-width sectors (by relative radial
-position) and computes per-sector means and optionally quantiles of the
-selected cell parameters.
+\code{calculate_sector_profiles()} divides the cells of each ring into
+\code{n_sectors} equal-width sectors (by relative radial position) and computes
+per-sector means and optionally quantiles of the selected cell parameters.
+The returned \code{QWAprofile} object includes a column \code{sector_n} with values in
+[1,..., \code{n_sectors}] for each \code{image_label} and \code{year}.
+
+\code{calculate_band_profiles()} computes moving-band profiles of selected cell
+parameters across the ring width. Each band is a window of \code{bandwidth}
+microns that shifts in steps of \code{stepsize} microns from the innner to the
+outer ring boundary. The returned \code{QWAprofile} object includes columns
+\code{start} and \code{end} with the band limits in microns (with the \code{mrw} value for
+context) for each \code{image_label} and \code{year}.
+
+For each selected parameter, the returned columns include number of valid
+cells used in the aggregation (\verb{<param>_N}), the mean (\verb{<param>_mean}) for
+each sector or band, and the quantile columns for the given probabilities
+(named by percentage, e.g. \code{la_q25}, \code{la_q05}, \code{la_q25.7}).
+}
+\details{
+In order to use \code{apply_exclusions = TRUE}, the \code{QWA_data$rings} component
+must be provided and include the flag columns \code{exclude_dupl} and
+\code{exclude_issues}.
+In addition, to exclude only the cells from affected tissue (via
+\code{tissue = "affected"}), the \code{ew_lw} assignment in \verb{$cells} must exist (see
+\code{\link[=complete_QWAdata]{complete_QWAdata()}}).
+The exclusion flag and \code{affected_tissue} columns can be edited via
+\code{\link[=launch_flags_app]{launch_flags_app()}} before the profile calculation, if you want a 'clean'
+profile object that does not include rows from overlapping or problematic
+rings (or tissue).
+
+To return a \code{ew_band} column in a band-type \code{QWAprofile} (indicating if a
+band falls entirely within the earlywood), the \verb{$rings} component must
+include an \code{eww} column, which can be added via \code{\link[=complete_QWAdata]{complete_QWAdata()}}.
 }
 \seealso{
-\code{\link[=calculate_band_profiles]{calculate_band_profiles()}}, \code{\link[=QWAprofile]{QWAprofile()}}
+\code{\link[=QWAprofile]{QWAprofile()}}
 }

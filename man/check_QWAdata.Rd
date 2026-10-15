@@ -4,7 +4,7 @@
 \alias{check_QWAdata}
 \title{Validate a QWAdata object}
 \usage{
-check_QWAdata(x, meta = NULL, exclude_mode = c("either", "incomplete_only"))
+check_QWAdata(x, meta = NULL, exclude_mode = NULL)
 }
 \arguments{
 \item{x}{A \link{QWAdata} object.}
@@ -12,8 +12,7 @@ check_QWAdata(x, meta = NULL, exclude_mode = c("either", "incomplete_only"))
 \item{meta}{Optional \link{QWAimages} object. If provided, also checks that no
 ring years exceed \code{outmost_year}.}
 
-\item{exclude_mode}{Which flag combination is expected in \code{exclude_issues}:
-\code{"either"} (default) or \code{"incomplete_only"}. Used to check consistency.}
+\item{exclude_mode}{Deprecated and ignored.}
 }
 \value{
 \code{TRUE}, invisibly. Warnings are issued for any problems found;
@@ -26,9 +25,6 @@ issues found. Checks include:
 \item CWT estimates present for all images.
 \item Dating validity (undated, duplicate, future years; and if \code{meta} is
 provided, years after \code{outmost_year}).
-\item Flag columns (\code{incomplete_ring}, \code{missing_ring}, \code{duplicate_ring},
-\code{exclude_issues}) are present, non-\code{NA}, and internally consistent
-(e.g. \code{exclude_issues} agrees with the flag columns given \code{exclude_mode}).
 }
 }
 \seealso{

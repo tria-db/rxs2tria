@@ -4,7 +4,7 @@
 \alias{complete_QWAdata}
 \title{Complete a QWAdata object}
 \usage{
-complete_QWAdata(x, meta, exclude_mode = c("either", "incomplete_only"))
+complete_QWAdata(x, meta, exclude_mode = NULL)
 }
 \arguments{
 \item{x}{A \link{QWAdata} object with both \verb{$cells} and \verb{$rings}.}
@@ -12,9 +12,7 @@ complete_QWAdata(x, meta, exclude_mode = c("either", "incomplete_only"))
 \item{meta}{A \link{QWAimages} object providing \code{spatial_resolution} and
 \code{outmost_year}, required for the incomplete-innermost and dating checks.}
 
-\item{exclude_mode}{Passed to \code{\link[=complete_flags]{complete_flags()}}: \code{"either"} (default)
-excludes incomplete and missing rings; \code{"incomplete_only"} excludes only
-incomplete rings.}
+\item{exclude_mode}{Deprecated, see \code{\link[=complete_flags]{complete_flags()}}.}
 }
 \value{
 A \link{QWAdata} object with all derived columns and flag columns populated.

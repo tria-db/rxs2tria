@@ -208,22 +208,19 @@ ring quality flags:
 - `exclude_dupl`: `TRUE` for the duplicate ring(s) not selected as the
   preferred source (ranked by cell count, penalising incomplete and
   missing rings).
-- `exclude_issues`: convenience flag combining incomplete and/or missing
-  rings, controlled by `exclude_mode`.
-
-The `exclude_mode` argument determines which ring issues are
-pre-selected for exclusion: `"either"` (default) marks both incomplete
-and missing rings; `"incomplete_only"` marks only incomplete rings
-(useful when missing/wedging rings should still contribute to
-chronologies).
+- `exclude_issues`: rings to exclude from analyses, initialised from
+  `incomplete_ring`. Missing rings are not excluded, as their zero width
+  is a valid measurement; set `exclude_issues` afterwards to use a
+  different rule.
 
 ```{r, eval = FALSE}
 QWA_data <- collect_raw_data(rxs_images)
 # or if you already loaded the full metadata from json after completing Step 3:
 # QWA_data <- collect_raw_data(QWA_meta$images)
 
-exclude_mode <- "either"
-QWA_data <- complete_QWAdata(QWA_data, rxs_images, exclude_mode)
+QWA_data <- complete_QWAdata(QWA_data, rxs_images)
+# to also exclude missing rings:
+# QWA_data$rings$exclude_issues <- QWA_data$rings$incomplete_ring | QWA_data$rings$missing_ring
 
 QWA_data  # prints an overview including ring flag counts
 ```
@@ -322,36 +319,103 @@ See `vignette("flags-app")` for a full walkthrough of the app.
 
 ---
 
-## Update re-analysed images (Step 6c)
+## Update images (Step 6c)
+
+`update_QWAdata()` synchronises a `QWAdata` object with a `QWAimages`
+object: images new in `rxs_images` are read and added, images no longer
+in `rxs_images` are removed, and images listed in `imgs_to_reread` are
+read again from their raw data files. This avoids reprocessing the
+entire dataset. Duplicate-ring flags are recalculated for all
+woodpiece-years affected by these changes. Added and re-read images are
+new data: inspect their flags again (Step 6b) or re-apply any custom
+rule for `exclude_issues`.
+
+### Re-analysed images
 
 If data processing reveals issues in the raw data and you re-analyse
-one or more images with ROXAS or ROXAS AI, `update_QWAimages()` and
-`update_QWAdata()` allow you to splice in the new data without
-reprocessing the entire dataset.
+one or more images with ROXAS or ROXAS AI:
 
 1. Replace the output files in `path_in` with the newly generated files.
-2. Update the settings/metadata for those images in the `QWAimages`
-   object:
+2. Re-read the settings/metadata for those images in the `QWAimages`
+   object (no need to repeat Steps 1 and 2):
 
 ```{r, eval = FALSE}
 rxs_images <- update_QWAimages(rxs_images,
-  imgs_to_update = c("IMAGELABEL1", "IMAGELABEL2"),
+  imgs_to_reread = c("IMAGELABEL1", "IMAGELABEL2"),
   settings_date_orders = settings_date_orders) # same as defined in Step 3
 # don't forget to update the component in the QWAmetadata object if necessary:
 QWA_meta$images <- rxs_images
 ```
 
-3. Update the `QWAdata` object. For the updated images only, the raw
-   data files are re-read, derived measures are recomputed, and
-   automatic flags are reset. By default, any manual edits made in the
-   flags app are also reset (set `reset_manual_flags = FALSE` to
-   preserve them):
+3. Update the `QWAdata` object. For the re-read images, derived measures
+   and automatic flags are recalculated. By default, any manual edits
+   made in the flags app for these images are also reset. Set
+   `reset_manual_flags = FALSE` to keep them only if the re-analysis was
+   minor and the dating was not affected:
 
 ```{r, eval = FALSE}
-QWA_data <- update_QWAdata(QWA_data,
-  imgs_to_update = c("IMAGELABEL1", "IMAGELABEL2"),
-  meta = rxs_images,
-  exclude_mode = exclude_mode) # same as defined in Step 4
+QWA_data <- update_QWAdata(QWA_data, meta = rxs_images,
+  imgs_to_reread = c("IMAGELABEL1", "IMAGELABEL2"))
+```
+
+4. Review `only_ew` and `img_comment` of the re-analysed images in the
+   metadata app, e.g. a comment noting that the image needs re-analysis.
+
+### Added or removed images
+
+To add images, there are two options:
+
+- Rerun Steps 1--3 on the updated `path_in` to rebuild `rxs_images`.
+  Any `only_ew` and `img_comment` values entered in the metadata app
+  are then missing from `rxs_images` (`update_QWAmetadata()` below
+  fills them in).
+- Run Steps 1--3 on a separate folder containing only the new images to
+  obtain `rxs_images_new`, and combine it with the existing object. This
+  keeps existing values. Both objects must have the same ROXAS version
+  and distinct image labels:
+
+```{r, eval = FALSE}
+rxs_images <- combine_QWAimages(rxs_images, rxs_images_new)
+```
+
+To remove images, filter them from `rxs_images`:
+
+```{r, eval = FALSE}
+rxs_images <- rxs_images |>
+  dplyr::filter(!image_label %in% c("IMAGELABEL1", "IMAGELABEL2"))
+```
+
+Then update the `QWAdata` object:
+
+```{r, eval = FALSE}
+QWA_data <- update_QWAdata(QWA_data, meta = rxs_images)
+```
+
+If a `QWAmetadata` object exists, update it as well. This replaces its
+images and adds or removes the corresponding rows (and updates the
+counts) in the sites, trees, woodpieces and slides tables, keeping the
+existing metadata. Any `only_ew` and `img_comment` values missing or
+`NA` in `rxs_images` are filled from `QWA_meta$images`, so this also
+recovers them after a rebuild. Complete any added rows in the metadata
+app.
+
+```{r, eval = FALSE}
+QWA_meta <- update_QWAmetadata(QWA_meta, rxs_images)
+```
+
+### Combining datasets
+
+Two datasets prepared separately, e.g. from different input folders, can
+be combined with `combine_QWAimages()`, `combine_QWAdata()` and
+`combine_QWAmetadata()`. Both must have the same ROXAS version and
+distinct image labels. Where both contain the same entry (e.g. a shared
+site or author), the first object takes precedence. Duplicate-ring flags
+are recalculated for woodpiece-years with rings from both datasets.
+
+```{r, eval = FALSE}
+rxs_images <- combine_QWAimages(rxs_images_1, rxs_images_2)
+QWA_data <- combine_QWAdata(QWA_data_1, QWA_data_2)
+QWA_meta <- combine_QWAmetadata(QWA_meta_1, QWA_meta_2)
 ```
 
 ---

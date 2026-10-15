@@ -46,8 +46,7 @@ In normal use, `QWAdata` is built incrementally in three steps:
 QWA_data <- collect_raw_data(rxs_images)
 
 # Step 2: add derived measures and ring quality flags
-QWA_data <- complete_QWAdata(QWA_data, meta = rxs_images,
-                              exclude_mode = "either")
+QWA_data <- complete_QWAdata(QWA_data, meta = rxs_images)
 
 # Step 3: validate
 check_QWAdata(QWA_data, meta = rxs_images)
@@ -124,8 +123,7 @@ described in the next section.
 ## Completing a QWAdata object
 
 ```{r complete}
-QWA_data <- complete_QWAdata(QWA_data, meta = rxs_images,
-                              exclude_mode = "either")
+QWA_data <- complete_QWAdata(QWA_data, meta = rxs_images)
 ```
 
 `complete_QWAdata()` runs three operations in sequence and returns a new
@@ -148,10 +146,12 @@ QWA_data <- complete_QWAdata(QWA_data, meta = rxs_images,
    | `missing_ring` | No cells detected; ring added manually during crossdating (e.g. wedging ring) |
    | `duplicate_ring` | Year appears in more than one image due to overlapping slides |
    | `exclude_dupl` | `TRUE` for the duplicate ring(s) not selected as the preferred source |
-   | `exclude_issues` | Convenience flag combining incomplete and/or missing rings; controlled by `exclude_mode` |
+   | `exclude_issues` | Rings to exclude from analyses; initialised from `incomplete_ring` |
 
-   For the `exclude_mode` options (`"either"` or `"incomplete_only"`),
-   see the main `rxs2tria` vignette.
+   Missing rings are not excluded by default, as their zero width is a
+   valid measurement. To use a different rule, set `exclude_issues`
+   afterwards, e.g.
+   `QWA_data$rings$exclude_issues <- QWA_data$rings$incomplete_ring | QWA_data$rings$missing_ring`.
 
 If you need finer control — for example to add derived measures without
 touching the flags, or to recompute flags after manual edits — the

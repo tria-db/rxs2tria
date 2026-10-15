@@ -183,3 +183,15 @@ flag_duplicate_rings <- function(df_rings_log){
     dplyr::select(-duplicate_rank, -duplicate_sel)
   df_rings_log
 }
+
+# recalculate duplicate-ring flags for the given woodpiece-years only
+#' @noRd
+recalc_duplicates <- function(df_rings, wp_yrs) {
+  by_wp_yr <- c("woodpiece_label", "year")
+  df_rings |>
+    dplyr::anti_join(wp_yrs, by = by_wp_yr) |>
+    dplyr::bind_rows(
+      df_rings |>
+        dplyr::semi_join(wp_yrs, by = by_wp_yr) |>
+        flag_duplicate_rings())
+}

@@ -140,6 +140,31 @@ get_tbl_props <- function(tbl_schema) {
   list(properties = properties, required = required)
 }
 
+#' Names of the columns of a table schema with the given colType(s)
+#' @param schema Schema name, see `schema_rel_path()`.
+#' @param col_types Character vector of `colType` values.
+#' @returns Character vector of column names, in schema order.
+#' @noRd
+schema_cols <- function(schema, col_types) {
+  schema_path <- system.file(schema_rel_path(schema), package = "rxs2tria")
+  schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
+  tbl_props <- get_tbl_props(resolve_schema(schema_obj, schema_path))
+  tbl_props$properties |>
+    purrr::keep(\(x) isTRUE(x$colType %in% col_types)) |>
+    names()
+}
+
+#' Names of the cell measurement columns that can be aggregated
+#'
+#' All `measure` and `derived` columns of the cells schema except radial
+#' positions, categorical columns and neighbour IDs.
+#' @returns Character vector of column names, in schema order.
+#' @noRd
+cell_param_cols <- function() {
+  setdiff(schema_cols("cells", c("measure", "derived")),
+          c("raddistr", "rraddistr", "sector100", "ew_lw", "nbrid"))
+}
+
 # tbl_props <- get_tbl_props(full_schema$properties$tbl_name)
 # tbl_props <- get_tbl_props(tbl_schema)
 

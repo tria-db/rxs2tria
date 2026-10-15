@@ -32,6 +32,31 @@ check_component <- function(df, schema) {
     check_missing_opt(df, tbl_props, schema)
   }
 
+# hierarchical tables: ID column and counts derived from the images
+#' @noRd
+hierarchy_tbls <- list(
+  sites = list(id_col = "site_label", summary_fn = function(d) {
+    d |>
+      dplyr::group_by(.data$site_label) |>
+      dplyr::summarise(n_trees = dplyr::n_distinct(.data$tree_label), .groups = "drop")
+  }),
+  trees = list(id_col = "tree_label", summary_fn = function(d) {
+    d |>
+      dplyr::group_by(.data$site_label, .data$species_code, .data$tree_label) |>
+      dplyr::summarise(n_woodpieces = dplyr::n_distinct(.data$woodpiece_label), .groups = "drop")
+  }),
+  woodpieces = list(id_col = "woodpiece_label", summary_fn = function(d) {
+    d |>
+      dplyr::group_by(.data$tree_label, .data$woodpiece_label) |>
+      dplyr::summarise(n_slides = dplyr::n_distinct(.data$slide_label), .groups = "drop")
+  }),
+  slides = list(id_col = "slide_label", summary_fn = function(d) {
+    d |>
+      dplyr::group_by(.data$woodpiece_label, .data$slide_label) |>
+      dplyr::summarise(n_images = dplyr::n_distinct(.data$image_label), .groups = "drop")
+  })
+)
+
 # check the structure of a given QWAmetadata component matches the underlying images structure
 #' @noRd
 check_hierarchy <- function(df, name, id_col, img, summary_fn) {
@@ -329,26 +354,10 @@ check_QWAmetadata <- function(x) {
   check_component(x$resources, "supplementary")
 
   # hierarchy consistency checks against x$images
-  check_hierarchy(x$sites, "sites", "site_label", x$images, function(d) {
-    d |>
-      dplyr::group_by(site_label) |>
-      dplyr::summarise(n_trees = dplyr::n_distinct(tree_label), .groups = "drop")
-  })
-  check_hierarchy(x$trees, "trees", "tree_label", x$images, function(d) {
-    d |>
-      dplyr::group_by(site_label, species_code, tree_label) |>
-      dplyr::summarise(n_woodpieces = dplyr::n_distinct(woodpiece_label), .groups = "drop")
-  })
-  check_hierarchy(x$woodpieces, "woodpieces", "woodpiece_label", x$images, function(d) {
-    d |>
-      dplyr::group_by(tree_label, woodpiece_label) |>
-      dplyr::summarise(n_slides = dplyr::n_distinct(slide_label), .groups = "drop")
-  })
-  check_hierarchy(x$slides, "slides", "slide_label", x$images, function(d) {
-    d |>
-      dplyr::group_by(woodpiece_label, slide_label) |>
-      dplyr::summarise(n_images = dplyr::n_distinct(image_label), .groups = "drop")
-  })
+  for (tbl in names(hierarchy_tbls)) {
+    h <- hierarchy_tbls[[tbl]]
+    check_hierarchy(x[[tbl]], tbl, h$id_col, x$images, h$summary_fn)
+  }
 
   # TODO: add advanced checks: countries, species, contact person, embargo date, license, ...
   # check_resources? -> chema check within, so remove from list above
@@ -392,33 +401,12 @@ complete_QWAmetadata <- function(x) {
   related <- complete_tbl(x$related, "related")
 
   # create + prefill or complete hierarchical tables
-  sites <- complete_tbl(x$sites, "sites", x$images, function(d) {
-    d |>
-      dplyr::group_by(site_label) |>
-      dplyr::summarise(n_trees = dplyr::n_distinct(tree_label), .groups = "drop")
-  })
-
-  trees <- complete_tbl(x$trees, "trees", x$images, function(d) {
-    d |>
-      dplyr::group_by(site_label, species_code, tree_label) |>
-      dplyr::summarise(n_woodpieces = dplyr::n_distinct(woodpiece_label), .groups = "drop")
-  })
-
-  woodpieces <- complete_tbl(x$woodpieces, "woodpieces", x$images, function(d) {
-    d |>
-      dplyr::group_by(tree_label, woodpiece_label) |>
-      dplyr::summarise(n_slides = dplyr::n_distinct(slide_label), .groups = "drop")
-  })
-
-  slides <- complete_tbl(x$slides, "slides", x$images, function(d) {
-    d |>
-      dplyr::group_by(woodpiece_label, slide_label) |>
-      dplyr::summarise(n_images = dplyr::n_distinct(image_label), .groups = "drop")
-  })
+  hier <- purrr::imap(hierarchy_tbls, \(h, tbl)
+    complete_tbl(x[[tbl]], tbl, x$images, h$summary_fn))
 
   new_QWAmetadata(dataset, authors, funding, related,
     resources = x$resources, # populated by TRIA at publish time, not completed client-side
-    sites, trees, woodpieces, slides, images)
+    hier$sites, hier$trees, hier$woodpieces, hier$slides, images)
 }
 
 

@@ -68,6 +68,18 @@ check_cwt <- function(df_cells, warn_only = FALSE) {
   invisible(TRUE)
 }
 
+# deprecated exclude_mode: warn if supplied, return the rule for initialising
+# exclude_issues ("incomplete_only" unless "either" is given explicitly)
+#' @noRd
+resolve_exclude_mode <- function(exclude_mode) {
+  if (is.null(exclude_mode)) return("incomplete_only")
+  cli::cli_warn(c(
+    "!" = "{.arg exclude_mode} is deprecated and will be removed in a future version.",
+    "i" = "{.field exclude_issues} is now initialised from {.field incomplete_ring}; to also exclude missing rings, set e.g. {.code x$rings$exclude_issues <- x$rings$incomplete_ring | x$rings$missing_ring}."
+  ), .frequency = "once", .frequency_id = "rxs2tria_exclude_mode")
+  match.arg(exclude_mode, c("either", "incomplete_only"))
+}
+
 #' @noRd
 check_ring_years <- function(df_rings, df_meta = NULL, warn_only = FALSE) {
   current_year <- as.numeric(format(Sys.Date(), "%Y"))
@@ -159,7 +171,8 @@ max_na_inf <- function(x) {
 #' - cwtall_adj
 #' - cdrad, cdtan, cdratio
 #' - sector100
-#' - ew_lw: indicates if it is an EW or LW cell (based on Mork index <1 for EW)
+#' - ew_lw: indicates if it is an earlywood (`"ew"`) or latewood (`"lw"`) cell
+#'   (based on Mork index <1 for EW)
 #' And for the rings, we add
 #' - eww and lww estimates  (based on Mork index of 1)
 #' If any of these columns already exist in the data they are NOT recalculated, only
@@ -249,7 +262,7 @@ complete_measures <- function(QWA_data, only = NULL) {
     if (ew_lw_needed) {
       df_cells <- df_cells |>
         dplyr::left_join(df_ewlw, by = c('image_label', 'year')) |>
-        dplyr::mutate(ew_lw = dplyr::if_else(.data$sector100 <= .data$max_EW_sector, "EW", "LW")) |>
+        dplyr::mutate(ew_lw = dplyr::if_else(.data$sector100 <= .data$max_EW_sector, "ew", "lw")) |>
         dplyr::select(-dplyr::any_of(c("mrw", "max_EW_sector")))
     }
 
@@ -331,19 +344,23 @@ complete_measures <- function(QWA_data, only = NULL) {
 #' number of cells for each overlap is the one that would then usually be
 #' selected for further analysis when building chronologies.
 #'
+#' The `exclude_issues` column is initialised from `incomplete_ring`. Missing
+#' rings are not excluded, as their zero width is a valid measurement. To use a
+#' different rule, set `exclude_issues` afterwards, e.g.
+#' `x$rings$exclude_issues <- x$rings$incomplete_ring | x$rings$missing_ring`.
+#'
 #' @param x a `QWAdata` object containing the cells and rings dataframes
 #' @param meta a [QWAimages] object or data.frame providing image-level
 #'   information on `spatial_resolution` (required for the incomplete
 #'   innermost ring check) and `outmost_year`.
-#' @param exclude_mode how should the `$exclude_issues` flag column be initialized, to
-#'   exclude any incomplete or missing rings (`"either"`, default) or only the 
-#'   incomplete rings (i.e., not flagging missing/wedging rings for exclusion
-#'   from analyses, `"incomplete_only"`).
+#' @param exclude_mode Deprecated. `"either"` initialises `exclude_issues`
+#'   from incomplete or missing rings, `"incomplete_only"` from incomplete
+#'   rings only (now the default behaviour).
 #' @returns A `QWAdata` object with the validated data: cells unchanged, rings
 #'   with added flag columns.
 #' @export
 #'
-complete_flags <- function(x, meta, exclude_mode = c("either","incomplete_only")) {
+complete_flags <- function(x, meta, exclude_mode = NULL) {
   all_flag_cols <- c("incomplete_ring", "missing_ring", "duplicate_ring", "exclude_dupl", "exclude_issues")
   flag_cols_missing <- setdiff(all_flag_cols, names(x$rings))
   flag_cols_existing <- intersect(all_flag_cols, names(x$rings))
@@ -375,7 +392,7 @@ complete_flags <- function(x, meta, exclude_mode = c("either","incomplete_only")
     df_rings_log <- flag_duplicate_rings(df_rings_log) # replace with duplicate_sel?
   }
 
-  mode <- match.arg(exclude_mode)
+  mode <- resolve_exclude_mode(exclude_mode)
   if ("exclude_issues" %in% flag_cols_missing) {
     df_rings_log <- df_rings_log |>
       dplyr::mutate(
@@ -627,15 +644,12 @@ as_QWAdata <- function(x) {
 #' @param x A [QWAdata] object with both `$cells` and `$rings`.
 #' @param meta A [QWAimages] object providing `spatial_resolution` and
 #'   `outmost_year`, required for the incomplete-innermost and dating checks.
-#' @param exclude_mode Passed to [complete_flags()]: `"either"` (default)
-#'   excludes incomplete and missing rings; `"incomplete_only"` excludes only
-#'   incomplete rings.
+#' @param exclude_mode Deprecated, see [complete_flags()].
 #' @returns A [QWAdata] object with all derived columns and flag columns populated.
 #' @seealso [QWAdata()], [check_QWAdata()], [complete_flags()],
 #'   [complete_measures()]
 #' @export
-complete_QWAdata <- function(x, meta,
-                             exclude_mode = c("either", "incomplete_only")) {
+complete_QWAdata <- function(x, meta, exclude_mode = NULL) {
   checkmate::assert_class(x, "QWAdata")
   checkmate::assert_class(meta, "QWAimages")
   checkmate::assert_subset(
@@ -686,26 +700,21 @@ complete_QWAdata <- function(x, meta,
 #' - CWT estimates present for all images.
 #' - Dating validity (undated, duplicate, future years; and if `meta` is
 #'   provided, years after `outmost_year`).
-#' - Flag columns (`incomplete_ring`, `missing_ring`, `duplicate_ring`,
-#'   `exclude_issues`) are present, non-`NA`, and internally consistent
-#'   (e.g. `exclude_issues` agrees with the flag columns given `exclude_mode`).
 #'
 #' @param x A [QWAdata] object.
 #' @param meta Optional [QWAimages] object. If provided, also checks that no
 #'   ring years exceed `outmost_year`.
-#' @param exclude_mode Which flag combination is expected in `exclude_issues`:
-#'   `"either"` (default) or `"incomplete_only"`. Used to check consistency.
+#' @param exclude_mode Deprecated and ignored.
 #' @returns `TRUE`, invisibly. Warnings are issued for any problems found;
 #'   errors are thrown for structural issues.
 #' @seealso [QWAdata()], [complete_QWAdata()]
 #' @export
-check_QWAdata <- function(x, meta = NULL,
-                          exclude_mode = c("either", "incomplete_only")) {
+check_QWAdata <- function(x, meta = NULL, exclude_mode = NULL) {
   checkmate::assert_class(x, "QWAdata")
   if (!is.null(meta)) {
     checkmate::assert_class(meta, "QWAimages")
   }
-  mode <- match.arg(exclude_mode)
+  resolve_exclude_mode(exclude_mode)
 
   if (is.null(x$cells) && is.null(x$rings))
     cli::cli_abort("{.var QWAdata} requires at least one of {.field cells} or {.field rings}.")
@@ -880,6 +889,11 @@ read_QWAdata <- function(dir = NULL, file_cells = NULL, file_rings = NULL,
   if (!is.null(file_cells)) {
     cli::cli_inform(c(" " = "Reading cells data from {.file {file_cells}}..."))
     cells <- vroom::vroom(file_cells, show_col_types = FALSE)
+    # back-compatibility: older files used "EW" / "LW" for ew_lw
+    if ("ew_lw" %in% names(cells)) {
+      cells <- cells |>
+        dplyr::mutate(ew_lw = tolower(.data$ew_lw))
+    }
     cli::cli_inform(c("v" = "{nrow(cells)} cells read from file"))
   }
 

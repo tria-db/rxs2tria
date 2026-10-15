@@ -6,7 +6,7 @@
 \usage{
 update_QWAimages(
   meta,
-  imgs_to_update,
+  imgs_to_reread,
   settings_date_orders = NULL,
   settings_date_tz = Sys.timezone()
 )
@@ -14,8 +14,8 @@ update_QWAimages(
 \arguments{
 \item{meta}{a \link{QWAimages} object}
 
-\item{imgs_to_update}{character vector of \code{image_label} values to update;
-must be a subset of \code{meta$image_label}}
+\item{imgs_to_reread}{character vector of \code{image_label} values whose
+settings/metadata files are re-read; must be a subset of \code{meta$image_label}}
 
 \item{settings_date_orders}{Character; date order string(s) passed to
 \code{\link[lubridate:parse_date_time]{lubridate::parse_date_time()}} to parse the \code{meas_created_at} field for
