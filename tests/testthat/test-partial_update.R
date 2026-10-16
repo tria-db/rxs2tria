@@ -253,6 +253,17 @@ test_that("missing app columns are carried over from the old images", {
   expect_equal(m$images$img_comment, imgs_meta$img_comment)
 })
 
+test_that("comment_handled from the flags app is carried over", {
+  meta_handled <- meta_old
+  meta_handled$images <- new_QWAimages(
+    dplyr::mutate(imgs_meta, comment_handled = c(TRUE, NA, NA)), "roxas")
+  images <- new_QWAimages(dplyr::select(imgs_meta, -only_ew, -img_comment), "roxas")
+
+  m <- update_QWAmetadata(meta_handled, images)
+
+  expect_equal(m$images$comment_handled, c(TRUE, NA, NA))
+})
+
 test_that("NA app values are filled from the old images, others kept", {
   images <- imgs_meta |>
     dplyr::mutate(only_ew = NA,

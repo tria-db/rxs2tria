@@ -40,7 +40,7 @@ input_field_names <- c(
   description = 'Dataset description',
   authors = 'Authors',
   funding = 'Funding',
-  related = "Related resources",
+  related = "Related works",
   sites = 'Sites',
   trees = 'Trees',
   woodpieces = 'Woodpieces',
@@ -379,4 +379,14 @@ convert_ds_name_filename <- function(ds_name, max_length = 32) {
   }
 
   clean_name
+}
+
+# text input with a small arrow button to its right (e.g. for search fields)
+search_input_row <- function(text_input, btn_id, btn_title) {
+  shiny::div(
+    style = "display: flex; gap: 4px; align-items: flex-end;",
+    shiny::div(style = "flex-grow: 1;", text_input),
+    shiny::actionButton(btn_id, NULL, icon = shiny::icon("arrow-right"),
+                        class = "btn btn-info btn-sm mb-3", title = btn_title)
+  )
 }

@@ -204,9 +204,10 @@ update_QWAdata <- function(x, meta, imgs_to_reread = NULL,
 #' - rows for IDs no longer in `images` are removed.
 #'
 #' Tables that are `NULL` in `x` remain `NULL` (see [complete_QWAmetadata()]).
-#' The columns edited in the metadata Shiny app (`only_ew`, `img_comment`) are
-#' filled from `x$images` where they are missing or `NA` in `images`, e.g.
-#' after rebuilding it with [build_QWAimages()].
+#' The manually set image columns (e.g. `only_ew`, `img_comment` from the
+#' metadata app, `comment_handled` from the flags app) are filled from
+#' `x$images` where they are missing or `NA` in `images`, e.g. after rebuilding
+#' it with [build_QWAimages()].
 #'
 #' @param x a [QWAmetadata] object
 #' @param images a [QWAimages] object; the complete set of images of the
@@ -219,8 +220,8 @@ update_QWAmetadata <- function(x, images) {
   checkmate::assert_class(images, "QWAimages")
   rv <- attr(images, "roxas_version")
 
-  # images: fill app-editable columns from x$images where missing or NA
-  app_cols <- intersect(c("only_ew", "img_comment"), names(x$images))
+  # images: fill manually set columns from x$images where missing or NA
+  app_cols <- intersect(schema_cols(rv, "manual"), names(x$images))
   images <- tibble::as_tibble(images)
   for (col in setdiff(app_cols, names(images))) {
     images[[col]] <- x$images[[col]][NA_integer_] # typed NA

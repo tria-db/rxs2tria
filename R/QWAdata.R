@@ -75,7 +75,7 @@ resolve_exclude_mode <- function(exclude_mode) {
   if (is.null(exclude_mode)) return("incomplete_only")
   cli::cli_warn(c(
     "!" = "{.arg exclude_mode} is deprecated and will be removed in a future version.",
-    "i" = "{.field exclude_issues} is now initialised from {.field incomplete_ring}; to also exclude missing rings, set e.g. {.code x$rings$exclude_issues <- x$rings$incomplete_ring | x$rings$missing_ring}."
+    "i" = "{.field exclude_issues} is now initialised from {.field incomplete_ring}."
   ), .frequency = "once", .frequency_id = "rxs2tria_exclude_mode")
   match.arg(exclude_mode, c("either", "incomplete_only"))
 }

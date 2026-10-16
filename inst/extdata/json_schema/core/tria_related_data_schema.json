@@ -15,9 +15,9 @@
       },
       "doi": {
         "type": ["string", "null"],
-        "title": "DOI", 
-        "description": "",
-        "$comment": "TODO: add doi validation pattern, and citation check?"
+        "pattern": "^(|(https?://(dx[.])?doi[.]org/)?10[.][0-9]{4,9}/[^ ]+)$",
+        "title": "DOI",
+        "description": "DOI, e.g. 10.1234/abc or https://doi.org/10.1234/abc"
       },
       "description": {
         "type": ["string", "null"],
@@ -33,8 +33,8 @@
       "rel_ds_label": {
         "type": ["string", "null"], 
         "title": "Dataset ID",
-        "description": "",
-        "pattern": "^(|tria.[0-9a-zA-Z]{3}$)"
+        "description": "TRIA dataset ID, e.g. tria.0001",
+        "pattern": "^(|tria[.][0-9]{4})$"
       }
     },
     "required": ["citation"],

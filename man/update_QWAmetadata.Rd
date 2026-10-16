@@ -29,9 +29,10 @@ accordingly:
 }
 \details{
 Tables that are \code{NULL} in \code{x} remain \code{NULL} (see \code{\link[=complete_QWAmetadata]{complete_QWAmetadata()}}).
-The columns edited in the metadata Shiny app (\code{only_ew}, \code{img_comment}) are
-filled from \code{x$images} where they are missing or \code{NA} in \code{images}, e.g.
-after rebuilding it with \code{\link[=build_QWAimages]{build_QWAimages()}}.
+The manually set image columns (e.g. \code{only_ew}, \code{img_comment} from the
+metadata app, \code{comment_handled} from the flags app) are filled from
+\code{x$images} where they are missing or \code{NA} in \code{images}, e.g. after rebuilding
+it with \code{\link[=build_QWAimages]{build_QWAimages()}}.
 }
 \seealso{
 \code{\link[=update_QWAimages]{update_QWAimages()}}, \code{\link[=update_QWAdata]{update_QWAdata()}}, \code{\link[=check_QWAmetadata]{check_QWAmetadata()}}

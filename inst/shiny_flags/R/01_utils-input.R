@@ -281,7 +281,7 @@ load_data_csv <- function(path_prf, path_rings, path_rxsmeta,
 }
 
 # check input dfs and throw error if not all checks passed
-validate_input_dfs <- function(prf_data_in, rings_data_in, rxsmeta_data_in,
+validate_input_dfs <- function(prf_data_in, rings_data_in,
                                specs = input_specs){
   checkmate::assert_data_frame(
     rings_data_in[names(specs$rings_data$req_cols)],
@@ -289,7 +289,6 @@ validate_input_dfs <- function(prf_data_in, rings_data_in, rxsmeta_data_in,
   )
 
   # TODO: check that duplicate rings and exclude dupl are consistent
-  # TODO: maybe check / replace missing ring measurements with 0 where applicable?
 
   n_meas_cols <- rings_data_in |>
     dplyr::select(dplyr::where(is.numeric), -year) |> ncol()
@@ -308,23 +307,61 @@ validate_input_dfs <- function(prf_data_in, rings_data_in, rxsmeta_data_in,
       dplyr::select(dplyr::where(is.numeric), -year, -sector_n) |> ncol()
     n_meas_cols <- n_meas_cols + n_meas_cols_prf
 
-    # TODO: check that prf_data (image_label, year) are subset of rings_data (image_label, year)
+    # profile rings (image_label, year) must be a subset of the rings data
+    prf_only <- prf_data_in |>
+      dplyr::distinct(image_label, year) |>
+      dplyr::anti_join(rings_data_in, by = c("image_label", "year"))
+    if (nrow(prf_only) > 0) {
+      ex <- paste0(prf_only$image_label, " (", prf_only$year, ")")
+      stop(nrow(prf_only), " ring(s) in profile data not found in rings data: ",
+           toString(utils::head(ex, 5)), if (length(ex) > 5) ", ...",
+           call. = FALSE)
+    }
   }
 
   checkmate::assert_true(n_meas_cols > 0)
 
-  if (!is.null(rxsmeta_data_in)) {
-    # at least one row, no missing in required column nor in species or site if present
-    checkmate::assert_data_frame(
-      rxsmeta_data_in |> dplyr::select(
-        "image_label", dplyr::any_of(c("species_code", "site_label"))),
-      min.rows = 1, any.missing = FALSE)
+  invisible(TRUE)
+}
 
-    # TODO: check that rxsmeta_data (image_label, year) are subset of rings_data (image_label, year)
-    # TODO: check for image filename column?
+# check rxsmeta df against rings data; on failure, warn and return NULL so that
+# the remaining input data can still be used
+validate_rxsmeta_df <- function(rxsmeta_data_in, rings_data_in) {
+  if (is.null(rxsmeta_data_in)) return(NULL)
+
+  fmt_labels <- function(x) {
+    paste0(toString(utils::head(x, 5)), if (length(x) > 5) ", ...")
   }
 
-  invisible(TRUE)
+  # at least one row, no missing in required column nor in species or site if present
+  chk_df <- checkmate::check_data_frame(
+    rxsmeta_data_in |> dplyr::select(
+      "image_label", dplyr::any_of(c("species_code", "site_label"))),
+    min.rows = 1, any.missing = FALSE)
+  # image labels unique and covering all images in rings data
+  img_labels <- rxsmeta_data_in$image_label
+  dupl <- unique(img_labels[duplicated(img_labels)])
+  miss <- setdiff(unique(rings_data_in$image_label), img_labels)
+
+  problems <- c(
+    if (!isTRUE(chk_df)) chk_df,
+    if (length(dupl) > 0) paste("duplicated image_label:", fmt_labels(dupl)),
+    if (length(miss) > 0) paste("missing image_label:", fmt_labels(miss))
+  )
+
+  if (length(problems) > 0) {
+    warning("Images metadata not loaded (", paste(problems, collapse = "; "), ")",
+            call. = FALSE)
+    return(NULL)
+  }
+
+  extra <- setdiff(img_labels, rings_data_in$image_label)
+  if (length(extra) > 0) {
+    warning(length(extra), " image(s) in images metadata without rings data are ignored: ",
+            fmt_labels(extra), call. = FALSE)
+  }
+
+  rxsmeta_data_in
 }
 
 # collection of helpers to derive rings_data_org from input rings_data:
@@ -542,6 +579,9 @@ save_ring_edits <- function(df, df_in, settings, rxsmeta = NULL, handled = NULL)
         dplyr::rows_update(handled[c("image_label","comment_handled")], by = "image_label")
 
       if ("env" %in% settings$save_imgs_to) {
+        # restore QWAimages class (dropped by as_tibble() on load)
+        rv <- attr(df_rxsmeta_out, "roxas_version")
+        if (!is.null(rv)) df_rxsmeta_out <- rxs2tria:::new_QWAimages(df_rxsmeta_out, rv)
         assign(settings$varname_rxsmeta, df_rxsmeta_out, envir = .GlobalEnv)
         shiny::showNotification(
           paste0("Saved to environment variable: ", settings$varname_rxsmeta),

@@ -126,7 +126,7 @@ get_structure_from_filenames <- function(
   df_structure <- stringr::str_match(fnames, pattern) |>
     as.data.frame() |> 
     dplyr::select(!"V1") |>
-    dplyr::mutate(org_img_name = as.character(fs::path_file(filenames)),
+    dplyr::mutate(org_img_name = strip_img_ext(as.character(fs::path_file(filenames))),
                   .before = 1)
   
   df_structure <- tibble::tibble(
@@ -204,4 +204,10 @@ extract_data_structure <- function(
     dplyr::bind_cols(files |> dplyr::select(!"prefix"))
 
   df_structure
+}
+
+#' Strip image file extension (incl. ROXAS AI `.scan`) from file names
+#' @noRd
+strip_img_ext <- function(x) {
+  sub("(\\.scan)?\\.(jpe?g|png|bmp|tiff?)$", "", x, ignore.case = TRUE)
 }

@@ -11,13 +11,13 @@
           "woodpiece_label": { "htType": "character", "unique": true },
           "tree_label": { "htType": "character", "otherChecks": ["valid_label"] },
           "n_slides": { "htType": "numeric", "otherChecks": ["check_counts"] },
-          "sampling_year": { "htType": "numeric" },
+          "sampling_year": { "htType": "numeric", "htInteger": true },
           "organ": { "htType": "dropdown" },
           "sampling_height": { "htType": "numeric" },
           "sample_apex_distance": { "htType": "numeric" },
           "sample_type": { "htType": "dropdown" },
           "sample_embedding": { "htType": "dropdown" },
-          "pith_year": { "htType": "numeric" },
+          "pith_year": { "htType": "numeric", "htInteger": true },
           "sample_archived": { "htType": "checkbox" }
         }
       } 

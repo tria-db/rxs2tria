@@ -259,10 +259,9 @@ check_supplementary <- function(suppl_res, path, rxs_images) {
   to_match <- new_res$linked_level %in% c("analysis", "image", "slide", "woodpiece")
 
   if (any(to_match)) {
-    # Strip image extensions from org_img_name to obtain base label pattern.
-    # Handles classic ROXAS (.jpg) and ROXAS AI (.scan.jpg).
-    img_bases <- sub("(\\.scan)?\\.(jpg|jpeg|png|tif|tiff)$", "",
-                     rxs_images$org_img_name, ignore.case = TRUE)
+    # Strip image extensions from org_img_name to obtain base label pattern
+    # (safeguard for older QWAimages that stored org_img_name with extension)
+    img_bases <- strip_img_ext(rxs_images$org_img_name)
 
     # image/analysis match against each image's own base name; slide/woodpiece
     # match against a prefix derived from their sibling images (see
