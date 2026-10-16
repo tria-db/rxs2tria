@@ -8,7 +8,7 @@
       "items": {
         "type": "object",
         "properties": {
-          "author_nr": { "htType": "numeric", "otherChecks": ["valid_seq"] },
+          "author_nr": { "htType": "numeric", "htInteger": true, "otherChecks": ["valid_seq"] },
           "last_name": { "htType": "character" },
           "first_name": { "htType": "character" },
           "email": { 

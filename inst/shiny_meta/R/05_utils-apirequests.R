@@ -12,6 +12,15 @@ get_author_choices <- function(author_df){
   return(stats::setNames(cb_vals, cb_names))
 }
 
+# choices of existing related works (row index), labelled by truncated citation
+get_relres_choices <- function(relres_df) {
+  if (is.null(relres_df) || nrow(relres_df) == 0) return(character(0))
+  cit <- dplyr::coalesce(relres_df$citation, "[no citation]")
+  cit <- ifelse(nchar(cit) > 60, paste0(substr(cit, 1, 60), "..."), cit)
+  stats::setNames(as.character(seq_len(nrow(relres_df))),
+                  paste0("Row ", seq_len(nrow(relres_df)), ": ", cit))
+}
+
 get_funding_choices <- function(funding_df){
   cb_names <- paste0("Funding Inst. Nr. ", rownames(funding_df))
   cb_vals <- rownames(funding_df)
@@ -178,19 +187,25 @@ cr_api_request <- function(search_string){
       return(NULL)
     }
 
-    cr_works <- rcrossref::cr_works(flq = c(query.bibliographic = query), limit = 3)
+    cr_works <- rcrossref::cr_works(flq = c(query.bibliographic = query), limit = 5)
 
     if (cr_works$meta$total_results == 0) {
       warning("No CrossRef results found. Try again.")
       return(NULL)
     }
 
-    cr_citations <- rcrossref::cr_cn(cr_works$data$doi, format = "text", style = "apa")
+    # format citations one by one (cr_cn drops failed DOIs), fall back to title
+    dois <- cr_works$data$doi
+    titles <- cr_works$data$title %||% rep(NA_character_, length(dois))
+    citations <- purrr::map2_chr(dois, titles, \(doi, title) {
+      cit <- tryCatch(
+        rcrossref::cr_cn(doi, format = "text", style = "apa"),
+        error = \(e) NULL
+      )
+      if (length(cit) == 1 && !is.na(cit)) trimws(cit) else title
+    })
 
-    tibble::tibble(
-      doi = cr_works$data$doi,
-      citation = unlist(cr_citations)
-    )
+    tibble::tibble(doi = dois, citation = citations)
   },
   err_title = "Crossref API Request Error", err_message = "An error occurred while querying Crossref:", propagate_err = FALSE
   )

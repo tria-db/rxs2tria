@@ -30,6 +30,7 @@ reference:
   desc: "S3 class QWAimages"
   contents:
   - check_QWAimages
+  - combine_QWAimages
   - complete_QWAimages
   - QWAimages
   - read_QWAimages
@@ -40,15 +41,18 @@ reference:
   desc: "S3 class QWAmetadata"
   contents:
   - check_QWAmetadata
+  - combine_QWAmetadata
   - complete_QWAmetadata
   - print.QWAmetadata
   - QWAmetadata
   - read_QWAmetadata
+  - update_QWAmetadata
   - write_QWAmetadata
 - title: "QWAdata"
   desc: "S3 class QWAdata"
   contents:
   - check_QWAdata
+  - combine_QWAdata
   - complete_flags
   - complete_measures
   - complete_QWAdata
@@ -63,7 +67,6 @@ reference:
   - calculate_band_profiles
   - calculate_sector_profiles
   - check_QWAprofile
-  - complete_QWAprofile
   - QWAprofile
   - read_QWAprofile
   - summary.QWAprofile
@@ -71,6 +74,7 @@ reference:
 - title: "Other"
   desc: "Other utility functions."
   contents:
+  - extract_ring_measures
   - extract_rwl
   - scale_for_tucson
   - rename_for_tucson

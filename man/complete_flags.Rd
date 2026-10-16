@@ -4,7 +4,7 @@
 \alias{complete_flags}
 \title{Add the initial flags columns to QWAdata}
 \usage{
-complete_flags(x, meta, exclude_mode = c("either", "incomplete_only"))
+complete_flags(x, meta, exclude_mode = NULL)
 }
 \arguments{
 \item{x}{a \code{QWAdata} object containing the cells and rings dataframes}
@@ -13,10 +13,9 @@ complete_flags(x, meta, exclude_mode = c("either", "incomplete_only"))
 information on \code{spatial_resolution} (required for the incomplete
 innermost ring check) and \code{outmost_year}.}
 
-\item{exclude_mode}{how should the \verb{$exclude_issues} flag column be initialized, to
-exclude any incomplete or missing rings (\code{"either"}, default) or only the
-incomplete rings (i.e., not flagging missing/wedging rings for exclusion
-from analyses, \code{"incomplete_only"}).}
+\item{exclude_mode}{Deprecated. \code{"either"} initialises \code{exclude_issues}
+from incomplete or missing rings, \code{"incomplete_only"} from incomplete
+rings only (now the default behaviour).}
 }
 \value{
 A \code{QWAdata} object with the validated data: cells unchanged, rings
@@ -58,4 +57,9 @@ overlapping. All years which have cells in more than one image are flagged
 and ranked by their number of cells. The (complete) year with the highest
 number of cells for each overlap is the one that would then usually be
 selected for further analysis when building chronologies.
+
+The \code{exclude_issues} column is initialised from \code{incomplete_ring}. Missing
+rings are not excluded, as their zero width is a valid measurement. To use a
+different rule, set \code{exclude_issues} afterwards, e.g.
+\code{x$rings$exclude_issues <- x$rings$incomplete_ring | x$rings$missing_ring}.
 }

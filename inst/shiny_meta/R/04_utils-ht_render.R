@@ -350,6 +350,19 @@ build_tbl_renderers <- function(tbl_props) {
   lapply(tbl_props, build_col_renderer)
 }
 
+# default numeric display format: integers without decimals, otherwise up to
+# 6 decimals with trailing zeros trimmed (rhandsontable defaults to 2 decimals;
+# more decimals expose floating point noise)
+num_format <- function(col_config) {
+  if (col_config$type[1] == 'integer') '0.' else list(mantissa = 6, trimMantissa = TRUE)
+}
+
+# blocks entry of non-integer values in numeric columns with htInteger
+int_validator_js <- htmlwidgets::JS("
+  function(value, callback) {
+    callback(value === null || value === '' || Number.isInteger(Number(value)));
+  }")
+
 hot_col_wrapper <- function(ht, col, col_config, renderer_js = NULL) {
   readOnly <- col_config$readOnly %||% FALSE
   if (is.null(renderer_js)) renderer_js <- build_col_renderer(col_config)
@@ -357,7 +370,8 @@ hot_col_wrapper <- function(ht, col, col_config, renderer_js = NULL) {
     character    = ht |> rhandsontable::hot_col(col, renderer = renderer_js, readOnly = readOnly),
     text         = ht |> rhandsontable::hot_col(col, renderer = renderer_js, readOnly = readOnly),
     numeric      = ht |> rhandsontable::hot_col(col, type = 'numeric',
-                     format = col_config$htFormat %||% (if (col_config$type[1] == 'integer') '0.' else NULL),
+                     format = col_config$htFormat %||% num_format(col_config),
+                     validator = if (isTRUE(col_config$htInteger)) int_validator_js,
                      renderer = renderer_js, readOnly = readOnly, allowInvalid = FALSE),
     dropdown     = ht |> rhandsontable::hot_col(col, type = 'dropdown',
                      source = col_config$enum, renderer = renderer_js, readOnly = readOnly),
@@ -400,9 +414,18 @@ tippy_renderer <- function(tippies) {
 #' @param renderers Named list of JS renderers (from `build_tbl_renderers()`);
 #'   if `NULL`, renderers are built per column on the fly.
 #' @param fixed_cols Number of left columns to freeze (default 0).
+#' @param col_widths Optional named vector of relative column widths (px);
+#'   unlisted columns get 120. Columns are stretched to fill the table.
+#' @param editable Optional column names to render as editable with
+#'   validation renderers; all other columns are read-only without validation.
+#'   If `NULL` (default), all columns are rendered as editable.
 #' @returns An `rhandsontable` htmlwidget.
-render_meta_hot <- function(data, tbl_props, renderers = NULL, fixed_cols = 0) {
+render_meta_hot <- function(data, tbl_props, renderers = NULL, fixed_cols = 0,
+                            col_widths = NULL, editable = NULL) {
   colHeaders <- sapply(tbl_props, function(x) x$title)[names(data)]
+  # wrap long headers onto two lines to keep columns narrow (also used as hot_col keys)
+  colHeaders <- stats::setNames(
+    gsub("\n", "<br>", stringr::str_wrap(colHeaders, width = 18)), names(colHeaders))
   tippies    <- sapply(tbl_props, function(x) x$description)[names(data)]
 
   ht_height <- min(max(nrow(data) * ht_row_height, ht_min_height), ht_max_height)
@@ -419,10 +442,35 @@ render_meta_hot <- function(data, tbl_props, renderers = NULL, fixed_cols = 0) {
   if (fixed_cols > 0) {
     ht <- ht |> rhandsontable::hot_cols(fixedColumnsLeft = fixed_cols)
   }
+  if (!is.null(col_widths)) {
+    widths <- col_widths[names(data)]
+    widths[is.na(widths)] <- 120
+    ht <- ht |> rhandsontable::hot_cols(colWidths = unname(widths))
+  }
+  editable <- editable %||% names(data)
   purrr::reduce(
     names(colHeaders),
-    function(ht, col) hot_col_wrapper(ht, colHeaders[col], tbl_props[[col]], renderers[[col]]),
+    function(ht, col) {
+      if (col %in% editable) {
+        hot_col_wrapper(ht, colHeaders[col], tbl_props[[col]], renderers[[col]])
+      } else {
+        hot_col_readonly(ht, colHeaders[col], tbl_props[[col]])
+      }
+    },
     .init = ht
+  )
+}
+
+# read-only column without validation renderer
+hot_col_readonly <- function(ht, col, col_config) {
+  switch(col_config$htType,
+    numeric  = ht |> rhandsontable::hot_col(col, type = "numeric",
+                 format = col_config$htFormat %||% num_format(col_config),
+                 readOnly = TRUE),
+    checkbox = ht |> rhandsontable::hot_col(col, type = "checkbox", readOnly = TRUE),
+    date     = ht |> rhandsontable::hot_col(col, type = "date",
+                 dateFormat = "YYYY-MM-DD", readOnly = TRUE),
+    ht |> rhandsontable::hot_col(col, readOnly = TRUE)
   )
 }
 

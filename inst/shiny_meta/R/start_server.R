@@ -76,8 +76,7 @@ start_server <- function(id, main_session) {
             res <- get_from_env(input$input_name, envir = .GlobalEnv)
             source <- glue::glue("object from current R enviornment: {input$input_name}")
             if (inherits(res, "data.frame")) {
-              df <- rxs2tria::QWAimages(res) |> rxs2tria::complete_QWAimages()
-              validated <- rxs2tria::QWAmetadata(images = df) |> complete_QWAmetadata_quiet()
+              validated <- rxs2tria::QWAmetadata(images = res) |> complete_QWAmetadata_quiet()
             } else { # assume list/QWAmetadata object
               validated <- rxs2tria::as_QWAmetadata(res) |> rxs2tria::complete_QWAmetadata()
             }
@@ -200,6 +199,9 @@ start_server <- function(id, main_session) {
     tbl_props_cl <- rxs2tria:::get_tbl_props(full_schema$properties$images$anyOf[[1]])$properties
     tbl_props_ai <- rxs2tria:::get_tbl_props(full_schema$properties$images$anyOf[[2]])$properties
 
+    # columns editable in the images table, shown last (followed by comment_handled)
+    editable_cols <- c("only_ew", "img_comment")
+
     df_hot <- shiny::reactive({
       shiny::req(image_data_in())
 
@@ -209,20 +211,33 @@ start_server <- function(id, main_session) {
       col_groups <- purrr::map_chr(tbl_props, "dtColGroup")
       sel_colgroups <- input$cols_meta
       sel_cols <- col_groups[col_groups %in% sel_colgroups] |> names()
-      sel_cols <- union("image_label", sel_cols)
+      # image_label and editable columns are always shown
+      sel_cols <- union(c("image_label", sel_cols), c(editable_cols, "comment_handled"))
 
-      image_data_in() |> dplyr::select(dplyr::any_of(sel_cols))
-      # TODO: missing columns? read only cols?
-    })
-
-    shiny::observeEvent(input_meta$images, {
-      df <- input_meta$images |>
+      # display formats for read-only columns (as text, not written back, see
+      # image_data_out); datetimes as text also avoids the date picker
+      fmt_datetime <- function(x) {
+        if (inherits(x, "POSIXt")) format(x, "%Y-%m-%d %H:%M") else substr(as.character(x), 1, 16)
+      }
+      image_data_in() |>
+        dplyr::select(dplyr::any_of(sel_cols)) |>
         dplyr::mutate(
           dplyr::across(dplyr::any_of(c(
             "meas_created_at","img_created_at",
             "rings_segmentation_datetime","cells_segmentation_datetime")),
-          as.character)
-      )
+          fmt_datetime),
+          dplyr::across(dplyr::any_of("img_size"),
+            \(x) ifelse(is.na(x), NA_character_, sprintf("%.1f MB", x / 1e6)))
+        ) |>
+        dplyr::relocate(dplyr::any_of(c(editable_cols, "comment_handled")),
+                        .after = dplyr::last_col())
+    })
+
+    shiny::observeEvent(input_meta$images, {
+      df <- input_meta$images
+      # manual columns are not added by complete_QWAimages(), but are editable here
+      if (!"only_ew" %in% names(df)) df$only_ew <- NA
+      if (!"img_comment" %in% names(df)) df$img_comment <- NA_character_
       image_data_in(df)
     })
 
@@ -232,45 +247,7 @@ start_server <- function(id, main_session) {
       rv <- rxs2tria:::infer_rv_from_data(image_data_in())
       tbl_props <- if (rv == "roxas_ai") tbl_props_ai else tbl_props_cl
 
-      colHeaders <- sapply(tbl_props, function(x) x$title)
-      colHeaders <- colHeaders[names(df_hot())] # ensure correct order
-      tippies <- sapply(tbl_props, function(x) x$description)
-      tippies <- tippies[names(df_hot())]      
-
-      n_rows <- nrow(image_data_in())
-      ht_height <- min(max(n_rows * ht_row_height, ht_min_height), ht_max_height)
-
-      ht <- rhandsontable::rhandsontable(
-        df_hot(),
-        rowHeaders = TRUE,
-        contextMenu = FALSE,
-        stretchH = "all",
-        height = ht_height,
-        colHeaders = unname(colHeaders),
-        afterGetColHeader = tippy_renderer(tippies)) |>
-        rhandsontable::hot_cols(fixedColumnsLeft = 1)
-      editable_cols <- c("only_ew","img_comment")
-      purrr::reduce(
-        names(colHeaders),
-        function(ht, col) {
-          config <- tbl_props[[col]]
-          colName <- colHeaders[col]
-          if (col %in% editable_cols) {
-            hot_col_wrapper(ht, colName, config)
-          } else {
-            switch(config$htType,
-              numeric  = ht |> rhandsontable::hot_col(colName, type = "numeric",
-                           format = if (config$type[1] == "integer") "0." else NULL,
-                           readOnly = TRUE),
-              checkbox = ht |> rhandsontable::hot_col(colName, type = "checkbox", readOnly = TRUE),
-              date     = ht |> rhandsontable::hot_col(colName, type = "date",
-                           dateFormat = "YYYY-MM-DD", readOnly = TRUE),
-              ht |> rhandsontable::hot_col(colName, readOnly = TRUE)
-            )
-          }
-        },
-        .init = ht
-      )
+      render_meta_hot(df_hot(), tbl_props, fixed_cols = 1, editable = editable_cols)
     })
 
     # create dataframe reactive to hot update
@@ -282,9 +259,12 @@ start_server <- function(id, main_session) {
           df_out <- df_out |> 
             dplyr::mutate(only_ew = as.logical(.data$only_ew))
         }
-        # merge with full img_data_in (hidden columns)
+        # merge edits into full img_data_in (only editable columns, as other
+        # columns are hidden or display-formatted)
         df_in <- image_data_in()
-        df_out <- df_in |> dplyr::rows_update(df_out, by = "image_label")
+        df_out <- df_in |> dplyr::rows_update(
+          df_out[intersect(c("image_label", editable_cols), names(df_out))],
+          by = "image_label")
       }
       df_out      
     }) |> shiny::bindEvent(input$image_table)

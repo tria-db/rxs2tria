@@ -253,5 +253,6 @@ If reviewing the data in the app reveals that one or more images need to
 be re-analysed in ROXAS/ROXAS AI, use `update_QWAimages()` and
 `update_QWAdata()` (Step 6c) to splice in the new results rather than
 reprocessing the whole dataset -- by default this resets any manual
-flags for the updated images, since they may no longer apply to the
-re-analysed data.
+flags for the re-read images, since they may no longer apply to the
+re-analysed data. Manual duplicate selections are also replaced for all
+woodpiece-years overlapping a re-read image.

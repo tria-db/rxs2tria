@@ -2,6 +2,16 @@
 
 * `compile_resources()` and `recompile_resources()` are renamed to `compile_supplementary()` and `recompile_supplementary()`; `vignette("resources")` is now `vignette("supplementary")`.
 * JSON schemas moved: `json_schema/base_schema/` is now `json_schema/core/`; the Shiny metadata app extensions `tria_*_ext_schema.json` are now `app_*_schema.json`.
+* `update_QWAdata()` now synchronises the data with `meta`: new images are added and images not in `meta` are removed. Duplicate-ring flags are only recalculated for affected woodpiece-years, and with `reset_manual_flags = FALSE` manual `exclude_issues` edits are kept.
+* `update_QWAdata()` signature is now `update_QWAdata(x, meta, imgs_to_reread = NULL, ...)`; `imgs_to_update` is renamed to `imgs_to_reread` (also in `update_QWAimages()`) and is optional in `update_QWAdata()`.
+* new `update_QWAmetadata()` replaces the images of a `QWAmetadata` object and updates the sites, trees, woodpieces and slides tables (rows and counts) accordingly, keeping existing metadata.
+* new `combine_QWAimages()`, `combine_QWAdata()` and `combine_QWAmetadata()` combine two datasets with distinct image labels (e.g. from separate input folders) into one.
+* `exclude_issues` is now initialised from `incomplete_ring` only; missing rings are no longer excluded by default, as their zero width is a valid measurement. The `exclude_mode` argument of `complete_flags()`, `complete_QWAdata()`, `update_QWAdata()` and `check_QWAdata()` is deprecated; to also exclude missing rings, set `exclude_issues` after `complete_QWAdata()`.
+* `complete_QWAprofile()` is removed; recalculate the profile with all parameters instead.
+* new `extract_ring_measures()` returns the identifier and measurement columns of the rings data without excluded rings (`exclude_dupl`, `exclude_issues`), as input for further analyses.
+* `calculate_sector_profiles()` and `calculate_band_profiles()` gain `apply_exclusions` and `tissue` arguments: with `apply_exclusions = TRUE`, the cells of excluded rings are removed before aggregating; `tissue = "affected"` removes only the earlywood or latewood cells of rings whose `affected_tissue` is `"ew"` or `"lw"`.
+* `NA` values in `exclude_dupl` and `exclude_issues` now count as `FALSE` (ring not excluded), also in `extract_rwl()`.
+* `ew_lw` in the cells data is now `"ew"` / `"lw"` as defined in the schema (was `"EW"` / `"LW"`); `read_QWAdata()` converts older files.
 
 # rxs2tria 0.1.3
 

@@ -47,7 +47,7 @@ comments_server <- function(id, main_session, flags_out) {
           comment_handled = reactable::colDef(
             cell = function(value) {
               # Render as an X mark or check mark
-              if (value) "\u2714\ufe0f Yes" else "\u274c No" 
+              if (value) "\u2714\ufe0f Yes" else "\u274c No"
           }),
           goto_img = reactable::colDef(
             name = "",

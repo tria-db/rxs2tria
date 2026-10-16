@@ -49,7 +49,8 @@
     "only_ew": {
       "type": ["boolean", "null"],
       "title": "Only EW",
-      "description": "Only earlywood was analysed"
+      "description": "Only earlywood was analysed",
+      "colType": "manual"
     },
     "spatial_resolution": {
       "type": ["number", "null"],
@@ -144,7 +145,14 @@
     "img_comment": {
       "type": ["string", "null"],
       "title": "Comment",
-      "description": "Any comments regarding the analysed image"
+      "description": "Any comments regarding the analysed image",
+      "colType": "manual"
+    },
+    "comment_handled": {
+      "type": ["boolean", "null"],
+      "title": "Comment handled",
+      "description": "Whether the image comment was addressed during quality control (flags app)",
+      "colType": "manual"
     }
   },
   "required": ["image_label", "slide_label", "woodpiece_label", "tree_label", 

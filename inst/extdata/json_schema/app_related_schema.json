@@ -9,10 +9,10 @@
         "type": "object",
         "properties": {
           "citation": { "htType": "text" },
-          "doi": { "htType": "character", "otherChecks": ["check_doi"] },
+          "doi": { "htType": "character" },
           "description": { "htType": "text" },
           "url": { "htType": "character" },
-          "rel_ds_label": { "htType": "character" ,"otherChecks": ["check_dsid"] }
+          "rel_ds_label": { "htType": "character" }
         }
       } 
     }

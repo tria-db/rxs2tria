@@ -26,7 +26,8 @@ Some additional cell measures are calculated based on the existing data:
 \item cwtall_adj
 \item cdrad, cdtan, cdratio
 \item sector100
-\item ew_lw: indicates if it is an EW or LW cell (based on Mork index <1 for EW)
+\item ew_lw: indicates if it is an earlywood (\code{"ew"}) or latewood (\code{"lw"}) cell
+(based on Mork index <1 for EW)
 And for the rings, we add
 \item eww and lww estimates  (based on Mork index of 1)
 If any of these columns already exist in the data they are NOT recalculated, only

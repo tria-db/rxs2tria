@@ -38,7 +38,7 @@
             "dtColGroup": "cols_settings"
           },
           "spatial_resolution": {
-            "htType": "character",
+            "htType": "numeric",
             "dtColGroup": "cols_settings"
           },
           "meas_geometry": {
@@ -54,7 +54,7 @@
             "dtColGroup": "cols_images"
           },
           "img_size": {
-            "htType": "numeric",
+            "htType": "character",
             "dtColGroup": "cols_images"
           },
           "img_width": {
@@ -151,6 +151,10 @@
           },
           "img_comment": {
             "htType": "character",
+            "dtColGroup": "cols_settings"
+          },
+          "comment_handled": {
+            "htType": "checkbox",
             "dtColGroup": "cols_settings"
           }
         }

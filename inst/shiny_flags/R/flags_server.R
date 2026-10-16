@@ -117,7 +117,8 @@ flags_server <- function(id, main_session, comments_out) {
           }
         )
         
-        validate_input_dfs(res$prf_data, res$rings_data, res$rxsmeta_data)
+        validate_input_dfs(res$prf_data, res$rings_data)
+        res$rxsmeta_data <- validate_rxsmeta_df(res$rxsmeta_data, res$rings_data)
 
         input_data$prf_data <- res$prf_data
         input_data$rings_data <- res$rings_data
@@ -155,7 +156,7 @@ flags_server <- function(id, main_session, comments_out) {
     shiny::observe({
       bslib::nav_hide("tabs", target = "comments_panel", session = main_session)
 
-      shiny::req(input_data$rxsmeta_data)
+      shiny::req(input_data$rxsmeta_data, input_data$rings_data)
       df_comments <- input_data$rxsmeta_data
       
       # check for comments
@@ -163,8 +164,9 @@ flags_server <- function(id, main_session, comments_out) {
         df_comments$img_comment <- NA
       }
       df_comments <- df_comments |>
-        dplyr::filter(!is.na(img_comment) & img_comment != "")
-      
+        dplyr::filter(!is.na(img_comment) & img_comment != "",
+                      image_label %in% input_data$rings_data$image_label)
+
       if (nrow(df_comments)>0){
         # initialize/validate comment_handled column
         if (!"comment_handled" %in% names(df_comments)){
@@ -172,7 +174,7 @@ flags_server <- function(id, main_session, comments_out) {
         }
         df_comments$comment_handled[is.na(df_comments$comment_handled)] <- FALSE
 
-        df_comments <- df_comments |> 
+        df_comments <- df_comments |>
           dplyr::select(
             dplyr::any_of(c("site_label", "species_code", "tree_label", "woodpiece_label", "slide_label")),
             image_label, img_comment, comment_handled
@@ -195,6 +197,10 @@ flags_server <- function(id, main_session, comments_out) {
 
       # site and species select inputs
       if (!is.null(rxsmeta_data)) {
+        # only offer choices with rings data
+        rxsmeta_data <- rxsmeta_data |>
+          dplyr::filter(image_label %in% rings_data$image_label)
+
         shinyjs::show("filt_site")
         
         site_choices <- unique(rxsmeta_data$site_label)
@@ -274,8 +280,9 @@ flags_server <- function(id, main_session, comments_out) {
       shiny::req(input_data$rxsmeta_data, input$filt_site)
       wp_choices <- input_data$rxsmeta_data |>
         dplyr::filter(
+          image_label %in% input_data$rings_data$image_label,
           site_label %in% input$filt_site,
-        ) 
+        )
       if (shiny::isTruthy(input$filt_species)) {
         wp_choices <- wp_choices |>
           dplyr::filter(species_code %in% input$filt_species)
@@ -1116,48 +1123,51 @@ flags_server <- function(id, main_session, comments_out) {
     # OPEN IMAGES --------------------------------------------------------------
     # when button is clicked
     shiny::observe({
-      shiny::req(sel_image(), input_data$rxsmeta_data)
+      if (!shiny::isTruthy(sel_image())) {
+        shiny::showNotification("Select an image to open.", type = "message")
+        return()
+      }
       sel_img <- sel_image()
 
-      image_path <- input_data$rxsmeta_data |>
-        dplyr::filter(image_label == sel_img) |>
-        dplyr::pull(fname_image)
+      safe_block({
+        rxsmeta <- input_data$rxsmeta_data
+        if (is.null(rxsmeta) || !"fname_image" %in% names(rxsmeta)) {
+          stop("Provide `QWAimages` data with valid `$fname_image` filepaths to open images.")
+        }
+        # exactly one row per image_label is ensured at input validation
+        img_meta <- rxsmeta |> dplyr::filter(image_label == sel_img)
+        if (is.na(img_meta$fname_image)) {
+          stop("No image filepath available in `$fname_image`.")
+        }
+        image_path <- img_meta$fname_image
+        base_path <- dirname(image_path)
 
-      org_img_name <- input_data$rxsmeta_data |>
-        dplyr::filter(image_label == sel_img) |>
-        dplyr::pull(org_img_name)
-
-      base_path <- dirname(image_path)
-
-      # Check for annotated (twin) image(s) in same folder
-      annotated_twin <- list.files(
-        base_path,
-        pattern = paste0(org_img_name, "_annotated_twin\\."),
-        full.names = TRUE
-      )
-      annotated_image <- list.files(
-        base_path,
-        pattern = paste0(org_img_name, "_annotated\\."),
-        full.names = TRUE
-      )
-
-      # Prefer annotated > twin > image file if found
-      if (length(annotated_image) == 1) {
-        file_to_open <- annotated_image
-      } else if (length(annotated_twin) == 1) {
-        file_to_open <- annotated_twin
-      } else {
-        file_to_open <- image_path
-      }
-
-      if (file.exists(file_to_open)) {
-        browseURL(file_to_open)
-      } else {
-        shiny::showNotification(
-          glue::glue("The following image could not be opened: {file_to_open}"),
-          type = "error"
+        # check for annotated images in same folder, any image extension
+        name_esc <- stringr::str_escape(img_meta$org_img_name)
+        img_ext <- "\\.(jpe?g|png|tiff?|bmp)$"
+        annotated_image <- list.files(
+          base_path,
+          pattern = paste0("^", name_esc, "_annotated", img_ext),
+          full.names = TRUE, ignore.case = TRUE
         )
-      }
+        annotated_twin <- list.files(
+          base_path,
+          pattern = paste0("^", name_esc, "_annotated_twin", img_ext),
+          full.names = TRUE, ignore.case = TRUE
+        )
+
+        # Prefer annotated > twin > image file
+        file_to_open <- c(annotated_image, annotated_twin, image_path)[1]
+        # annotated files are found on disk, but image_path from the metadata may be outdated
+        if (!file.exists(file_to_open)) {
+          stop("Image file not found (moved or renamed?): ", file_to_open)
+        }
+        browseURL(file_to_open)
+      },
+        err_title = glue::glue("Error opening image {sel_img}"),
+        err_message = "",
+        propagate_err = FALSE
+      )
 
     }) |> shiny::bindEvent(input$show_image, ignoreNULL = TRUE)
 

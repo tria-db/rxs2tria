@@ -2,45 +2,55 @@
 % Please edit documentation in R/partial_update.R
 \name{update_QWAdata}
 \alias{update_QWAdata}
-\title{Update a QWAdata object with re-read raw data for selected images}
+\title{Update a QWAdata object to match a QWAimages object}
 \usage{
 update_QWAdata(
   x,
-  imgs_to_update,
   meta,
-  exclude_mode = c("either", "incomplete_only"),
+  imgs_to_reread = NULL,
+  exclude_mode = NULL,
   reset_manual_flags = TRUE
 )
 }
 \arguments{
 \item{x}{a \link{QWAdata} object}
 
-\item{imgs_to_update}{character vector of \code{image_label} values to update;
-must be a subset of \code{meta$image_label}}
+\item{meta}{a \link{QWAimages} object; defines the images in the updated data}
 
-\item{meta}{a \link{QWAimages} object, required for \code{\link[=complete_flags]{complete_flags()}} when flag
-columns are present in \code{x}}
+\item{imgs_to_reread}{optional character vector of \code{image_label} values
+whose raw data files are read again; must be a subset of
+\code{meta$image_label}. \code{NULL} (default) re-reads none.}
 
-\item{exclude_mode}{passed to \code{\link[=complete_flags]{complete_flags()}}; only relevant when the
-\verb{$exclude_issues} flag is present in \code{x}: how should the \verb{$exclude_issues}
-flag column be initialized, to exclude any incomplete or missing rings
-(\code{"either"}, default) or only the incomplete rings (i.e., not flagging
-missing/wedging rings for exclusion from analyses, \code{"incomplete_only"}).}
+\item{exclude_mode}{Deprecated, see \code{\link[=complete_flags]{complete_flags()}}.}
 
-\item{reset_manual_flags}{Logical; if \code{TRUE} (default), any manual flag
-column edits made via the flags Shiny app for the updated images are
-reset. If \code{FALSE}, existing values in the manual flag columns are kept
-(i.e. this assumes that the dating was not affected by the re-analysis).}
+\item{reset_manual_flags}{Logical; only applies to \code{imgs_to_reread}. If
+\code{TRUE} (default), any manual edits made via the flags Shiny app are reset.
+If \code{FALSE} (i.e. assuming the dating was not affected by the re-analysis),
+the manual flag and comment columns are kept, and so is \code{exclude_issues}
+where it differs from the value derived from the old automatic flags.}
 }
 \value{
 An updated \link{QWAdata} object
 }
 \description{
-Re-reads the raw data files for \code{imgs_to_update}, recomputes any derived
-cell/ring measures and derived flag columns that are already present in \code{x}, and
-splices the result back into the existing \link{QWAdata} object.
+Synchronises \code{x} with the images in \code{meta}:
+\itemize{
+\item images in \code{meta} but not in \code{x} are read and added,
+\item images in \code{x} but not in \code{meta} are removed,
+\item images in \code{imgs_to_reread} are read again from their raw data files and
+replace the existing data (e.g. after re-analysis in ROXAS/ROXAS AI).
+}
 }
 \details{
-Duplicate-ring flags are recalculated across all images sharing a woodpiece
-with any updated image, because overlaps may change when one image changes.
+For all read images, derived cell/ring measures and flag columns that are
+already present in \code{x} are recalculated. Duplicate-ring flags
+(\code{duplicate_ring}, \code{exclude_dupl}) are recalculated for all woodpiece-years
+that contain an added, removed or re-read image, since overlaps may change;
+any manual duplicate selection in these woodpiece-years is replaced.
+
+Added and re-read images are treated as new data: their flags need to be
+inspected again, e.g. in the flags Shiny app or by re-applying any custom
+rule for \code{exclude_issues}. Only if a re-analysis was minor and did not
+change the dating, use \code{reset_manual_flags = FALSE} to keep the previous
+manual flags.
 }

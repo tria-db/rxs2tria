@@ -99,10 +99,10 @@ QWA_data <- collect_raw_data(rxs_images)
 # Add additional cell and ring measures, and ring quality flags
 # for duplicate rings (overlapping years from separate images), radially
 # incomplete rings (at image borders) and missing/wedging rings.
-# exclude_mode: "either" flags both incomplete and missing rings for exclusion;
-#               "incomplete_only" flags only incomplete rings.
-exclude_mode <- "either"
-QWA_data <- complete_QWAdata(QWA_data, rxs_images, exclude_mode)
+# exclude_issues is initialised from the incomplete rings; to also exclude
+# missing rings, set it afterwards:
+QWA_data <- complete_QWAdata(QWA_data, rxs_images)
+# QWA_data$rings$exclude_issues <- QWA_data$rings$incomplete_ring | QWA_data$rings$missing_ring
 
 
 # ------------------------------------------------------------------------------
@@ -178,30 +178,61 @@ launch_flags_app()
 # write_QWAdata(QWA_data, dir = path_out, dataset_name = dataset_name)
 
 # ------------------------------------------------------------------------------
-# Step 6c: Iteratively updating re-analysed images
+# Step 6c: Iteratively updating images
 # ------------------------------------------------------------------------------
-# If the data processing steps above reveal issues in the raw data (e.g. you
-# want to re-analyse some images with ROXAS or ROXAS AI), it is possible to
-# replace the underlying raw data for a subset of images only, without having
-# to start fresh.
+# If the data processing steps above reveal issues in the raw data, it is
+# possible to update the data for a subset of images only, without having to
+# start fresh. update_QWAdata() synchronises QWA_data with rxs_images: new
+# images are added, images no longer in rxs_images are removed, and images in
+# `imgs_to_reread` are read again. Duplicate-ring flags are recalculated for
+# all affected woodpiece-years. Added and re-read images are new data: inspect
+# their flags again (Step 6b) or re-apply any custom exclude_issues rule.
+
+# a) Re-analysed images
 # First, rerun the analyses with the QWA software, and replace the output files
 # in `path_in` with the new files.
 # Second, update the ROXAS settings / ROXAS AI metadata information in the
-# QWAimages object by re-reading the updated files for the chosen `imgs_to_update`.
+# QWAimages object by re-reading the updated files for the chosen images.
 rxs_images <- update_QWAimages(rxs_images,
-  imgs_to_update = c("IMAGELABEL1", "IMAGELABEL2"),
+  imgs_to_reread = c("IMAGELABEL1", "IMAGELABEL2"),
   settings_date_orders = settings_date_orders) # same as defined in Step 3
 
-# Third, update the QWAdata object. For the `imgs_to_update` (and only those),
-# the corresponding raw cells and rings data files are read again, any derived
-# measures are recalculated, and the automatic flags (missing, incomplete,
-# duplicate rings plus exclude_issues and exclude_duplicate) are reset.
-# Per default, any manual edits (e.g. in the flags Shiny app) are discarded.
-QWA_data <- update_QWAdata(QWA_data,
-  imgs_to_update = c("IMAGELABEL1", "IMAGELABEL2"),
-  meta = rxs_images,
-  exclude_mode = exclude_mode # same as defined in Step 4
-)
+# Third, update the QWAdata object. For the `imgs_to_reread`, the raw cells
+# and rings data files are read again, any derived measures are recalculated,
+# and the automatic flags (missing, incomplete, duplicate rings plus
+# exclude_issues and exclude_dupl) are reset. Per default, any manual edits
+# (e.g. in the flags Shiny app) for these images are discarded; set
+# `reset_manual_flags = FALSE` to keep them only if the re-analysis was minor
+# and the dating was not affected.
+QWA_data <- update_QWAdata(QWA_data, meta = rxs_images,
+  imgs_to_reread = c("IMAGELABEL1", "IMAGELABEL2"))
+# Also review `only_ew` and `img_comment` of these images in the metadata app.
+
+# b) Added or removed images
+# To add images, either rerun Steps 1-3 on the updated `path_in` (any
+# `only_ew` and `img_comment` values from the metadata app are then missing,
+# but update_QWAmetadata() below carries them over), or run Steps 1-3
+# on a separate folder with only the new images and combine the results (same
+# ROXAS version, distinct image labels):
+# rxs_images <- combine_QWAimages(rxs_images, rxs_images_new)
+# To remove images, filter them from rxs_images:
+# rxs_images <- rxs_images |>
+#   dplyr::filter(!image_label %in% c("IMAGELABEL1", "IMAGELABEL2"))
+# Then update the QWAdata object:
+# QWA_data <- update_QWAdata(QWA_data, meta = rxs_images)
+# If a QWAmetadata object exists, update it as well (replaces the images,
+# adds/removes rows and updates counts in the sites, trees, woodpieces and
+# slides tables, keeps existing metadata and fills missing `only_ew` and
+# `img_comment` values). Complete any added rows in the metadata app.
+# QWA_meta <- update_QWAmetadata(QWA_meta, rxs_images)
+
+# c) Combining datasets
+# Two datasets prepared separately (same ROXAS version, distinct image labels)
+# can be combined; for shared entries (e.g. sites, authors) the first object
+# takes precedence:
+# rxs_images <- combine_QWAimages(rxs_images_1, rxs_images_2)
+# QWA_data <- combine_QWAdata(QWA_data_1, QWA_data_2)
+# QWA_meta <- combine_QWAmetadata(QWA_meta_1, QWA_meta_2)
 
 
 # ------------------------------------------------------------------------------

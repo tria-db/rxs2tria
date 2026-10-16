@@ -140,6 +140,40 @@ get_tbl_props <- function(tbl_schema) {
   list(properties = properties, required = required)
 }
 
+#' Names of the manually set columns (`colType` `"manual"`) in table properties
+#' @param tbl_props Output of `get_tbl_props()`.
+#' @noRd
+manual_cols <- function(tbl_props) {
+  tbl_props$properties |>
+    purrr::keep(\(x) isTRUE(x$colType == "manual")) |>
+    names()
+}
+
+#' Names of the columns of a table schema with the given colType(s)
+#' @param schema Schema name, see `schema_rel_path()`.
+#' @param col_types Character vector of `colType` values.
+#' @returns Character vector of column names, in schema order.
+#' @noRd
+schema_cols <- function(schema, col_types) {
+  schema_path <- system.file(schema_rel_path(schema), package = "rxs2tria")
+  schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
+  tbl_props <- get_tbl_props(resolve_schema(schema_obj, schema_path))
+  tbl_props$properties |>
+    purrr::keep(\(x) isTRUE(x$colType %in% col_types)) |>
+    names()
+}
+
+#' Names of the cell measurement columns that can be aggregated
+#'
+#' All `measure` and `derived` columns of the cells schema except radial
+#' positions, categorical columns and neighbour IDs.
+#' @returns Character vector of column names, in schema order.
+#' @noRd
+cell_param_cols <- function() {
+  setdiff(schema_cols("cells", c("measure", "derived")),
+          c("raddistr", "rraddistr", "sector100", "ew_lw", "nbrid"))
+}
+
 # tbl_props <- get_tbl_props(full_schema$properties$tbl_name)
 # tbl_props <- get_tbl_props(tbl_schema)
 
@@ -214,7 +248,9 @@ convert_column <- function(x, target_class) {
 #' @param df  The data frame to be aligned
 #' @param tbl_props  Table properties read from schema (output of get_tbl_props()) 
 #' @param schema  Schema name, only used for warning messages
-#' @param add_opt  Should missing optional columns be added as well, or only required?
+#' @param add_opt  Should missing optional columns be added as well, or only
+#'   required? Columns with `colType` `"manual"` (set manually, e.g. in the
+#'   Shiny apps) are never added.
 #' @param mute_info  Should warning messages (missing req columns, 
 #'   dropped extra cols, NAs due to type conversions) be displayed
 #' @param ignore_colnames  Should the column names of df be ignored
@@ -243,7 +279,11 @@ align_to_schema <- function(df, tbl_props, schema = NULL, add_opt = FALSE,
     names(aligned_data)[1:min(length(aligned_data),length(target_cols))] <- target_cols
   }
 
-  req_cols <- if (add_opt) target_cols else tbl_props$required
+  req_cols <- if (add_opt) {
+    setdiff(target_cols, manual_cols(tbl_props))
+  } else {
+    tbl_props$required
+  }
   source_cols <- names(aligned_data)
   common_cols <- intersect(target_cols, source_cols)
 
@@ -380,8 +420,8 @@ check_structure <- function(df, warn_only = FALSE) {
 #' @noRd
 check_missing_opt <- function(df, tbl_props, schema = NULL) {
   missing_opt_cols <- setdiff(
-    names(tbl_props$properties), 
-    c(tbl_props$required, names(df))
+    names(tbl_props$properties),
+    c(tbl_props$required, manual_cols(tbl_props), names(df))
   )
   if (length(missing_opt_cols)>0) {
     cli::cli_warn(c(

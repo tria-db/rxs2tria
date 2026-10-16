@@ -16,7 +16,7 @@
       },
       "rorid": {
         "type": ["string", "null"],
-        "pattern": "^(|[0-9a-zA-Z]{9}$)",
+        "pattern": "^(|[0-9a-zA-Z]{9})$",
         "title": "RORID",
         "description": "RORID, e.g. 04bs5yc70"
       },

@@ -5,8 +5,8 @@
 #' files have changed after initial import.
 #'
 #' @param meta a [QWAimages] object
-#' @param imgs_to_update character vector of `image_label` values to update;
-#'   must be a subset of `meta$image_label`
+#' @param imgs_to_reread character vector of `image_label` values whose
+#'   settings/metadata files are re-read; must be a subset of `meta$image_label`
 #' @param settings_date_orders Character; date order string(s) passed to
 #'   [lubridate::parse_date_time()] to parse the `meas_created_at` field for
 #'   ROXAS classic.
@@ -15,18 +15,18 @@
 #'   Defaults to system timezone.
 #' @returns An updated [QWAimages] object
 #' @export
-update_QWAimages <- function(meta, imgs_to_update, 
+update_QWAimages <- function(meta, imgs_to_reread,
                              settings_date_orders = NULL,
                              settings_date_tz = Sys.timezone()
                             ) {
   checkmate::assert_class(meta, "QWAimages")
-  checkmate::assert_subset(imgs_to_update, meta$image_label)
+  checkmate::assert_subset(imgs_to_reread, meta$image_label)
 
   roxas_version <- attr(meta, "roxas_version") # TODO: check roxas version ok?
 
   # read in settings files again
   df_settings_new <- collect_settings_data(meta |>
-    dplyr::filter(image_label %in% imgs_to_update))
+    dplyr::filter(.data$image_label %in% imgs_to_reread))
 
   # convert meas_created_at dates to POSIXct (already done for standardized roxas ai)
   if (roxas_version == "roxas") {
@@ -43,119 +43,218 @@ update_QWAimages <- function(meta, imgs_to_update,
   meta
 }
 
-#' Update a QWAdata object with re-read raw data for selected images
+#' Update a QWAdata object to match a QWAimages object
 #'
-#' Re-reads the raw data files for `imgs_to_update`, recomputes any derived
-#' cell/ring measures and derived flag columns that are already present in `x`, and
-#' splices the result back into the existing [QWAdata] object.
+#' Synchronises `x` with the images in `meta`:
+#' - images in `meta` but not in `x` are read and added,
+#' - images in `x` but not in `meta` are removed,
+#' - images in `imgs_to_reread` are read again from their raw data files and
+#'   replace the existing data (e.g. after re-analysis in ROXAS/ROXAS AI).
 #'
-#' Duplicate-ring flags are recalculated across all images sharing a woodpiece
-#' with any updated image, because overlaps may change when one image changes.
+#' For all read images, derived cell/ring measures and flag columns that are
+#' already present in `x` are recalculated. Duplicate-ring flags
+#' (`duplicate_ring`, `exclude_dupl`) are recalculated for all woodpiece-years
+#' that contain an added, removed or re-read image, since overlaps may change;
+#' any manual duplicate selection in these woodpiece-years is replaced.
+#'
+#' Added and re-read images are treated as new data: their flags need to be
+#' inspected again, e.g. in the flags Shiny app or by re-applying any custom
+#' rule for `exclude_issues`. Only if a re-analysis was minor and did not
+#' change the dating, use `reset_manual_flags = FALSE` to keep the previous
+#' manual flags.
 #'
 #' @param x a [QWAdata] object
-#' @param imgs_to_update character vector of `image_label` values to update;
-#'   must be a subset of `meta$image_label`
-#' @param meta a [QWAimages] object, required for [complete_flags()] when flag
-#'   columns are present in `x`
-#' @param exclude_mode passed to [complete_flags()]; only relevant when the
-#'   `$exclude_issues` flag is present in `x`: how should the `$exclude_issues`
-#'    flag column be initialized, to exclude any incomplete or missing rings
-#'   (`"either"`, default) or only the incomplete rings (i.e., not flagging
-#'   missing/wedging rings for exclusion from analyses, `"incomplete_only"`).
-#' @param reset_manual_flags Logical; if `TRUE` (default), any manual flag
-#'   column edits made via the flags Shiny app for the updated images are
-#'   reset. If `FALSE`, existing values in the manual flag columns are kept
-#'   (i.e. this assumes that the dating was not affected by the re-analysis).
+#' @param meta a [QWAimages] object; defines the images in the updated data
+#' @param imgs_to_reread optional character vector of `image_label` values
+#'   whose raw data files are read again; must be a subset of
+#'   `meta$image_label`. `NULL` (default) re-reads none.
+#' @param exclude_mode Deprecated, see [complete_flags()].
+#' @param reset_manual_flags Logical; only applies to `imgs_to_reread`. If
+#'   `TRUE` (default), any manual edits made via the flags Shiny app are reset.
+#'   If `FALSE` (i.e. assuming the dating was not affected by the re-analysis),
+#'   the manual flag and comment columns are kept, and so is `exclude_issues`
+#'   where it differs from the value derived from the old automatic flags.
 #' @returns An updated [QWAdata] object
 #' @export
-update_QWAdata <- function(x, imgs_to_update, meta,
-                           exclude_mode = c("either","incomplete_only"),
+update_QWAdata <- function(x, meta, imgs_to_reread = NULL,
+                           exclude_mode = NULL,
                            reset_manual_flags = TRUE) {
   checkmate::assert_class(x, "QWAdata")
   checkmate::assert_class(meta, "QWAimages")
-  checkmate::assert_subset(imgs_to_update, meta$image_label)
+  checkmate::assert_subset(imgs_to_reread, meta$image_label)
   checkmate::assert_flag(reset_manual_flags)
-  exclude_mode <- match.arg(exclude_mode)
+  mode <- resolve_exclude_mode(exclude_mode)
 
-  files_to_update <- meta |>
-    dplyr::filter(image_label %in% imgs_to_update)
+  # sort images into new (read), deleted (drop) and re-read (read and replace)
+  imgs_old <- unique(x$rings$image_label)
+  imgs_new <- setdiff(meta$image_label, imgs_old)
+  imgs_del <- setdiff(imgs_old, meta$image_label)
+  imgs_reread <- intersect(imgs_to_reread, imgs_old)
+  imgs_read <- c(imgs_new, imgs_reread)
 
-  # read and preprocess raw cells/rings data for the updated images
-  x_new <- collect_raw_data(files_to_update)
+  if (length(c(imgs_read, imgs_del)) == 0) {
+    cli::cli_inform(c("i" = "Nothing to update: {.arg x} already matches {.arg meta}."))
+    return(x)
+  }
+  cli::cli_inform(c(
+    "i" = if (length(imgs_new) > 0) "Adding {length(imgs_new)} new image{?s}: {.val {imgs_new}}",
+    "i" = if (length(imgs_del) > 0) "Removing {length(imgs_del)} image{?s} not in {.arg meta}: {.val {imgs_del}}",
+    "i" = if (length(imgs_reread) > 0) "Re-reading {length(imgs_reread)} image{?s}: {.val {imgs_reread}}"
+  ))
 
-  # recalculate only the measures that already exist in x
-  meas_all <- c("tca", "rwd2", "dcwt", "cwtall_adj",
-                "cdrad", "cdtan", "cdratio", "sector100", "ew_lw",
-                "eww", "lww")
-  meas_to_recalc <- intersect(meas_all, c(names(x$cells), names(x$rings)))
-  x_new <- complete_measures(x_new, only = meas_to_recalc)
-
-  # for the rings data, we still need to recalculate the automatic flags
+  # automatic flag columns: either all or none present
   flag_cols <- c("incomplete_ring", "missing_ring", "duplicate_ring", "exclude_dupl", "exclude_issues")
-
-  # first: carry over or reset manual flag columns
+  has_flags <- any(flag_cols %in% names(x$rings))
+  if (has_flags && !all(flag_cols %in% names(x$rings))) {
+    cli::cli_abort(c(
+      "x" = "Cannot update with only some of the flag columns {.field {flag_cols}}.",
+      "i" = "Remove them all or run {.fn complete_QWAdata} first."
+    ))
+  }
   manual_lgl_cols <- setdiff(names(x$rings)[sapply(x$rings, is.logical)], flag_cols)
   manual_char_cols <- intersect(c("affected_tissue", "comment"), names(x$rings))
   manual_cols <- c(manual_lgl_cols, manual_char_cols)
 
-  if (length(manual_cols) > 0) {
-    # if we reset: nothing to do, bind rows and replace NA with FALSE
-    # if we want to keep old values: add them to x_new
-    if (!reset_manual_flags) {
-      old_manual <- x$rings |>
-        dplyr::filter(image_label %in% imgs_to_update) |>
-        dplyr::select(image_label, year, dplyr::all_of(manual_cols))
-      x_new$rings <- x_new$rings |>
-        dplyr::left_join(old_manual, by = c("image_label", "year"))
-    }
-  }
-  
-  # recaluclate flag columns if present:
-  if (any(flag_cols %in% names(x$rings))) {
-    if (!all(flag_cols %in% names(x$rings))) {
-      cli::cli_abort(
-        "Cannot update with partial calculated flag columns. Remove all or run complete_QWAdata first."
-      )
-    }
-    x_new <- complete_flags(x_new, meta, exclude_mode)
+  by_img_yr <- c("image_label", "year")
+  by_wp_yr <- c("woodpiece_label", "year")
 
-    # only for duplicate rings: WE NEED TO RECALCULATE ALSO FOR OTHER IMAGES FROM SAME WOODPIECE
-    # default behavior is to select the year with the highest cell count (that isn't incomplete or missing)
-    affected_wps <- unique(files_to_update$woodpiece_label)
-    df_rings_wps <- x$rings |> # add old data for affected wps
-      dplyr::filter(woodpiece_label %in% affected_wps) |>
-      dplyr::filter(!image_label %in% imgs_to_update) |> # filter out old data for updated images
-      dplyr::bind_rows(x_new$rings) # add new data
+  # keep old rings of re-read images (to carry over manual values) and the
+  # woodpiece-years they occupy (duplicate flags need recalculation there)
+  rings_reread_old <- x$rings |>
+    dplyr::filter(.data$image_label %in% imgs_reread)
+  affected_wp_yrs <- x$rings |>
+    dplyr::filter(.data$image_label %in% c(imgs_del, imgs_reread)) |>
+    dplyr::distinct(dplyr::across(dplyr::all_of(by_wp_yr)))
 
-    df_rings_wps <- flag_duplicate_rings(df_rings_wps) # this affects only the duplicate_ring and exclude_dupl cols, so any other edited cols stay the same
-
-    # update the rings component with the data (incl calc flags for all affected wps)
-    x$rings <- x$rings |>
-      dplyr::filter(!woodpiece_label %in% affected_wps) |> # filter out any affected/old wp data
-      dplyr::bind_rows(df_rings_wps) |>
-      dplyr::mutate(dplyr::across(
-        dplyr::where(is.logical),
-        ~ tidyr::replace_na(., FALSE)
-      )) |>
-      dplyr::arrange(woodpiece_label, slide_label, image_label, year)
-  } else {
-    # update the rings component with the data (no calc flags, only imgs_to_update)
-    x$rings <- x$rings |>
-      dplyr::filter(!image_label %in% imgs_to_update) |>
-      dplyr::bind_rows(x_new$rings) |>
-      dplyr::mutate(dplyr::across(
-        dplyr::where(is.logical),
-        ~ tidyr::replace_na(., FALSE)
-      )) |>
-      dplyr::arrange(woodpiece_label, slide_label, image_label, year)
-  }
-
-  # update the cells component with the new data
+  # drop deleted and re-read images
+  x$rings <- x$rings |>
+    dplyr::filter(!.data$image_label %in% c(imgs_del, imgs_reread))
   x$cells <- x$cells |>
-    dplyr::filter(!image_label %in% imgs_to_update) |> # filter out old data
-    dplyr::bind_rows(x_new$cells) |>
-    dplyr::arrange(image_label, year)
+    dplyr::filter(!.data$image_label %in% c(imgs_del, imgs_reread))
 
+  if (length(imgs_read) > 0) {
+    x_new <- collect_raw_data(meta |>
+      dplyr::filter(.data$image_label %in% imgs_read))
+
+    # recalculate only the measures that already exist in x
+    meas_all <- c("tca", "rwd2", "dcwt", "cwtall_adj",
+                  "cdrad", "cdtan", "cdratio", "sector100", "ew_lw",
+                  "eww", "lww")
+    meas_to_recalc <- intersect(meas_all, c(names(x$cells), names(x$rings)))
+    x_new <- complete_measures(x_new, only = meas_to_recalc)
+
+    # carry over manual values for re-read images (new images have none)
+    if (!reset_manual_flags && length(manual_cols) > 0) {
+      x_new$rings <- x_new$rings |>
+        dplyr::left_join(
+          rings_reread_old |>
+            dplyr::select(dplyr::all_of(c(by_img_yr, manual_cols))),
+          by = by_img_yr)
+    }
+
+    if (has_flags) {
+      x_new <- complete_flags(x_new, meta, exclude_mode)
+      # keep exclude_issues where it was edited manually, i.e. where the old
+      # value differs from the automatic rule applied to the old flags
+      if (!reset_manual_flags) {
+        excl_manual <- rings_reread_old |>
+          dplyr::mutate(excl_auto = switch(mode,
+            "either" = .data$incomplete_ring | .data$missing_ring,
+            "incomplete_only" = .data$incomplete_ring)) |>
+          dplyr::filter(.data$exclude_issues != .data$excl_auto) |>
+          dplyr::select(dplyr::all_of(by_img_yr), excl_old = "exclude_issues")
+        x_new$rings <- x_new$rings |>
+          dplyr::left_join(excl_manual, by = by_img_yr) |>
+          dplyr::mutate(exclude_issues = dplyr::coalesce(.data$excl_old, .data$exclude_issues)) |>
+          dplyr::select(-dplyr::all_of("excl_old"))
+      }
+      affected_wp_yrs <- affected_wp_yrs |>
+        dplyr::bind_rows(
+          x_new$rings |> dplyr::distinct(dplyr::across(dplyr::all_of(by_wp_yr)))) |>
+        dplyr::distinct()
+    }
+
+    x$rings <- dplyr::bind_rows(x$rings, x_new$rings)
+    x$cells <- dplyr::bind_rows(x$cells, x_new$cells)
+  }
+
+  # recalculate duplicate flags only for affected woodpiece-years
+  if (has_flags) {
+    x$rings <- recalc_duplicates(x$rings, affected_wp_yrs)
+  }
+
+  x$rings <- x$rings |>
+    dplyr::mutate(dplyr::across(dplyr::where(is.logical), ~ tidyr::replace_na(., FALSE))) |>
+    dplyr::arrange(.data$woodpiece_label, .data$slide_label, .data$image_label, .data$year)
+  x$cells <- x$cells |>
+    dplyr::arrange(.data$image_label, .data$year)
+
+  x
+}
+
+#' Update a QWAmetadata object to match a QWAimages object
+#'
+#' Replaces the `$images` component of `x` with `images` and updates the
+#' hierarchical tables (`$sites`, `$trees`, `$woodpieces`, `$slides`)
+#' accordingly:
+#' - the hierarchy columns and counts (`n_trees`, `n_woodpieces`, `n_slides`,
+#'   `n_images`) are derived from `images`,
+#' - all other columns are kept from `x`,
+#' - rows for IDs new in `images` are added (other columns `NA`),
+#' - rows for IDs no longer in `images` are removed.
+#'
+#' Tables that are `NULL` in `x` remain `NULL` (see [complete_QWAmetadata()]).
+#' The manually set image columns (e.g. `only_ew`, `img_comment` from the
+#' metadata app, `comment_handled` from the flags app) are filled from
+#' `x$images` where they are missing or `NA` in `images`, e.g. after rebuilding
+#' it with [build_QWAimages()].
+#'
+#' @param x a [QWAmetadata] object
+#' @param images a [QWAimages] object; the complete set of images of the
+#'   updated dataset
+#' @returns An updated [QWAmetadata] object
+#' @seealso [update_QWAimages()], [update_QWAdata()], [check_QWAmetadata()]
+#' @export
+update_QWAmetadata <- function(x, images) {
+  checkmate::assert_class(x, "QWAmetadata")
+  checkmate::assert_class(images, "QWAimages")
+  rv <- attr(images, "roxas_version")
+
+  # images: fill manually set columns from x$images where missing or NA
+  app_cols <- intersect(schema_cols(rv, "manual"), names(x$images))
+  images <- tibble::as_tibble(images)
+  for (col in setdiff(app_cols, names(images))) {
+    images[[col]] <- x$images[[col]][NA_integer_] # typed NA
+  }
+  images <- images |>
+    dplyr::rows_patch(
+      tibble::as_tibble(x$images)[c("image_label", app_cols)],
+      by = "image_label", unmatched = "ignore") |>
+    new_QWAimages(rv)
+
+  # hierarchical tables: counts and hierarchy columns from images, other
+  # columns kept from x; rows for new IDs added, rows for missing IDs removed
+  for (tbl in names(hierarchy_tbls)) {
+    df_old <- x[[tbl]]
+    if (is.null(df_old)) next
+    h <- hierarchy_tbls[[tbl]]
+    df_counts <- h$summary_fn(images)
+    ids_new <- setdiff(df_counts[[h$id_col]], df_old[[h$id_col]])
+    ids_del <- setdiff(df_old[[h$id_col]], df_counts[[h$id_col]])
+    if (length(ids_new) + length(ids_del) > 0) {
+      cli::cli_inform(c(
+        "i" = if (length(ids_new) > 0) "{.field {tbl}}: adding {length(ids_new)} row{?s}: {.val {ids_new}}",
+        "!" = if (length(ids_del) > 0) "{.field {tbl}}: removing {length(ids_del)} row{?s}: {.val {ids_del}}"
+      ))
+    }
+    x[[tbl]] <- df_counts |>
+      dplyr::left_join(
+        df_old |> dplyr::select(-dplyr::any_of(setdiff(names(df_counts), h$id_col))),
+        by = h$id_col) |>
+      dplyr::select(dplyr::all_of(names(df_old)))
+  }
+
+  x$images <- images
   x
 }
 
