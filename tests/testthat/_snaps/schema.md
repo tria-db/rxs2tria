@@ -2,52 +2,39 @@
 
     Code
       check_QWAmetadata(x)
-    Condition
-      Warning:
-      ! related missing optional columns:
+    Message
+      i related missing optional columns:
       i description, url, and rel_ds_label
-      Warning:
-      ! sites missing optional columns:
+      i sites missing optional columns:
       i aspect, slope, soil_water_capacity, soil_moisture, stand_age_str, and stand_age_class
-      Warning:
-      ! trees missing optional columns:
+      i trees missing optional columns:
       i tree_sex, tree_latitude, tree_longitude, and tree_comment
-      Warning:
-      ! woodpieces missing optional columns:
+      i woodpieces missing optional columns:
       i sampling_year, sample_apex_distance, and pith_year
-      Warning:
-      ! slides missing optional columns:
+      i slides missing optional columns:
       i pith_offset
-    Message
       i supplementary: not provided, skipping.
-    Condition
-      Warning:
-      ! roxas missing optional columns:
-      i img_created_at, img_software, and rw_reference_file
-    Message
+      i roxas missing optional columns:
+      i only_ew, img_created_at, img_software, img_comment, and rw_reference_file
       v All checks completed.
 
 ---
 
     Code
       check_QWAmetadata(x)
-    Condition
-      Warning:
-      ! related missing optional columns:
-      i description, url, and rel_ds_label
-      Warning:
-      ! sites missing optional columns:
-      i aspect, slope, soil_water_capacity, soil_moisture, stand_age_str, and stand_age_class
-      Warning:
-      ! trees missing optional columns:
-      i tree_sex, tree_latitude, tree_longitude, and tree_comment
-      Warning:
-      ! woodpieces missing optional columns:
-      i sampling_year, sample_apex_distance, and pith_year
-      Warning:
-      ! slides missing optional columns:
-      i pith_offset
     Message
+      i related missing optional columns:
+      i description, url, and rel_ds_label
+      i sites missing optional columns:
+      i aspect, slope, soil_water_capacity, soil_moisture, stand_age_str, and stand_age_class
+      i trees missing optional columns:
+      i tree_sex, tree_latitude, tree_longitude, and tree_comment
+      i woodpieces missing optional columns:
+      i sampling_year, sample_apex_distance, and pith_year
+      i slides missing optional columns:
+      i pith_offset
       i supplementary: not provided, skipping.
+      i roxas_ai missing optional columns:
+      i only_ew and img_comment
       v All checks completed.
 

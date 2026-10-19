@@ -4,7 +4,7 @@
 \alias{write_QWAimages}
 \title{Write a QWAimages object to a CSV file.}
 \usage{
-write_QWAimages(x, file, compress = FALSE, overwrite = TRUE)
+write_QWAimages(x, file, compress = FALSE, overwrite = TRUE, drop_empty = TRUE)
 }
 \arguments{
 \item{x}{A \link{QWAimages} object.}
@@ -16,6 +16,10 @@ Note that if you add an compression-related extension to the file name,
 vroom will automatically compress the output regardless of this parameter.}
 
 \item{overwrite}{Allow to overwrite existing files? (default \code{TRUE}).}
+
+\item{drop_empty}{If \code{TRUE} (default), optional columns set in the Shiny
+apps (\code{colType} \code{"meta_input"} or \code{"qc_input"}, e.g. \code{img_comment}) that
+are empty in all rows are not written.}
 }
 \value{
 The output file path, invisibly.
@@ -24,9 +28,9 @@ The output file path, invisibly.
 Write a QWAimages object to a CSV file.
 }
 \note{
-The \code{roxas_version} attribute is not written to the CSV file. It is
-re-derived from the \verb{$software} column when the file is read back with
-\code{\link[=read_QWAimages]{read_QWAimages()}}.
+Empty values are written as empty fields. The \code{roxas_version}
+attribute is not written to the CSV file. It is re-derived from the
+\verb{$software} column when the file is read back with \code{\link[=read_QWAimages]{read_QWAimages()}}.
 }
 \seealso{
 \code{\link[=read_QWAimages]{read_QWAimages()}}, \link{QWAimages}

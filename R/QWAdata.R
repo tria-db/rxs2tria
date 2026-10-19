@@ -756,7 +756,8 @@ check_QWAdata <- function(x, meta = NULL, exclude_mode = NULL) {
 
 #' Write a QWAdata object to files
 #'
-#' Cells and rings are written as (compressed) CSV files.
+#' Cells and rings are written as (compressed) CSV files. Empty values are
+#' written as empty fields.
 #'
 #' @param x A [QWAdata] object.
 #' @param dir Directory to write to. Files are auto-named
@@ -770,14 +771,19 @@ check_QWAdata <- function(x, meta = NULL, exclude_mode = NULL) {
 #'   `QWArings.csv(.gz)`.
 #' @param compress If `TRUE` (default), write `.csv.gz` files.
 #' @param overwrite Allow to overwrite existing files? (default `FALSE`).
+#' @param drop_empty If `TRUE` (default), optional columns set in the flags app
+#'   (`colType` `"qc_input"`, e.g. ring quality flags and comments) that are
+#'   empty in all rows are not written.
 #' @returns A named list of written file paths, invisibly.
 #' @seealso [read_QWAdata()], [write_QWAprofile()]
 #' @export
 write_QWAdata <- function(x, dir = NULL,
                           file_cells = NULL, file_rings = NULL,
                           dataset_name = NULL,
-                          compress = TRUE, overwrite = FALSE) {
+                          compress = TRUE, overwrite = FALSE,
+                          drop_empty = TRUE) {
   checkmate::assert_class(x, "QWAdata")
+  checkmate::assert_flag(drop_empty)
   use_dir <- !is.null(dir)
   use_files <- !is.null(file_cells) && !is.null(file_rings)
   if (use_dir == use_files) {
@@ -809,8 +815,10 @@ write_QWAdata <- function(x, dir = NULL,
   checkmate::assert_path_for_output(file_cells, overwrite = overwrite)
   checkmate::assert_path_for_output(file_rings, overwrite = overwrite)
 
-  vroom::vroom_write(x$cells, file_cells, delim = ",")
-  vroom::vroom_write(x$rings, file_rings, delim = ",")
+  vroom::vroom_write(prepare_write(x$cells, "cells", drop_empty), file_cells,
+                     delim = ",", na = "")
+  vroom::vroom_write(prepare_write(x$rings, "rings", drop_empty), file_rings,
+                     delim = ",", na = "")
 
   cli::cli_inform(c(
     "v" = "Cells written to {.file {file_cells}}",

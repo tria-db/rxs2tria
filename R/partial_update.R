@@ -204,8 +204,9 @@ update_QWAdata <- function(x, meta, imgs_to_reread = NULL,
 #' - rows for IDs no longer in `images` are removed.
 #'
 #' Tables that are `NULL` in `x` remain `NULL` (see [complete_QWAmetadata()]).
-#' The manually set image columns (e.g. `only_ew`, `img_comment` from the
-#' metadata app, `comment_handled` from the flags app) are filled from
+#' The image columns set in the apps (`colType` `"meta_input"`, e.g. `only_ew`,
+#' `img_comment` from the metadata app, and `"qc_input"`, e.g.
+#' `comment_handled` from the flags app) are filled from
 #' `x$images` where they are missing or `NA` in `images`, e.g. after rebuilding
 #' it with [build_QWAimages()].
 #'
@@ -220,8 +221,8 @@ update_QWAmetadata <- function(x, images) {
   checkmate::assert_class(images, "QWAimages")
   rv <- attr(images, "roxas_version")
 
-  # images: fill manually set columns from x$images where missing or NA
-  app_cols <- intersect(schema_cols(rv, "manual"), names(x$images))
+  # images: fill columns set in the apps from x$images where missing or NA
+  app_cols <- intersect(schema_cols(rv, c("meta_input", "qc_input")), names(x$images))
   images <- tibble::as_tibble(images)
   for (col in setdiff(app_cols, names(images))) {
     images[[col]] <- x$images[[col]][NA_integer_] # typed NA

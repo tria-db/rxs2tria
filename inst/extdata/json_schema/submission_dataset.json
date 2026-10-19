@@ -14,29 +14,33 @@
         "properties": {
           "ds_access": {
             "type": "string",
-            "enum": ["public", "restricted"]
+            "enum": ["public", "restricted"],
+            "colType": "meta_input"
           },
           "ds_license": {
             "not": { "const": "All rights reserved" },
-            "description": "Intended license; for restricted datasets it applies once the embargo ends and may be left empty"
+            "description": "Intended license; required for public datasets, may be left empty for restricted ones (applies once the embargo ends)"
           },
           "embargoed_until": {
             "type": ["string", "null"],
             "format": "date",
-            "description": "Date until which the dataset is embargoed (YYYY-MM-DD), or null if not restricted."
+            "description": "Date until which the dataset is embargoed (YYYY-MM-DD); required for restricted datasets only",
+            "colType": "meta_input"
           }
         },
-        "required": ["ds_access", "embargoed_until"]
+        "required": ["ds_access"]
       },
       {
         "if": {
           "properties": { "ds_access": { "const": "restricted" } }
         },
         "then": {
-          "properties": { "embargoed_until": { "type": "string", "minLength": 1 } }
+          "properties": { "embargoed_until": { "type": "string", "minLength": 1 } },
+          "required": ["embargoed_until"]
         },
         "else": {
-          "properties": { "ds_license": { "type": "string", "minLength": 1 } }
+          "properties": { "ds_license": { "type": "string", "minLength": 1 } },
+          "required": ["ds_license"]
         }
       }
     ],

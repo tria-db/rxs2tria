@@ -43,7 +43,7 @@
             "description": "Version of the TRIA dataset"
           }
         },
-        "required": ["ds_label", "url", "citation", "dataset_version"]
+        "required": ["ds_label", "ds_license", "url", "citation", "dataset_version"]
       }
     ],
     "unevaluatedProperties": false

@@ -4,7 +4,13 @@
 \alias{write_QWAmetadata}
 \title{Write a QWAmetadata object to a JSON file}
 \usage{
-write_QWAmetadata(x, file, compress = FALSE, overwrite = TRUE)
+write_QWAmetadata(
+  x,
+  file,
+  compress = FALSE,
+  overwrite = TRUE,
+  drop_empty = TRUE
+)
 }
 \arguments{
 \item{x}{A \link{QWAmetadata} object.}
@@ -14,12 +20,17 @@ write_QWAmetadata(x, file, compress = FALSE, overwrite = TRUE)
 \item{compress}{If \code{TRUE}, write compressed \code{.gz} file. (default \code{FALSE}).}
 
 \item{overwrite}{Allow to overwrite existing files? (default \code{TRUE}).}
+
+\item{drop_empty}{If \code{TRUE} (default), optional fields filled in the Shiny
+apps (\code{colType} \code{"meta_input"} or \code{"qc_input"}) that are empty in all rows
+of a component are not written. Fields required under a condition (e.g.
+\code{embargoed_until} for restricted datasets) are kept where it applies.}
 }
 \value{
 The output file path, invisibly.
 }
 \description{
-Write a QWAmetadata object to a JSON file
+Empty values are written as \code{null}.
 }
 \seealso{
 \code{\link[=read_QWAmetadata]{read_QWAmetadata()}}

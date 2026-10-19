@@ -14,13 +14,13 @@ A \link{QWAmetadata} object with all optional columns and component
 tables initialized.
 }
 \description{
-Adds missing optional columns to \verb{$images} and to any already-present
-optional component tables. For absent hierarchical tables (\verb{$sites},
-\verb{$trees}, \verb{$woodpieces}, \verb{$slides}), pre-fills known values from the
-hierarchy in \verb{$images} (the same logic used by the metadata Shiny app).
-For absent flat tables (\verb{$dataset}, \verb{$authors}, \verb{$funding}, \verb{$related}),
-inserts a 0-row skeleton with all schema columns so the user can see the
-expected fields.
+Adds missing optional columns to \verb{$images} (see \code{\link[=complete_QWAimages]{complete_QWAimages()}}) and
+to any already-present optional component tables. For absent hierarchical
+tables (\verb{$sites}, \verb{$trees}, \verb{$woodpieces}, \verb{$slides}), pre-fills known
+values from the hierarchy in \verb{$images} (the same logic used by the metadata
+Shiny app). For absent flat tables, inserts a skeleton with all schema
+columns so the user can see the expected fields: one empty row for
+\verb{$dataset}, \verb{$authors} and \verb{$funding}, no rows for \verb{$related}.
 }
 \details{
 Existing tables are never overwritten; only missing optional columns are

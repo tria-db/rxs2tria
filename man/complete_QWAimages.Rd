@@ -13,8 +13,9 @@ complete_QWAimages(x)
 A \link{QWAimages} object extended with all possible columns.
 }
 \description{
-Add any missing columns to a \link{QWAimages} object, including optional columns.
-New columns are intitialized as \code{NA}.
+Add any missing columns to a \link{QWAimages} object, including optional columns,
+except the quality control columns set in the flags app (\code{colType}
+\code{"qc_input"}, e.g. \code{comment_handled}). New columns are initialised as \code{NA}.
 }
 \seealso{
 \code{\link[=complete_QWAmetadata]{complete_QWAmetadata()}}, \code{\link[=QWAimages]{QWAimages()}}

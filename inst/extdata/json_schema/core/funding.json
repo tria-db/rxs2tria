@@ -12,29 +12,34 @@
         "type": "string",
         "minLength": 1,
         "title": "Funding institute",
-        "description": "Funding institue or research organization granting funds"
+        "description": "Funding institue or research organization granting funds",
+        "colType": "meta_input"
       },
       "rorid": {
         "type": ["string", "null"],
         "pattern": "^(|[0-9a-zA-Z]{9})$",
         "title": "RORID",
-        "description": "RORID, e.g. 04bs5yc70"
+        "description": "RORID, e.g. 04bs5yc70",
+        "colType": "meta_input"
       },
       "org_country": {
         "type": "string",
         "pattern": "^[A-Z]{2}$",
         "title": "Country",
-        "description": "Country code and name (ISO 3166-1 alpha-2)"
+        "description": "Country code and name (ISO 3166-1 alpha-2)",
+        "colType": "meta_input"
       },
       "grant_name": {
         "type": ["string", "null"],
         "title": "Grant name",
-        "description": ""
+        "description": "",
+        "colType": "meta_input"
       },
       "grant_nr": {
         "type":  ["string", "null"],
         "title": "Grant Nr.",
-        "description": "Nr. or ID of the grant"
+        "description": "Nr. or ID of the grant",
+        "colType": "meta_input"
       }
     },
     "required": ["org_name", "org_country"],

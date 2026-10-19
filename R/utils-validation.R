@@ -90,13 +90,16 @@ resolve_schema <- function(schema_obj, schema_path) {
   resolve_refs(tbl_schema, fs::path_dir(schema_path))
 }
 
+# "required" inside if/then/else applies conditionally only, so these
+# branches are skipped by default
 #' @noRd
-extract_required <- function(x) {
+extract_required <- function(x, skip = c("if", "then", "else")) {
   if (!is.list(x)) return(NULL)
   # collect "required" at this level
   current <- if (!is.null(x$required)) list(x$required) else list()
-  # recurse into all children and combine
-  children <- purrr::map(x, extract_required) 
+  # recurse into all children except the skipped ones and combine
+  if (!is.null(names(x))) x <- x[setdiff(names(x), skip)]
+  children <- purrr::map(x, extract_required, skip = skip)
   c(current, children) |> purrr::list_flatten() |> unname()
 }
 #' @noRd
@@ -126,24 +129,30 @@ extract_properties <- function(x) {
 }
 
 #' Helper to extract specific column definitions from a imported schema
+#' @returns A list with the column definitions (`properties`), the required
+#'   columns (`required`) and the columns required only under an
+#'   `if`/`then`/`else` condition (`cond_required`).
 #' @noRd
 get_tbl_props <- function(tbl_schema) {
   required <- tbl_schema |> extract_required() |> unlist()
+  cond_required <- tbl_schema |> extract_required(skip = NULL) |> unlist() |>
+    setdiff(required)
   properties <- tbl_schema |> extract_properties()
   prop_names <- names(properties)
   properties <- lapply(prop_names, function(nm) {
     c(properties[[nm]], list(required = nm %in% required))
   })
   names(properties) <- prop_names
-  list(properties = properties, required = required)
+  list(properties = properties, required = required, cond_required = cond_required)
 }
 
-#' Names of the manually set columns (`colType` `"manual"`) in table properties
+#' Names of the quality control columns set in the flags app (`colType`
+#' `"qc_input"`) in table properties
 #' @param tbl_props Output of `get_tbl_props()`.
 #' @noRd
-manual_cols <- function(tbl_props) {
+qc_input_cols <- function(tbl_props) {
   tbl_props$properties |>
-    purrr::keep(\(x) isTRUE(x$colType == "manual")) |>
+    purrr::keep(\(x) isTRUE(x$colType == "qc_input")) |>
     names()
 }
 
@@ -247,8 +256,8 @@ convert_column <- function(x, target_class) {
 #' @param tbl_props  Table properties read from schema (output of get_tbl_props()) 
 #' @param schema  Schema name, only used for warning messages
 #' @param add_opt  Should missing optional columns be added as well, or only
-#'   required? Columns with `colType` `"manual"` (set manually, e.g. in the
-#'   Shiny apps) are never added.
+#'   required? Columns with `colType` `"qc_input"` (set in the flags app) are
+#'   never added.
 #' @param mute_info  Should warning messages (missing req columns, 
 #'   dropped extra cols, NAs due to type conversions) be displayed
 #' @param ignore_colnames  Should the column names of df be ignored
@@ -278,7 +287,7 @@ align_to_schema <- function(df, tbl_props, schema = NULL, add_opt = FALSE,
   }
 
   req_cols <- if (add_opt) {
-    setdiff(target_cols, manual_cols(tbl_props))
+    setdiff(target_cols, qc_input_cols(tbl_props))
   } else {
     tbl_props$required
   }
@@ -298,12 +307,15 @@ align_to_schema <- function(df, tbl_props, schema = NULL, add_opt = FALSE,
   if (!mute_info) {
     msg <- c()
     
-    missing_cols <- setdiff(req_cols, source_cols)
+    # missing required columns are a warning, optional ones added on request
+    # (add_opt) only an information
+    missing_cols <- setdiff(tbl_props$required, source_cols)
+    added_opt_cols <- setdiff(req_cols, c(source_cols, tbl_props$required))
     extra_cols <- setdiff(source_cols, target_cols)
 
     if (length(missing_cols) > 0) {
-      msg <- c(msg, 
-        "i" = "Missing columns added:", 
+      msg <- c(msg,
+        "i" = "Missing required columns added:",
         " " = "{missing_cols}"
       )
     }
@@ -332,6 +344,9 @@ align_to_schema <- function(df, tbl_props, schema = NULL, add_opt = FALSE,
       cli::cli_warn(c("!" = "{.field {schema}} data frame aligned to schema with {length(msg)%/%2} warning{?s}", msg))
     } else {
       cli::cli_inform(c("i" = "{.field {schema}} data frame aligned with schema"))
+    }
+    if (length(added_opt_cols) > 0) {
+      cli::cli_inform(c("i" = "{.field {schema}} optional columns added:", " " = "{added_opt_cols}"))
     }
   }
 
@@ -415,19 +430,66 @@ check_structure <- function(df, warn_only = FALSE) {
   invisible(TRUE)
 }
 
+# report the missing optional columns that complete_*() would add (all except
+# "qc_input" columns); conditionally required columns are left to the schema
+# validation
 #' @noRd
 check_missing_opt <- function(df, tbl_props, schema = NULL) {
   missing_opt_cols <- setdiff(
     names(tbl_props$properties),
-    c(tbl_props$required, manual_cols(tbl_props), names(df))
+    c(tbl_props$required, tbl_props$cond_required, qc_input_cols(tbl_props), names(df))
   )
   if (length(missing_opt_cols)>0) {
-    cli::cli_warn(c(
-      "!" = "{.field {schema}} missing optional columns:",
+    cli::cli_inform(c(
+      "i" = "{.field {schema}} missing optional columns:",
       "i" = "{missing_opt_cols}"
     ))
   }
   invisible(TRUE)
+}
+
+#' Prepare a table for writing to file
+#'
+#' Converts empty strings to `NA`. With `drop_empty`, drops the optional
+#' columns set in the apps (`colType` `"meta_input"` or `"qc_input"`) that are
+#' entirely `NA`. A column that is required only under a schema condition
+#' (e.g. `embargoed_until` for restricted datasets) is kept if the schema
+#' validation reports it as missing without it.
+#' @param df Data frame, or `NULL`.
+#' @param schema Schema name, see `schema_rel_path()`.
+#' @param drop_empty Drop all-empty optional app columns?
+#' @returns `df` prepared for writing, `NULL` if `df` is `NULL`.
+#' @noRd
+prepare_write <- function(df, schema, drop_empty = TRUE) {
+  if (is.null(df)) return(NULL)
+  df <- df |>
+    dplyr::mutate(dplyr::across(dplyr::where(is.character), \(x) dplyr::na_if(x, "")))
+  if (!drop_empty) return(df)
+
+  schema_path <- system.file(schema_rel_path(schema), package = "rxs2tria")
+  schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
+  tbl_props <- get_tbl_props(resolve_schema(schema_obj, schema_path))
+
+  input_cols <- tbl_props$properties |>
+    purrr::keep(\(x) isTRUE(x$colType %in% c("meta_input", "qc_input"))) |>
+    names()
+  empty_cols <- names(df)[vapply(df, \(x) all(is.na(x)), logical(1))]
+  drop_cols <- setdiff(intersect(empty_cols, input_cols), tbl_props$required)
+
+  # keep conditionally required columns the validation asks for
+  cond_cols <- intersect(drop_cols, tbl_props$cond_required)
+  if (length(cond_cols) > 0) {
+    result <- schema_obj$validate(
+      jsonlite::toJSON(df[setdiff(names(df), drop_cols)], na = "null", POSIXt = "ISO8601"),
+      verbose = TRUE, greedy = TRUE
+    )
+    errors <- attr(result, "errors")
+    missing_props <- if (is.null(errors)) character(0) else
+      errors$params$missingProperty[errors$keyword == "required"]
+    drop_cols <- setdiff(drop_cols, missing_props)
+  }
+
+  df[setdiff(names(df), drop_cols)]
 }
 
 

@@ -140,7 +140,7 @@
         "enum": ["", "all", "ew", "lw"],
         "title": "Affected tissue",
         "description": "Can be used to indicate whether the data quality issue(s) affect the entire or only part of the ring",
-        "colType": "manual"
+        "colType": "qc_input"
       },
       "incomplete_ring": {
         "type": ["boolean", "null"],
@@ -158,151 +158,151 @@
         "type": ["boolean", "null"],
         "title": "Crossdating issue",
         "description": "Data quality flag: crossdating problem detected for this ring.",
-        "colType": "manual"
+        "colType": "qc_input"
       },
       "compression_wood": {
         "type": ["boolean", "null"],
         "title": "Compression wood",
         "description": "Data quality flag: compression wood present.",
-        "colType": "manual"
+        "colType": "qc_input"
       },
       "orientation": {
         "type": ["boolean", "null"],
         "title": "Orientation issue",
         "description": "Data quality flag: section orientation problem affecting measurements.",
-        "colType": "manual"
+        "colType": "qc_input"
       },
       "cracks": {
         "type": ["boolean", "null"],
         "title": "Cracks",
         "description": "Technical quality flag: cracks visible in the section.",
-        "colType": "manual"
+        "colType": "qc_input"
       },
       "out_of_focus": {
         "type": ["boolean", "null"],
         "title": "Out of focus",
         "description": "Technical quality flag: image is out of focus.",
-        "colType": "manual"
+        "colType": "qc_input"
       },
       "paraffin": {
         "type": ["boolean", "null"],
         "title": "Paraffin",
         "description": "Technical quality flag: paraffin residue visible.",
-        "colType": "manual"
+        "colType": "qc_input"
       },
       "compressed_cells": {
         "type": ["boolean", "null"],
         "title": "Compressed cells",
         "description": "Technical quality flag: cells are mechanically compressed.",
-        "colType": "manual"
+        "colType": "qc_input"
       },
       "overlapping_cells": {
         "type": ["boolean", "null"],
         "title": "Overlapping cells",
         "description": "Technical quality flag: cells overlap in the image.",
-        "colType": "manual"
+        "colType": "qc_input"
       },
       "broken_cells": {
         "type": ["boolean", "null"],
         "title": "Broken cells",
         "description": "Technical quality flag: broken or damaged cells present.",
-        "colType": "manual"
+        "colType": "qc_input"
       },
       "tang_incomplete": {
         "type": ["boolean", "null"],
         "title": "Tangentially incomplete",
         "description": "Technical quality flag: ring is cut off at the tangential image border.",
-        "colType": "manual"
+        "colType": "qc_input"
       },
       "irreg_thickness": {
         "type": ["boolean", "null"],
         "title": "Irregular/unequal thickness",
         "description": "Technical quality flag: irregular/unequal thickness.",
-        "colType": "manual"
+        "colType": "qc_input"
       },
       "air_bubbles": {
         "type": ["boolean", "null"],
         "title": "Air bubble(s)",
         "description": "Technical quality flag: air bubble(s).",
-        "colType": "manual"
+        "colType": "qc_input"
       },
       "tyloses": {
         "type": ["boolean", "null"],
         "title": "Tyloses",
         "description": "Other issue flag: tyloses present in vessels.",
-        "colType": "manual"
+        "colType": "qc_input"
       },
       "decay": {
         "type": ["boolean", "null"],
         "title": "Decay",
         "description": "Other issue flag: wood decay visible.",
-        "colType": "manual"
+        "colType": "qc_input"
       },
       "other_disqual": {
         "type": ["boolean", "null"],
         "title": "Other issue",
         "description": "Other issue flag: other data quality issue.",
-        "colType": "manual"
+        "colType": "qc_input"
       },
       "blue_ring": {
         "type": ["boolean", "null"],
         "title": "Blue ring",
         "description": "Discrete feature flag: blue ring (freeze damage during cell expansion).",
-        "colType": "manual"
+        "colType": "qc_input"
       },
       "frost_ring": {
         "type": ["boolean", "null"],
         "title": "Frost ring",
         "description": "Discrete feature flag: frost ring (freeze damage during cell wall formation).",
-        "colType": "manual"
+        "colType": "qc_input"
       },
       "light_ring": {
         "type": ["boolean", "null"],
         "title": "Light ring",
         "description": "Discrete feature flag: light ring (absence of latewood).",
-        "colType": "manual"
+        "colType": "qc_input"
       },
       "iadf": {
         "type": ["boolean", "null"],
         "title": "Intra-annual density fluctuation",
         "description": "Discrete feature flag: intra-annual density fluctuation.",
-        "colType": "manual"
+        "colType": "qc_input"
       },
       "traum_resin_ducts": {
         "type": ["boolean", "null"],
         "title": "Traumatic resin ducts",
         "description": "Discrete feature flag: presence of traumatic resin ducts.",
-        "colType": "manual"
+        "colType": "qc_input"
       },
       "trabeculae": {
         "type": ["boolean", "null"],
         "title": "Trabeculae",
         "description": "Discrete feature flag: presence of trabeculae.",
-        "colType": "manual"
+        "colType": "qc_input"
       },
       "blue_cells": {
         "type": ["boolean", "null"],
         "title": "Blue cells",
         "description": "Discrete feature flag: blue cells.",
-        "colType": "manual"
+        "colType": "qc_input"
       },
       "red_cells": {
         "type": ["boolean", "null"],
         "title": "Red cells",
         "description": "Discrete feature flag: red cells.",
-        "colType": "manual"
+        "colType": "qc_input"
       },
       "other_discrete": {
         "type": ["boolean", "null"],
         "title": "Other discrete feature",
         "description": "Discrete feature flag: other discrete features.",
-        "colType": "manual"
+        "colType": "qc_input"
       },
       "comment": {
         "type": ["string", "null"],
         "title": "Comment",
         "description": "Additional comments (not imported to TRIA DB)",
-        "colType": "manual"
+        "colType": "qc_input"
       }
     },
     "required": ["image_label", "year"],

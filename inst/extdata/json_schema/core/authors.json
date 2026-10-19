@@ -12,76 +12,89 @@
         "type": "integer",
         "minimum": 1,
         "title": "Author Nr",
-        "description": "Order of authorship from first (1) to last (n)" 
+        "description": "Order of authorship from first (1) to last (n)",
+        "colType": "meta_input"
       },
       "last_name": {
         "type": "string",
         "minLength": 1,
         "title": "Last name",
-        "description": "Family name(s) of the author"
+        "description": "Family name(s) of the author",
+        "colType": "meta_input"
       },
       "first_name": {
         "type": "string",
         "minLength": 1,
         "title": "First name",
-        "description": "Given name(s) of the author"
+        "description": "Given name(s) of the author",
+        "colType": "meta_input"
       },
       "email": {
         "type": "string",
         "format": "email",
         "title": "Email",
-        "description": "Email address"
+        "description": "Email address",
+        "colType": "meta_input"
       },
       "orcid": {
         "type": ["string", "null"],
         "pattern": "^(|[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X])$",
         "title": "ORCID",
-        "description": "ORCID, e.g. 0000-0002-7070-3292"
+        "description": "ORCID, e.g. 0000-0002-7070-3292",
+        "colType": "meta_input"
       },
       "org_name": {
         "type": "string",
         "minLength": 1,
         "title": "Research institution",
-        "description": "Primary affiliation"
+        "description": "Primary affiliation",
+        "colType": "meta_input"
       },
       "rorid": {
         "type": ["string", "null"],
         "pattern": "^(|[0-9a-zA-Z]{9})$",
         "title": "RORID",
-        "description": "RORID, e.g. 04bs5yc70"
+        "description": "RORID, e.g. 04bs5yc70",
+        "colType": "meta_input"
       },
       "aff_department": {
         "type": ["string", "null"],
         "title": "Department",
-        "description": "Department at primary affiliation"
+        "description": "Department at primary affiliation",
+        "colType": "meta_input"
       },
       "aff_street": {
         "type": ["string", "null"],
         "title": "Street",
-        "description": ""
+        "description": "",
+        "colType": "meta_input"
       },
       "aff_plz": {
         "type": ["string", "null"],
         "title": "Postal code",
-        "description": ""
+        "description": "",
+        "colType": "meta_input"
       },
       "aff_city": {
         "type": ["string", "null"],
         "title": "City",
-        "description": ""
+        "description": "",
+        "colType": "meta_input"
       },
       "org_country": {
         "type": "string",
         "pattern": "^[A-Z]{2}$",
         "title": "Country",
-        "description": "Country code and name (ISO 3166-1 alpha-2)"
+        "description": "Country code and name (ISO 3166-1 alpha-2)",
+        "colType": "meta_input"
       },
       "contact_person": {
         "type": ["boolean", "null", "string"],
         "maxLength": 0,
         "title": "Contact person",
         "description": "Select one author as contact person",
-        "$comment": "missing, null, or empty string values are considered as false"
+        "$comment": "missing, null, or empty string values are considered as false",
+        "colType": "meta_input"
       }
     },
     "required": ["author_nr", "last_name", "first_name", "email", "org_name", "org_country", "contact_person"],

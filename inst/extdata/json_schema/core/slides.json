@@ -13,21 +13,24 @@
         "minLength": 1,
         "readOnly": true,
         "title": "Slide label",
-        "description": "Unique slide identifier"
+        "description": "Unique slide identifier",
+        "colType": "key"
       },
       "woodpiece_label": {
         "type": "string",
         "minLength": 1,
         "readOnly": true,
         "title": "Woodpiece label",
-        "description": "Woodpiece identifier"
+        "description": "Woodpiece identifier",
+        "colType": "key"
       },
       "n_images": {
         "type": "integer",
         "minimum": 1,
         "readOnly": true,
         "title": "Nr of images",
-        "description": "Nr. of images taken from each slide"
+        "description": "Nr. of images taken from each slide",
+        "colType": "derived"
       },
       "sect_thickness": {
         "type": ["number", "null"],
@@ -35,56 +38,65 @@
         "maximum": 100,
         "unit": "µm",
         "title": "Section thickness",
-        "description": "in µm"
+        "description": "in µm",
+        "colType": "meta_input"
       },
       "cutting_plane": {
         "type": ["string", "null"],
         "enum": ["", "cross-section", "tangential section", "radial section"],
         "title": "Cutting plane",
-        "description": ""
+        "description": "",
+        "colType": "meta_input"
       },
       "slide_prep": {
         "type": ["string", "null"],
         "enum": ["", "micro-section", "cut surface", "polished surface", "double saw cut"],
         "title": "Preparation",
-        "description": "Slide preparation method"
+        "description": "Slide preparation method",
+        "colType": "meta_input"
       },
       "slide_staining": {
         "type": ["string", "null"],
         "enum": ["", "Sarafin Astrablue", "FASGA", "Cresyl violet", "Fast green", "other", "none"],
         "title": "Staining method",
-        "description": ""
+        "description": "",
+        "colType": "meta_input"
       },
       "slide_mounting": {
         "type": ["string", "null"],
         "enum": ["", "Euparal", "Canada Balsam", "Eukitt", "other", "none"],
         "title": "Mounting method",
-        "description": "Description of the mounting method used"
+        "description": "Description of the mounting method used",
+        "colType": "meta_input"
       },
       "img_cap_system": {
         "type": ["string", "null"],
         "enum": ["", "confocal microscope", "light microscope", "slide scanner", "flatbed scanner"],
         "title": "Image capture",
-        "description": "The image capturing system used to digitize the slide"
+        "description": "The image capturing system used to digitize the slide",
+        "colType": "meta_input"
       },
       "data_structure": {
         "type": ["string", "null"],
         "enum": ["", "tracheid-full", "tracheid-row", "vessels", "parenchyma"],
         "title": "Data structure",
-        "description": ""
+        "description": "",
+        "colType": "meta_input"
       },
       "pith_offset": {
         "type": ["integer", "null"],
         "minimum": 0,
         "maximum": 5000,
         "title": "Pith offset",
-        "description": "Pith offset (in years)"
+        "description": "Pith offset (in years)",
+        "colType": "meta_input"
       },
       "slide_archived": {
         "type": ["boolean", "null", "string"], 
         "maxLength": 0, 
         "title": "Slide archived",
-        "description": "Is the slide archived"
+        "description": "Is the slide archived",
+        "colType": "meta_input"
       }
     },
     "required": ["slide_label", "woodpiece_label"],

@@ -370,13 +370,13 @@ check_QWAmetadata <- function(x) {
 
 #' Complete a QWAmetadata object with all optional fields
 #'
-#' Adds missing optional columns to `$images` and to any already-present
-#' optional component tables. For absent hierarchical tables (`$sites`,
-#' `$trees`, `$woodpieces`, `$slides`), pre-fills known values from the
-#' hierarchy in `$images` (the same logic used by the metadata Shiny app).
-#' For absent flat tables (`$dataset`, `$authors`, `$funding`, `$related`),
-#' inserts a 0-row skeleton with all schema columns so the user can see the
-#' expected fields.
+#' Adds missing optional columns to `$images` (see [complete_QWAimages()]) and
+#' to any already-present optional component tables. For absent hierarchical
+#' tables (`$sites`, `$trees`, `$woodpieces`, `$slides`), pre-fills known
+#' values from the hierarchy in `$images` (the same logic used by the metadata
+#' Shiny app). For absent flat tables, inserts a skeleton with all schema
+#' columns so the user can see the expected fields: one empty row for
+#' `$dataset`, `$authors` and `$funding`, no rows for `$related`.
 #'
 #' Existing tables are never overwritten; only missing optional columns are
 #' added to them.
@@ -412,20 +412,39 @@ complete_QWAmetadata <- function(x) {
 
 #' Write a QWAmetadata object to a JSON file
 #'
+#' Empty values are written as `null`.
+#'
 #' @param x A [QWAmetadata] object.
 #' @param file Path to the output file.
 #' @param compress If `TRUE`, write compressed `.gz` file. (default `FALSE`).
 #' @param overwrite Allow to overwrite existing files? (default `TRUE`).
+#' @param drop_empty If `TRUE` (default), optional fields filled in the Shiny
+#'   apps (`colType` `"meta_input"` or `"qc_input"`) that are empty in all rows
+#'   of a component are not written. Fields required under a condition (e.g.
+#'   `embargoed_until` for restricted datasets) are kept where it applies.
 #' @returns The output file path, invisibly.
 #' @seealso [read_QWAmetadata()]
 #' @export
-write_QWAmetadata <- function(x, file, compress = FALSE, overwrite = TRUE) {
+write_QWAmetadata <- function(x, file, compress = FALSE, overwrite = TRUE,
+                              drop_empty = TRUE) {
   checkmate::assert_class(x, "QWAmetadata")
+  checkmate::assert_flag(drop_empty)
   # if compress, enforce .gz extension
   if (compress && fs::path_ext(file) != "gz")
     file <- paste0(file, ".gz")
 
   checkmate::assert_path_for_output(file, overwrite = overwrite)
+
+  # component = schema name
+  schemas <- c(dataset = "dataset", authors = "authors", funding = "funding",
+               related = "related", resources = "supplementary", sites = "sites",
+               trees = "trees", woodpieces = "woodpieces", slides = "slides",
+               images = attr(x$images, "roxas_version"))
+  x <- unclass(x)
+  for (comp in names(schemas)) {
+    x[comp] <- list(prepare_write(x[[comp]], schemas[[comp]], drop_empty))
+  }
+
   if (compress){
     write(
       jsonlite::toJSON(x, na = "null", POSIXt = "ISO8601", digits = NA),

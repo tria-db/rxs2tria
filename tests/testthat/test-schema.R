@@ -84,6 +84,26 @@ test_that("dataset: license may only be empty for restricted submissions", {
     expect_false(validate_rows(list(c(ds_tria[names(ds_tria) != "ds_license"], list(ds_license = empty))),
                                "dataset", FALSE))
   }
+  # absent field
+  expect_false(validate_rows(list(ds_sub[names(ds_sub) != "ds_license"]), "dataset", TRUE))
+  expect_true(validate_rows(list(restricted[names(restricted) != "ds_license"]), "dataset", TRUE))
+  expect_false(validate_rows(list(ds_tria[names(ds_tria) != "ds_license"]), "dataset", FALSE))
+})
+
+test_that("dataset: embargo date may be absent for public submissions only", {
+  restricted <- utils::modifyList(ds_sub, list(ds_access = "restricted", embargoed_until = "2027-01-01"))
+  expect_true(validate_rows(list(ds_sub[names(ds_sub) != "embargoed_until"]), "dataset", TRUE))
+  expect_false(validate_rows(list(restricted[names(restricted) != "embargoed_until"]), "dataset", TRUE))
+})
+
+test_that("conditionally required fields are not extracted as required", {
+  path <- system.file(schema_rel_path("dataset", TRUE), package = "rxs2tria")
+  props <- get_tbl_props(resolve_schema(jsonvalidate::json_schema$new(path, engine = "ajv"), path))
+  expect_setequal(props$required, c("ds_name", "ds_title", "description", "ds_access"))
+
+  path <- system.file(schema_rel_path("dataset", FALSE), package = "rxs2tria")
+  props <- get_tbl_props(resolve_schema(jsonvalidate::json_schema$new(path, engine = "ajv"), path))
+  expect_true("ds_license" %in% props$required)
 })
 
 test_that("dataset: restricted access requires an embargo date", {

@@ -7,8 +7,7 @@
             "description": "This dataset contains 3 trees of Pinus sylvestris collected in Pogorelsky and Stolby (Russia), covering the period from 1955 to 2018. The selected trees used in this collection are a selected subset from the original collected ad archived wood.",
             "ds_access": "public",
             "ds_license": "CC BY 4.0",
-            "embargoed_until": "",
-            "acknowledgements": ""
+            "acknowledgements": null
         }
     ],
     "authors":
@@ -21,9 +20,9 @@
             "orcid": "0000-0002-3361-5349",
             "org_name": "Siberian Federal University",
             "rorid": "05fw97k56",
-            "aff_department": "",
-            "aff_street": "",
-            "aff_plz": "",
+            "aff_department": null,
+            "aff_street": null,
+            "aff_plz": null,
             "aff_city": "Krasnoyarsk",
             "org_country": "RU",
             "contact_person": false
@@ -36,9 +35,9 @@
             "orcid": "0000-0002-7070-3292",
             "org_name": "Swiss Federal Institute for Forest, Snow and Landscape Research",
             "rorid": "04bs5yc70",
-            "aff_department": "",
-            "aff_street": "",
-            "aff_plz": "",
+            "aff_department": null,
+            "aff_street": null,
+            "aff_plz": null,
             "aff_city": "Birmensdorf",
             "org_country": "CH",
             "contact_person": true
@@ -51,9 +50,9 @@
             "orcid": "0000-0002-0490-7510",
             "org_name": "Swiss Federal Institute for Forest, Snow and Landscape Research",
             "rorid": "04bs5yc70",
-            "aff_department": "",
-            "aff_street": "",
-            "aff_plz": "",
+            "aff_department": null,
+            "aff_street": null,
+            "aff_plz": null,
             "aff_city": "Birmensdorf",
             "org_country": "CH",
             "contact_person": false
@@ -65,7 +64,7 @@
             "org_name": "Swiss Federal Institute for Forest, Snow and Landscape Research",
             "rorid": "04bs5yc70",
             "org_country": "CH",
-            "grant_name": "",
+            "grant_name": null,
             "grant_nr": "unknown"
         }
     ],
@@ -89,7 +88,7 @@
             "elevation": 164,
             "stand_composition": "mono gymnosperm",
             "stand_structure": "regular",
-            "stand_main_species_code": "",
+            "stand_main_species_code": null,
             "stand_management": "extensive"
         },
         {
@@ -101,9 +100,9 @@
             "longitude": 92.72,
             "country_code": "RU",
             "elevation": 450,
-            "topography": "",
-            "soil_depth": "",
-            "stand_composition": ""
+            "topography": null,
+            "soil_depth": null,
+            "stand_composition": null
         }
     ],
     "trees":

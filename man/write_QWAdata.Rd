@@ -11,7 +11,8 @@ write_QWAdata(
   file_rings = NULL,
   dataset_name = NULL,
   compress = TRUE,
-  overwrite = FALSE
+  overwrite = FALSE,
+  drop_empty = TRUE
 )
 }
 \arguments{
@@ -32,12 +33,17 @@ CSV files. Both must be provided together. Mutually exclusive with \code{dir}.}
 \item{compress}{If \code{TRUE} (default), write \code{.csv.gz} files.}
 
 \item{overwrite}{Allow to overwrite existing files? (default \code{FALSE}).}
+
+\item{drop_empty}{If \code{TRUE} (default), optional columns set in the flags app
+(\code{colType} \code{"qc_input"}, e.g. ring quality flags and comments) that are
+empty in all rows are not written.}
 }
 \value{
 A named list of written file paths, invisibly.
 }
 \description{
-Cells and rings are written as (compressed) CSV files.
+Cells and rings are written as (compressed) CSV files. Empty values are
+written as empty fields.
 }
 \seealso{
 \code{\link[=read_QWAdata]{read_QWAdata()}}, \code{\link[=write_QWAprofile]{write_QWAprofile()}}

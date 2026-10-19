@@ -226,8 +226,9 @@ check_QWAimages <- function(x) {
 
 #' Complete a QWAimages object
 #'
-#' Add any missing columns to a [QWAimages] object, including optional columns.
-#' New columns are intitialized as `NA`. 
+#' Add any missing columns to a [QWAimages] object, including optional columns,
+#' except the quality control columns set in the flags app (`colType`
+#' `"qc_input"`, e.g. `comment_handled`). New columns are initialised as `NA`.
 #'
 #' @param x A [QWAimages] object.
 #' @returns A [QWAimages] object extended with all possible columns.
@@ -258,21 +259,27 @@ complete_QWAimages <- function(x) {
 #'   Note that if you add an compression-related extension to the file name, 
 #'   vroom will automatically compress the output regardless of this parameter.
 #' @param overwrite Allow to overwrite existing files? (default `TRUE`).
+#' @param drop_empty If `TRUE` (default), optional columns set in the Shiny
+#'   apps (`colType` `"meta_input"` or `"qc_input"`, e.g. `img_comment`) that
+#'   are empty in all rows are not written.
 #' @returns The output file path, invisibly.
-#' @note The `roxas_version` attribute is not written to the CSV file. It is
-#'   re-derived from the `$software` column when the file is read back with
-#'   [read_QWAimages()].
+#' @note Empty values are written as empty fields. The `roxas_version`
+#'   attribute is not written to the CSV file. It is re-derived from the
+#'   `$software` column when the file is read back with [read_QWAimages()].
 #' @seealso [read_QWAimages()], [QWAimages]
 #' @export
-write_QWAimages <- function(x, file, compress = FALSE, overwrite = TRUE) {
+write_QWAimages <- function(x, file, compress = FALSE, overwrite = TRUE,
+                            drop_empty = TRUE) {
   checkmate::assert_class(x, "QWAimages")
+  checkmate::assert_flag(drop_empty)
 
   # if compress, enforce .gz extension
   if (compress && fs::path_ext(file) != "gz")
     file <- paste0(file, ".gz")
   
   checkmate::assert_path_for_output(file, overwrite = overwrite)
-  vroom::vroom_write(x, file, delim = ",")
+  x_out <- prepare_write(x, attr(x, "roxas_version"), drop_empty)
+  vroom::vroom_write(x_out, file, delim = ",", na = "")
   cli::cli_inform(c("v" = "QWAimages written to {.file {file}}"))
   invisible(file)
 }
