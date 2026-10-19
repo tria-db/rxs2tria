@@ -18,6 +18,7 @@ Runs a series of checks on each component of a \link{QWAmetadata} object and
 warns about any issues found. For \verb{$images}, delegates to \code{\link[=check_QWAimages]{check_QWAimages()}}.
 For all other components, checks compliance with the corresponding JSON schema
 and warns about missing optional columns. Absent components are skipped.
+The schemas are those of the object's stage (see \code{\link[=is_submission]{is_submission()}}).
 }
 \seealso{
 \code{\link[=QWAmetadata]{QWAmetadata()}}, \code{\link[=check_QWAimages]{check_QWAimages()}}

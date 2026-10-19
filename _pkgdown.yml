@@ -43,6 +43,7 @@ reference:
   - check_QWAmetadata
   - combine_QWAmetadata
   - complete_QWAmetadata
+  - is_submission
   - print.QWAmetadata
   - QWAmetadata
   - read_QWAmetadata

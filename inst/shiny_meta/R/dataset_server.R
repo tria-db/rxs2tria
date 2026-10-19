@@ -689,8 +689,7 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
           dataset = ds_data_out,
           authors = author_data_export,
           funding = funding_data_export,
-          related = relres_data_out,
-          resources = shiny::reactive(dataset_tbls_in()$resources)
+          related = relres_data_out
         ),
         val_check = validation_checks
       )

@@ -34,6 +34,8 @@ The image columns set in the apps (\code{colType} \code{"meta_input"}, e.g. \cod
 \code{comment_handled} from the flags app) are filled from
 \code{x$images} where they are missing or \code{NA} in \code{images}, e.g. after rebuilding
 it with \code{\link[=build_QWAimages]{build_QWAimages()}}.
+
+Submission files only; TRIA dataset files are not edited.
 }
 \seealso{
 \code{\link[=update_QWAimages]{update_QWAimages()}}, \code{\link[=update_QWAdata]{update_QWAdata()}}, \code{\link[=check_QWAmetadata]{check_QWAmetadata()}}

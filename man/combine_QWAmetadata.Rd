@@ -26,9 +26,11 @@ the authors of \code{x} first; the contact person of \code{x} is kept,
 \item \verb{$sites}, \verb{$trees}, \verb{$woodpieces} and \verb{$slides} are combined and
 deduplicated by their ID column (with a warning for shared IDs with
 different values), and their counts are updated with
-\code{\link[=update_QWAmetadata]{update_QWAmetadata()}},
-\item \verb{$resources} is \code{NULL} (populated by TRIA at publish time).
+\code{\link[=update_QWAmetadata]{update_QWAmetadata()}}.
 }
+}
+\details{
+Submission files only; TRIA dataset files are not edited.
 }
 \seealso{
 \code{\link[=combine_QWAimages]{combine_QWAimages()}}, \code{\link[=combine_QWAdata]{combine_QWAdata()}}, \code{\link[=update_QWAmetadata]{update_QWAmetadata()}}

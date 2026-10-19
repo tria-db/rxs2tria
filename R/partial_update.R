@@ -210,6 +210,8 @@ update_QWAdata <- function(x, meta, imgs_to_reread = NULL,
 #' `x$images` where they are missing or `NA` in `images`, e.g. after rebuilding
 #' it with [build_QWAimages()].
 #'
+#' Submission files only; TRIA dataset files are not edited.
+#'
 #' @param x a [QWAmetadata] object
 #' @param images a [QWAimages] object; the complete set of images of the
 #'   updated dataset
@@ -218,6 +220,7 @@ update_QWAdata <- function(x, meta, imgs_to_reread = NULL,
 #' @export
 update_QWAmetadata <- function(x, images) {
   checkmate::assert_class(x, "QWAmetadata")
+  assert_submission(x, "update_QWAmetadata")
   checkmate::assert_class(images, "QWAimages")
   rv <- attr(images, "roxas_version")
 

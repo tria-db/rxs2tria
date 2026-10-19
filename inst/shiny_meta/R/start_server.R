@@ -109,7 +109,7 @@ start_server <- function(id, main_session) {
         # store in reactive containers
         input_meta$source <- source
         input_meta$images <- validated$images
-        input_meta$dataset_tbls <- validated[c("dataset","authors","funding","related","resources")]
+        input_meta$dataset_tbls <- validated[c("dataset","authors","funding","related")]
         input_meta$site_tbls <- validated[c("sites","trees","woodpieces","slides")]
 
         shiny::removeModal()

@@ -190,16 +190,19 @@ summary.QWAimages <- function(object, ...) {
 #' columns, and invalid data structure.
 #'
 #' @param x A [QWAimages] object.
+#' @param submission Check against the schema of submission files (`TRUE`)
+#'   or TRIA dataset files (`FALSE`)? Set by [check_QWAmetadata()].
 #' @returns `TRUE`, invisibly. Warnings are issued for any problems found;
 #'   an error is thrown if the object structure is invalid.
 #' @seealso [QWAimages()], [check_QWAmetadata()]
 #' @export
-check_QWAimages <- function(x) {
+check_QWAimages <- function(x, submission = TRUE) {
   checkmate::assert_class(x, c("QWAimages", "data.frame"))
+  checkmate::assert_flag(submission)
   roxas_version <- attr(x, "roxas_version")
   checkmate::assert_choice(roxas_version, c("roxas","roxas_ai"))
 
-  schema_path <- system.file(schema_rel_path(roxas_version), package = "rxs2tria")
+  schema_path <- system.file(schema_rel_path(roxas_version, submission), package = "rxs2tria")
   schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
   tbl_schema <- resolve_schema(schema_obj, schema_path)
   tbl_props <- get_tbl_props(tbl_schema)

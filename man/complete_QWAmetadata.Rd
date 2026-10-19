@@ -24,7 +24,7 @@ columns so the user can see the expected fields: one empty row for
 }
 \details{
 Existing tables are never overwritten; only missing optional columns are
-added to them.
+added to them. Submission files only; TRIA dataset files are not edited.
 }
 \seealso{
 \code{\link[=complete_QWAimages]{complete_QWAimages()}}, \code{\link[=QWAmetadata]{QWAmetadata()}}

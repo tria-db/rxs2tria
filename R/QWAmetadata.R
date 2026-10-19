@@ -1,13 +1,13 @@
 # Helpers ----
 # align QWAmetadata components with respective schema
 #' @noRd
-align_component <- function(data, schema) {
+align_component <- function(data, schema, submission = TRUE) {
   if (is.null(data) || length(data) == 0) return(NULL)
-  
+
   checkmate::assert_data_frame(data, .var.name = schema)
   data <- tibble::as_tibble(data, .name_repair = janitor::make_clean_names)
-  
-  schema_path <- system.file(schema_rel_path(schema), package = "rxs2tria")
+
+  schema_path <- system.file(schema_rel_path(schema, submission), package = "rxs2tria")
   schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
   tbl_schema <- resolve_schema(schema_obj, schema_path)
   tbl_props <- get_tbl_props(tbl_schema)
@@ -19,18 +19,26 @@ align_component <- function(data, schema) {
 
 # check QWAmetadata components against respective schema
 #' @noRd
-check_component <- function(df, schema) {
+check_component <- function(df, schema, submission = TRUE) {
     if (is.null(df)) {
       cli::cli_inform(c("i" = "{.field {schema}}: not provided, skipping."))
       return(invisible(NULL))
     }
-    schema_path <- system.file(schema_rel_path(schema), package = "rxs2tria")
+    schema_path <- system.file(schema_rel_path(schema, submission), package = "rxs2tria")
     schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
     tbl_schema <- resolve_schema(schema_obj, schema_path)
     tbl_props <- get_tbl_props(tbl_schema)
     check_schema(df, schema_obj, schema, warn_only = TRUE, greedy = FALSE)
     check_missing_opt(df, tbl_props, schema)
   }
+
+# abort for TRIA dataset files, which are not edited
+#' @noRd
+assert_submission <- function(x, fn) {
+  if (!is_submission(x))
+    cli::cli_abort(c("x" = "TRIA dataset files are not edited: {.fn {fn}} applies to submission files only."))
+  invisible(TRUE)
+}
 
 # hierarchical tables: ID column and counts derived from the images
 #' @noRd
@@ -138,37 +146,40 @@ new_QWAmetadata <- function(dataset = NULL,
                             authors = NULL,
                             funding = NULL,
                             related = NULL,
-                            resources = NULL,
+                            datafiles = NULL,
                             sites = NULL,
                             trees = NULL,
                             woodpieces = NULL,
                             slides = NULL,
-                            images = new_QWAimages(data.frame(), "roxas")) {
+                            images = new_QWAimages(data.frame(), "roxas"),
+                            submission = TRUE) {
   checkmate::assert_data_frame(dataset, null.ok = TRUE)
   checkmate::assert_data_frame(authors, null.ok = TRUE)
   checkmate::assert_data_frame(funding, null.ok = TRUE)
   checkmate::assert_data_frame(related, null.ok = TRUE)
-  checkmate::assert_data_frame(resources, null.ok = TRUE)
+  checkmate::assert_data_frame(datafiles, null.ok = TRUE)
   checkmate::assert_data_frame(sites, null.ok = TRUE)
   checkmate::assert_data_frame(trees, null.ok = TRUE)
   checkmate::assert_data_frame(woodpieces, null.ok = TRUE)
   checkmate::assert_data_frame(slides, null.ok = TRUE)
   checkmate::assert_class(images, "QWAimages")
- 
+  checkmate::assert_flag(submission)
+
   structure(
     list(
       dataset = dataset,
       authors = authors,
       funding = funding,
       related = related,
-      resources = resources,
+      datafiles = datafiles,
       sites = sites,
       trees = trees,
       woodpieces = woodpieces,
       slides = slides,
       images = images
     ),
-    class = c("QWAmetadata", "list")
+    class = c("QWAmetadata", "list"),
+    submission = submission
   )
 }
 
@@ -182,8 +193,9 @@ new_QWAmetadata <- function(dataset = NULL,
 #' - **`$dataset`**: dataset-level information (name, description, license).
 #' - **`$authors`**: author information.
 #' - **`$funding`**: funding sources and grant numbers.
-#' - **`$related`**: related objects (publications, datasets, etc.).
-#' - **`$resources`**: included resources (data files)
+#' - **`$related`**: related objects (publications, datasets, etc.). Submission
+#'   files only.
+#' - **`$datafiles`**: the cells and rings files. TRIA dataset files only.
 #' - **`$sites`**: site-level metadata (location, climate, etc.).
 #' - **`$trees`**: tree-level metadata (species, DBH, age, etc.).
 #' - **`$woodpieces`**: woodpiece-level metadata (disc, core, etc.).
@@ -194,7 +206,13 @@ new_QWAmetadata <- function(dataset = NULL,
 #'
 #' All components except `images` are optional and can be filled in later to
 #' prepare a complete dataset submission to the TRIA database.
-#' 
+#'
+#' The `submission` attribute ([is_submission()]) tells submission files from
+#' TRIA dataset files. It is inferred from the components: TRIA dataset files
+#' have a `$datafiles` component or a `ds_label` in `$dataset`. Components are
+#' aligned with the schema of their stage; `$related` is dropped from TRIA
+#' dataset files with a warning.
+#'
 #' [as_QWAmetadata()] safely constructs a [QWAmetadata] object from a named list. 
 #' Component names are matched against the [QWAmetadata()] constructor parameters;
 #' unknown names are dropped with a warning.
@@ -207,11 +225,11 @@ new_QWAmetadata <- function(dataset = NULL,
 #'   metadata Shiny app.
 #' @param related Data frame with related publications or datasets. Typically 
 #'   provided via metadata Shiny app.
-#' @param resources Data frame describing the submitted `QWAdata` cells/rings
-#'   files. Populated by TRIA at publish time rather than by this package --
-#'   leave `NULL`. (The supplementary-file manifest built by
-#'   [compile_supplementary()] is a separate, standalone artefact -- see
-#'   `vignette("supplementary")` -- not a component of `QWAmetadata`.)
+#' @param datafiles Data frame listing the cells and rings files of a TRIA
+#'   dataset, with size, checksum and S3 key. Written by TRIA at publish time;
+#'   leave `NULL` for submission files. (The supplementary CSV built by
+#'   [compile_supplementary()] is a separate file, see
+#'   `vignette("supplementary")`.)
 #' @param sites Data frame with site-level metadata. Typically provided via
 #'   metadata Shiny app.
 #' @param trees Data frame with tree-level metadata. Typically provided via
@@ -231,7 +249,7 @@ QWAmetadata <- function(dataset = NULL,
                         authors = NULL,
                         funding = NULL,
                         related = NULL,
-                        resources = NULL,
+                        datafiles = NULL,
                         sites = NULL,
                         trees = NULL,
                         woodpieces = NULL,
@@ -246,18 +264,36 @@ QWAmetadata <- function(dataset = NULL,
   # images: validation via QWAimages
   images <- QWAimages(images)
 
-  dataset <- align_component(dataset, "dataset")
-  authors <- align_component(authors, "authors")
-  funding <- align_component(funding, "funding")
-  related <- align_component(related, "related")
-  resources <- align_component(resources, "supplementary")
-  sites <- align_component(sites, "sites")
-  trees <- align_component(trees, "trees")
-  woodpieces <- align_component(woodpieces, "woodpieces")
-  slides <- align_component(slides, "slides")
+  # stage: TRIA dataset files have $datafiles or a ds_label
+  submission <- length(datafiles) == 0 && !("ds_label" %in% names(dataset))
+  if (!submission && length(related) > 0) {
+    cli::cli_warn(c("!" = "{.field related} is not part of TRIA dataset files, dropped."))
+    related <- NULL
+  }
 
-  new_QWAmetadata(dataset, authors, funding, related, resources, sites, trees,
-                  woodpieces, slides, images)
+  dataset <- align_component(dataset, "dataset", submission)
+  authors <- align_component(authors, "authors", submission)
+  funding <- align_component(funding, "funding", submission)
+  related <- align_component(related, "related", submission)
+  datafiles <- align_component(datafiles, "datafiles", submission)
+  sites <- align_component(sites, "sites", submission)
+  trees <- align_component(trees, "trees", submission)
+  woodpieces <- align_component(woodpieces, "woodpieces", submission)
+  slides <- align_component(slides, "slides", submission)
+
+  new_QWAmetadata(dataset, authors, funding, related, datafiles, sites, trees,
+                  woodpieces, slides, images, submission)
+}
+
+#' Is a QWAmetadata object from submission files?
+#'
+#' @param x A [QWAmetadata] object.
+#' @returns `TRUE` for submission files, `FALSE` for TRIA dataset files (see
+#'   [QWAmetadata()]).
+#' @export
+is_submission <- function(x) {
+  checkmate::assert_class(x, "QWAmetadata")
+  attr(x, "submission")
 }
 
 # Methods (general and specific) ------
@@ -276,6 +312,15 @@ QWAmetadata <- function(dataset = NULL,
 #' @export
 print.QWAmetadata <- function(x, ...) {
   cli::cli_h3("{.cls QWAmetadata}")
+
+  sub <- is_submission(x)
+  if (sub) {
+    cli::cli_text("Submission files")
+  } else {
+    ds <- x$dataset
+    cli::cli_text("TRIA dataset files: {.val {ds$ds_label}} (version {ds$dataset_version})")
+    cli::cli_text("Citation: {ds$citation}")
+  }
 
   # images (cf. summary.QWAimages)
   img <- x$images
@@ -298,8 +343,8 @@ print.QWAmetadata <- function(x, ...) {
   ))
 
   # optional components
-  optional <- c("dataset", "authors", "funding", "related", "resources",
-                "sites", "trees", "woodpieces", "slides")  
+  optional <- c("dataset", "authors", "funding", if (sub) "related" else "datafiles",
+                "sites", "trees", "woodpieces", "slides")
   cli::cli_text("{.strong Other components}")
   for (comp in optional) {
     if (!is.null(x[[comp]])) {
@@ -337,6 +382,7 @@ as_QWAmetadata <- function(x) {
 #' warns about any issues found. For `$images`, delegates to [check_QWAimages()].
 #' For all other components, checks compliance with the corresponding JSON schema
 #' and warns about missing optional columns. Absent components are skipped.
+#' The schemas are those of the object's stage (see [is_submission()]).
 #'
 #' @param x A [QWAmetadata] object.
 #' @returns `TRUE`, invisibly. Warnings are issued for any problems found;
@@ -346,12 +392,12 @@ as_QWAmetadata <- function(x) {
 check_QWAmetadata <- function(x) {
   checkmate::assert_class(x, "QWAmetadata")
 
-  components <- c("dataset", "authors", "funding", "related",
+  sub <- is_submission(x)
+  components <- c("dataset", "authors", "funding", if (sub) "related" else "datafiles",
                   "sites", "trees", "woodpieces", "slides")
   for (comp in components) { # check against schema, missing optional cols
-    check_component(x[[comp]], comp)
+    check_component(x[[comp]], comp, sub)
   }
-  check_component(x$resources, "supplementary")
 
   # hierarchy consistency checks against x$images
   for (tbl in names(hierarchy_tbls)) {
@@ -360,9 +406,8 @@ check_QWAmetadata <- function(x) {
   }
 
   # TODO: add advanced checks: countries, species, contact person, embargo date, license, ...
-  # check_resources? -> chema check within, so remove from list above
 
-  check_QWAimages(x$images)
+  check_QWAimages(x$images, submission = sub)
 
   invisible(TRUE)
 }
@@ -379,7 +424,7 @@ check_QWAmetadata <- function(x) {
 #' `$dataset`, `$authors` and `$funding`, no rows for `$related`.
 #'
 #' Existing tables are never overwritten; only missing optional columns are
-#' added to them.
+#' added to them. Submission files only; TRIA dataset files are not edited.
 #'
 #' @param x A [QWAmetadata] object.
 #' @returns A [QWAmetadata] object with all optional columns and component
@@ -388,6 +433,7 @@ check_QWAmetadata <- function(x) {
 #' @export
 complete_QWAmetadata <- function(x) {
   checkmate::assert_class(x, "QWAmetadata")
+  assert_submission(x, "complete_QWAmetadata")
 
   images <- complete_QWAimages(x$images)
 
@@ -405,14 +451,15 @@ complete_QWAmetadata <- function(x) {
     complete_tbl(x[[tbl]], tbl, x$images, h$summary_fn))
 
   new_QWAmetadata(dataset, authors, funding, related,
-    resources = x$resources, # populated by TRIA at publish time, not completed client-side
+    datafiles = x$datafiles, # written by TRIA at publish time, not completed
     hier$sites, hier$trees, hier$woodpieces, hier$slides, images)
 }
 
 
 #' Write a QWAmetadata object to a JSON file
 #'
-#' Empty values are written as `null`.
+#' Empty values are written as `null`; absent (`NULL`) components are not
+#' written.
 #'
 #' @param x A [QWAmetadata] object.
 #' @param file Path to the output file.
@@ -437,13 +484,15 @@ write_QWAmetadata <- function(x, file, compress = FALSE, overwrite = TRUE,
 
   # component = schema name
   schemas <- c(dataset = "dataset", authors = "authors", funding = "funding",
-               related = "related", resources = "supplementary", sites = "sites",
+               related = "related", datafiles = "datafiles", sites = "sites",
                trees = "trees", woodpieces = "woodpieces", slides = "slides",
                images = attr(x$images, "roxas_version"))
+  sub <- is_submission(x)
   x <- unclass(x)
   for (comp in names(schemas)) {
-    x[comp] <- list(prepare_write(x[[comp]], schemas[[comp]], drop_empty))
+    x[comp] <- list(prepare_write(x[[comp]], schemas[[comp]], drop_empty, sub))
   }
+  x <- purrr::compact(x) # absent components are not written
 
   if (compress){
     write(

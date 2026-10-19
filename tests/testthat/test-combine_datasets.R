@@ -98,7 +98,7 @@ test_that("combine_QWAmetadata combines images and hierarchy with updated counts
   }
   expect_equal(m$sites$n_trees[m$sites$site_label == "POG"], 2)
   expect_equal(m$dataset, meta_x$dataset)
-  expect_null(m$resources)
+  expect_null(m$datafiles)
 })
 
 test_that("combine_QWAmetadata deduplicates authors, funding and related", {

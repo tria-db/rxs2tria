@@ -115,7 +115,7 @@ dataset_ui <- function(id) {
             condition = "input.ds_access == 'restricted'",
             shiny::dateInput(ns("embargoed_until"),
                       "Select an embargo date",
-                      value = Sys.Date() + 365),
+                      value = Sys.Date() + 365), # TODO: no default value?
             shiny::span(shiny::tags$i("For embargoed datasets, only the metadata will be accessible via TRIA while the data remain restricted (\"All rights reserved\"). ",
                         "The selected license applies once you lift the embargo and the data become open access; leave it empty if not yet decided.")),
             ns=shiny::NS(id))

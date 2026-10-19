@@ -30,7 +30,8 @@ of a component are not written. Fields required under a condition (e.g.
 The output file path, invisibly.
 }
 \description{
-Empty values are written as \code{null}.
+Empty values are written as \code{null}; absent (\code{NULL}) components are not
+written.
 }
 \seealso{
 \code{\link[=read_QWAmetadata]{read_QWAmetadata()}}

@@ -4,10 +4,13 @@
 \alias{check_QWAimages}
 \title{Validate a QWAimages object}
 \usage{
-check_QWAimages(x)
+check_QWAimages(x, submission = TRUE)
 }
 \arguments{
 \item{x}{A \link{QWAimages} object.}
+
+\item{submission}{Check against the schema of submission files (\code{TRUE})
+or TRIA dataset files (\code{FALSE})? Set by \code{\link[=check_QWAmetadata]{check_QWAmetadata()}}.}
 }
 \value{
 \code{TRUE}, invisibly. Warnings are issued for any problems found;

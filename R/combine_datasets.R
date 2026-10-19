@@ -107,8 +107,9 @@ bind_by_key <- function(df_x, df_y, key = NULL) {
 #' - `$sites`, `$trees`, `$woodpieces` and `$slides` are combined and
 #'   deduplicated by their ID column (with a warning for shared IDs with
 #'   different values), and their counts are updated with
-#'   [update_QWAmetadata()],
-#' - `$resources` is `NULL` (populated by TRIA at publish time).
+#'   [update_QWAmetadata()].
+#'
+#' Submission files only; TRIA dataset files are not edited.
 #'
 #' @param x,y [QWAmetadata] objects
 #' @returns A combined [QWAmetadata] object
@@ -117,6 +118,8 @@ bind_by_key <- function(df_x, df_y, key = NULL) {
 combine_QWAmetadata <- function(x, y) {
   checkmate::assert_class(x, "QWAmetadata")
   checkmate::assert_class(y, "QWAmetadata")
+  assert_submission(x, "combine_QWAmetadata")
+  assert_submission(y, "combine_QWAmetadata")
   images <- combine_QWAimages(x$images, y$images)
 
   if (!is.null(y$dataset)) {
@@ -155,7 +158,7 @@ combine_QWAmetadata <- function(x, y) {
   })
 
   combined <- new_QWAmetadata(x$dataset, authors, funding, related,
-    resources = NULL, # populated by TRIA at publish time
+    datafiles = NULL, # written by TRIA at publish time
     hier$sites, hier$trees, hier$woodpieces, hier$slides, images)
   # correct counts for shared IDs
   update_QWAmetadata(combined, images)

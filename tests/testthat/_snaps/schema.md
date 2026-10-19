@@ -13,7 +13,6 @@
       i sampling_year, sample_apex_distance, and pith_year
       i slides missing optional columns:
       i pith_offset
-      i supplementary: not provided, skipping.
       i roxas missing optional columns:
       i only_ew, img_created_at, img_software, img_comment, and rw_reference_file
       v All checks completed.
@@ -33,7 +32,6 @@
       i sampling_year, sample_apex_distance, and pith_year
       i slides missing optional columns:
       i pith_offset
-      i supplementary: not provided, skipping.
       i roxas_ai missing optional columns:
       i only_ew and img_comment
       v All checks completed.

@@ -10,7 +10,7 @@ QWAmetadata(
   authors = NULL,
   funding = NULL,
   related = NULL,
-  resources = NULL,
+  datafiles = NULL,
   sites = NULL,
   trees = NULL,
   woodpieces = NULL,
@@ -33,11 +33,11 @@ metadata Shiny app.}
 \item{related}{Data frame with related publications or datasets. Typically
 provided via metadata Shiny app.}
 
-\item{resources}{Data frame describing the submitted \code{QWAdata} cells/rings
-files. Populated by TRIA at publish time rather than by this package --
-leave \code{NULL}. (The supplementary-file manifest built by
-\code{\link[=compile_supplementary]{compile_supplementary()}} is a separate, standalone artefact -- see
-\code{vignette("supplementary")} -- not a component of \code{QWAmetadata}.)}
+\item{datafiles}{Data frame listing the cells and rings files of a TRIA
+dataset, with size, checksum and S3 key. Written by TRIA at publish time;
+leave \code{NULL} for submission files. (The supplementary CSV built by
+\code{\link[=compile_supplementary]{compile_supplementary()}} is a separate file, see
+\code{vignette("supplementary")}.)}
 
 \item{sites}{Data frame with site-level metadata. Typically provided via
 metadata Shiny app.}
@@ -66,8 +66,9 @@ structured by level of organisation:
 \item \strong{\verb{$dataset}}: dataset-level information (name, description, license).
 \item \strong{\verb{$authors}}: author information.
 \item \strong{\verb{$funding}}: funding sources and grant numbers.
-\item \strong{\verb{$related}}: related objects (publications, datasets, etc.).
-\item \strong{\verb{$resources}}: included resources (data files)
+\item \strong{\verb{$related}}: related objects (publications, datasets, etc.). Submission
+files only.
+\item \strong{\verb{$datafiles}}: the cells and rings files. TRIA dataset files only.
 \item \strong{\verb{$sites}}: site-level metadata (location, climate, etc.).
 \item \strong{\verb{$trees}}: tree-level metadata (species, DBH, age, etc.).
 \item \strong{\verb{$woodpieces}}: woodpiece-level metadata (disc, core, etc.).
@@ -79,6 +80,12 @@ and is usually populated automatically by \code{\link[=build_QWAimages]{build_QW
 
 All components except \code{images} are optional and can be filled in later to
 prepare a complete dataset submission to the TRIA database.
+
+The \code{submission} attribute (\code{\link[=is_submission]{is_submission()}}) tells submission files from
+TRIA dataset files. It is inferred from the components: TRIA dataset files
+have a \verb{$datafiles} component or a \code{ds_label} in \verb{$dataset}. Components are
+aligned with the schema of their stage; \verb{$related} is dropped from TRIA
+dataset files with a warning.
 
 \code{\link[=as_QWAmetadata]{as_QWAmetadata()}} safely constructs a \link{QWAmetadata} object from a named list.
 Component names are matched against the \code{\link[=QWAmetadata]{QWAmetadata()}} constructor parameters;

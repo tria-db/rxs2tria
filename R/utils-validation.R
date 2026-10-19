@@ -458,15 +458,17 @@ check_missing_opt <- function(df, tbl_props, schema = NULL) {
 #' @param df Data frame, or `NULL`.
 #' @param schema Schema name, see `schema_rel_path()`.
 #' @param drop_empty Drop all-empty optional app columns?
+#' @param submission Schema for submission files (`TRUE`) or TRIA dataset
+#'   files (`FALSE`)?
 #' @returns `df` prepared for writing, `NULL` if `df` is `NULL`.
 #' @noRd
-prepare_write <- function(df, schema, drop_empty = TRUE) {
+prepare_write <- function(df, schema, drop_empty = TRUE, submission = TRUE) {
   if (is.null(df)) return(NULL)
   df <- df |>
     dplyr::mutate(dplyr::across(dplyr::where(is.character), \(x) dplyr::na_if(x, "")))
   if (!drop_empty) return(df)
 
-  schema_path <- system.file(schema_rel_path(schema), package = "rxs2tria")
+  schema_path <- system.file(schema_rel_path(schema, submission), package = "rxs2tria")
   schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
   tbl_props <- get_tbl_props(resolve_schema(schema_obj, schema_path))
 
