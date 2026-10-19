@@ -159,7 +159,7 @@ build_QWAimages <- function(df_structure,
   # auto-detect schema version from the software column
   rv <- resolve_roxas_version(df_rxsmeta)
 
-  # compliance with base schema
+  # compliance with the submission schema
   schema_path <- system.file(schema_rel_path(rv), package = "rxs2tria")
   schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
   tbl_schema <- resolve_schema(schema_obj, schema_path)
@@ -168,7 +168,7 @@ build_QWAimages <- function(df_structure,
   # align columns and types to schema (coerce with warnings)
   df_rxsmeta <- align_to_schema(df_rxsmeta, tbl_props, rv, add_opt = FALSE, mute_info = FALSE)
 
-  # validate against the base schema, but warn only. user may want to fix
+  # validate against the schema, but warn only. user may want to fix
   # things manually in the metadata app
   check_schema(df_rxsmeta, schema_obj, rv, warn_only = TRUE, greedy = FALSE)
 
@@ -378,8 +378,8 @@ collect_image_info <- function(files_images, batch_size = 50) {
 #'
 #' After collecting the raw settings info from multiple files, convert the 
 #' columns to their respective type.
-#' Note: Datetime columns are parsed separately by the callers, as they may
-#' require different formats.
+#' Datetime columns are parsed here, except `meas_created_at` of classic
+#' ROXAS (non-standard formats), which is converted by the user.
 #' @param df Data frame of combined raw settings columns.
 #' @param roxas_version Either `"roxas"` or `"roxas_ai"`.
 #' @returns The data frame with coerced column types.

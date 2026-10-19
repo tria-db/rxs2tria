@@ -18,9 +18,10 @@ an error is thrown if the object structure is invalid.
 }
 \description{
 Runs a series of checks on a \link{QWAimages} object and warns about any issues
-found. Checks include: compliance with the base JSON schema, consistency of
-the \code{roxas_version} attribute with the \verb{$software} column, missing optional
-columns, and invalid data structure.
+found. Checks include: compliance with the JSON schema of the given stage,
+consistency of the \code{roxas_version} attribute with the \verb{$software} column,
+unique \code{image_label}s and a valid data structure. Missing optional columns
+are reported as information.
 }
 \seealso{
 \code{\link[=QWAimages]{QWAimages()}}, \code{\link[=check_QWAmetadata]{check_QWAmetadata()}}

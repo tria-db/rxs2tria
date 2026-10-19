@@ -41,8 +41,9 @@ read_output_file <- function(filename, selcols, colname_variants, delim) {
 #' ROXAS output .txt or ROXAS AI table .csv files with the raw measurements).
 #' Used by [collect_raw_data()] to read each `QWAdata` component.
 #'
-#' @param df_structure Data frame of image identifiers (`$image_label`) and
-#'   corresponding data file names (`$fname_cells` or `$fname_rings`).
+#' @param df_structure Data frame of image identifiers (`$image_label`; for
+#'   rings also `$woodpiece_label` and `$slide_label`) and corresponding data
+#'   file names (`$fname_cells` or `$fname_rings`).
 #' @param roxas_version The software used to create the files (`"roxas"` or `"roxas_ai"`).
 #' @param ftype which type of files should be read (`"cells"` or `"rings"`).
 #' @returns A data frame with the relevant raw measurements data from all

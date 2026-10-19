@@ -29,7 +29,7 @@ combine_QWAimages <- function(x, y) {
 #'
 #' Combines the cells and rings data of two [QWAdata] objects with distinct
 #' `image_label` values into one. Columns present in only one object are
-#' filled with `NA` (`FALSE` for logical ring columns).
+#' filled with `NA`; `NA` in logical ring columns is set to `FALSE`.
 #'
 #' If the ring flag columns are present (both objects must have them or
 #' neither), the duplicate-ring flags (`duplicate_ring`, `exclude_dupl`) are

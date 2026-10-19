@@ -53,17 +53,17 @@ df_settings  <- collect_settings_data(df_structure)
 rxs_images <- build_QWAimages(df_structure, df_settings)
 ```
 
-`build_QWAimages()` calls `QWAimages()` internally, which:
-
-- infers or validates `roxas_version` from the `$software` column,
-- coerces the data to a tibble and cleans column names,
-- aligns the column set and types to the internal JSON schema for that
-  software version (adding any missing required columns as `NA`,
-  dropping unrecognised columns, and warning if coercions were made),
-- runs a minimal structural check and aborts if the result is invalid.
+`build_QWAimages()` checks the label hierarchy (aborting if it is
+invalid), aligns the columns and types to the JSON schema for the
+software version (adding missing required columns as `NA`, dropping
+unrecognised columns, warning on coercions) and validates the result
+against the schema (warnings only).
 
 If you already have a data frame with the right columns — for example
-after reading from a non-standard source — you can pass it directly:
+after reading from a non-standard source — you can pass it directly to
+`QWAimages()`. It infers or validates `roxas_version` from the
+`$software` column and does the same alignment, but only warns on an
+invalid hierarchy:
 
 ```{r construct-direct}
 rxs_images <- QWAimages(my_df, roxas_version = "roxas")
@@ -82,7 +82,7 @@ summary(rxs_images) # compact overview
 woodpieces, and trees, the sites and species present, and the range of
 `outmost_year` values.
 
-The columns fall into four groups:
+The columns fall into the following groups:
 
 **Hierarchical labels** — uniquely identify each image within the
 sampling design and link images to the metadata tables in `QWAmetadata`:
@@ -101,10 +101,13 @@ locate the ROXAS output files:
 
 | Column | Description |
 |---|---|
-| `fname_image` | Path to the image file (ROXAS only) |
+| `fname_image` | Path to the image file |
 | `fname_cells` | Path to the cells output file |
 | `fname_rings` | Path to the rings output file |
 | `fname_settings` | Path to the settings / metadata file |
+
+File paths are part of submission files only; the `$images` of TRIA
+dataset files have no `fname_*` columns.
 
 **Image metadata** — properties extracted from the image EXIF data or
 the ROXAS AI metadata file:
@@ -113,7 +116,7 @@ the ROXAS AI metadata file:
 |---|---|
 | `img_created_at` | Image capture timestamp |
 | `img_width`, `img_height` | Image dimensions in pixels |
-| `spatial_resolution` | Pixel size in µm; required for the incomplete-innermost-ring check in `complete_QWAdata()` |
+| `spatial_resolution` | Pixels per µm; required for the incomplete-innermost-ring check in `complete_QWAdata()` |
 | `software` | Software that produced the data (`"roxas"` or `"roxas_ai"`); must match the `roxas_version` attribute |
 
 **ROXAS settings** — parameters from the ROXAS settings or ROXAS AI
@@ -124,9 +127,13 @@ differ between `roxas_version` values.
 complete ring in the image, used to validate that ring years do not
 exceed it.
 
+**App inputs** — `only_ew` and `img_comment` (`colType` `meta_input`,
+filled in the metadata app) and `comment_handled` (`colType` `qc_input`,
+set in the flags app).
+
 Optional columns (those not always present in ROXAS output) are `NA`
-until populated. `complete_QWAimages()` adds all optional columns
-at once, initialised to `NA`.
+until populated. `complete_QWAimages()` adds all missing optional columns
+except `qc_input` columns (`comment_handled`), initialised to `NA`.
 
 ---
 
@@ -137,8 +144,9 @@ source) and as the `$software` column (a per-row record). The two must
 agree. When they do not, the package will warn:
 
 ```{r version-mismatch, eval = FALSE}
-# Warning raised by check_QWAimages() and during construction if attribute
-# and $software column disagree:
+# Warning raised by check_QWAimages() and during construction if an existing
+# attribute and the $software column disagree (a roxas_version argument
+# that conflicts with $software is an error):
 #   ! roxas_version attribute ("roxas") does not match the software column ("roxas_ai").
 #   i Check your data for mixed or incorrect software values.
 ```
@@ -161,13 +169,15 @@ invisibly when done:
 
 - **Schema compliance** (warning): checks that required columns are
   present and values are within expected ranges for the given
-  `roxas_version`.
+  `roxas_version` and stage (`submission = TRUE` for submission files,
+  `FALSE` for TRIA dataset files; set by `check_QWAmetadata()`).
 - **`roxas_version` consistency** (warning): checks that the attribute
   matches the `$software` column.
-- **Missing optional columns** (warning): reports which optional columns
-  are absent. Use `complete_QWAimages()` to add them.
-- **Invalid structure** (error): aborts if required columns are missing
-  or the object is otherwise structurally broken.
+- **Missing optional columns** (information): lists absent optional
+  columns except `qc_input` ones. Use `complete_QWAimages()` to add them.
+- **Invalid structure**: aborts if `image_label` is missing or
+  duplicated or a hierarchy label is `NA`; warns if the labels do not
+  nest (image within slide within woodpiece …).
 
 Warnings do not stop execution; they flag things you should inspect
 before proceeding.
@@ -180,10 +190,9 @@ before proceeding.
 rxs_images_full <- complete_QWAimages(rxs_images)
 ```
 
-Returns a new `QWAimages` object with every optional column added and
-initialised to `NA`. Existing values are preserved. Use this before
-passing the object to `QWAmetadata()` if you want to fill in optional
-fields manually.
+Returns a new `QWAimages` object with all optional columns except
+`qc_input` ones added and initialised to `NA`. Existing values are
+preserved. `complete_QWAmetadata()` does this for `$images`.
 
 ---
 
@@ -204,3 +213,9 @@ consistent for round-tripping to work correctly.
 The `compress` argument adds a `.gz` extension if not already present.
 Alternatively, naming the file with a `.csv.gz` extension is sufficient
 — `vroom` compresses automatically.
+
+Empty values are written as empty fields. With `drop_empty = TRUE`
+(default), optional `meta_input`/`qc_input` columns (`only_ew`,
+`img_comment`, `comment_handled`) that are empty in all rows are not
+written. `read_QWAimages()` does not re-create them; use
+`complete_QWAimages()`.

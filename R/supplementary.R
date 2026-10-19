@@ -34,10 +34,11 @@
 #' manifest against the current contents of `path` and re-derive the `status`/`note` 
 #' columns without losing any manual edits.
 #' 
-#' To verify a finalized manifest against a directory or
-#' zip archive, ses [check_supplementary()]. Then
-#' save the resulting table to a CSV (e.g. `vroom::vroom_write()`) and submit 
-#' it alongside the supplementary zip archive.
+#' To verify a finalised manifest against a directory or
+#' zip archive, see [check_supplementary()]. Then
+#' save the resulting table as the supplementary CSV (e.g.
+#' `vroom::vroom_write(delim = ",", na = "")`) and submit it alongside the
+#' supplementary zip archive.
 #'
 #' See `vignette("supplementary")` for a worked example and the complete list of
 #' recognised resource types.
@@ -57,7 +58,7 @@
 #'   - `description`: normally `NA`, can be filled manually if required to
 #'      provide justification for "other" supplementary files that should
 #'      be included in the upload
-#'   - `resource_type`: inferred resource type string (see Details).
+#'   - `resource_type`: inferred resource type string (see `vignette("supplementary")`).
 #'   - `linked_level`: hierarchy level for this type (e.g. `"dataset"`,
 #'     `"woodpiece"`, or `"analysis"`).
 #'   - `linked_label`: label of the linked entity, auto-filled from where
@@ -73,9 +74,10 @@
 #' @examples
 #' \dontrun{
 #' suppl_res <- compile_supplementary("path/to/submission_files", rxs_images = my_images)
-#' # review and make changes are required, then persist as a standalone CSV
-#' # to submit alongside the resources zip:
-#' vroom::vroom_write(suppl_res, "output_data/submission_files_resources.csv")
+#' # review and edit if required, then save as the supplementary CSV
+#' # to submit alongside the supplementary zip:
+#' vroom::vroom_write(suppl_res, "output_data/supplementary_files.csv",
+#'                    delim = ",", na = "")
 #' }
 #' @export
 compile_supplementary <- function(path, rxs_images) {
@@ -166,7 +168,9 @@ recompile_supplementary <- function(suppl_res, path, rxs_images, add_new_files =
 #'
 #' A pass/fail check confirming that your finalised manifest accurately
 #' describes the content of the supplementary archive/directory and is ready
-#' for submission. `suppl_res` must be a finalised manifest, i.e. including
+#' for submission. A submission-time check: it applies to the submitted
+#' supplementary CSV (with `status`), not to the supplementary CSV of TRIA
+#' dataset files. `suppl_res` must be a finalised manifest, i.e. including
 #' the `status` column produced by [compile_supplementary()] or
 #' [recompile_supplementary()].
 #' Aborts if `suppl_res` lists a file with `status == "ok"` that isn't found
@@ -181,7 +185,7 @@ recompile_supplementary <- function(suppl_res, path, rxs_images, add_new_files =
 #' @seealso [recompile_supplementary()], [compile_supplementary()], `vignette("supplementary")`
 #' @examples
 #' \dontrun{
-#' # verify a finalized manifest against an already-zipped submission
+#' # verify a finalised manifest against an already-zipped submission
 #' suppl_res <- vroom::vroom("output_data/supplementary_files.csv",
 #'                           show_col_types = FALSE)
 #' if (!check_supplementary(suppl_res, "supplementary_data.zip", rxs_images = my_images)) {
@@ -436,8 +440,8 @@ load_resource_types <- function() {
 #' @param filenames Character; one or more file names.
 #' @param roxas_version `"roxas"` or `"roxas_ai"`. Used to
 #'   disambiguate patterns that are specific to one ROXAS version.
-#' @returns A tibble with one row per file: `resource_name`, `fname_resource`,
-#'   `resource_type`, `linked_level`.
+#' @returns A tibble with one row per file: `resource_name`, `resource_type`,
+#'   `linked_level`.
 #' @seealso [compile_supplementary()]
 #' @noRd
 infer_resource_types <- function(filenames, roxas_version) {

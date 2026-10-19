@@ -51,9 +51,9 @@ build_csv_inputs <- function(ns) {
   shiny::tagList(
     "Provide the filepaths for the following:",
     shiny::fileInput(ns("file_prf"), "Upload the QWA profile data",
-                     accept = c(".csv")),
+                     accept = c(".csv", ".gz")),
     shiny::fileInput(ns("file_rings"), "Upload the QWA rings data",
-                     accept = c(".csv")),
+                     accept = c(".csv", ".gz")),
     shiny::fileInput(ns("file_rxsmeta"),
                      "Upload the images metadata (QWAmetadata .json or QWAimages .csv)",
                      accept = c(".json", ".csv"))
@@ -562,7 +562,7 @@ save_ring_edits <- function(df, df_in, settings, rxsmeta = NULL, handled = NULL)
     if ("file" %in% settings$save_to) {
       filepath <- fs::path_abs(settings$filepath, start = launch_wd)
       checkmate::assert_path_for_output(filepath, overwrite = TRUE)
-      vroom::vroom_write(df_out, filepath, delim = ",")
+      vroom::vroom_write(df_out, filepath, delim = ",", na = "")
       shiny::showNotification(
         paste0("Saved to file: ", filepath),
         type = "message"
@@ -592,7 +592,7 @@ save_ring_edits <- function(df, df_in, settings, rxsmeta = NULL, handled = NULL)
       if ("file" %in% settings$save_imgs_to) {
         filepath_rxsmeta <- fs::path_abs(settings$filepath_rxsmeta, start = launch_wd)
         checkmate::assert_path_for_output(filepath_rxsmeta, overwrite = TRUE)
-        vroom::vroom_write(df_rxsmeta_out, filepath_rxsmeta, delim = ",")
+        vroom::vroom_write(df_rxsmeta_out, filepath_rxsmeta, delim = ",", na = "")
         shiny::showNotification(
           paste0("Image metadata saved to: ", filepath_rxsmeta),
           type = "message"

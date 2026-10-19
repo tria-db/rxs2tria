@@ -1,4 +1,4 @@
-#' Update QWA metadata for selected images
+#' Update a QWAimages object for selected images
 #'
 #' Re-reads the settings/metadata files for the given images and replaces the
 #' corresponding rows in the existing [QWAimages] object. Useful when source
@@ -9,7 +9,7 @@
 #'   settings/metadata files are re-read; must be a subset of `meta$image_label`
 #' @param settings_date_orders Character; date order string(s) passed to
 #'   [lubridate::parse_date_time()] to parse the `meas_created_at` field for
-#'   ROXAS classic.
+#'   ROXAS classic. Required for ROXAS classic, ignored for ROXAS AI.
 #' @param settings_date_tz Optional timezone passed to
 #'   [lubridate::parse_date_time()] to parse the `meas_created_at` field. 
 #'   Defaults to system timezone.
@@ -72,7 +72,7 @@ update_QWAimages <- function(meta, imgs_to_reread,
 #' @param reset_manual_flags Logical; only applies to `imgs_to_reread`. If
 #'   `TRUE` (default), any manual edits made via the flags Shiny app are reset.
 #'   If `FALSE` (i.e. assuming the dating was not affected by the re-analysis),
-#'   the manual flag and comment columns are kept, and so is `exclude_issues`
+#'   the columns set in the flags app (`colType` `"qc_input"`) are kept, and so is `exclude_issues`
 #'   where it differs from the value derived from the old automatic flags.
 #' @returns An updated [QWAdata] object
 #' @export

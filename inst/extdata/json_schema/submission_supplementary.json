@@ -19,7 +19,7 @@
             "type": ["string", "null"],
             "enum": ["", "ok", "review", "ignore"],
             "title": "Status",
-            "description": "Automated readiness check result: \"ok\" (ready for submission as-is), \"review\" (needs manual attention before this dataset can be zipped, see `note`), or \"ignore\" (excluded from the archive, e.g. a junk file or one already required as a core submission file)."
+            "description": "Automated readiness check result: \"ok\" (ready for submission as-is), \"review\" (needs manual attention before this dataset can be zipped, see `note`), or \"ignore\" (excluded from the archive, e.g. a junk file or one manually set to resource_type \"junk\")."
           },
           "note": {
             "type": ["string", "null"],

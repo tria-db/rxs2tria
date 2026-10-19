@@ -15,8 +15,8 @@ new_QWAprofile <- function(data, profile_type) {
 #' Create a QWAprofile object
 #'
 #' `QWAprofile` is a subclass of `data.frame` that holds profiles of QWA
-#' measurements aggregated along the annual rings. Usually elements of the 
-#' `$profiles` slot of a `QWAdata` object.
+#' measurements aggregated along the annual rings, computed from a [QWAdata]
+#' object with [calculate_sector_profiles()] or [calculate_band_profiles()].
 #'
 #' Two profile types are supported, set via the `profile_type` attribute:
 #' - **`"sector"`**: bins defined by equal relative position sectors across the
@@ -37,7 +37,7 @@ new_QWAprofile <- function(data, profile_type) {
 #' @export
 QWAprofile <- function(data, profile_type = c("sector", "band")) {
   checkmate::assert_data_frame(data)
-  checkmate::assert_choice(profile_type, c("sector","band"))
+  profile_type <- rlang::arg_match(profile_type)
   
   # TODO: validation checks
 
@@ -56,7 +56,7 @@ print.QWAprofile <- function(x, ...) {
 #' Summarise a QWAprofile object
 #'
 #' Displays a compact overview of a [QWAprofile] object: the profile type,
-#' the number of position bins, and the coverage (images, rings, year range).
+#' its dimensions, and the coverage (images, year range).
 #'
 #' @param object A `QWAprofile` object.
 #' @param ... Further arguments (currently unused).
@@ -86,6 +86,8 @@ summary.QWAprofile <- function(object, ...) {
 
 #' Write a QWAprofile object to a CSV file
 #'
+#' Empty values are written as empty fields.
+#'
 #' @param x A [QWAprofile] object.
 #' @param file Path to the output `.csv` or `.csv.gz` file.
 #' @param compress If `TRUE`, write a compressed `.csv.gz` file (default `FALSE`).
@@ -101,7 +103,7 @@ write_QWAprofile <- function(x, file, compress = FALSE, overwrite = TRUE) {
   if (compress && fs::path_ext(file) != "gz")
     file <- paste0(file, ".gz")
   checkmate::assert_path_for_output(file, overwrite = overwrite)
-  vroom::vroom_write(x, file, delim = ",")
+  vroom::vroom_write(x, file, delim = ",", na = "")
   cli::cli_inform(c("v" = "QWAprofile written to {.file {file}}"))
   
   invisible(file)

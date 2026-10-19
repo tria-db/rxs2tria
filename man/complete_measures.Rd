@@ -11,8 +11,7 @@ complete_measures(QWA_data, only = NULL)
 
 \item{only}{optional character vector of measure names to calculate. When
 supplied, only measures listed here are eligible for calculation (derived measures
-not in \code{only} are skipped). \code{NULL} (default) retains the existing behaviour:
-all missing measures are added.}
+not in \code{only} are skipped). \code{NULL} (default) adds all missing measures.}
 }
 \value{
 a \code{QWAdata} object with the updated cells and rings dataframes with the new measures

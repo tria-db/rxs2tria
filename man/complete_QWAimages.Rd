@@ -10,7 +10,8 @@ complete_QWAimages(x)
 \item{x}{A \link{QWAimages} object.}
 }
 \value{
-A \link{QWAimages} object extended with all possible columns.
+A \link{QWAimages} object extended with all optional columns except
+\code{qc_input} ones.
 }
 \description{
 Add any missing columns to a \link{QWAimages} object, including optional columns,

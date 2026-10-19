@@ -25,7 +25,7 @@ A data frame with one row per file and columns:
 \item \code{description}: normally \code{NA}, can be filled manually if required to
 provide justification for "other" supplementary files that should
 be included in the upload
-\item \code{resource_type}: inferred resource type string (see Details).
+\item \code{resource_type}: inferred resource type string (see \code{vignette("supplementary")}).
 \item \code{linked_level}: hierarchy level for this type (e.g. \code{"dataset"},
 \code{"woodpiece"}, or \code{"analysis"}).
 \item \code{linked_label}: label of the linked entity, auto-filled from where
@@ -72,10 +72,11 @@ After your edits, use \code{\link[=recompile_supplementary]{recompile_supplement
 manifest against the current contents of \code{path} and re-derive the \code{status}/\code{note}
 columns without losing any manual edits.
 
-To verify a finalized manifest against a directory or
-zip archive, ses \code{\link[=check_supplementary]{check_supplementary()}}. Then
-save the resulting table to a CSV (e.g. \code{vroom::vroom_write()}) and submit
-it alongside the supplementary zip archive.
+To verify a finalised manifest against a directory or
+zip archive, see \code{\link[=check_supplementary]{check_supplementary()}}. Then
+save the resulting table as the supplementary CSV (e.g.
+\code{vroom::vroom_write(delim = ",", na = "")}) and submit it alongside the
+supplementary zip archive.
 
 See \code{vignette("supplementary")} for a worked example and the complete list of
 recognised resource types.
@@ -83,9 +84,10 @@ recognised resource types.
 \examples{
 \dontrun{
 suppl_res <- compile_supplementary("path/to/submission_files", rxs_images = my_images)
-# review and make changes are required, then persist as a standalone CSV
-# to submit alongside the resources zip:
-vroom::vroom_write(suppl_res, "output_data/submission_files_resources.csv")
+# review and edit if required, then save as the supplementary CSV
+# to submit alongside the supplementary zip:
+vroom::vroom_write(suppl_res, "output_data/supplementary_files.csv",
+                   delim = ",", na = "")
 }
 }
 \seealso{

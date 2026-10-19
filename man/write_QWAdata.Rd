@@ -12,7 +12,8 @@ write_QWAdata(
   dataset_name = NULL,
   compress = TRUE,
   overwrite = FALSE,
-  drop_empty = TRUE
+  drop_empty = TRUE,
+  keep_derived = TRUE
 )
 }
 \arguments{
@@ -36,7 +37,11 @@ CSV files. Both must be provided together. Mutually exclusive with \code{dir}.}
 
 \item{drop_empty}{If \code{TRUE} (default), optional columns set in the flags app
 (\code{colType} \code{"qc_input"}, e.g. ring quality flags and comments) that are
-empty in all rows are not written.}
+empty (\code{NA}, or \code{NA}/\code{FALSE} for flags) in all rows are not written.}
+
+\item{keep_derived}{If \code{FALSE}, derived columns (\code{colType} \code{"derived"}, e.g.
+cell measures computed from other columns) are not written. They can be
+recomputed with \code{\link[=complete_QWAdata]{complete_QWAdata()}}. Default \code{TRUE}.}
 }
 \value{
 A named list of written file paths, invisibly.

@@ -2,7 +2,7 @@
 % Please edit documentation in R/partial_update.R
 \name{update_QWAimages}
 \alias{update_QWAimages}
-\title{Update QWA metadata for selected images}
+\title{Update a QWAimages object for selected images}
 \usage{
 update_QWAimages(
   meta,
@@ -19,7 +19,7 @@ settings/metadata files are re-read; must be a subset of \code{meta$image_label}
 
 \item{settings_date_orders}{Character; date order string(s) passed to
 \code{\link[lubridate:parse_date_time]{lubridate::parse_date_time()}} to parse the \code{meas_created_at} field for
-ROXAS classic.}
+ROXAS classic. Required for ROXAS classic, ignored for ROXAS AI.}
 
 \item{settings_date_tz}{Optional timezone passed to
 \code{\link[lubridate:parse_date_time]{lubridate::parse_date_time()}} to parse the \code{meas_created_at} field.

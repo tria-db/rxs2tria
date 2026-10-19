@@ -4,7 +4,7 @@ template:
   bootswatch: darkly
 reference:
 - title: "Read raw ROXAS (AI) metadata"
-  desc: "Functions for extracing metadata from the raw ROXAS (AI) output files."
+  desc: "Functions for extracting metadata from the raw ROXAS (AI) output files."
   contents:
   - get_roxas_files
   - extract_data_structure
@@ -62,8 +62,8 @@ reference:
   - read_QWAdata
   - update_QWAdata
   - write_QWAdata
-- title: "QWAprofiles"
-  desc: "S3 class QWAprofiles"
+- title: "QWAprofile"
+  desc: "S3 class QWAprofile"
   contents: 
   - calculate_band_profiles
   - calculate_sector_profiles
@@ -84,7 +84,7 @@ articles:
   navbar: ~
   contents:
   - workflow
-  - resources
+  - supplementary
   - submission
   - metadata-app
   - flags-app

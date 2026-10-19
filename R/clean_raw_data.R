@@ -7,10 +7,12 @@
 #' ROXAS used the image border instead of the true ring border to estimate MRW.
 #'
 #' @param cells.innermost a dataframe containing the cells data for the innermost ring
-#' @param res the spatial resolution of the image in microns per pixel
+#' @param res the spatial resolution of the image in pixels per micron
 #'
-#' @return a logical indicating whether the true inner ring border lies outside
-#' the image border and the ring is thus incomplete
+#' @return a list with the border fit statistics (`mae`, `medYleft`,
+#' `medYright`, `mindist`) and the logicals `incomplete_inner` and
+#' `incomplete_innerv2`, indicating whether the true inner ring border lies
+#' outside the image border and the ring is thus incomplete
 #' @noRd
 # TODO: compare my method with GvA's original one, check thresholds
 check_incomplete_innermost <- function(cells.innermost, res){
@@ -111,7 +113,9 @@ check_incomplete_innermost <- function(cells.innermost, res){
 #' @param df_meta the dataframe containing the metadata of the images (needed
 #' for the spatial resolution)
 #'
-#' @return the input dataframe with additional logical columns 'incomplete_ring'
+#' @return the input dataframe with the logical column 'incomplete_ring' and
+#' helper columns ('innermost_ring', 'outermost_ring', the border fit
+#' statistics, 'incomplete_fct_check'), removed later by `complete_flags()`
 #' @noRd
 # TODO: additional columns
 # TODO: what about circular samples?
@@ -162,8 +166,8 @@ flag_incomplete_rings <- function(df_rings_log, df_cells_all, df_meta){
 #'
 #' @param df_rings_log the dataframe containing the rings data
 #'
-#' @return the input dataframe with additional logical column 'duplicate_ring'
-#' and integer column 'duplicate_sel' with the selected ring among duplicates
+#' @return the input dataframe with additional logical columns 'duplicate_ring'
+#' and 'exclude_dupl' (`TRUE` for the duplicates not selected)
 #' @noRd
 # TODO: avoid switching too often?
 flag_duplicate_rings <- function(df_rings_log){

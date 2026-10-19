@@ -82,4 +82,38 @@ test_that("write_QWAdata writes NA as empty fields and drops all-empty qc_input 
   files <- suppressMessages(write_QWAdata(new_QWAdata(cells, rings), dir, compress = FALSE,
                                           overwrite = TRUE, drop_empty = FALSE))
   expect_equal(readLines(files$file_rings)[1], "image_label,year,mrw,x_dating,comment")
+
+  # all-FALSE logical qc_input columns count as empty, automatic flags are kept
+  rings$x_dating <- c(FALSE, NA)
+  rings$duplicate_ring <- FALSE
+  files <- suppressMessages(write_QWAdata(new_QWAdata(cells, rings), dir, compress = FALSE,
+                                          overwrite = TRUE))
+  expect_equal(readLines(files$file_rings)[1], "image_label,year,mrw,duplicate_ring")
+})
+
+test_that("QWAprofile defaults to sector profiles, write_QWAprofile writes NA as empty fields", {
+  prf <- QWAprofile(data.frame(image_label = "IMG1", year = 2000, sector_n = 1, la_mean = NA_real_))
+  expect_equal(attr(prf, "profile_type"), "sector")
+
+  file <- tempfile(fileext = ".csv")
+  suppressMessages(write_QWAprofile(prf, file))
+  expect_equal(readLines(file)[2], "IMG1,2000,1,")
+})
+
+test_that("write_QWAdata drops derived columns with keep_derived = FALSE", {
+  derived <- schema_cols("cells", "derived")
+  cells <- tibble::tibble(image_label = "IMG1", year = 2000, xpix = 1, ypix = 1, la = 10)
+  cells[derived] <- 1
+  rings <- tibble::tibble(image_label = "IMG1", year = 2000, mrw = 100)
+  dir <- tempfile()
+  dir.create(dir)
+
+  files <- suppressMessages(write_QWAdata(new_QWAdata(cells, rings), dir, compress = FALSE))
+  expect_equal(readLines(files$file_cells)[1],
+               paste(c("image_label,year,xpix,ypix,la", derived), collapse = ","))
+
+  files <- suppressMessages(write_QWAdata(new_QWAdata(cells, rings), dir, compress = FALSE,
+                                          overwrite = TRUE, keep_derived = FALSE))
+  expect_equal(readLines(files$file_cells)[1], "image_label,year,xpix,ypix,la")
+  expect_equal(readLines(files$file_rings)[1], "image_label,year,mrw")
 })

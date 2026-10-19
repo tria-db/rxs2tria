@@ -32,7 +32,8 @@ by ROXAS resp. ROXAS AI, see the Details below.
 \details{
 For ROXAS, the required files per image are:
 \itemize{
-\item The original image file (\verb{\{IMAGEID\}.jpg} or \code{.jpeg}).
+\item The original image file (\verb{\{IMAGEID\}.jpg}; also \code{.jpeg}, \code{.png}, \code{.bmp} or
+\code{.tiff}, in that order of preference if several exist).
 \item The ROXAS settings file (\verb{\{IMAGEID\}_ROXAS_Settings.txt}).
 \item The cell measurements output (\verb{\{IMAGEID\}_Output_Cells.txt}).
 \item The ring measurements output (\verb{\{IMAGEID\}_Output_Rings.txt}).
@@ -40,7 +41,8 @@ For ROXAS, the required files per image are:
 
 For ROXAS AI, the required files per image are:
 \itemize{
-\item The original image file (\verb{\{IMAGEID\}.scan.jpg} or \code{.jpeg}).
+\item The original image file (\verb{\{IMAGEID\}.scan.jpg}; also \code{.jpeg}, \code{.png},
+\code{.bmp} or \code{.tiff}, in that order of preference if several exist).
 \item The ROXAS AI metadata file (\verb{\{IMAGEID\}.metadata.json}).
 \item The cell measurements table (\verb{\{IMAGEID\}.cells_table.csv} or \code{.txt}).
 \item The ring measurements table (\verb{\{IMAGEID\}.rings_table.csv} or \code{.txt}).

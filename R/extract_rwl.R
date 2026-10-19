@@ -10,9 +10,9 @@
 #' (aggregated cell parameters such as the 90th percentile lumen area,
 #' `la_q90`).
 #'
-#' Duplicate rings (`exclude_dupl`) and user-defined ring exclusions
+#' Duplicate rings (`exclude_dupl`) and rings flagged for exclusion
 #' (`exclude_issues`) are filtered out before constructing the final time
-#' series. These flag columns are read from `df_rings`, making it a required
+#' series; `NA` flags count as `FALSE`. These flag columns are read from `df_rings`, making it a required
 #' parameter, while `prf_data` (with the selected `sector`) is only required
 #' to extract a `param` from the profile data. With `tissue = "affected"`,
 #' rings with `exclude_issues` and `affected_tissue` `"ew"` or `"lw"` are
@@ -62,7 +62,7 @@ extract_rwl <- function(df_rings, param, prf_data = NULL, sector = NULL,
   # TODO: check rings df valid?
 
   # possible measurement params for the rings data:
-  measure_cols_rings <- schema_cols("rings", c("measure", "derived"))
+  measure_cols_rings <- schema_cols("rings", c("measure", "derived", "estimate"))
 
   meas_cols <- intersect(names(df_rings), measure_cols_rings)
   is_prf_param <- FALSE
@@ -142,7 +142,7 @@ extract_rwl <- function(df_rings, param, prf_data = NULL, sector = NULL,
 extract_ring_measures <- function(df_rings) {
   check_rings_excl_cols(df_rings)
 
-  keep_cols <- schema_cols("rings", c("key", "measure", "derived"))
+  keep_cols <- schema_cols("rings", c("key", "measure", "derived", "estimate"))
   df <- df_rings |>
     dplyr::filter(!dplyr::coalesce(.data$exclude_dupl, FALSE),
                   !dplyr::coalesce(.data$exclude_issues, FALSE)) |>

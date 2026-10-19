@@ -26,7 +26,9 @@ appropriate.}
 \description{
 A pass/fail check confirming that your finalised manifest accurately
 describes the content of the supplementary archive/directory and is ready
-for submission. \code{suppl_res} must be a finalised manifest, i.e. including
+for submission. A submission-time check: it applies to the submitted
+supplementary CSV (with \code{status}), not to the supplementary CSV of TRIA
+dataset files. \code{suppl_res} must be a finalised manifest, i.e. including
 the \code{status} column produced by \code{\link[=compile_supplementary]{compile_supplementary()}} or
 \code{\link[=recompile_supplementary]{recompile_supplementary()}}.
 Aborts if \code{suppl_res} lists a file with \code{status == "ok"} that isn't found
@@ -37,7 +39,7 @@ everything is ready.
 }
 \examples{
 \dontrun{
-# verify a finalized manifest against an already-zipped submission
+# verify a finalised manifest against an already-zipped submission
 suppl_res <- vroom::vroom("output_data/supplementary_files.csv",
                           show_col_types = FALSE)
 if (!check_supplementary(suppl_res, "supplementary_data.zip", rxs_images = my_images)) {

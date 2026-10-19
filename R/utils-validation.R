@@ -249,8 +249,8 @@ convert_column <- function(x, target_class) {
   )
 }
 
-#' Helper to force a given df into alignment with the base schema
-#' ensure it has required columns, remove any extra columns
+#' Helper to force a given df into alignment with a table schema:
+#' ensure it has required columns, remove any extra columns,
 #' force all columns to have the correct type
 #' @param df  The data frame to be aligned
 #' @param tbl_props  Table properties read from schema (output of get_tbl_props()) 
@@ -258,8 +258,8 @@ convert_column <- function(x, target_class) {
 #' @param add_opt  Should missing optional columns be added as well, or only
 #'   required? Columns with `colType` `"qc_input"` (set in the flags app) are
 #'   never added.
-#' @param mute_info  Should warning messages (missing req columns, 
-#'   dropped extra cols, NAs due to type conversions) be displayed
+#' @param mute_info  If `TRUE`, suppress the messages on missing required
+#'   columns, dropped extra columns and `NA`s from type conversions
 #' @param ignore_colnames  Should the column names of df be ignored
 #'   in favor of position?
 #' @noRd
@@ -452,7 +452,7 @@ check_missing_opt <- function(df, tbl_props, schema = NULL) {
 #'
 #' Converts empty strings to `NA`. With `drop_empty`, drops the optional
 #' columns set in the apps (`colType` `"meta_input"` or `"qc_input"`) that are
-#' entirely `NA`. A column that is required only under a schema condition
+#' entirely `NA` (or `NA`/`FALSE` for logical columns). A column that is required only under a schema condition
 #' (e.g. `embargoed_until` for restricted datasets) is kept if the schema
 #' validation reports it as missing without it.
 #' @param df Data frame, or `NULL`.
@@ -475,7 +475,9 @@ prepare_write <- function(df, schema, drop_empty = TRUE, submission = TRUE) {
   input_cols <- tbl_props$properties |>
     purrr::keep(\(x) isTRUE(x$colType %in% c("meta_input", "qc_input"))) |>
     names()
-  empty_cols <- names(df)[vapply(df, \(x) all(is.na(x)), logical(1))]
+  # FALSE is the default of logical app columns (flags app), so counts as empty
+  is_empty <- \(x) all(is.na(x) | (is.logical(x) & x %in% FALSE))
+  empty_cols <- names(df)[vapply(df, is_empty, logical(1))]
   drop_cols <- setdiff(intersect(empty_cols, input_cols), tbl_props$required)
 
   # keep conditionally required columns the validation asks for
@@ -498,5 +500,5 @@ prepare_write <- function(df, schema, drop_empty = TRUE, submission = TRUE) {
 
 
 
-# TODO: other additional validation checks beyond the base schema
+# TODO: other additional validation checks beyond the schemas
 # - example: check that outmost year in rxs_images is not in future

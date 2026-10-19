@@ -39,6 +39,12 @@ test_that("ring-level export creates series per woodpiece, drops excluded and fi
   expect_equal(unname(df_rwl[["WP2"]]), c(NA, NA, 200, 210, 220, 230))
 })
 
+test_that("ring-level export accepts estimate columns (eww, lww)", {
+  df_rwl <- extract_rwl(df_rings = dplyr::mutate(df_rings_multi, eww = mrw / 2), param = "eww")
+
+  expect_equal(unname(df_rwl[["WP2"]]), c(NA, NA, 100, 105, 110, 115))
+})
+
 test_that("profile-level export filters by sector, joins by image_label/year, and respects exclusions", {
   df_rwl <- extract_rwl(
     df_rings = df_rings_multi, param = "la_mean",
@@ -78,11 +84,11 @@ test_that("tissue set to 'affected' keeps issue rings with only ew/lw affected t
 
 test_that("extract_ring_measures drops excluded rings and keeps id and measure columns", {
   df_rings <- df_rings_multi |>
-    dplyr::mutate(cno = 10, missing_ring = FALSE, comment = NA_character_)
+    dplyr::mutate(cno = 10, eww = 50, missing_ring = FALSE, comment = NA_character_)
 
   df <- extract_ring_measures(df_rings)
 
-  expect_named(df, c("woodpiece_label", "slide_label", "image_label", "year", "cno", "mrw"))
+  expect_named(df, c("woodpiece_label", "slide_label", "image_label", "year", "cno", "mrw", "eww"))
   expect_equal(nrow(df), 8)
   expect_false(any(df$mrw %in% c(999, 140)))
 })

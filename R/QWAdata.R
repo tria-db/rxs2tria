@@ -181,8 +181,7 @@ max_na_inf <- function(x) {
 #' @param QWA_data a `QWAdata` object containing the cells and rings data frames
 #' @param only optional character vector of measure names to calculate. When
 #'   supplied, only measures listed here are eligible for calculation (derived measures
-#'   not in `only` are skipped). `NULL` (default) retains the existing behaviour: 
-#'   all missing measures are added.
+#'   not in `only` are skipped). `NULL` (default) adds all missing measures.
 #' @return a `QWAdata` object with the updated cells and rings dataframes with the new measures
 #' @export
 complete_measures <- function(QWA_data, only = NULL) {
@@ -329,9 +328,9 @@ complete_measures <- function(QWA_data, only = NULL) {
 #' MRW value (except if it is actually complete either because it is at the
 #' at the bark or because the user removed the incomplete ring manually in ROXAS).
 #' Therefore, we perform an additional check on the border shape and position to
-#' check if an innermost ring is incomplete,  while the outermost ring is flagged
-#' as incomplete if and only if it has no MRW.
-#' TODO: The correct behaviour for rings derived with ROXAS AI still needs to be determined
+#' check if an innermost ring is incomplete, while the outermost ring is flagged
+#' as incomplete if it has no MRW, an MRW of zero, or fewer than five cells.
+#' The same rules are applied to ROXAS AI data.
 #'
 #' **Missing** rings are for years that have no discernible ring in the image, but
 #' have been manually added in ROXAS during cross-dating, leading to an entry
@@ -340,9 +339,10 @@ complete_measures <- function(QWA_data, only = NULL) {
 #'
 #' **Duplicate** rings are those that are present in multiple images due to them
 #' overlapping. All years which have cells in more than one image are flagged
-#' and ranked by their number of cells. The (complete) year with the highest
-#' number of cells for each overlap is the one that would then usually be
-#' selected for further analysis when building chronologies.
+#' and ranked by their number of cells, with missing and incomplete rings ranked
+#' last. `exclude_dupl` is `TRUE` for all but the best-ranked ring of each
+#' overlap, which is the one usually selected for further analysis when
+#' building chronologies.
 #'
 #' The `exclude_issues` column is initialised from `incomplete_ring`. Missing
 #' rings are not excluded, as their zero width is a valid measurement. To use a
@@ -551,8 +551,9 @@ QWAdata <- function(cells = NULL,
 #' Print a QWAdata object
 #'
 #' Displays a compact overview of a [QWAdata] object: which components are
-#' present, the spatial and temporal coverage of the data, and (if the data
-#' have been validated) a summary of ring quality flags.
+#' present, the spatial and temporal coverage of the data, and (if the flag
+#' columns are present, see [complete_QWAdata()]) a summary of the automatic
+#' ring flags.
 #'
 #' @param x A `QWAdata` object.
 #' @param ... Further arguments (currently unused).
@@ -635,11 +636,12 @@ as_QWAdata <- function(x) {
 #' Complete a QWAdata object
 #'
 #' Runs the full preprocessing pipeline on a [QWAdata] object:
-#' 1. Adds derived cell measures (see [complete_measures()]).
-#' 2. Extends the rings data frame to cover all years present in cells,
-#'    with cell counts and mean CWT per ring (see `complete_rings_log()`).
+#' 1. Aligns column types and extends `$rings` to complete year sequences per
+#'    image, with the cell count `cno` from `$cells`; aborts on dating problems.
+#' 2. Adds derived cell measures and the earlywood/latewood estimates (see
+#'    [complete_measures()]).
 #' 3. Flags incomplete, missing, and duplicate rings and initialises
-#'    the `exclude_issues` column (see [complete_flags()]).
+#'    `exclude_dupl` and `exclude_issues` (see [complete_flags()]).
 #'
 #' @param x A [QWAdata] object with both `$cells` and `$rings`.
 #' @param meta A [QWAimages] object providing `spatial_resolution` and
@@ -773,7 +775,10 @@ check_QWAdata <- function(x, meta = NULL, exclude_mode = NULL) {
 #' @param overwrite Allow to overwrite existing files? (default `FALSE`).
 #' @param drop_empty If `TRUE` (default), optional columns set in the flags app
 #'   (`colType` `"qc_input"`, e.g. ring quality flags and comments) that are
-#'   empty in all rows are not written.
+#'   empty (`NA`, or `NA`/`FALSE` for flags) in all rows are not written.
+#' @param keep_derived If `FALSE`, derived columns (`colType` `"derived"`, e.g.
+#'   cell measures computed from other columns) are not written. They can be
+#'   recomputed with [complete_QWAdata()]. Default `TRUE`.
 #' @returns A named list of written file paths, invisibly.
 #' @seealso [read_QWAdata()], [write_QWAprofile()]
 #' @export
@@ -781,9 +786,10 @@ write_QWAdata <- function(x, dir = NULL,
                           file_cells = NULL, file_rings = NULL,
                           dataset_name = NULL,
                           compress = TRUE, overwrite = FALSE,
-                          drop_empty = TRUE) {
+                          drop_empty = TRUE, keep_derived = TRUE) {
   checkmate::assert_class(x, "QWAdata")
   checkmate::assert_flag(drop_empty)
+  checkmate::assert_flag(keep_derived)
   use_dir <- !is.null(dir)
   use_files <- !is.null(file_cells) && !is.null(file_rings)
   if (use_dir == use_files) {
@@ -814,6 +820,11 @@ write_QWAdata <- function(x, dir = NULL,
   }
   checkmate::assert_path_for_output(file_cells, overwrite = overwrite)
   checkmate::assert_path_for_output(file_rings, overwrite = overwrite)
+
+  if (!keep_derived) {
+    x$cells <- x$cells[setdiff(names(x$cells), schema_cols("cells", "derived"))]
+    x$rings <- x$rings[setdiff(names(x$rings), schema_cols("rings", "derived"))]
+  }
 
   vroom::vroom_write(prepare_write(x$cells, "cells", drop_empty), file_cells,
                      delim = ",", na = "")

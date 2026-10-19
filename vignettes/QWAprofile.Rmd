@@ -74,8 +74,17 @@ prf_band <- calculate_band_profiles(
 )
 ```
 
-`sel_cell_params` selects which cell-level columns from `QWA_data$cells`
-to aggregate. `quant_probs` is optional; omitting it produces means only.
+`sel_cell_params` selects the cell measurement columns to aggregate
+(`measure` and `derived` columns of `$cells`, excluding positions,
+`sector100`, `ew_lw` and `nbrid`), or `"all"`. `quant_probs` is optional;
+omitting it produces counts and means only. Band profiles skip rings
+narrower than `bandwidth` or without `mrw`.
+
+With `apply_exclusions = TRUE`, the cells of excluded rings
+(`exclude_dupl`, `exclude_issues`; `NA` counts as `FALSE`) are removed
+before aggregating. With `tissue = "affected"`, rings with
+`exclude_issues` and `affected_tissue` `"ew"` or `"lw"` lose only the
+cells of that tissue (requires `ew_lw`).
 
 ---
 

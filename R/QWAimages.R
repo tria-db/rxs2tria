@@ -185,9 +185,10 @@ summary.QWAimages <- function(object, ...) {
 #' Validate a QWAimages object
 #'
 #' Runs a series of checks on a [QWAimages] object and warns about any issues
-#' found. Checks include: compliance with the base JSON schema, consistency of
-#' the `roxas_version` attribute with the `$software` column, missing optional
-#' columns, and invalid data structure.
+#' found. Checks include: compliance with the JSON schema of the given stage,
+#' consistency of the `roxas_version` attribute with the `$software` column,
+#' unique `image_label`s and a valid data structure. Missing optional columns
+#' are reported as information.
 #'
 #' @param x A [QWAimages] object.
 #' @param submission Check against the schema of submission files (`TRUE`)
@@ -208,11 +209,11 @@ check_QWAimages <- function(x, submission = TRUE) {
   tbl_props <- get_tbl_props(tbl_schema)
   
   # extended validation checks:
-  # compliance with base schema
+  # compliance with the schema of the stage
   check_schema(x, schema_obj, roxas_version, warn_only = TRUE, greedy = FALSE)
   # warn if attr vs $software column mismatch
   check_roxas_version(x)
-  # warn if missing optional columns
+  # report missing optional columns
   check_missing_opt(x, tbl_props, roxas_version)
 
   checkmate::assert_character(x$image_label, unique = TRUE, any.missing = FALSE)
@@ -234,7 +235,8 @@ check_QWAimages <- function(x, submission = TRUE) {
 #' `"qc_input"`, e.g. `comment_handled`). New columns are initialised as `NA`.
 #'
 #' @param x A [QWAimages] object.
-#' @returns A [QWAimages] object extended with all possible columns.
+#' @returns A [QWAimages] object extended with all optional columns except
+#'   `qc_input` ones.
 #' @seealso [complete_QWAmetadata()], [QWAimages()]
 #' @export
 complete_QWAimages <- function(x) {

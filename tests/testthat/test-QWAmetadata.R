@@ -38,6 +38,13 @@ test_that("checks use the schemas of the stage", {
   expect_warning(suppressMessages(check_QWAimages(imgs, submission = FALSE)), "failed validation")
 })
 
+test_that("check_QWAmetadata skips absent hierarchy tables", {
+  x <- read_quiet(tria_file)
+  x$sites <- NULL
+  msgs <- capture_messages(check_QWAmetadata(x))
+  expect_match(msgs, "sites.*not provided", all = FALSE)
+})
+
 test_that("QWAmetadata round-trips at both stages", {
   comps <- c("dataset", "authors", "funding", "related", "datafiles",
              "sites", "trees", "woodpieces", "slides")

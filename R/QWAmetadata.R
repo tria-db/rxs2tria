@@ -299,8 +299,9 @@ is_submission <- function(x) {
 # Methods (general and specific) ------
 #' Print a QWAmetadata object
 #'
-#' Displays a compact overview of a [QWAmetadata] object: image-level coverage
-#' (number of images, slides, woodpieces, species, and sites) and the
+#' Displays a compact overview of a [QWAmetadata] object: the stage (submission
+#' files, or TRIA dataset files with label, version and citation), image-level
+#' coverage (number of images, slides, woodpieces, species, and sites) and the
 #' availability of the optional metadata components.
 #'
 #' @param x A `QWAmetadata` object.
@@ -380,8 +381,10 @@ as_QWAmetadata <- function(x) {
 #'
 #' Runs a series of checks on each component of a [QWAmetadata] object and
 #' warns about any issues found. For `$images`, delegates to [check_QWAimages()].
-#' For all other components, checks compliance with the corresponding JSON schema
-#' and warns about missing optional columns. Absent components are skipped.
+#' For all other components, checks compliance with the corresponding JSON
+#' schema and reports missing optional columns. The `$sites`, `$trees`,
+#' `$woodpieces` and `$slides` must match the IDs and counts derived from
+#' `$images` (an error is thrown otherwise). Absent components are skipped.
 #' The schemas are those of the object's stage (see [is_submission()]).
 #'
 #' @param x A [QWAmetadata] object.
@@ -401,6 +404,7 @@ check_QWAmetadata <- function(x) {
 
   # hierarchy consistency checks against x$images
   for (tbl in names(hierarchy_tbls)) {
+    if (is.null(x[[tbl]])) next # absent, reported by check_component()
     h <- hierarchy_tbls[[tbl]]
     check_hierarchy(x[[tbl]], tbl, h$id_col, x$images, h$summary_fn)
   }

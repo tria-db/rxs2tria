@@ -16,8 +16,10 @@ an error is thrown if a component fails structural validation.
 \description{
 Runs a series of checks on each component of a \link{QWAmetadata} object and
 warns about any issues found. For \verb{$images}, delegates to \code{\link[=check_QWAimages]{check_QWAimages()}}.
-For all other components, checks compliance with the corresponding JSON schema
-and warns about missing optional columns. Absent components are skipped.
+For all other components, checks compliance with the corresponding JSON
+schema and reports missing optional columns. The \verb{$sites}, \verb{$trees},
+\verb{$woodpieces} and \verb{$slides} must match the IDs and counts derived from
+\verb{$images} (an error is thrown otherwise). Absent components are skipped.
 The schemas are those of the object's stage (see \code{\link[=is_submission]{is_submission()}}).
 }
 \seealso{
