@@ -2,7 +2,7 @@
   "$id": "https://example.com/schemas/extended_tree.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "allOf": [
-    { "$ref": "core/tria_tree_data_schema.json"},
+    { "$ref": "core/trees.json"},
     { 
       "type": "array",
       "items": {

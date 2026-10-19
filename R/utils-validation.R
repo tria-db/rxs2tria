@@ -37,32 +37,30 @@ cli_truncated_groups <- function(
   )
 }
 
-#' Map a QWAmetadata slot name to its package-relative schema file path
+#' Map a schema name to its package-relative schema file path
 #'
-#' @param schema QWAmetadata slot name.
-#' @param roxas_version Required when `schema = "images"`: `"roxas"` selects
-#'   the classic ROXAS schema, `"roxas_ai"` the ROXAS AI schema.
-#'   Ignored for all other schema names.
+#' Schema files are named after the schema. The stage overlay
+#' (`submission_<schema>.json` or `tria_<schema>.json`) is used if it exists,
+#' otherwise the definition shared by both stages (`core/<schema>.json`).
+#'
+#' @param schema Schema name: a QWAmetadata component (e.g. `"dataset"`,
+#'   `"datafiles"`), `"supplementary"`, `"roxas"` / `"roxas_ai"` for images,
+#'   `"cells"`, `"rings"`, `"QWAmetadata"` (full schema) or `"shiny_meta"`
+#'   (metadata app).
+#' @param submission Schema for submission files (`TRUE`) or TRIA dataset
+#'   files (`FALSE`)?
 #' @return Package-relative path to the JSON schema file.
 #' @noRd
-schema_rel_path <- function(schema) {
-  switch(schema,
-    "QWAmetadata" = "extdata/json_schema/core/tria_metadata_schema.json",
-    "shiny_meta" = "extdata/json_schema/app_metadata_schema.json",
-    "dataset" = "extdata/json_schema/core/tria_ds_data_schema.json",
-    "authors" = "extdata/json_schema/core/tria_author_data_schema.json",
-    "funding" = "extdata/json_schema/core/tria_funding_data_schema.json",
-    "related" = "extdata/json_schema/core/tria_related_data_schema.json",
-    "supplementary" = "extdata/json_schema/core/tria_resource_data_schema.json",
-    "sites" = "extdata/json_schema/core/tria_site_data_schema.json",
-    "trees" = "extdata/json_schema/core/tria_tree_data_schema.json",
-    "woodpieces" = "extdata/json_schema/core/tria_woodpiece_data_schema.json",
-    "slides" = "extdata/json_schema/core/tria_slide_data_schema.json",
-    "roxas" = "extdata/json_schema/core/tria_roxas_data_schema.json",
-    "roxas_ai" = "extdata/json_schema/core/tria_roxasai_data_schema.json",
-    "cells" = "extdata/json_schema/core/tria_cell_data_schema.json",
-    "rings" = "extdata/json_schema/core/tria_ring_data_schema.json"
-  )
+schema_rel_path <- function(schema, submission = TRUE) {
+  if (schema == "shiny_meta") return("extdata/json_schema/app_QWAmetadata.json")
+  stage <- if (submission) "submission" else "tria"
+  candidates <- file.path("extdata/json_schema",
+                          c(paste0(stage, "_", schema, ".json"),
+                            paste0("core/", schema, ".json")))
+  for (rel_path in candidates) {
+    if (nzchar(system.file(rel_path, package = "rxs2tria"))) return(rel_path)
+  }
+  cli::cli_abort("No schema {.val {schema}} for {.val {stage}} files.")
 }
 
 #' Inline all references in a JSON schema list

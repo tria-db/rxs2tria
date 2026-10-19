@@ -122,26 +122,6 @@
       "title": "Measurements created",
       "description": "Timestamp of the QWA analysis"
     },
-    "fname_image": {
-      "type": ["string", "null"],
-      "title": "File image",
-      "description": "Image file name"
-    },
-    "fname_cells": {
-      "type": ["string", "null"],
-      "title": "File cells",
-      "description": "Cell data file name"
-    },
-    "fname_rings": {
-      "type": ["string", "null"],
-      "title": "File rings",
-      "description": "Ring data file name"
-    },
-    "fname_settings": {
-      "type": ["string", "null"],
-      "title": "File Settings",
-      "description": "Settings file name"
-    },
     "img_comment": {
       "type": ["string", "null"],
       "title": "Comment",

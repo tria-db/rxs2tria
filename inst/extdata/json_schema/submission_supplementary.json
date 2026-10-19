@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "TODO:addurltoTRIAschema",
+  "title": "TRIA supplementary files schema, submission files",
+  "description": "Schema for the supplementary CSV in submission files",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "allOf": [
+      { "$ref": "core/resources.json" },
+      {
+        "properties": {
+          "fname_resource": {
+            "type": ["string", "null"],
+            "title": "File path / name of the resource",
+            "description": ""
+          },
+          "status": {
+            "type": ["string", "null"],
+            "enum": ["", "ok", "review", "ignore"],
+            "title": "Status",
+            "description": "Automated readiness check result: \"ok\" (ready for submission as-is), \"review\" (needs manual attention before this dataset can be zipped, see `note`), or \"ignore\" (excluded from the archive, e.g. a junk file or one already required as a core submission file)."
+          },
+          "note": {
+            "type": ["string", "null"],
+            "title": "Note",
+            "description": "Explanation for `status`, e.g. why a file needs review or is ignored."
+          }
+        }
+      }
+    ],
+    "unevaluatedProperties": false
+  }
+}

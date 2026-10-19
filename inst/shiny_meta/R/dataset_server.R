@@ -106,6 +106,12 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
       "description",
       shinyvalidate::sv_regex("\\[ADD INFO", "Complete or adapt the description template", invert = TRUE)
     )
+    iv_gen$add_rule("ds_license", function(value) {
+      if (input$ds_access == "public" && !shiny::isTruthy(value)) "Required for public access"
+    })
+    iv_gen$add_rule("embargoed_until", function(value) {
+      if (input$ds_access == "restricted" && !shiny::isTruthy(value)) "Required for restricted access"
+    })
 
     iv_gen$enable()
 

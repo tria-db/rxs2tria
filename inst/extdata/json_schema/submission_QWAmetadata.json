@@ -1,0 +1,36 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "TODO:addurltoTRIAschema",
+    "title": "TRIA metadata schema, submission files",
+    "description": "Main schema for TRIA dataset metadata in submission files",
+    "type": "object",
+    "properties":
+    {
+        "dataset": { "$ref": "submission_dataset.json" },
+        "authors": { "$ref": "core/authors.json" },
+        "funding": { "$ref": "core/funding.json" },
+        "related": { "$ref": "submission_related.json" },
+        "sites": { "$ref": "core/sites.json" },
+        "trees": { "$ref": "core/trees.json" },
+        "woodpieces": { "$ref": "core/woodpieces.json" },
+        "slides": { "$ref": "core/slides.json" },
+        "images": {
+          "anyOf": [
+            { "$ref": "submission_roxas.json" },
+            { "$ref": "submission_roxas_ai.json" }
+          ]
+        }
+    },
+    "required":
+    [
+        "dataset",
+        "authors",
+        "funding",
+        "sites",
+        "trees",
+        "woodpieces",
+        "slides",
+        "images"
+    ],
+    "additionalProperties": true
+}

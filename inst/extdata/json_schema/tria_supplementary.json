@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "TODO:addurltoTRIAschema",
+  "title": "TRIA supplementary files schema, TRIA dataset files",
+  "description": "Schema for the supplementary CSV in TRIA dataset files",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "allOf": [
+      { "$ref": "core/resources.json" },
+      {
+        "properties": {
+          "size_bytes": {
+            "type": "integer",
+            "minimum": 0,
+            "title": "Size",
+            "description": "File size in bytes"
+          },
+          "checksum": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{32}$",
+            "title": "Checksum",
+            "description": "MD5 checksum of the file"
+          }
+        },
+        "required": ["size_bytes", "checksum"]
+      }
+    ],
+    "unevaluatedProperties": false
+  }
+}

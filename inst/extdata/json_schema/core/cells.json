@@ -280,7 +280,7 @@
         "enum": ["", "ew", "lw"],
         "title": "Earlywood / latewood",
         "description": "Earlywood or latewood classification based on Mork's index",
-        "colType": "derived"
+        "colType": "estimate"
       }
     },
     "required": ["image_label", "year", "xpix", "ypix"],

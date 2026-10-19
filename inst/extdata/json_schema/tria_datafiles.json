@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "TODO:addurltoTRIAschema",
+  "title": "TRIA data files schema, TRIA dataset files",
+  "description": "Schema for $datafiles in TRIA dataset files: the cells and rings files of the dataset",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "allOf": [
+      { "$ref": "core/resources.json" },
+      {
+        "properties": {
+          "size_bytes": {
+            "type": "integer",
+            "minimum": 0,
+            "title": "Size",
+            "description": "File size in bytes"
+          },
+          "checksum": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{32}$",
+            "title": "Checksum",
+            "description": "MD5 checksum of the file"
+          },
+          "s3_key": {
+            "type": "string",
+            "minLength": 1,
+            "title": "S3 key",
+            "description": "Object key of the file in the S3 bucket"
+          }
+        },
+        "required": ["size_bytes", "checksum", "s3_key"]
+      }
+    ],
+    "unevaluatedProperties": false
+  }
+}

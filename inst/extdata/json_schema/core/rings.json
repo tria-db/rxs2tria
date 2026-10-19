@@ -39,8 +39,8 @@
         "type": ["integer", "null"],
         "minimum": 0,
         "title": "Cell count",
-        "description": "Number of cells detected in the ring; derived from the cells component",
-        "colType": "derived"
+        "description": "Number of cells in the ring; ROXAS output, recounted from the cells data",
+        "colType": "measure"
       },
       "mrw": {
         "type": ["number", "null"],
@@ -107,7 +107,7 @@
         "unit": "µm",
         "title": "Earlywood width",
         "description": "Estimated earlywood width based on Mork's index threshold",
-        "colType": "derived"
+        "colType": "estimate"
       },
       "lww": {
         "type": ["number", "null"],
@@ -115,7 +115,7 @@
         "unit": "µm",
         "title": "Latewood width",
         "description": "Estimated latewood width (mrw - eww)",
-        "colType": "derived"
+        "colType": "estimate"
       },
       "duplicate_ring": {
         "type": ["boolean", "null"],
@@ -140,7 +140,7 @@
         "enum": ["", "all", "ew", "lw"],
         "title": "Affected tissue",
         "description": "Can be used to indicate whether the data quality issue(s) affect the entire or only part of the ring",
-        "colType": "opt_char"
+        "colType": "manual"
       },
       "incomplete_ring": {
         "type": ["boolean", "null"],
@@ -158,151 +158,151 @@
         "type": ["boolean", "null"],
         "title": "Crossdating issue",
         "description": "Data quality flag: crossdating problem detected for this ring.",
-        "colType": "opt_flag"
+        "colType": "manual"
       },
       "compression_wood": {
         "type": ["boolean", "null"],
         "title": "Compression wood",
         "description": "Data quality flag: compression wood present.",
-        "colType": "opt_flag"
+        "colType": "manual"
       },
       "orientation": {
         "type": ["boolean", "null"],
         "title": "Orientation issue",
         "description": "Data quality flag: section orientation problem affecting measurements.",
-        "colType": "opt_flag"
+        "colType": "manual"
       },
       "cracks": {
         "type": ["boolean", "null"],
         "title": "Cracks",
         "description": "Technical quality flag: cracks visible in the section.",
-        "colType": "opt_flag"
+        "colType": "manual"
       },
       "out_of_focus": {
         "type": ["boolean", "null"],
         "title": "Out of focus",
         "description": "Technical quality flag: image is out of focus.",
-        "colType": "opt_flag"
+        "colType": "manual"
       },
       "paraffin": {
         "type": ["boolean", "null"],
         "title": "Paraffin",
         "description": "Technical quality flag: paraffin residue visible.",
-        "colType": "opt_flag"
+        "colType": "manual"
       },
       "compressed_cells": {
         "type": ["boolean", "null"],
         "title": "Compressed cells",
         "description": "Technical quality flag: cells are mechanically compressed.",
-        "colType": "opt_flag"
+        "colType": "manual"
       },
       "overlapping_cells": {
         "type": ["boolean", "null"],
         "title": "Overlapping cells",
         "description": "Technical quality flag: cells overlap in the image.",
-        "colType": "opt_flag"
+        "colType": "manual"
       },
       "broken_cells": {
         "type": ["boolean", "null"],
         "title": "Broken cells",
         "description": "Technical quality flag: broken or damaged cells present.",
-        "colType": "opt_flag"
+        "colType": "manual"
       },
       "tang_incomplete": {
         "type": ["boolean", "null"],
         "title": "Tangentially incomplete",
         "description": "Technical quality flag: ring is cut off at the tangential image border.",
-        "colType": "opt_flag"
+        "colType": "manual"
       },
       "irreg_thickness": {
         "type": ["boolean", "null"],
         "title": "Irregular/unequal thickness",
         "description": "Technical quality flag: irregular/unequal thickness.",
-        "colType": "opt_flag"
+        "colType": "manual"
       },
       "air_bubbles": {
         "type": ["boolean", "null"],
         "title": "Air bubble(s)",
         "description": "Technical quality flag: air bubble(s).",
-        "colType": "opt_flag"
+        "colType": "manual"
       },
       "tyloses": {
         "type": ["boolean", "null"],
         "title": "Tyloses",
         "description": "Other issue flag: tyloses present in vessels.",
-        "colType": "opt_flag"
+        "colType": "manual"
       },
       "decay": {
         "type": ["boolean", "null"],
         "title": "Decay",
         "description": "Other issue flag: wood decay visible.",
-        "colType": "opt_flag"
+        "colType": "manual"
       },
       "other_disqual": {
         "type": ["boolean", "null"],
         "title": "Other issue",
         "description": "Other issue flag: other data quality issue.",
-        "colType": "opt_flag"
+        "colType": "manual"
       },
       "blue_ring": {
         "type": ["boolean", "null"],
         "title": "Blue ring",
         "description": "Discrete feature flag: blue ring (freeze damage during cell expansion).",
-        "colType": "opt_flag"
+        "colType": "manual"
       },
       "frost_ring": {
         "type": ["boolean", "null"],
         "title": "Frost ring",
         "description": "Discrete feature flag: frost ring (freeze damage during cell wall formation).",
-        "colType": "opt_flag"
+        "colType": "manual"
       },
       "light_ring": {
         "type": ["boolean", "null"],
         "title": "Light ring",
         "description": "Discrete feature flag: light ring (absence of latewood).",
-        "colType": "opt_flag"
+        "colType": "manual"
       },
       "iadf": {
         "type": ["boolean", "null"],
         "title": "Intra-annual density fluctuation",
         "description": "Discrete feature flag: intra-annual density fluctuation.",
-        "colType": "opt_flag"
+        "colType": "manual"
       },
       "traum_resin_ducts": {
         "type": ["boolean", "null"],
         "title": "Traumatic resin ducts",
         "description": "Discrete feature flag: presence of traumatic resin ducts.",
-        "colType": "opt_flag"
+        "colType": "manual"
       },
       "trabeculae": {
         "type": ["boolean", "null"],
         "title": "Trabeculae",
         "description": "Discrete feature flag: presence of trabeculae.",
-        "colType": "opt_flag"
+        "colType": "manual"
       },
       "blue_cells": {
         "type": ["boolean", "null"],
         "title": "Blue cells",
         "description": "Discrete feature flag: blue cells.",
-        "colType": "opt_flag"
+        "colType": "manual"
       },
       "red_cells": {
         "type": ["boolean", "null"],
         "title": "Red cells",
         "description": "Discrete feature flag: red cells.",
-        "colType": "opt_flag"
+        "colType": "manual"
       },
       "other_discrete": {
         "type": ["boolean", "null"],
         "title": "Other discrete feature",
         "description": "Discrete feature flag: other discrete features.",
-        "colType": "opt_flag"
+        "colType": "manual"
       },
       "comment": {
         "type": ["string", "null"],
         "title": "Comment",
         "description": "Additional comments (not imported to TRIA DB)",
-        "colType": "opt_char"
+        "colType": "manual"
       }
     },
     "required": ["image_label", "year"],

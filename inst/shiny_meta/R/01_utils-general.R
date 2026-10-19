@@ -38,6 +38,8 @@ input_field_names <- c(
   ds_name = 'Dataset name',
   ds_title = 'Dataset title',
   description = 'Dataset description',
+  ds_license = 'License',
+  embargoed_until = 'Embargo date',
   authors = 'Authors',
   funding = 'Funding',
   related = "Related works",
@@ -152,76 +154,6 @@ get_shiny_schema <- function() {
   full_schema
 }
 full_schema <- get_shiny_schema()
-
-#' Load a subschema for a specific table
-#' Accepts QWAmetadata slot names: "images", "dataset", "authors", "funding",
-#' "relresources", "sites", "trees", "woodpieces", "slides", or "metadata"
-#' (the full combined schema).
-#' @param schema_name The name of the schema to load (default: "metadata").
-#' @returns A jsonvalidate schema object for the specified schema.
-#' @export
-get_schema <- function(schema_name = "metadata"){
-  # Map QWAmetadata slot names to schema file name patterns
-  file_pattern <- switch(schema_name,
-    "images"      = "roxas_data",
-    "dataset"     = "ds_data",
-    "authors"     = "author_data",
-    "funding"     = "funding_data",
-    "relresources" = "relresource_data",
-    "sites"       = "site_data",
-    "trees"       = "tree_data",
-    "woodpieces"  = "woodpiece_data",
-    "slides"      = "slide_data",
-    schema_name   # pass through for "metadata", "cell_data", etc.
-  )
-  schema_files <- list.files(system.file("extdata", "json_schema/core",
-                                         package = "rxs2tria"), full.names = TRUE)
-  # find file matching the pattern (sort for most recent version if multiple matches)
-  schema_filepath <- grep(sort(schema_files, decreasing = TRUE), pattern = file_pattern, value = TRUE)[1]
-  schema_obj <- jsonvalidate::json_schema$new(schema_filepath)
-  schema_obj
-}
-
-
-#' Load and resolve a JSON schema with $ref pointers
-#' @param schema_path Path to the schema file
-#' @return Fully resolved schema as a list
-load_extended_schema <- function(schema_path) {
-  # jsonvalidate can resolve $refs
-  obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
-
-  # Get the resolved schema (this is a bit of a workaround)
-  # The validator has resolved all $refs internally
-
-  # Alternative: read and manually resolve
-  schema <- jsonlite::fromJSON(obj$schema$schema, simplifyDataFrame = FALSE)
-
-  if (!"allOf" %in% names(schema)) {
-    stop("Schema does not seem to be extended (does not contain 'allOf' definitions.)")
-  }
-
-  base_path <- dirname(schema_path)
-
-  all_props <- list()
-  for (k in seq_along(schema[['allOf']])) {
-    subschema <- schema[['allOf']][[k]]
-    # resolve ref if present
-    if ("$ref" %in% names(subschema)) {
-      ref_path <- subschema[["$ref"]]
-      ref_file <- fs::path_real(file.path(base_path, ref_path))
-      ref_obj <- jsonvalidate::json_schema$new(ref_file, engine = "ajv")
-      subschema <- jsonlite::fromJSON(ref_obj$schema$schema, simplifyDataFrame = FALSE)
-      req_props <- subschema$items$required %||% character(0)
-      for (rp in req_props) {
-        subschema$items$properties[[rp]][['required']] <- TRUE
-      }
-    }
-    item_props <- subschema$items$properties
-    all_props <- modifyList(all_props, item_props)
-  }
-
-  all_props
-}
 
 
 

@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "TODO:addurltoTRIAschema",
+  "title": "TRIA dataset metadata schema, TRIA dataset files",
+  "description": "Schema for main dataset-related data in TRIA dataset files",
+  "type": "array",
+  "minItems": 1,
+  "maxItems": 1,
+  "items": {
+    "type": "object",
+    "allOf": [
+      { "$ref": "core/dataset.json" },
+      {
+        "properties": {
+          "ds_label": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique dataset label assigned by TRIA"
+          },
+          "ds_license": {
+            "type": "string",
+            "minLength": 1,
+            "not": { "const": "other" },
+            "description": "\"All rights reserved\" while the dataset is embargoed"
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "URL of the dataset landing page in the TRIA web app"
+          },
+          "doi": {
+            "type": ["string", "null"],
+            "description": "DOI of the dataset, if registered"
+          },
+          "citation": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Citation of the dataset, with the DOI if registered, otherwise with the url"
+          },
+          "dataset_version": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Version of the TRIA dataset"
+          }
+        },
+        "required": ["ds_label", "url", "citation", "dataset_version"]
+      }
+    ],
+    "unevaluatedProperties": false
+  }
+}

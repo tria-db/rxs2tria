@@ -1,7 +1,9 @@
 # rxs2tria (development version)
 
 * `compile_resources()` and `recompile_resources()` are renamed to `compile_supplementary()` and `recompile_supplementary()`; `vignette("resources")` is now `vignette("supplementary")`.
-* JSON schemas moved: `json_schema/base_schema/` is now `json_schema/core/`; the Shiny metadata app extensions `tria_*_ext_schema.json` are now `app_*_schema.json`.
+* JSON schemas are renamed: `json_schema/core/<component>.json`; the Shiny metadata app extensions to `app_<component>.json`.
+* JSON schemas distinguish submission files (`submission_<component>.json`) from TRIA dataset files (`tria_<component>.json`), with shared definitions in `core/`. submission only: `$related`, `fname_*`, `ds_access`, `embargoed_until`; TRIA dataset files add `$datafiles`, `ds_label`, `url`, `doi`, `citation`, `dataset_version`.
+* Schema `colType`s are now `key`, `measure`, `derived` (recomputable arithmetic), `estimate` (`ew_lw`, `eww`, `lww`), `flag` (automatic ring flags) and `manual` (set in the Shiny apps, incl. the optional ring flags, `comment` and `affected_tissue`). `cno` is a `measure`.
 * `update_QWAdata()` now synchronises the data with `meta`: new images are added and images not in `meta` are removed. Duplicate-ring flags are only recalculated for affected woodpiece-years, and with `reset_manual_flags = FALSE` manual `exclude_issues` edits are kept.
 * `update_QWAdata()` signature is now `update_QWAdata(x, meta, imgs_to_reread = NULL, ...)`; `imgs_to_update` is renamed to `imgs_to_reread` (also in `update_QWAimages()`) and is optional in `update_QWAdata()`.
 * new `update_QWAmetadata()` replaces the images of a `QWAmetadata` object and updates the sites, trees, woodpieces and slides tables (rows and counts) accordingly, keeping existing metadata.
@@ -11,10 +13,8 @@
 * new `extract_ring_measures()` returns the identifier and measurement columns of the rings data without excluded rings (`exclude_dupl`, `exclude_issues`), as input for further analyses.
 * `calculate_sector_profiles()` and `calculate_band_profiles()` gain `apply_exclusions` and `tissue` arguments: with `apply_exclusions = TRUE`, the cells of excluded rings are removed before aggregating; `tissue = "affected"` removes only the earlywood or latewood cells of rings whose `affected_tissue` is `"ew"` or `"lw"`.
 * `NA` values in `exclude_dupl` and `exclude_issues` now count as `FALSE` (ring not excluded), also in `extract_rwl()`.
-* `ew_lw` in the cells data is now `"ew"` / `"lw"` as defined in the schema (was `"EW"` / `"LW"`); `read_QWAdata()` converts older files.
 
 # rxs2tria 0.1.3
-
 
 * overhauled and finalised the extract rwl logic: new `extract_rwl()` with `scale_for_tucson()` and `rename_for_tucson()` (then write with `dplR::write.tucson()`), also added an `Export rwl` button to the flags Shiny app.
 * overhauled the supplementary resources handling. Supplementary resources info is no longer part of the `QWAmetadata` object. `compile_resources()`, `recompile_resources()` and `check_supplementary()` replace the existing functions. The output suppl resource manifest is a slim table listing and describing each file, to be submitted alongside the zip.
