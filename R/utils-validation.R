@@ -170,6 +170,22 @@ schema_cols <- function(schema, col_types) {
     names()
 }
 
+#' Key columns of a table schema (`colType` `"key"`) and their JSON types
+#'
+#' Reads the schema with jsonlite only (no V8 context), as the validators call
+#' it often.
+#' @param schema Schema name, see `schema_rel_path()`.
+#' @returns Named character vector: JSON type by key column, in schema order.
+#' @noRd
+key_props <- function(schema) {
+  schema_path <- system.file(schema_rel_path(schema), package = "rxs2tria")
+  tbl_schema <- jsonlite::read_json(schema_path, simplifyVector = TRUE, simplifyDataFrame = FALSE) |>
+    resolve_refs(fs::path_dir(schema_path))
+  extract_properties(tbl_schema) |>
+    purrr::keep(\(x) "key" %in% x$colType) |>
+    vapply(\(x) x$type[1], character(1))
+}
+
 #' Names of the cell measurement columns that can be aggregated
 #'
 #' All `measure` and `derived` columns of the cells schema except radial
@@ -250,7 +266,7 @@ convert_column <- function(x, target_class) {
 }
 
 #' Helper to force a given df into alignment with a table schema:
-#' ensure it has required columns, remove any extra columns,
+#' ensure it has required columns, remove extra columns unless `keep_extra`,
 #' force all columns to have the correct type
 #' @param df  The data frame to be aligned
 #' @param tbl_props  Table properties read from schema (output of get_tbl_props()) 
@@ -262,10 +278,13 @@ convert_column <- function(x, target_class) {
 #'   columns, dropped extra columns and `NA`s from type conversions
 #' @param ignore_colnames  Should the column names of df be ignored
 #'   in favor of position?
+#' @param keep_extra  Keep columns not in the schema (appended after the schema
+#'   columns, type unchanged) instead of removing them?
 #' @noRd
 align_to_schema <- function(df, tbl_props, schema = NULL, add_opt = FALSE,
-                            mute_info = FALSE, ignore_colnames = FALSE
-                            ) {  
+                            mute_info = FALSE, ignore_colnames = FALSE,
+                            keep_extra = FALSE
+                            ) {
   # get target empty df to align data to
   target_structure <- create_empty_df(tbl_props, nrows = 0)
   target_cols <- names(target_structure)
@@ -293,15 +312,20 @@ align_to_schema <- function(df, tbl_props, schema = NULL, add_opt = FALSE,
   }
   source_cols <- names(aligned_data)
   common_cols <- intersect(target_cols, source_cols)
+  extra_cols <- setdiff(source_cols, target_cols)
 
   # enforce the correct class for all columns in df
   for (col in common_cols) {
     aligned_data[[col]] <- convert_column(aligned_data[[col]], class(target_structure[[col]]))
   }
-  
+  source_data <- aligned_data
+
   # bind to target_structure to ensure required+common columns are present
   res_cols <- intersect(target_cols, c(req_cols, common_cols)) # ensures correct order
   aligned_data <- dplyr::bind_rows(target_structure[res_cols], aligned_data[common_cols])
+  if (keep_extra && length(extra_cols) > 0) {
+    aligned_data[extra_cols] <- source_data[extra_cols]
+  }
 
   # if not muted, collect messages on changes made
   if (!mute_info) {
@@ -311,7 +335,6 @@ align_to_schema <- function(df, tbl_props, schema = NULL, add_opt = FALSE,
     # (add_opt) only an information
     missing_cols <- setdiff(tbl_props$required, source_cols)
     added_opt_cols <- setdiff(req_cols, c(source_cols, tbl_props$required))
-    extra_cols <- setdiff(source_cols, target_cols)
 
     if (length(missing_cols) > 0) {
       msg <- c(msg,
@@ -320,7 +343,7 @@ align_to_schema <- function(df, tbl_props, schema = NULL, add_opt = FALSE,
       )
     }
 
-    if (length(extra_cols) > 0) {
+    if (length(extra_cols) > 0 && !keep_extra) {
       msg <- c(msg,
         "i" = "Extra columns ignored:", 
         " " = "{extra_cols}"
@@ -348,14 +371,101 @@ align_to_schema <- function(df, tbl_props, schema = NULL, add_opt = FALSE,
     if (length(added_opt_cols) > 0) {
       cli::cli_inform(c("i" = "{.field {schema}} optional columns added:", " " = "{added_opt_cols}"))
     }
+    if (length(extra_cols) > 0 && keep_extra) {
+      cli::cli_inform(c("i" = "{.field {schema}} extra columns kept:", " " = "{extra_cols}"))
+    }
   }
 
   aligned_data
 }
 
-#' Helper to check df against schema
+#' Report a check issue as a warning, or as an error with `strict`
+#' @param msg Message for cli, interpolated in the caller's environment.
+#' @param strict If `TRUE`, abort instead of warning.
+#' @return `FALSE`, invisibly.
 #' @noRd
-check_schema <- function(df, schema_obj, schema = NULL, warn_only = TRUE, greedy = FALSE) {
+report_issue <- function(msg, strict = FALSE, .envir = parent.frame()) {
+  if (strict) {
+    cli::cli_abort(msg, .envir = .envir)
+  } else {
+    cli::cli_warn(msg, .envir = .envir)
+  }
+  invisible(FALSE)
+}
+
+#' Does a column match a JSON schema type? Whole numbers count as integer;
+#' unknown types pass.
+#' @noRd
+is_json_type <- function(x, type) {
+  switch(type,
+    string = is.character(x),
+    boolean = is.logical(x),
+    number = is.numeric(x),
+    integer = is.numeric(x) && all(x == round(x), na.rm = TRUE),
+    TRUE
+  )
+}
+
+#' Abort if key columns are missing, of the wrong type or `NA`, or if rows are
+#' not unique by `unique_by`
+#' @param df Data frame.
+#' @param keys Named character vector: JSON type by key column (`NA` skips the
+#'   type check), see `key_props()`.
+#' @param what Table name, for messages.
+#' @param unique_by Columns that must identify the rows uniquely, or `NULL`.
+#' @param hint Optional hint added to the messages on `NA` and duplicate keys.
+#' @return `df`, invisibly.
+#' @noRd
+validate_keys <- function(df, keys, what, unique_by = NULL, hint = NULL) {
+  key_cols <- names(keys)
+  missing_cols <- setdiff(key_cols, names(df))
+  if (length(missing_cols) > 0) {
+    cli::cli_abort(c("x" = "{.field {what}}: missing key column{?s} {.field {missing_cols}}."))
+  }
+
+  wrong_type <- key_cols[!purrr::map2_lgl(df[key_cols], keys, \(x, t) is.na(t) || is_json_type(x, t))]
+  if (length(wrong_type) > 0) {
+    cli::cli_abort(c(
+      "x" = "{.field {what}}: key column{?s} of the wrong type:",
+      cli_truncated_list(paste0("`", wrong_type, "` must be ", keys[wrong_type]), max_show = Inf)
+    ))
+  }
+
+  # images affected by the rows in `rows`, if known
+  affected_imgs <- function(rows) {
+    if (!"image_label" %in% names(df)) return(NULL)
+    imgs <- unique(stats::na.omit(df$image_label[rows]))
+    if (length(imgs) > 0) c("i" = "Affected images:", cli_truncated_list(imgs))
+  }
+
+  na_rows <- !stats::complete.cases(df[key_cols])
+  if (any(na_rows)) {
+    na_cols <- key_cols[vapply(df[key_cols], anyNA, logical(1))]
+    cli::cli_abort(c(
+      "x" = "{.field {what}}: {sum(na_rows)} row{?s} with missing values in key column{?s} {.field {na_cols}}.",
+      affected_imgs(na_rows),
+      "i" = hint
+    ))
+  }
+
+  if (!is.null(unique_by)) {
+    dupl_rows <- duplicated(df[unique_by]) | duplicated(df[unique_by], fromLast = TRUE)
+    if (any(dupl_rows)) {
+      cli::cli_abort(c(
+        "x" = "{.field {what}}: {sum(dupl_rows)} row{?s} with duplicate {.field {unique_by}}.",
+        affected_imgs(dupl_rows),
+        "i" = hint
+      ))
+    }
+  }
+
+  invisible(df)
+}
+
+#' Helper to check df against schema
+#' @return `TRUE` if valid, `FALSE` otherwise (invisibly).
+#' @noRd
+check_schema <- function(df, schema_obj, schema = NULL, strict = FALSE, greedy = FALSE) {
   # convert NA_character to empty strings for $validate to work correctly
   df_na <- df |> 
     dplyr::mutate(dplyr::across(dplyr::where(is.character), \(x) tidyr::replace_na(x,"")))
@@ -382,32 +492,83 @@ check_schema <- function(df, schema_obj, schema = NULL, warn_only = TRUE, greedy
         )
       ) |> dplyr::pull(full_message) |> unique()
     names(msg) <- rep("*", length(msg))
-    if (warn_only) {
-      cli::cli_warn(c("!" = "{.field {schema}} data frame failed validation checks:", msg))
-    } else {
-     cli::cli_abort(c("x" = "{.field {schema}} data frame failed validation checks:", msg))
+    return(report_issue(
+      c("!" = "{.field {schema}} data frame failed validation checks:", msg),
+      strict
+    ))
+  }
+  invisible(TRUE)
+}
+
+#' Helper to check a large data frame against the column rules of its schema
+#'
+#' Vectorised alternative to `check_schema()` for the cells and rings tables:
+#' checks `type`, `minimum`, `maximum` and `enum` of the schema columns, with
+#' the messages of `check_schema()` plus the number of rows affected. Extra
+#' columns are reported as information only.
+#' @param df Data frame to check.
+#' @param tbl_props Output of `get_tbl_props()`.
+#' @param schema Schema name, only used for messages.
+#' @param strict If `TRUE`, abort instead of warning.
+#' @return `TRUE` if valid, `FALSE` otherwise (invisibly).
+#' @noRd
+check_data_schema <- function(df, tbl_props, schema = NULL, strict = FALSE) {
+  fmt_n <- \(n) if (n == 1) "1 row" else paste(n, "rows")
+
+  msg <- c()
+  for (col in intersect(names(tbl_props$properties), names(df))) {
+    prop <- tbl_props$properties[[col]]
+    x <- df[[col]]
+    if (all(is.na(x))) next
+    type <- prop$type[1]
+    if (!is_json_type(x, type)) {
+      msg <- c(msg, paste0("must be ", type, ": `", col, "`"))
+      next
+    }
+    if (!is.null(prop$minimum)) {
+      n <- sum(x < prop$minimum, na.rm = TRUE)
+      if (n > 0) msg <- c(msg, paste0("must be >= ", prop$minimum, ": `", col, "` (", fmt_n(n), ")"))
+    }
+    if (!is.null(prop$maximum)) {
+      n <- sum(x > prop$maximum, na.rm = TRUE)
+      if (n > 0) msg <- c(msg, paste0("must be <= ", prop$maximum, ": `", col, "` (", fmt_n(n), ")"))
+    }
+    if (!is.null(prop$enum)) {
+      n <- sum(!is.na(x) & !x %in% unlist(prop$enum))
+      if (n > 0) msg <- c(msg, paste0(
+        "must be equal to one of the allowed values: `", col, "` (",
+        paste(unlist(prop$enum), collapse = ", "), ") (", fmt_n(n), ")"
+      ))
     }
   }
-  invisible(result)
+
+  extra_cols <- setdiff(names(df), names(tbl_props$properties))
+  if (length(extra_cols) > 0) {
+    cli::cli_inform(c(
+      "i" = "{.field {schema}} extra columns (kept, not imported into TRIA by default):",
+      " " = "{extra_cols}"
+    ))
+  }
+
+  if (length(msg) > 0) {
+    names(msg) <- rep("*", length(msg))
+    return(report_issue(
+      c("!" = "{.field {schema}} data frame failed validation checks:", msg),
+      strict
+    ))
+  }
+  invisible(TRUE)
 }
 
 
 #' Helper to check the structure columns define a sound hierarchy
 #' @param df data frame containing the structure columns image_label, slide_label,
-#'   woodpiece_label, tree_label and site_label
+#'   woodpiece_label, tree_label and site_label, not `NA` (see
+#'   `validate_QWAimages()`)
+#' @param strict If `TRUE`, abort on label prefix mismatches instead of warning.
+#' @return `TRUE` if the label prefixes match, `FALSE` otherwise (invisibly).
 #' @noRd
-check_structure <- function(df, warn_only = FALSE) {
-  checkmate::assert_data_frame(df[c('image_label','slide_label','woodpiece_label','tree_label','site_label')], 
-    any.missing = FALSE, .var.name = "No missing values allowed in structure columns of QWAimages")
-  msg <- c()
-  # ensure we have unique image_labels
-  if (any(duplicated(df$image_label))) {
-    msg <- c(msg,
-      "x" = "Duplicate image_labels found. Fix manually!", 
-      " " = "{df$image_label[duplicated(df$image_label)]}"
-    )
-    #data$image_label <- janitor::make_clean_names(data$image_label, case = "none")
-  }
+check_structure <- function(df, strict = FALSE) {
   valid <- (
     stringr::str_starts(df$image_label, df$slide_label) &
       stringr::str_starts(df$slide_label, df$woodpiece_label) &
@@ -415,17 +576,11 @@ check_structure <- function(df, warn_only = FALSE) {
       stringr::str_starts(df$tree_label, df$site_label)
   )
   if (any(!valid)) {
-    msg <- c(msg,
-      "!" = "Invalid data structure or not using rxs2tria labels for:",
+    return(report_issue(c(
+      "!" = "{.cls QWAimages} structure check failed:",
+      " " = "Invalid data structure or not using rxs2tria labels for:",
       " " = "{df$image_label[!valid]}"
-    )
-  }
-  if (length(msg)>0) {
-    if (warn_only) {
-      cli::cli_warn(c("!" = "{.cls QWAimages} structure check failed with {length(msg)%/%2} warning{?s}", msg))
-    } else {
-      cli::cli_abort(c("!" = "{.cls QWAimages} structure check failed with {length(msg)%/%2} error{?s}", msg))
-    }
+    ), strict))
   }
   invisible(TRUE)
 }

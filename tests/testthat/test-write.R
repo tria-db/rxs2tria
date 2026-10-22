@@ -66,14 +66,15 @@ test_that("written QWAmetadata reads back with the same values", {
 test_that("write_QWAdata writes NA as empty fields and drops all-empty qc_input columns", {
   cells <- tibble::tibble(image_label = "IMG1", year = 2000, xpix = c(1, 2), ypix = c(1, 2),
                           la = c(10, NA), cwttan = NA_real_)
-  rings <- tibble::tibble(image_label = "IMG1", year = c(2000, 2001), mrw = NA_real_,
+  rings <- tibble::tibble(woodpiece_label = "WP1", slide_label = "WP1_SL1",
+                          image_label = "IMG1", year = c(2000, 2001), mrw = NA_real_,
                           x_dating = c(TRUE, NA), comment = c(NA, ""))
   dir <- tempfile()
   dir.create(dir)
   files <- suppressMessages(write_QWAdata(new_QWAdata(cells, rings), dir, compress = FALSE))
 
   rings_txt <- readLines(files$file_rings)
-  expect_equal(rings_txt[1], "image_label,year,mrw,x_dating") # mrw kept, comment dropped
+  expect_equal(rings_txt[1], "woodpiece_label,slide_label,image_label,year,mrw,x_dating") # mrw kept, comment dropped
   expect_false(any(grepl("NA", rings_txt)))
   cells_txt <- readLines(files$file_cells)
   expect_equal(cells_txt[1], "image_label,year,xpix,ypix,la,cwttan")
@@ -81,14 +82,14 @@ test_that("write_QWAdata writes NA as empty fields and drops all-empty qc_input 
 
   files <- suppressMessages(write_QWAdata(new_QWAdata(cells, rings), dir, compress = FALSE,
                                           overwrite = TRUE, drop_empty = FALSE))
-  expect_equal(readLines(files$file_rings)[1], "image_label,year,mrw,x_dating,comment")
+  expect_equal(readLines(files$file_rings)[1], "woodpiece_label,slide_label,image_label,year,mrw,x_dating,comment")
 
   # all-FALSE logical qc_input columns count as empty, automatic flags are kept
   rings$x_dating <- c(FALSE, NA)
   rings$duplicate_ring <- FALSE
   files <- suppressMessages(write_QWAdata(new_QWAdata(cells, rings), dir, compress = FALSE,
                                           overwrite = TRUE))
-  expect_equal(readLines(files$file_rings)[1], "image_label,year,mrw,duplicate_ring")
+  expect_equal(readLines(files$file_rings)[1], "woodpiece_label,slide_label,image_label,year,mrw,duplicate_ring")
 })
 
 test_that("QWAprofile defaults to sector profiles, write_QWAprofile writes NA as empty fields", {
@@ -104,7 +105,8 @@ test_that("write_QWAdata drops derived columns with keep_derived = FALSE", {
   derived <- schema_cols("cells", "derived")
   cells <- tibble::tibble(image_label = "IMG1", year = 2000, xpix = 1, ypix = 1, la = 10)
   cells[derived] <- 1
-  rings <- tibble::tibble(image_label = "IMG1", year = 2000, mrw = 100)
+  rings <- tibble::tibble(woodpiece_label = "WP1", slide_label = "WP1_SL1",
+                          image_label = "IMG1", year = 2000, mrw = 100)
   dir <- tempfile()
   dir.create(dir)
 
@@ -115,5 +117,5 @@ test_that("write_QWAdata drops derived columns with keep_derived = FALSE", {
   files <- suppressMessages(write_QWAdata(new_QWAdata(cells, rings), dir, compress = FALSE,
                                           overwrite = TRUE, keep_derived = FALSE))
   expect_equal(readLines(files$file_cells)[1], "image_label,year,xpix,ypix,la")
-  expect_equal(readLines(files$file_rings)[1], "image_label,year,mrw")
+  expect_equal(readLines(files$file_rings)[1], "woodpiece_label,slide_label,image_label,year,mrw")
 })

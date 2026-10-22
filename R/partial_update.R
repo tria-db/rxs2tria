@@ -19,10 +19,10 @@ update_QWAimages <- function(meta, imgs_to_reread,
                              settings_date_orders = NULL,
                              settings_date_tz = Sys.timezone()
                             ) {
-  checkmate::assert_class(meta, "QWAimages")
+  validate_QWAimages(meta)
   checkmate::assert_subset(imgs_to_reread, meta$image_label)
 
-  roxas_version <- attr(meta, "roxas_version") # TODO: check roxas version ok?
+  roxas_version <- attr(meta, "roxas_version")
 
   # read in settings files again
   df_settings_new <- collect_settings_data(meta |>
@@ -79,8 +79,8 @@ update_QWAimages <- function(meta, imgs_to_reread,
 update_QWAdata <- function(x, meta, imgs_to_reread = NULL,
                            exclude_mode = NULL,
                            reset_manual_flags = TRUE) {
-  checkmate::assert_class(x, "QWAdata")
-  checkmate::assert_class(meta, "QWAimages")
+  validate_QWAdata(x)
+  validate_QWAimages(meta)
   checkmate::assert_subset(imgs_to_reread, meta$image_label)
   checkmate::assert_flag(reset_manual_flags)
   mode <- resolve_exclude_mode(exclude_mode)
@@ -219,9 +219,9 @@ update_QWAdata <- function(x, meta, imgs_to_reread = NULL,
 #' @seealso [update_QWAimages()], [update_QWAdata()], [check_QWAmetadata()]
 #' @export
 update_QWAmetadata <- function(x, images) {
-  checkmate::assert_class(x, "QWAmetadata")
+  validate_QWAmetadata(x)
   assert_submission(x, "update_QWAmetadata")
-  checkmate::assert_class(images, "QWAimages")
+  validate_QWAimages(images)
   rv <- attr(images, "roxas_version")
 
   # images: fill columns set in the apps from x$images where missing or NA

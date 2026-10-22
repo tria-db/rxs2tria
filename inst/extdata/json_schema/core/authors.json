@@ -89,11 +89,10 @@
         "colType": "meta_input"
       },
       "contact_person": {
-        "type": ["boolean", "null", "string"],
-        "maxLength": 0,
+        "type": ["boolean", "null"],
         "title": "Contact person",
         "description": "Select one author as contact person",
-        "$comment": "missing, null, or empty string values are considered as false",
+        "$comment": "null is considered as false",
         "colType": "meta_input"
       }
     },

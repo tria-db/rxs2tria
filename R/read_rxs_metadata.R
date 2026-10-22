@@ -133,8 +133,8 @@ build_QWAimages <- function(df_structure,
     df_structure$fname_settings,
     df_settings$fname_settings, na.ok = FALSE)
   # custom check of the hierarchy defined by the structure columns
-  checkmate::assert_character(df_structure$image_label, unique = TRUE)
-  check_structure(df_structure)
+  validate_keys(df_structure, key_props("images"), "df_structure", unique_by = "image_label")
+  check_structure(df_structure, strict = TRUE)
 
   # datetime columns must already be converted to POSIXct: ROXAS classic
   # timestamp formats are not parsed automatically further down and would
@@ -170,7 +170,7 @@ build_QWAimages <- function(df_structure,
 
   # validate against the schema, but warn only. user may want to fix
   # things manually in the metadata app
-  check_schema(df_rxsmeta, schema_obj, rv, warn_only = TRUE, greedy = FALSE)
+  check_schema(df_rxsmeta, schema_obj, rv, greedy = FALSE)
 
   # TODO: check outmost_year is valid?
 
@@ -178,7 +178,9 @@ build_QWAimages <- function(df_structure,
     "Extracted available {rv_msg(rv)} metadata to {.var QWAimages} object."
   )
 
-  new_QWAimages(df_rxsmeta, roxas_version = rv)
+  x <- new_QWAimages(df_rxsmeta, roxas_version = rv)
+  validate_QWAimages(x)
+  x
 }
 
 #' Detect the ROXAS version from settings file names

@@ -63,21 +63,6 @@ resolve_roxas_version <- function(x, rv_param = NULL) {
   rv
 }
 
-#' @noRd
-# check if roxas version can be inferred and matches attr
-check_roxas_version <- function(x) {
-  rv_attr <- attr(x, "roxas_version")
-  checkmate::assert_choice(rv_attr, c("roxas", "roxas_ai"))
-  rv_infer <- infer_rv_from_data(x)
-  if (!is.null(rv_infer) && rv_infer != rv_attr)
-    cli::cli_warn(c(
-      "!" = "{.arg roxas_version} attribute ({.val {rv_attr}}) does not match
-             the {.var software} column ({.val {rv_infer}}).",
-      "i" = "Check your data for mixed or incorrect software values."
-    ))
-  invisible(TRUE)
-}
-
 # Internal S3 constructor ----
 #' @noRd
 new_QWAimages <- function(data, roxas_version) {
@@ -88,6 +73,32 @@ new_QWAimages <- function(data, roxas_version) {
     class = c("QWAimages", class(data)),
     roxas_version = roxas_version
   )
+}
+
+# Internal S3 validator ----
+#' Abort if a QWAimages object violates the class invariants
+#'
+#' Valid `roxas_version` attribute, equal to `$software` in all rows; structure
+#' labels present, character and not `NA`; `image_label` unique.
+#' @returns `x`, invisibly.
+#' @noRd
+validate_QWAimages <- function(x) {
+  checkmate::assert_class(x, c("QWAimages", "data.frame"))
+  rv <- attr(x, "roxas_version")
+  if (!checkmate::test_choice(rv, c("roxas", "roxas_ai"))) {
+    cli::cli_abort(c(
+      "x" = "{.cls QWAimages}: invalid {.arg roxas_version} attribute {.val {rv}}.",
+      "i" = "Rebuild the object with {.fn QWAimages}."
+    ))
+  }
+  validate_keys(x, key_props(rv), "QWAimages", unique_by = "image_label")
+  if (!"software" %in% names(x) || !all(x$software %in% rv)) {
+    cli::cli_abort(c(
+      "x" = "{.cls QWAimages}: {.field software} must be {.val {rv}} (the {.arg roxas_version} attribute) in all rows.",
+      "i" = "Rebuild the object with {.fn QWAimages}."
+    ))
+  }
+  invisible(x)
 }
 
 # Public constructor -----
@@ -115,12 +126,16 @@ new_QWAimages <- function(data, roxas_version) {
 #' @export
 QWAimages <- function(data, roxas_version = NULL) {
   roxas_version <- resolve_roxas_version(data, rv_param = roxas_version)
-  # if we can resolve ok, then make sure that the column software exists (also forces lower_case)
-  rv_infer <- infer_rv_from_data(data)
-  if (is.null(rv_infer) || rv_infer == roxas_version) data$software <- roxas_version
 
   # prep data:
   data <- tibble::as_tibble(data, .name_repair = janitor::make_clean_names)
+
+  # software always equals roxas_version (case changes are not reported)
+  n_changed <- sum(!is.na(data$software) & tolower(data$software) != roxas_version)
+  if (n_changed > 0) {
+    cli::cli_warn(c("!" = "{.field software} set to {.val {roxas_version}} in {n_changed} row{?s}."))
+  }
+  data$software <- roxas_version
 
   schema_path <- system.file(schema_rel_path(roxas_version), package = "rxs2tria")
   schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
@@ -131,11 +146,10 @@ QWAimages <- function(data, roxas_version = NULL) {
   # warn if this causes changes to data
   data <- align_to_schema(data, tbl_props, roxas_version)
 
-  # minimal validation checks: warn if structure invalid
-  check_structure(data, warn_only = TRUE)
- 
-  # construct object:
-  new_QWAimages(data, roxas_version)
+  x <- validate_QWAimages(new_QWAimages(data, roxas_version))
+  # warn if label prefixes do not match
+  check_structure(x)
+  x
 }
 
 # Methods (general and specific) ------
@@ -185,10 +199,11 @@ summary.QWAimages <- function(object, ...) {
 #' Validate a QWAimages object
 #'
 #' Runs a series of checks on a [QWAimages] object and warns about any issues
-#' found. Checks include: compliance with the JSON schema of the given stage,
-#' consistency of the `roxas_version` attribute with the `$software` column,
-#' unique `image_label`s and a valid data structure. Missing optional columns
-#' are reported as information.
+#' found. Aborts if the object is invalid (structure labels missing or `NA`,
+#' duplicate `image_label`s, `$software` not matching the `roxas_version`
+#' attribute). Checks include: compliance with the JSON schema of the given
+#' stage and a valid data structure. Missing optional columns are reported as
+#' information.
 #'
 #' @param x A [QWAimages] object.
 #' @param submission Check against the schema of submission files (`TRUE`)
@@ -198,10 +213,9 @@ summary.QWAimages <- function(object, ...) {
 #' @seealso [QWAimages()], [check_QWAmetadata()]
 #' @export
 check_QWAimages <- function(x, submission = TRUE) {
-  checkmate::assert_class(x, c("QWAimages", "data.frame"))
+  validate_QWAimages(x)
   checkmate::assert_flag(submission)
   roxas_version <- attr(x, "roxas_version")
-  checkmate::assert_choice(roxas_version, c("roxas","roxas_ai"))
 
   schema_path <- system.file(schema_rel_path(roxas_version, submission), package = "rxs2tria")
   schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
@@ -210,15 +224,12 @@ check_QWAimages <- function(x, submission = TRUE) {
   
   # extended validation checks:
   # compliance with the schema of the stage
-  check_schema(x, schema_obj, roxas_version, warn_only = TRUE, greedy = FALSE)
-  # warn if attr vs $software column mismatch
-  check_roxas_version(x)
+  check_schema(x, schema_obj, roxas_version, greedy = FALSE)
   # report missing optional columns
   check_missing_opt(x, tbl_props, roxas_version)
 
-  checkmate::assert_character(x$image_label, unique = TRUE, any.missing = FALSE)
   # check if structure invalid / labels start_with logic
-  check_structure(x, warn_only = TRUE)
+  check_structure(x)
 
   # TODO: any additional checks?
   # e.g.: check outmost_year is valid
@@ -240,9 +251,8 @@ check_QWAimages <- function(x, submission = TRUE) {
 #' @seealso [complete_QWAmetadata()], [QWAimages()]
 #' @export
 complete_QWAimages <- function(x) {
-  checkmate::assert_class(x, "QWAimages")
+  validate_QWAimages(x)
   roxas_version <- attr(x, "roxas_version")
-  checkmate::assert_choice(roxas_version, c("roxas","roxas_ai"))
 
   schema_path <- system.file(schema_rel_path(roxas_version), package = "rxs2tria")
   schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
@@ -275,7 +285,7 @@ complete_QWAimages <- function(x) {
 #' @export
 write_QWAimages <- function(x, file, compress = FALSE, overwrite = TRUE,
                             drop_empty = TRUE) {
-  checkmate::assert_class(x, "QWAimages")
+  validate_QWAimages(x)
   checkmate::assert_flag(drop_empty)
 
   # if compress, enforce .gz extension

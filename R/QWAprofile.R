@@ -11,6 +11,32 @@ new_QWAprofile <- function(data, profile_type) {
   )
 }
 
+# Internal S3 validator ----
+#' Abort if a QWAprofile object violates the class invariants
+#'
+#' Valid `profile_type` attribute; key columns (`image_label`, `year` and
+#' `sector_n` or `start`, `end`) present, not `NA` and unique; `start < end`.
+#' @returns `x`, invisibly.
+#' @noRd
+validate_QWAprofile <- function(x) {
+  checkmate::assert_class(x, c("QWAprofile", "data.frame"))
+  pt <- attr(x, "profile_type")
+  if (!checkmate::test_choice(pt, c("sector", "band"))) {
+    cli::cli_abort(c(
+      "x" = "{.cls QWAprofile}: invalid {.arg profile_type} attribute {.val {pt}}.",
+      "i" = "Rebuild the object with {.fn QWAprofile}."
+    ))
+  }
+  # no schema for profiles; sector_n is a factor after calculate_sector_profiles()
+  keys <- c(image_label = "string", year = "integer",
+            switch(pt, sector = c(sector_n = NA), band = c(start = "number", end = "number")))
+  validate_keys(x, keys, "QWAprofile", unique_by = names(keys))
+  if (pt == "band" && any(x$start >= x$end)) {
+    cli::cli_abort(c("x" = "{.cls QWAprofile}: {sum(x$start >= x$end)} band{?s} with {.field start} >= {.field end}."))
+  }
+  invisible(x)
+}
+
 # Public constructor ----
 #' Create a QWAprofile object
 #'
@@ -38,10 +64,10 @@ new_QWAprofile <- function(data, profile_type) {
 QWAprofile <- function(data, profile_type = c("sector", "band")) {
   checkmate::assert_data_frame(data)
   profile_type <- rlang::arg_match(profile_type)
-  
-  # TODO: validation checks
 
-  new_QWAprofile(data, profile_type)
+  x <- new_QWAprofile(data, profile_type)
+  validate_QWAprofile(x)
+  x
 }
 
 # Methods (general and specific) ----
@@ -99,7 +125,7 @@ summary.QWAprofile <- function(object, ...) {
 #' @seealso [read_QWAprofile()], [QWAprofile()]
 #' @export
 write_QWAprofile <- function(x, file, compress = FALSE, overwrite = TRUE) {
-  checkmate::assert_class(x, "QWAprofile")
+  validate_QWAprofile(x)
   if (compress && fs::path_ext(file) != "gz")
     file <- paste0(file, ".gz")
   checkmate::assert_path_for_output(file, overwrite = overwrite)
@@ -132,56 +158,28 @@ read_QWAprofile <- function(file) {
   }
 
   # TODO: validate profile data
-  # - image_label, year available and complete,
   # - valid measurement and count cols
-  # - sectors: n sectors no NA, consistent
-  # - bands: start, end, bandwith no NA, consistent
-  # use QWAprofile?
+  # - sectors: n sectors consistent
+  # - bands: bandwidth consistent
+  x <- QWAprofile(df, profile_type = pt)
   cli::cli_inform(c("v" = "QWAprofile read from {.file {file}}"))
-  new_QWAprofile(df, profile_type = pt)
+  x
 }
 
 #' Validate a QWAprofile object
 #'
 #' Runs a series of checks on a [QWAprofile] object and warns about any issues
-#' found. Checks include: required identifier columns present and non-`NA`,
-#' consistent bin definitions (`sector_n` for sector profiles, `start`/`end`
-#' for band profiles), and at least one measurement column present.
+#' found. Aborts if the object is invalid (key columns `image_label`, `year`
+#' and `sector_n` for sector profiles or `start`/`end` for band profiles
+#' missing, `NA` or not unique; bands with `start >= end`). Warns if no
+#' measurement column is present.
 #'
 #' @param x A [QWAprofile] object.
 #' @returns `TRUE`, invisibly. Warnings are issued for any problems found.
 #' @seealso [QWAprofile()], [check_QWAdata()]
 #' @export
 check_QWAprofile <- function(x) {
-  checkmate::assert_class(x, "QWAprofile")
-  profile_type <- attr(x, "profile_type")
-  checkmate::assert_choice(profile_type, c("sector", "band"))
-
-  # required identifier columns
-  id_cols <- c("image_label", "year")
-  missing_id <- setdiff(id_cols, names(x))
-  if (length(missing_id) > 0)
-    cli::cli_warn(c("!" = "Missing required columns: {.field {missing_id}}"))
-
-  if (all(id_cols %in% names(x))) {
-    if (anyNA(x$image_label) || anyNA(x$year))
-      cli::cli_warn(c("!" = "{.field image_label} and {.field year} must not contain NA values."))
-  }
-
-  # bin-specific checks
-  if (profile_type == "sector") {
-    if (!"sector_n" %in% names(x))
-      cli::cli_warn(c("!" = "Missing required column {.field sector_n} for sector profiles."))
-    else if (anyNA(x$sector_n) || length(unique(x$sector_n)) < 1)
-      cli::cli_warn(c("!" = "{.field sector_n} contains NA or is empty."))
-  } else {
-    bin_cols <- c("start", "end")
-    missing_bin <- setdiff(bin_cols, names(x))
-    if (length(missing_bin) > 0)
-      cli::cli_warn(c("!" = "Missing required columns for band profiles: {.field {missing_bin}}"))
-    else if (any(x$start >= x$end, na.rm = TRUE))
-      cli::cli_warn(c("!" = "Some bands have {.field start} >= {.field end}."))
-  }
+  validate_QWAprofile(x)
 
   # at least one measurement column
   non_meta <- setdiff(names(x), c("image_label", "year", "sector_n", "start", "end",

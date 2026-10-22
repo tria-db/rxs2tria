@@ -10,6 +10,33 @@ tbl_props_roxas <- function() {
   get_tbl_props(resolve_schema(schema_obj, schema_path))
 }
 
+test_that("validate_QWAimages aborts on invalid objects", {
+  x <- suppressMessages(QWAimages(imgs))
+  expect_identical(validate_QWAimages(x), x)
+
+  na_lbl <- new_QWAimages(dplyr::mutate(imgs, slide_label = c(NA, "S1_T1_WP1_SL1")), "roxas")
+  expect_error(validate_QWAimages(na_lbl), "missing values")
+  no_lbl <- new_QWAimages(dplyr::select(imgs, -"tree_label"), "roxas")
+  expect_error(validate_QWAimages(no_lbl), "missing key column")
+  dupl <- new_QWAimages(dplyr::mutate(imgs, image_label = image_label[1]), "roxas")
+  expect_error(validate_QWAimages(dupl), "duplicate")
+  sw <- new_QWAimages(imgs, "roxas_ai")
+  expect_error(validate_QWAimages(sw), "software")
+})
+
+test_that("QWAimages sets software to roxas_version", {
+  expect_no_warning(
+    x <- suppressMessages(QWAimages(dplyr::mutate(imgs, software = c("ROXAS", NA))))
+  )
+  expect_equal(x$software, c("roxas", "roxas"))
+
+  mixed <- dplyr::mutate(imgs, software = c("roxas", "roxas_ai"))
+  expect_warning(
+    expect_warning(x <- suppressMessages(QWAimages(mixed, "roxas")), "set to"),
+    "Mixed")
+  expect_equal(x$software, c("roxas", "roxas"))
+})
+
 test_that("qc_input columns are kept and typed if present", {
   x <- suppressMessages(
     QWAimages(dplyr::mutate(imgs, comment_handled = c("TRUE", NA)))

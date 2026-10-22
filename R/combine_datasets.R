@@ -10,8 +10,8 @@
 #' @seealso [combine_QWAdata()], [combine_QWAmetadata()]
 #' @export
 combine_QWAimages <- function(x, y) {
-  checkmate::assert_class(x, "QWAimages")
-  checkmate::assert_class(y, "QWAimages")
+  validate_QWAimages(x)
+  validate_QWAimages(y)
   rv <- attr(x, "roxas_version")
   if (!identical(rv, attr(y, "roxas_version"))) {
     cli::cli_abort("Cannot combine {.cls QWAimages} with different ROXAS versions.")
@@ -41,8 +41,8 @@ combine_QWAimages <- function(x, y) {
 #' @seealso [combine_QWAimages()], [combine_QWAmetadata()]
 #' @export
 combine_QWAdata <- function(x, y) {
-  checkmate::assert_class(x, "QWAdata")
-  checkmate::assert_class(y, "QWAdata")
+  validate_QWAdata(x)
+  validate_QWAdata(y)
   shared <- intersect(x$rings$image_label, y$rings$image_label)
   if (length(shared) > 0) {
     cli::cli_abort(c("x" = "{length(shared)} image label{?s} in both objects.",
@@ -116,8 +116,8 @@ bind_by_key <- function(df_x, df_y, key = NULL) {
 #' @seealso [combine_QWAimages()], [combine_QWAdata()], [update_QWAmetadata()]
 #' @export
 combine_QWAmetadata <- function(x, y) {
-  checkmate::assert_class(x, "QWAmetadata")
-  checkmate::assert_class(y, "QWAmetadata")
+  validate_QWAmetadata(x)
+  validate_QWAmetadata(y)
   assert_submission(x, "combine_QWAmetadata")
   assert_submission(y, "combine_QWAmetadata")
   images <- combine_QWAimages(x$images, y$images)

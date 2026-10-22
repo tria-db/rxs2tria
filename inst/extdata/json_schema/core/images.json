@@ -10,28 +10,32 @@
       "minLength": 1,
       "readOnly": true,
       "title": "Image",
-      "description": "Unique image identifier"
+      "description": "Unique image identifier",
+      "colType": "key"
     },
     "slide_label": {
       "type": "string",
       "minLength": 1,
       "readOnly": true,
       "title": "Slide",
-      "description": "Slide identifier"
+      "description": "Slide identifier",
+      "colType": "key"
     },
     "woodpiece_label": {
       "type": "string",
       "minLength": 1,
       "readOnly": true,
       "title": "Woodpiece",
-      "description": "Woodpiece identifier"
+      "description": "Woodpiece identifier",
+      "colType": "key"
     },
     "tree_label": {
       "type": "string",
       "minLength": 1,
       "title": "Tree",
       "readOnly": true,
-      "description": "Tree identifier"
+      "description": "Tree identifier",
+      "colType": "key"
     },
     "species_code": {
       "type": ["string", "null"],
@@ -44,7 +48,8 @@
       "minLength": 1,
       "readOnly": true,
       "title": "Site",
-      "description": "Site identifier"
+      "description": "Site identifier",
+      "colType": "key"
     },
     "only_ew": {
       "type": ["boolean", "null"],

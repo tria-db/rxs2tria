@@ -20,16 +20,16 @@ cells_prf <- rings_prf |>
   dplyr::select(image_label, year) |>
   tidyr::crossing(tibble::tibble(rraddistr = c(10, 40, 60, 90),
                                  ew_lw = c("ew", "ew", "lw", "lw"))) |>
-  dplyr::mutate(la = rraddistr)
+  dplyr::mutate(xpix = 1, ypix = 1, la = rraddistr)
 x_prf <- new_QWAdata(cells = cells_prf, rings = rings_prf)
 
 # single ring with la equal to rraddistr
 one_ring <- function(rraddistr, mrw = 100, eww = 50) {
   new_QWAdata(
-    cells = tibble::tibble(image_label = "IMG", year = 2001,
+    cells = tibble::tibble(image_label = "IMG", year = 2001, xpix = 1, ypix = 1,
                            rraddistr = rraddistr, la = rraddistr),
-    rings = tibble::tibble(image_label = "IMG", year = 2001,
-                           mrw = mrw, eww = eww))
+    rings = tibble::tibble(woodpiece_label = "WP", slide_label = "SL",
+                           image_label = "IMG", year = 2001, mrw = mrw, eww = eww))
 }
 
 sector_prf <- function(...) suppressMessages(calculate_sector_profiles(...))
@@ -136,8 +136,10 @@ test_that("overlapping bands count cells in each band they fall in", {
 
 test_that("rings with mrw NA or not exceeding bandwidth get no bands", {
   x <- new_QWAdata(
-    cells = tibble::tibble(image_label = "IMG", year = 2001:2003, rraddistr = 10, la = 10),
-    rings = tibble::tibble(image_label = "IMG", year = 2001:2003, mrw = c(100, 50, NA)))
+    cells = tibble::tibble(image_label = "IMG", year = 2001:2003, xpix = 1, ypix = 1,
+                           rraddistr = 10, la = 10),
+    rings = tibble::tibble(woodpiece_label = "WP", slide_label = "SL",
+                           image_label = "IMG", year = 2001:2003, mrw = c(100, 50, NA)))
 
   expect_equal(unique(band_prf(x, 50, 50, "la")$year), 2001)
 })

@@ -92,8 +92,7 @@
         "colType": "meta_input"
       },
       "slide_archived": {
-        "type": ["boolean", "null", "string"], 
-        "maxLength": 0, 
+        "type": ["boolean", "null"],
         "title": "Slide archived",
         "description": "Is the slide archived",
         "colType": "meta_input"

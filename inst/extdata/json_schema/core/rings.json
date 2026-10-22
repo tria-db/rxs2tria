@@ -305,7 +305,7 @@
         "colType": "qc_input"
       }
     },
-    "required": ["image_label", "year"],
+    "required": ["woodpiece_label", "slide_label", "image_label", "year"],
     "additionalProperties": true
   }
 }

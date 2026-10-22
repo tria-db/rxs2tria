@@ -84,8 +84,7 @@
         "colType": "meta_input"
       },
       "sample_archived": {
-        "type": ["boolean", "null", "string"], 
-        "maxLength": 0, 
+        "type": ["boolean", "null"],
         "title": "Sample archived",
         "description": "",
         "colType": "meta_input"

@@ -16,7 +16,7 @@ rings_old <- tibble::tribble(
 )
 cells_old <- rings_old |>
   dplyr::distinct(image_label, year) |>
-  dplyr::mutate(la = 1)
+  dplyr::mutate(xpix = 1, ypix = 1, la = 1)
 x_old <- new_QWAdata(cells = cells_old, rings = rings_old)
 
 # Current raw data on disk (as returned by the mocked collect_raw_data):
@@ -34,12 +34,13 @@ rings_disk <- tibble::tribble(
 )
 cells_disk <- rings_disk |>
   dplyr::distinct(image_label, year) |>
-  dplyr::mutate(la = 2)
+  dplyr::mutate(xpix = 1, ypix = 1, la = 2)
 
 make_meta <- function(labels) {
   df <- dplyr::bind_rows(rings_old, rings_disk) |>
     dplyr::distinct(woodpiece_label, slide_label, image_label) |>
-    dplyr::filter(image_label %in% labels)
+    dplyr::filter(image_label %in% labels) |>
+    dplyr::mutate(tree_label = woodpiece_label, site_label = woodpiece_label, software = "roxas")
   new_QWAimages(as.data.frame(df), "roxas")
 }
 
@@ -183,7 +184,8 @@ test_that("update_QWAimages replaces the settings of the re-read images only", {
                      spatial_resolution = 2)
     })
   meta <- new_QWAimages(data.frame(
-    image_label = c("IMG1", "IMG2"),
+    image_label = c("IMG1", "IMG2"), slide_label = "SL1", woodpiece_label = "WP1",
+    tree_label = "T1", site_label = "S1", software = "roxas",
     fname_settings = c("IMG1_settings.txt", "IMG2_settings.txt"),
     meas_created_at = as.POSIXct(c("2020-01-01 10:00:00", "2020-01-01 11:00:00"), tz = "UTC"),
     spatial_resolution = 1), "roxas")
@@ -204,7 +206,8 @@ imgs_meta <- tibble::tribble(
   "S1", "PCAB", "S1_T1", "S1_T1_WP1", "S1_T1_WP1_SL1", "S1_T1_WP1_SL1_IMG1", TRUE,  "blurry",
   "S1", "PCAB", "S1_T1", "S1_T1_WP1", "S1_T1_WP1_SL1", "S1_T1_WP1_SL1_IMG2", FALSE, NA,
   "S2", "PCAB", "S2_T1", "S2_T1_WP1", "S2_T1_WP1_SL1", "S2_T1_WP1_SL1_IMG1", FALSE, NA,
-)
+) |>
+  dplyr::mutate(software = "roxas")
 # completed hierarchical tables with user-entered metadata
 meta_old <- new_QWAmetadata(
   sites = tibble::tibble(site_label = c("S1", "S2"), n_trees = 1L, site_name = c("Site 1", "Site 2")),
@@ -226,8 +229,8 @@ expect_hierarchy_ok <- function(m) {
 
 test_that("appended images add rows and update counts, keeping metadata", {
   img_new <- tibble::tribble(
-    ~site_label, ~species_code, ~tree_label, ~woodpiece_label, ~slide_label, ~image_label,
-    "S1", "PCAB", "S1_T1", "S1_T1_WP2", "S1_T1_WP2_SL1", "S1_T1_WP2_SL1_IMG1",
+    ~site_label, ~species_code, ~tree_label, ~woodpiece_label, ~slide_label, ~image_label, ~software,
+    "S1", "PCAB", "S1_T1", "S1_T1_WP2", "S1_T1_WP2_SL1", "S1_T1_WP2_SL1_IMG1", "roxas",
   )
   images <- new_QWAimages(dplyr::bind_rows(imgs_meta, img_new), "roxas")
 

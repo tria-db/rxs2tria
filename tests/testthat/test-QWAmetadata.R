@@ -12,6 +12,21 @@ test_that("the stage is inferred from the components", {
   expect_false(is_submission(suppressMessages(as_QWAmetadata(raw[c("datafiles", "images")]))))
 })
 
+test_that("validate_QWAmetadata aborts on invalid objects", {
+  x <- read_quiet(tria_file)
+  expect_identical(validate_QWAmetadata(x), x)
+
+  bad <- x
+  bad$sites <- "not a table"
+  expect_error(validate_QWAmetadata(bad), "sites")
+  bad <- x
+  attr(bad, "submission") <- NA
+  expect_error(validate_QWAmetadata(bad), "submission")
+  bad <- x
+  bad$images$image_label[1] <- NA
+  expect_error(validate_QWAmetadata(bad), "missing values")
+})
+
 test_that("TRIA dataset files read and check without warnings", {
   expect_no_warning(x <- read_quiet(tria_file))
   expect_equal(x$dataset$ds_label, "TRIA_test")

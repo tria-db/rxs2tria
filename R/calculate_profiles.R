@@ -217,7 +217,7 @@ calculate_band_profiles <- function(QWA_data,
 #' @noRd
 check_profile_args <- function(QWA_data, sel_cell_params, quant_probs,
                                apply_exclusions, tissue) {
-  checkmate::assert_class(QWA_data, "QWAdata")
+  validate_QWAdata(QWA_data)
   checkmate::assert_data_frame(QWA_data$cells, null.ok = FALSE)
   checkmate::assert_names(names(QWA_data$cells),
     must.include = c("image_label", "year", "rraddistr"))

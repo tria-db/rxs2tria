@@ -28,7 +28,7 @@ check_component <- function(df, schema, submission = TRUE) {
     schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
     tbl_schema <- resolve_schema(schema_obj, schema_path)
     tbl_props <- get_tbl_props(tbl_schema)
-    check_schema(df, schema_obj, schema, warn_only = TRUE, greedy = FALSE)
+    check_schema(df, schema_obj, schema, greedy = FALSE)
     check_missing_opt(df, tbl_props, schema)
   }
 
@@ -183,6 +183,31 @@ new_QWAmetadata <- function(dataset = NULL,
   )
 }
 
+# Internal S3 validator ----
+#' Abort if a QWAmetadata object violates the class invariants
+#'
+#' Components data frames or `NULL`; `$images` a valid [QWAimages]; logical
+#' `submission` attribute. The hierarchy IDs are not checked (incomplete while
+#' the metadata is built up, see `check_hierarchy()`).
+#' @returns `x`, invisibly.
+#' @noRd
+validate_QWAmetadata <- function(x) {
+  checkmate::assert_class(x, "QWAmetadata")
+  comps <- setdiff(names(formals(new_QWAmetadata)), c("images", "submission"))
+  not_df <- comps[!vapply(comps, \(comp) is.null(x[[comp]]) || is.data.frame(x[[comp]]), logical(1))]
+  if (length(not_df) > 0) {
+    cli::cli_abort(c("x" = "{.cls QWAmetadata}: component{?s} {.field {not_df}} must be data frames or {.code NULL}."))
+  }
+  validate_QWAimages(x$images)
+  if (!checkmate::test_flag(attr(x, "submission"))) {
+    cli::cli_abort(c(
+      "x" = "{.cls QWAmetadata}: invalid {.arg submission} attribute.",
+      "i" = "Rebuild the object with {.fn QWAmetadata}."
+    ))
+  }
+  invisible(x)
+}
+
 # Public constructor -----
 #' Create a QWAmetadata object
 #'
@@ -281,8 +306,10 @@ QWAmetadata <- function(dataset = NULL,
   woodpieces <- align_component(woodpieces, "woodpieces", submission)
   slides <- align_component(slides, "slides", submission)
 
-  new_QWAmetadata(dataset, authors, funding, related, datafiles, sites, trees,
-                  woodpieces, slides, images, submission)
+  x <- new_QWAmetadata(dataset, authors, funding, related, datafiles, sites, trees,
+                       woodpieces, slides, images, submission)
+  validate_QWAmetadata(x)
+  x
 }
 
 #' Is a QWAmetadata object from submission files?
@@ -393,7 +420,7 @@ as_QWAmetadata <- function(x) {
 #' @seealso [QWAmetadata()], [check_QWAimages()]
 #' @export
 check_QWAmetadata <- function(x) {
-  checkmate::assert_class(x, "QWAmetadata")
+  validate_QWAmetadata(x)
 
   sub <- is_submission(x)
   components <- c("dataset", "authors", "funding", if (sub) "related" else "datafiles",
@@ -436,7 +463,7 @@ check_QWAmetadata <- function(x) {
 #' @seealso [complete_QWAimages()], [QWAmetadata()]
 #' @export
 complete_QWAmetadata <- function(x) {
-  checkmate::assert_class(x, "QWAmetadata")
+  validate_QWAmetadata(x)
   assert_submission(x, "complete_QWAmetadata")
 
   images <- complete_QWAimages(x$images)
@@ -478,7 +505,7 @@ complete_QWAmetadata <- function(x) {
 #' @export
 write_QWAmetadata <- function(x, file, compress = FALSE, overwrite = TRUE,
                               drop_empty = TRUE) {
-  checkmate::assert_class(x, "QWAmetadata")
+  validate_QWAmetadata(x)
   checkmate::assert_flag(drop_empty)
   # if compress, enforce .gz extension
   if (compress && fs::path_ext(file) != "gz")

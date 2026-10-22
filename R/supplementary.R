@@ -85,10 +85,8 @@ compile_supplementary <- function(path, rxs_images) {
     checkmate::check_directory_exists(path),
     checkmate::check_file_exists(path, extension = "zip")
   )
-  checkmate::assert_class(rxs_images, "QWAimages")
-  checkmate::assert_names(names(rxs_images),
-                          must.include = c("org_img_name", "image_label",
-                          "slide_label", "woodpiece_label"))
+  validate_QWAimages(rxs_images)
+  checkmate::assert_names(names(rxs_images), must.include = "org_img_name")
 
   new_res <- .scan_resources(path, rxs_images)
 
@@ -138,14 +136,14 @@ recompile_supplementary <- function(suppl_res, path, rxs_images, add_new_files =
     checkmate::check_directory_exists(path),
     checkmate::check_file_exists(path, extension = "zip")
   )
-  checkmate::assert_class(rxs_images, "QWAimages")
-  checkmate::assert_names(names(rxs_images),
-                          must.include = c("org_img_name", "image_label",
-                          "slide_label", "woodpiece_label"))
+  validate_QWAimages(rxs_images)
+  checkmate::assert_names(names(rxs_images), must.include = "org_img_name")
   checkmate::assert_flag(add_new_files)
 
   # status is derived; a hand-built manifest may not have it yet
   if (!"status" %in% names(suppl_res)) suppl_res$status <- NA_character_
+  # description is optional; may be missing, or all-NA logical when read from CSV
+  suppl_res$description <- as.character(suppl_res$description %||% NA_character_)
 
   new_res <- .scan_resources(path, rxs_images)
 
@@ -393,7 +391,7 @@ check_supplementary <- function(suppl_res, path, rxs_images) {
 
   schema_path <- system.file(schema_rel_path("supplementary"), package = "rxs2tria")
   schema_obj  <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
-  check_schema(res, schema_obj, "resources", warn_only = TRUE, greedy = FALSE)
+  check_schema(res, schema_obj, "resources", greedy = FALSE)
 
   res_meta <- dplyr::left_join(res, .resource_type_meta(), by = "resource_type")
   roxas_version <- attr(rxs_images, "roxas_version")

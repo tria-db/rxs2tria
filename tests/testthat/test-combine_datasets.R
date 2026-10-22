@@ -31,7 +31,7 @@ rings_y <- tibble::tribble(
 )
 make_data <- function(rings) {
   new_QWAdata(
-    cells = rings |> dplyr::distinct(image_label, year) |> dplyr::mutate(la = 1),
+    cells = rings |> dplyr::distinct(image_label, year) |> dplyr::mutate(xpix = 1, ypix = 1, la = 1),
     rings = rings)
 }
 data_x <- make_data(rings_x)

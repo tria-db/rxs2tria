@@ -46,24 +46,19 @@ complete_rings <- function(QWA_data) {
 }
 
 #' @noRd
-check_cwt <- function(df_cells, warn_only = FALSE) {
+check_cwt <- function(df_cells) {
   no_cwt_imgs <- df_cells |>
     dplyr::select("image_label","cwttan") |> 
     dplyr::summarise(all_na = all(is.na(.data$cwttan)), .by = "image_label") |>
     dplyr::filter(.data$all_na) |> 
     dplyr::pull("image_label")
   if (length(no_cwt_imgs) > 0) {
-    msg <- c(
-      "!" = "Missing cell wall thickness estimates detected",
+    cli::cli_inform(c(
+      "i" = "Missing cell wall thickness estimates detected",
       "i" = "For conifer (but not angiosperm) data, CWT analysis is expected for TRIA submissions.",
       " " = "{length(no_cwt_imgs)} image{?s} without cwttan found:",
       cli_truncated_list(no_cwt_imgs)
-    )
-    if (warn_only) {
-      cli::cli_warn(msg)
-    } else {
-      cli::cli_abort(msg)
-    }
+    ))
   }
   invisible(TRUE)
 }
@@ -80,8 +75,10 @@ resolve_exclude_mode <- function(exclude_mode) {
   match.arg(exclude_mode, c("either", "incomplete_only"))
 }
 
+# gaps, future years and years after outmost_year warn (abort with strict);
+# undated and duplicated years abort in validate_QWAdata()
 #' @noRd
-check_ring_years <- function(df_rings, df_meta = NULL, warn_only = FALSE) {
+check_ring_years <- function(df_rings, df_meta = NULL, strict = FALSE) {
   current_year <- as.numeric(format(Sys.Date(), "%Y"))
   
   # if df_meta (resp. $outmost_year) is not given, create dummy
@@ -100,8 +97,6 @@ check_ring_years <- function(df_rings, df_meta = NULL, warn_only = FALSE) {
 
   issues <- df |>
     dplyr::summarise(
-      undated = any(is.na(.data$year)),
-      duplicated = any(duplicated(.data$year)),
       gaps = dplyr::n_distinct(.data$year, na.rm=TRUE) != (max(.data$year, na.rm=TRUE) - min(.data$year, na.rm=TRUE) + 1),
       in_future = any(.data$year > current_year, na.rm=TRUE),
       after_outmost = any(.data$year > .data$outmost_year + 1, na.rm=TRUE), # add 1 year for incomplete rings
@@ -109,48 +104,35 @@ check_ring_years <- function(df_rings, df_meta = NULL, warn_only = FALSE) {
     )
   issue_counts <- colSums(issues[-1])
 
-  if (any(issue_counts>0)) {
-    msg <- c(
-      " " = "Undated year in {issue_counts[1]} image{?s} {.val {issues$image_label[issues$undated]}}",
-      " " = "Duplicated years in {issue_counts[2]} image{?s} {.val {issues$image_label[issues$duplicated]}}",
-      " " = "Gaps in dating in {issue_counts[3]} image{?s} {.val {issues$image_label[issues$gaps]}}",
-      " " = "Invalid future years in {issue_counts[4]} image{?s} {.val {issues$image_label[issues$in_future]}}",
-      " " = "After outmost years in {issue_counts[5]} image{?s} {.val {issues$image_label[issues$after_outmost]}}"
-    )
-    msg <- msg[issue_counts >0]
-    msg <- c("x" = "The data has dating problems. Fix these issues before continuing!", msg)
-    
-    if (warn_only) {
-      cli::cli_warn(msg)
-    } else {
-      cli::cli_abort(msg)
-    }
+  msg <- c(
+    " " = "Gaps in dating in {issue_counts[1]} image{?s} {.val {issues$image_label[issues$gaps]}}",
+    " " = "Invalid future years in {issue_counts[2]} image{?s} {.val {issues$image_label[issues$in_future]}}",
+    " " = "After outmost years in {issue_counts[3]} image{?s} {.val {issues$image_label[issues$after_outmost]}}"
+  )
+
+  if (any(issue_counts > 0)) {
+    return(report_issue(c(
+      "!" = "The data has dating problems:",
+      msg[issue_counts > 0]
+    ), strict))
   }
 
   invisible(TRUE)
 }
 
 #' @noRd
-check_cell_years <- function(df_cells, warn_only = FALSE) {
+check_cell_years <- function(df_cells, strict = FALSE) {
   current_year <- as.numeric(format(Sys.Date(), "%Y"))
-  in_future <- df_cells |> 
-    dplyr::distinct(.data$image_label, .data$year) |> 
-    dplyr::filter(.data$year > current_year) |> 
+  in_future <- df_cells |>
+    dplyr::distinct(.data$image_label, .data$year) |>
+    dplyr::filter(.data$year > current_year) |>
     dplyr::pull("image_label") |> unique()
   if (length(in_future)>0) {
-    if (warn_only) {
-      cli::cli_warn(c(
-        "!" = "The data has dating problems. Fix these issues before continuing!", 
-        "i" = "Invalid future years in {length(in_future)} image{?s}:",
-        cli_truncated_list(in_future)
-      ))
-    } else {
-      cli::cli_abort(c(
-        "The data has dating problems. Fix these issues before continuing!", 
-        "i" = "Invalid future years in {length(in_future)} image{?s}:",
-        cli_truncated_list(in_future)
-      ))
-    }
+    return(report_issue(c(
+      "!" = "The data has dating problems:",
+      "i" = "Invalid future years in {length(in_future)} image{?s}:",
+      cli_truncated_list(in_future)
+    ), strict))
   }
   invisible(TRUE)
 }
@@ -185,7 +167,7 @@ max_na_inf <- function(x) {
 #' @return a `QWAdata` object with the updated cells and rings dataframes with the new measures
 #' @export
 complete_measures <- function(QWA_data, only = NULL) {
-  checkmate::assert_class(QWA_data, "QWAdata")
+  validate_QWAdata(QWA_data)
   checkmate::assert_character(only, null.ok = TRUE)
 
   df_cells <- QWA_data$cells |> 
@@ -361,6 +343,7 @@ complete_measures <- function(QWA_data, only = NULL) {
 #' @export
 #'
 complete_flags <- function(x, meta, exclude_mode = NULL) {
+  validate_QWAdata(x)
   all_flag_cols <- c("incomplete_ring", "missing_ring", "duplicate_ring", "exclude_dupl", "exclude_issues")
   flag_cols_missing <- setdiff(all_flag_cols, names(x$rings))
   flag_cols_existing <- intersect(all_flag_cols, names(x$rings))
@@ -438,6 +421,31 @@ new_QWAdata <- function(cells = NULL,
   )
 }
 
+# Internal S3 validator ----
+#' Abort if a QWAdata object violates the class invariants
+#'
+#' At least one of `$cells` and `$rings`, each a data frame or `NULL`; key
+#' columns present, typed and not `NA`; (image, year) unique in `$rings`.
+#' @param hint Optional hint added to the messages on `NA` and duplicate keys.
+#' @returns `x`, invisibly.
+#' @noRd
+validate_QWAdata <- function(x, hint = NULL) {
+  checkmate::assert_class(x, "QWAdata")
+  checkmate::assert_data_frame(x$cells, null.ok = TRUE, .var.name = "cells")
+  checkmate::assert_data_frame(x$rings, null.ok = TRUE, .var.name = "rings")
+  if (is.null(x$cells) && is.null(x$rings)) {
+    cli::cli_abort("{.cls QWAdata} requires at least one of {.field cells} or {.field rings}.")
+  }
+  if (!is.null(x$cells)) {
+    validate_keys(x$cells, key_props("cells"), "cells", hint = hint)
+  }
+  if (!is.null(x$rings)) {
+    validate_keys(x$rings, key_props("rings"), "rings",
+                  unique_by = c("image_label", "year"), hint = hint)
+  }
+  invisible(x)
+}
+
 
 # Public constructor ----
 #' Create a QWAdata object
@@ -479,10 +487,6 @@ QWAdata <- function(cells = NULL,
     schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
     tbl_schema <- resolve_schema(schema_obj, schema_path)
     tbl_props <- get_tbl_props(tbl_schema)
-    # required cols
-    checkmate::assert_data_frame(
-      cells[tbl_props$required], any.missing = FALSE, 
-      .var.name = "Missing required columns in cells component")
     # expected raw measurement cols
     measure_cols <- tbl_props$properties |> purrr::keep(\(x) x$colType == "measure") |> names()
     missing_meas_cols <- setdiff(measure_cols, names(cells))
@@ -499,23 +503,19 @@ QWAdata <- function(cells = NULL,
         dplyr::across(-dplyr::any_of(c("image_label", "ew_lw")), as.numeric)
     )
     # check for cwt estimates (expected for conifers)
-    check_cwt(cells, warn_only = TRUE)
+    check_cwt(cells)
     if (is.null(rings)) { # if no rings, check dating in cells (just no in-future years)
-      check_cell_years(cells, warn_only = FALSE)
+      check_cell_years(cells)
     }
   }
    
-  # rings - align cols, complete years, check dating
+  # rings - align cols
   if (!is.null(rings)) {
     # get schema from file
     schema_path <- system.file(schema_rel_path("rings"), package = "rxs2tria")
     schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
     tbl_schema <- resolve_schema(schema_obj, schema_path)
     tbl_props <- get_tbl_props(tbl_schema)
-    # required columns
-    checkmate::assert_data_frame(
-      rings[tbl_props$required], any.missing = FALSE, 
-      .var.name = "Missing required columns in rings component")
     # expected measurement cols
     measure_cols <- tbl_props$properties |> purrr::keep(\(x) x$colType == "measure") |> names()
     missing_meas_cols <- setdiff(measure_cols, names(rings))
@@ -537,13 +537,18 @@ QWAdata <- function(cells = NULL,
         dplyr::across(dplyr::any_of(num_cols), as.numeric),
         dplyr::across(dplyr::any_of(int_cols), as.integer)
       )
-    # ensure we have complete year sequences for each image (re-adds cno)
-    rings <- complete_rings(new_QWAdata(cells, rings))
-    # check dating
-    check_ring_years(rings, warn_only = FALSE)
   }
-  
-  new_QWAdata(cells, rings)
+
+  x <- validate_QWAdata(new_QWAdata(cells, rings))
+
+  # rings - complete years, check dating
+  if (!is.null(rings)) {
+    # ensure we have complete year sequences for each image (re-adds cno)
+    x$rings <- complete_rings(x)
+    check_ring_years(x$rings)
+  }
+
+  x
 }
 
 
@@ -598,7 +603,7 @@ print.QWAdata <- function(x, ...) {
     cli::cli_bullets(bullets)
   }
 
-  # --- Flags (only after validate_QWA_data) ---
+  # --- Flags (only after complete_QWAdata) ---
   flag_cols <- c("incomplete_ring", "missing_ring", "duplicate_ring")
   if (!is.null(x$rings) && all(flag_cols %in% names(x$rings))) {
     r <- x$rings
@@ -652,11 +657,9 @@ as_QWAdata <- function(x) {
 #'   [complete_measures()]
 #' @export
 complete_QWAdata <- function(x, meta, exclude_mode = NULL) {
-  checkmate::assert_class(x, "QWAdata")
-  checkmate::assert_class(meta, "QWAimages")
-  checkmate::assert_subset(
-    c("image_label", "spatial_resolution", "outmost_year"), names(meta)
-  )
+  validate_QWAdata(x)
+  validate_QWAimages(meta)
+  checkmate::assert_subset(c("spatial_resolution", "outmost_year"), names(meta))
 
   # align cells
   if (!is.null(x$cells)) {
@@ -680,7 +683,7 @@ complete_QWAdata <- function(x, meta, exclude_mode = NULL) {
   
   # ensure complete sequences of years (note: creates rings df from cells if null)
   x$rings <- complete_rings(x)
-  check_ring_years(x$rings, meta, warn_only = FALSE)
+  check_ring_years(x$rings, meta)
 
   # complete measures (derived cell measures and ew/lw estimates)
   x <- complete_measures(x)
@@ -712,29 +715,21 @@ complete_QWAdata <- function(x, meta, exclude_mode = NULL) {
 #' @seealso [QWAdata()], [complete_QWAdata()]
 #' @export
 check_QWAdata <- function(x, meta = NULL, exclude_mode = NULL) {
-  checkmate::assert_class(x, "QWAdata")
+  validate_QWAdata(x)
   if (!is.null(meta)) {
-    checkmate::assert_class(meta, "QWAimages")
+    validate_QWAimages(meta)
   }
   resolve_exclude_mode(exclude_mode)
 
-  if (is.null(x$cells) && is.null(x$rings))
-    cli::cli_abort("{.var QWAdata} requires at least one of {.field cells} or {.field rings}.")
-  
   if (!is.null(x$cells)) {
     # TODO: check against schema for cells
-    check_missing <- checkmate::test_data_frame(
-      x$cells[c("image_label","year","xpix","ypix")], any.missing = FALSE)
-    if (!check_missing) {
-      cli::cli_warn("Missing required detected in {.field cells} component")
-    }
     # TODO: complete the checks, see QWAdata
     # check_missing_opt(cells, tbl_props)? or separate for measures and derived
     # extra_cols <- names(x$cells) %in% all_cols
     # char_cols <- x$cells |> dplyr::select(dplyr::where(is.character)) |> names()
     # checkmate::assert_subset(char_cols, ...)
     # missing (incl. optional) columns
-    check_cwt(x$cells, warn_only = TRUE)
+    check_cwt(x$cells)
   }
     
 
@@ -742,9 +737,9 @@ check_QWAdata <- function(x, meta = NULL, exclude_mode = NULL) {
     # TODO: check against schema for rings
     # as for cells...
     # check dating
-    check_ring_years(x$rings, meta, warn_only = TRUE)
+    check_ring_years(x$rings, meta)
   } else { # check dating of cells component
-    check_cell_years(x$cells, warn_only = TRUE)
+    check_cell_years(x$cells)
   }
   
   # check for negative values / outliers, ranges as defined in schemata
@@ -787,7 +782,7 @@ write_QWAdata <- function(x, dir = NULL,
                           dataset_name = NULL,
                           compress = TRUE, overwrite = FALSE,
                           drop_empty = TRUE, keep_derived = TRUE) {
-  checkmate::assert_class(x, "QWAdata")
+  validate_QWAdata(x)
   checkmate::assert_flag(drop_empty)
   checkmate::assert_flag(keep_derived)
   use_dir <- !is.null(dir)
