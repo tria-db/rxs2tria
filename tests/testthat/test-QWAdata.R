@@ -26,6 +26,17 @@ test_that("deprecated exclude_mode warns and still applies", {
     expect_warning(check_QWAdata(x, exclude_mode = "either"), "deprecated"))
 })
 
+test_that("complete_flags warns on missing spatial_resolution", {
+  rings <- dplyr::select(rings_flags, "woodpiece_label":"mrw")
+  cells <- data.frame(image_label = "WP1_SL1_IMG1", year = 2001L,
+                      xpix = 1:3, ypix = 1:3, raddistr = 1:3)
+  meta <- data.frame(image_label = c("WP1_SL1_IMG1", "OTHER_IMG"), spatial_resolution = NA_real_)
+  x <- new_QWAdata(cells = cells, rings = rings)
+
+  expect_warning(x <- suppressMessages(complete_flags(x, meta)), "innermost rings")
+  expect_true(x$rings$incomplete_ring[1])
+})
+
 # dating checks ----
 rings_dates <- function(years, img = "WP1_SL1_IMG1") {
   data.frame(image_label = img, year = years)

@@ -53,6 +53,31 @@ test_that("checks use the schemas of the stage", {
   expect_warning(suppressMessages(check_QWAimages(imgs, submission = FALSE)), "failed validation")
 })
 
+test_that("check_QWAimages returns the pass state and aborts with strict", {
+  imgs <- read_quiet(tria_file)$images
+  expect_true(suppressMessages(check_QWAimages(imgs, submission = FALSE)))
+
+  future <- imgs
+  future$outmost_year[1] <- 3000L
+  expect_warning(res <- suppressMessages(check_QWAimages(future, submission = FALSE)), "in the future")
+  expect_false(res)
+  expect_error(suppressMessages(check_QWAimages(future, submission = FALSE, strict = TRUE)), "in the future")
+
+  no_res <- imgs
+  no_res$spatial_resolution[1] <- NA
+  expect_warning(res <- suppressMessages(check_QWAimages(no_res, submission = FALSE)), "spatial_resolution")
+  expect_false(res)
+})
+
+test_that("check_QWAimages informs on empty values, except fname_* and EXIF columns", {
+  imgs <- read_quiet(tria_file)$images
+  imgs$sw_version[1] <- NA
+  imgs$img_software <- NA_character_
+  msgs <- capture_messages(check_QWAimages(imgs, submission = FALSE))
+  expect_match(msgs, "sw_version` \\(1 row\\)", all = FALSE)
+  expect_no_match(paste(msgs, collapse = ""), "img_software|fname_")
+})
+
 test_that("check_QWAmetadata skips absent hierarchy tables", {
   x <- read_quiet(tria_file)
   x$sites <- NULL

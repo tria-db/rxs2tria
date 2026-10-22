@@ -15,7 +15,7 @@
       i pith_offset
       i roxas missing optional columns:
       i only_ew, img_created_at, img_software, img_comment, and rw_reference_file
-      v All checks completed.
+      v <QWAimages>: all checks passed.
 
 ---
 
@@ -34,5 +34,11 @@
       i pith_offset
       i roxas_ai missing optional columns:
       i only_ew and img_comment
-      v All checks completed.
+      i roxas_ai columns with empty values:
+        `rings_segmentation_model` (5 rows)
+        `rings_segmentation_datetime` (5 rows)
+        `cells_segmentation_model` (5 rows)
+        `cells_segmentation_datetime` (5 rows)
+        `reference_series` (33 rows)
+      v <QWAimages>: all checks passed.
 

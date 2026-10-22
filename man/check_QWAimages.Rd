@@ -4,24 +4,29 @@
 \alias{check_QWAimages}
 \title{Validate a QWAimages object}
 \usage{
-check_QWAimages(x, submission = TRUE)
+check_QWAimages(x, submission = TRUE, strict = FALSE)
 }
 \arguments{
 \item{x}{A \link{QWAimages} object.}
 
 \item{submission}{Check against the schema of submission files (\code{TRUE})
 or TRIA dataset files (\code{FALSE})? Set by \code{\link[=check_QWAmetadata]{check_QWAmetadata()}}.}
+
+\item{strict}{If \code{TRUE}, throw an error instead of a warning.}
 }
 \value{
-\code{TRUE}, invisibly. Warnings are issued for any problems found;
-an error is thrown if the object structure is invalid.
+\code{TRUE} if no warning was issued, \code{FALSE} otherwise (invisibly).
 }
 \description{
 Runs a series of checks on a \link{QWAimages} object and warns about any issues
-found. Checks include: compliance with the JSON schema of the given stage,
-consistency of the \code{roxas_version} attribute with the \verb{$software} column,
-unique \code{image_label}s and a valid data structure. Missing optional columns
-are reported as information.
+found. Aborts if the object is invalid (structure labels missing or \code{NA},
+duplicate \code{image_label}s, \verb{$software} not matching the \code{roxas_version}
+attribute). Warns on: non-compliance with the JSON schema of the given
+stage, an unsound data structure (labels not starting with their parent
+label, or a label in more than one parent), \code{outmost_year} in the future
+and missing \code{spatial_resolution}. Missing optional columns and empty values
+are reported as information, except for the source file names (\verb{fname_*}),
+which are only needed during processing.
 }
 \seealso{
 \code{\link[=QWAimages]{QWAimages()}}, \code{\link[=check_QWAmetadata]{check_QWAmetadata()}}

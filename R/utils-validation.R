@@ -562,11 +562,15 @@ check_data_schema <- function(df, tbl_props, schema = NULL, strict = FALSE) {
 
 
 #' Helper to check the structure columns define a sound hierarchy
+#'
+#' Each label starts with its parent label (rxs2tria labels), and each slide is
+#' in one woodpiece, each woodpiece in one tree and each tree in one site (the
+#' package groups by single label columns).
 #' @param df data frame containing the structure columns image_label, slide_label,
 #'   woodpiece_label, tree_label and site_label, not `NA` (see
 #'   `validate_QWAimages()`)
-#' @param strict If `TRUE`, abort on label prefix mismatches instead of warning.
-#' @return `TRUE` if the label prefixes match, `FALSE` otherwise (invisibly).
+#' @param strict If `TRUE`, abort instead of warning.
+#' @return `TRUE` if the structure is sound, `FALSE` otherwise (invisibly).
 #' @noRd
 check_structure <- function(df, strict = FALSE) {
   valid <- (
@@ -575,30 +579,93 @@ check_structure <- function(df, strict = FALSE) {
       stringr::str_starts(df$woodpiece_label, df$tree_label) &
       stringr::str_starts(df$tree_label, df$site_label)
   )
+  msg <- c()
   if (any(!valid)) {
-    return(report_issue(c(
-      "!" = "{.cls QWAimages} structure check failed:",
-      " " = "Invalid data structure or not using rxs2tria labels for:",
-      " " = "{df$image_label[!valid]}"
-    ), strict))
+    msg <- c(msg,
+      "i" = "Labels not starting with their parent label (not using rxs2tria labels):",
+      cli_truncated_list(df$image_label[!valid])
+    )
+  }
+
+  # each label in exactly one parent
+  lvls <- c("slide_label", "woodpiece_label", "tree_label", "site_label")
+  for (i in 1:3) {
+    pairs <- unique(df[lvls[i:(i + 1)]])
+    multi <- unique(pairs[[1]][duplicated(pairs[[1]])])
+    if (length(multi) > 0) {
+      msg <- c(msg,
+        "i" = paste0("`", lvls[i], "` in more than one `", lvls[i + 1], "`:"),
+        cli_truncated_list(multi)
+      )
+    }
+  }
+
+  if (length(msg) > 0) {
+    return(report_issue(c("!" = "{.cls QWAimages} structure check failed:", msg), strict))
   }
   invisible(TRUE)
 }
 
 # report the missing optional columns that complete_*() would add (all except
-# "qc_input" columns); conditionally required columns are left to the schema
-# validation
+# "qc_input" columns and the columns in `skip`); conditionally required columns
+# are left to the schema validation
 #' @noRd
-check_missing_opt <- function(df, tbl_props, schema = NULL) {
+check_missing_opt <- function(df, tbl_props, schema = NULL, skip = NULL) {
   missing_opt_cols <- setdiff(
     names(tbl_props$properties),
-    c(tbl_props$required, tbl_props$cond_required, qc_input_cols(tbl_props), names(df))
+    c(tbl_props$required, tbl_props$cond_required, qc_input_cols(tbl_props), names(df), skip)
   )
   if (length(missing_opt_cols)>0) {
     cli::cli_inform(c(
       "i" = "{.field {schema}} missing optional columns:",
       "i" = "{missing_opt_cols}"
     ))
+  }
+  invisible(TRUE)
+}
+
+#' Report the optional schema columns with empty values (information only)
+#' @param df Data frame.
+#' @param tbl_props Output of `get_tbl_props()`.
+#' @param schema Schema name, only used for messages.
+#' @param skip Further columns expected to be empty in some rows. Required
+#'   columns and the app columns (`colType` `"meta_input"`, `"qc_input"`) are
+#'   always skipped.
+#' @noRd
+check_empty_cols <- function(df, tbl_props, schema = NULL, skip = NULL) {
+  input_cols <- tbl_props$properties |>
+    purrr::keep(\(x) isTRUE(x$colType %in% c("meta_input", "qc_input"))) |>
+    names()
+  cols <- setdiff(intersect(names(tbl_props$properties), names(df)),
+                  c(tbl_props$required, input_cols, skip))
+  n_empty <- vapply(df[cols], \(x) sum(is.na(x)), integer(1))
+  n_empty <- n_empty[n_empty > 0]
+  if (length(n_empty) > 0) {
+    cli::cli_inform(c(
+      "i" = "{.field {schema}} columns with empty values:",
+      cli_truncated_list(paste0("`", names(n_empty), "` (", n_empty,
+                                ifelse(n_empty == 1, " row)", " rows)")), max_show = Inf)
+    ))
+  }
+  invisible(TRUE)
+}
+
+#' Helper to check `spatial_resolution` is given for all images
+#' @param df Data frame with `image_label` and (optionally) `spatial_resolution`.
+#' @param strict If `TRUE`, abort instead of warning.
+#' @param consequence Optional message on the consequence of missing values.
+#' @return `TRUE` if given for all images, `FALSE` otherwise (invisibly).
+#' @noRd
+check_spatial_resolution <- function(df, strict = FALSE, consequence = NULL) {
+  res <- df[["spatial_resolution"]] %||% rep(NA_real_, nrow(df))
+  no_res <- df$image_label[is.na(res)]
+  if (length(no_res) > 0) {
+    return(report_issue(c(
+      "!" = "{.field spatial_resolution} missing for {length(no_res)} image{?s}:",
+      cli_truncated_list(no_res),
+      "i" = consequence,
+      "i" = "Check the ROXAS (AI) settings files of these images and set {.field spatial_resolution} in the {.cls QWAimages} object."
+    ), strict))
   }
   invisible(TRUE)
 }
@@ -651,9 +718,3 @@ prepare_write <- function(df, schema, drop_empty = TRUE, submission = TRUE) {
   df[setdiff(names(df), drop_cols)]
 }
 
-
-
-
-
-# TODO: other additional validation checks beyond the schemas
-# - example: check that outmost year in rxs_images is not in future

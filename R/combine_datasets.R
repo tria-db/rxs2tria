@@ -118,7 +118,7 @@ bind_by_key <- function(df_x, df_y, key = NULL) {
 combine_QWAmetadata <- function(x, y) {
   validate_QWAmetadata(x)
   validate_QWAmetadata(y)
-  assert_submission(x, "combine_QWAmetadata")
+  assert_submission(x, "combine_QWAmetadata") # TODO: might it make sense to use this fct to combine published datasets into one?
   assert_submission(y, "combine_QWAmetadata")
   images <- combine_QWAimages(x$images, y$images)
 

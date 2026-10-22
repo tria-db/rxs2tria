@@ -14,9 +14,10 @@ check_QWAprofile(x)
 }
 \description{
 Runs a series of checks on a \link{QWAprofile} object and warns about any issues
-found. Checks include: required identifier columns present and non-\code{NA},
-consistent bin definitions (\code{sector_n} for sector profiles, \code{start}/\code{end}
-for band profiles), and at least one measurement column present.
+found. Aborts if the object is invalid (key columns \code{image_label}, \code{year}
+and \code{sector_n} for sector profiles or \code{start}/\code{end} for band profiles
+missing, \code{NA} or not unique; bands with \code{start >= end}). Warns if no
+measurement column is present.
 }
 \seealso{
 \code{\link[=QWAprofile]{QWAprofile()}}, \code{\link[=check_QWAdata]{check_QWAdata()}}

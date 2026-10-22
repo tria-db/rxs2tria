@@ -351,6 +351,10 @@ complete_flags <- function(x, meta, exclude_mode = NULL) {
   df_rings_log <- x$rings
 
   if ("incomplete_ring" %in% flag_cols_missing) {
+    check_spatial_resolution(
+      meta[meta$image_label %in% df_rings_log$image_label, ],
+      consequence = "Their innermost rings are flagged as incomplete."
+    )
     df_rings_log <- flag_incomplete_rings(df_rings_log, x$cells, meta)
   }
 

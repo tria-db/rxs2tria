@@ -201,41 +201,64 @@ summary.QWAimages <- function(object, ...) {
 #' Runs a series of checks on a [QWAimages] object and warns about any issues
 #' found. Aborts if the object is invalid (structure labels missing or `NA`,
 #' duplicate `image_label`s, `$software` not matching the `roxas_version`
-#' attribute). Checks include: compliance with the JSON schema of the given
-#' stage and a valid data structure. Missing optional columns are reported as
-#' information.
+#' attribute). Warns on: non-compliance with the JSON schema of the given
+#' stage, an unsound data structure (labels not starting with their parent
+#' label, or a label in more than one parent), `outmost_year` in the future
+#' and missing `spatial_resolution`. Missing optional columns and empty values
+#' are reported as information, except for the source file names (`fname_*`),
+#' which are only needed during processing.
 #'
 #' @param x A [QWAimages] object.
 #' @param submission Check against the schema of submission files (`TRUE`)
 #'   or TRIA dataset files (`FALSE`)? Set by [check_QWAmetadata()].
-#' @returns `TRUE`, invisibly. Warnings are issued for any problems found;
-#'   an error is thrown if the object structure is invalid.
+#' @param strict If `TRUE`, throw an error instead of a warning.
+#' @returns `TRUE` if no warning was issued, `FALSE` otherwise (invisibly).
 #' @seealso [QWAimages()], [check_QWAmetadata()]
 #' @export
-check_QWAimages <- function(x, submission = TRUE) {
+check_QWAimages <- function(x, submission = TRUE, strict = FALSE) {
   validate_QWAimages(x)
   checkmate::assert_flag(submission)
+  checkmate::assert_flag(strict)
   roxas_version <- attr(x, "roxas_version")
 
   schema_path <- system.file(schema_rel_path(roxas_version, submission), package = "rxs2tria")
   schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
   tbl_schema <- resolve_schema(schema_obj, schema_path)
   tbl_props <- get_tbl_props(tbl_schema)
-  
-  # extended validation checks:
-  # compliance with the schema of the stage
-  check_schema(x, schema_obj, roxas_version, greedy = FALSE)
-  # report missing optional columns
-  check_missing_opt(x, tbl_props, roxas_version)
 
-  # check if structure invalid / labels start_with logic
-  check_structure(x)
+  ok <- c(
+    # compliance with the schema of the stage
+    check_schema(x, schema_obj, roxas_version, strict = strict, greedy = FALSE),
+    check_structure(x, strict),
+    check_spatial_resolution(x, strict)
+  )
 
-  # TODO: any additional checks?
-  # e.g.: check outmost_year is valid
+  # outmost_year not in the future
+  if ("outmost_year" %in% names(x)) {
+    current_year <- as.numeric(format(Sys.Date(), "%Y"))
+    future <- x$image_label[which(x$outmost_year > current_year)]
+    if (length(future) > 0) {
+      ok <- c(ok, report_issue(c(
+        "!" = "{.field outmost_year} in the future for {length(future)} image{?s}:",
+        cli_truncated_list(future)
+      ), strict))
+    }
+  }
 
-  cli::cli_inform(c("v" = "All checks completed."))
-  invisible(TRUE)
+  # information on missing optional columns and empty values; the source file
+  # names are only needed during processing, the image EXIF data is often
+  # incomplete
+  fname_cols <- grep("^fname_", names(tbl_props$properties), value = TRUE)
+  check_missing_opt(x, tbl_props, roxas_version, skip = fname_cols)
+  check_empty_cols(x, tbl_props, roxas_version,
+                   skip = c(fname_cols, "spatial_resolution", "img_created_at", "img_software"))
+
+  if (all(ok)) {
+    cli::cli_inform(c("v" = "{.cls QWAimages}: all checks passed."))
+  } else {
+    cli::cli_inform(c("x" = "{.cls QWAimages}: issues found, see warnings."))
+  }
+  invisible(all(ok))
 }
 
 
