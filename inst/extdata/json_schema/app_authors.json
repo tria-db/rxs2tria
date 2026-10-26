@@ -2,7 +2,7 @@
   "$id": "https://example.com/schemas/extended_author.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "allOf": [
-    { "$ref": "core/authors.json"},
+    { "$ref": "submission_authors.json"},
     { 
       "type": "array",
       "items": {
@@ -11,11 +11,7 @@
           "author_nr": { "htType": "numeric", "htInteger": true, "otherChecks": ["valid_seq"] },
           "last_name": { "htType": "character" },
           "first_name": { "htType": "character" },
-          "email": { 
-            "htType": "character", 
-            "pattern" : "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", 
-            "unique" : true
-          },
+          "email": { "htType": "character" },
           "orcid": { "htType": "character" },
           "org_name": { "htType": "text" },
           "rorid": { "htType": "character" },

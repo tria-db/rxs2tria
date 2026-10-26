@@ -198,7 +198,8 @@ update_QWAdata <- function(x, meta, imgs_to_reread = NULL,
 #' hierarchical tables (`$sites`, `$trees`, `$woodpieces`, `$slides`)
 #' accordingly:
 #' - the hierarchy columns and counts (`n_trees`, `n_woodpieces`, `n_slides`,
-#'   `n_images`) are derived from `images`,
+#'   `n_images`) are derived from `images`; `species_code` is kept from `x`
+#'   where it is `NA` in `images`,
 #' - all other columns are kept from `x`,
 #' - rows for IDs new in `images` are added (other columns `NA`),
 #' - rows for IDs no longer in `images` are removed.
@@ -251,11 +252,16 @@ update_QWAmetadata <- function(x, images) {
         "!" = if (length(ids_del) > 0) "{.field {tbl}}: removing {length(ids_del)} row{?s}: {.val {ids_del}}"
       ))
     }
-    x[[tbl]] <- df_counts |>
+    df_new <- df_counts |>
       dplyr::left_join(
         df_old |> dplyr::select(-dplyr::any_of(setdiff(names(df_counts), h$id_col))),
-        by = h$id_col) |>
-      dplyr::select(dplyr::all_of(names(df_old)))
+        by = h$id_col)
+    # species_code is optional in images (e.g. not in the filenames): keep x's value
+    if ("species_code" %in% names(df_counts)) {
+      sp_old <- df_old$species_code[match(df_new[[h$id_col]], df_old[[h$id_col]])]
+      df_new$species_code <- dplyr::coalesce(df_new$species_code, sp_old)
+    }
+    x[[tbl]] <- dplyr::select(df_new, dplyr::all_of(names(df_old)))
   }
 
   x$images <- images

@@ -30,10 +30,11 @@
         "colType": "meta_input"
       },
       "email": {
-        "type": "string",
-        "format": "email",
+        "type": ["string", "null"],
+        "pattern": "^(|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})$",
         "title": "Email",
-        "description": "Email address",
+        "description": "Email address; required for all authors in submission files, for the contact person only in TRIA dataset files",
+        "unique": true,
         "colType": "meta_input"
       },
       "orcid": {
@@ -96,7 +97,7 @@
         "colType": "meta_input"
       }
     },
-    "required": ["author_nr", "last_name", "first_name", "email", "org_name", "org_country", "contact_person"],
+    "required": ["author_nr", "last_name", "first_name", "org_name", "org_country", "contact_person"],
     "additionalProperties": false
   }
 }

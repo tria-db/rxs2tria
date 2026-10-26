@@ -257,12 +257,22 @@ convert_column <- function(x, target_class) {
          "character" = as.character(x),
          "factor" = as.factor(x),
          "numeric" = as.numeric(x),
-         "integer" = as.integer(x),
+         "integer" = as_whole_integer(x),
          "logical" = as.logical(x),
          "Date" = as.Date(x),
          "POSIXct" = as.POSIXct(x),
          x  # fallback: no conversion
   )
+}
+
+#' Convert to integer if all values are whole numbers; otherwise return the
+#' values as numeric (as.integer() would truncate them silently), the schema
+#' checks then report the type
+#' @noRd
+as_whole_integer <- function(x) {
+  if (is.integer(x)) return(x)
+  num <- suppressWarnings(as.numeric(x)) # new NAs are reported by align_to_schema()
+  if (any(num != round(num), na.rm = TRUE)) num else as.integer(num)
 }
 
 #' Helper to force a given df into alignment with a table schema:
@@ -622,6 +632,37 @@ check_missing_opt <- function(df, tbl_props, schema = NULL, skip = NULL) {
     ))
   }
   invisible(TRUE)
+}
+
+#' Empty values: `NA` or `""`
+#' @noRd
+is_blank <- function(x) is.na(x) | x == ""
+
+#' Warn on duplicate values in the columns marked `"unique": true` in the
+#' schema, ignoring empty values (as the metadata app). Key columns are
+#' skipped, their uniqueness is checked with the hierarchy (`check_hierarchy()`).
+#' @param df Data frame.
+#' @param tbl_props Output of `get_tbl_props()`.
+#' @param schema Schema name, only used for messages.
+#' @param strict If `TRUE`, abort instead of warning.
+#' @return `TRUE` if no duplicates were found, `FALSE` otherwise (invisibly).
+#' @noRd
+check_unique_cols <- function(df, tbl_props, schema = NULL, strict = FALSE) {
+  cols <- tbl_props$properties |>
+    purrr::keep(\(x) isTRUE(x$unique) && !isTRUE(x$colType == "key")) |>
+    names() |>
+    intersect(names(df))
+  ok <- TRUE
+  for (col in cols) {
+    vals <- df[[col]][!is_blank(df[[col]])]
+    dupls <- unique(vals[duplicated(vals)])
+    if (length(dupls) > 0) {
+      ok <- report_issue(c(
+        "!" = "{.field {schema}}: {length(dupls)} duplicate value{?s} in {.field {col}}: {.val {dupls}}"
+      ), strict)
+    }
+  }
+  invisible(ok)
 }
 
 #' Report the optional schema columns with empty values (information only)

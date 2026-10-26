@@ -300,7 +300,8 @@ collect_raw_data <- function(df_meta, roxas_version = NULL) {
   # check for cwt estimates (expected/required for conifer data)
   # TODO: could already check in df_meta for info wrt angiosperm/conifer?
   check_cwt(QWA_data$cells)
-  
+  check_cells_key(QWA_data$cells)
+
   # check dating (df_meta for outmost_year check if available)
   check_ring_years(df_rings_complete, df_meta)
 

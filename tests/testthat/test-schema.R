@@ -21,6 +21,14 @@ res_shared <- list(resource_name = "images/img1.jpg", resource_type = "image_ori
 res_sub <- c(res_shared, list(fname_resource = "/data/images/img1.jpg", status = "ok"))
 res_tria <- c(res_shared, list(size_bytes = 1024L, checksum = strrep("a", 32)))
 
+aut <- list(author_nr = 1L, last_name = "Doe", first_name = "Jane", email = "jane@example.org",
+            org_name = "WSL", org_country = "CH", contact_person = TRUE)
+with_email <- function(row, email, contact = row$contact_person) {
+  row["email"] <- list(email)
+  row$contact_person <- contact
+  row
+}
+
 img_shared <- list(image_label = "S_T1_W1_S1_I1", slide_label = "S_T1_W1_S1",
                    woodpiece_label = "S_T1_W1", tree_label = "S_T1", site_label = "S",
                    org_img_name = "img1", software = "roxas")
@@ -120,6 +128,18 @@ test_that("supplementary: each stage accepts its own rows and rejects the other'
   expect_true(validate_rows(list(res_tria), "supplementary", FALSE))
   expect_false(validate_rows(list(res_tria), "supplementary", TRUE))
   expect_false(validate_rows(list(res_sub), "supplementary", FALSE))
+})
+
+test_that("authors: email required in submission files, for the contact person only at TRIA stage", {
+  for (sub in c(TRUE, FALSE)) {
+    expect_true(validate_rows(list(aut), "authors", sub))
+    expect_false(validate_rows(list(with_email(aut, "not an email")), "authors", sub))
+  }
+  for (email in list(NULL, "")) {
+    expect_false(validate_rows(list(with_email(aut, email, contact = FALSE)), "authors", TRUE))
+    expect_true(validate_rows(list(with_email(aut, email, contact = FALSE)), "authors", FALSE))
+    expect_false(validate_rows(list(with_email(aut, email, contact = TRUE)), "authors", FALSE))
+  }
 })
 
 test_that("datafiles require size, checksum and S3 key", {

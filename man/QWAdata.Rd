@@ -30,7 +30,16 @@ data produced from ROXAS output files, organised into two components:
 (one row per annual ring per image).
 }
 
-At least one component must be provided. The typical workflow builds a
+At least one component must be provided. The components are aligned with
+their schema (column types and order); columns not in the schema are kept
+after the schema columns. Aborts on missing, \code{NA} or (in \verb{$rings}) duplicate
+keys. Warns on missing measurement columns, duplicate cell keys (image,
+year, \code{xpix}, \code{ypix}), dating problems, images only in \verb{$cells} or only in
+\verb{$rings}, years with cells but without a rings row, and \code{cno} not matching
+the number of cells. The rings are not completed here: \code{\link[=complete_QWAdata]{complete_QWAdata()}}
+adds the missing rings rows and \code{cno}.
+
+The typical workflow builds a
 \code{QWAdata} object incrementally using \code{\link[=collect_raw_data]{collect_raw_data()}}, \code{\link[=complete_QWAdata]{complete_QWAdata()}},
 and \code{\link[=check_QWAdata]{check_QWAdata()}}.
 Metadata is kept separately as a \link{QWAmetadata} or \link{QWAimages} object.

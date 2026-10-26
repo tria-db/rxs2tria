@@ -101,6 +101,25 @@ test_that("tissue = 'affected' drops only the affected tissue", {
   expect_false(any(prf$image_label == "WP1_SL1_IMG2" & prf$year == 2004))
 })
 
+# Rings rows ----
+# no rings row for IMG1 2001
+x_no_row <- new_QWAdata(cells = cells_prf, rings = rings_prf[-1, ])
+
+test_that("profiles with exclusions abort on cells without a rings row", {
+  expect_error(sector_prf(x_no_row, 2, "la", apply_exclusions = TRUE), "no row for 1 year")
+  expect_error(band_prf(x_no_row, 50, 50, "la", apply_exclusions = TRUE), "no row for 1 year")
+})
+
+test_that("sector profiles without exclusions need no rings rows", {
+  expect_no_warning(prf <- sector_prf(x_no_row, 2, "la"))
+  expect_true(any(prf$image_label == "WP1_SL1_IMG1" & prf$year == 2001))
+})
+
+test_that("band profiles warn on and drop cells without a rings row", {
+  expect_warning(prf <- band_prf(x_no_row, 50, 50, "la"), "left out of the band profiles")
+  expect_false(any(prf$image_label == "WP1_SL1_IMG1" & prf$year == 2001))
+})
+
 # Band profiles ----
 test_that("band profiles aggregate cells per band and flag ew bands", {
   prf <- band_prf(one_ring(c(10, 40, 60, 90)), 50, 50, "la")

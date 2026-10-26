@@ -37,6 +37,82 @@ test_that("complete_flags warns on missing spatial_resolution", {
   expect_true(x$rings$incomplete_ring[1])
 })
 
+# QWAdata helper ----
+cells_raw <- data.frame(image_label = "WP1_SL1_IMG1", year = c(2000, 2000, 2002),
+                        xpix = c(1, 2, 3), ypix = c(1, 2, 3), cwttan = 1)
+rings_raw <- data.frame(woodpiece_label = "WP1", slide_label = "WP1_SL1",
+                        image_label = "WP1_SL1_IMG1", year = c(2000, 2002), my_col = "x")
+# warnings of QWAdata(), messages muted
+qwa_warnings <- function(...) capture_warnings(suppressMessages(QWAdata(...)))
+
+test_that("QWAdata aligns to the schema, keeps extra columns and does not complete rings", {
+  w <- qwa_warnings(cells_raw, rings_raw)
+  x <- suppressWarnings(suppressMessages(QWAdata(cells_raw, rings_raw)))
+
+  expect_type(x$rings$year, "integer")
+  expect_type(x$cells$xpix, "integer")
+  expect_equal(names(x$rings)[ncol(x$rings)], "my_col")
+  expect_false("cno" %in% names(x$rings))
+  expect_equal(x$rings$year, c(2000L, 2002L))
+  expect_match(w, "Gaps", all = FALSE)
+  expect_no_match(paste(w, collapse = ""), "cno differs|no row|duplicate")
+})
+
+test_that("QWAdata aborts on missing key columns", {
+  expect_error(suppressMessages(QWAdata(rings = dplyr::select(rings_raw, -"slide_label"))),
+               "missing key column")
+})
+
+test_that("QWAdata warns on duplicate cell keys and cells vs rings issues", {
+  expect_match(qwa_warnings(cells = cells_raw[c(1, 1:3), ]), "duplicate", all = FALSE)
+  expect_match(qwa_warnings(cells_raw, rings_raw[1, ]), "no row for 1 year", all = FALSE)
+
+  expect_match(qwa_warnings(cells_raw, dplyr::mutate(rings_raw, cno = c(2L, 5L))),
+               "cno differs", all = FALSE)
+  expect_no_match(paste(qwa_warnings(cells_raw, dplyr::mutate(rings_raw, cno = c(2L, 1L))),
+                        collapse = ""), "cno differs")
+
+  img2 <- dplyr::mutate(rings_raw[1, ], image_label = "WP1_SL1_IMG2")
+  expect_match(qwa_warnings(cells_raw, dplyr::bind_rows(rings_raw, img2)),
+               "rings.*but not in.*cells", all = FALSE)
+  expect_match(qwa_warnings(cells_raw, img2), "no images in common", all = FALSE)
+})
+
+# check_QWAdata ----
+cells_ok <- dplyr::mutate(cells_raw, year = c(2000L, 2000L, 2001L))
+rings_ok <- data.frame(woodpiece_label = "WP1", slide_label = "WP1_SL1",
+                       image_label = "WP1_SL1_IMG1", year = 2000:2001, cno = 2:1)
+x_ok <- new_QWAdata(cells = cells_ok, rings = rings_ok)
+
+test_that("check_QWAdata returns TRUE without issues", {
+  expect_no_warning(res <- suppressMessages(check_QWAdata(x_ok)))
+  expect_true(res)
+})
+
+test_that("check_QWAdata warns, returns FALSE and aborts with strict", {
+  bad_schema <- new_QWAdata(cells = dplyr::mutate(cells_ok, la = -1), rings = rings_ok)
+  expect_warning(res <- suppressMessages(check_QWAdata(bad_schema)), "failed validation")
+  expect_false(res)
+  expect_error(suppressMessages(check_QWAdata(bad_schema, strict = TRUE)), "failed validation")
+
+  chk_warnings <- function(x) capture_warnings(suppressMessages(check_QWAdata(x)))
+  dupl <- new_QWAdata(cells = cells_ok[c(1, 1:3), ], rings = rings_ok)
+  expect_match(chk_warnings(dupl), "duplicate", all = FALSE)
+
+  stale <- new_QWAdata(cells = cells_ok[1:2, ], rings = rings_ok)
+  expect_match(chk_warnings(stale), "cno.*differs")
+
+  gaps <- new_QWAdata(cells = NULL, rings = dplyr::mutate(rings_ok, year = c(2000L, 2002L)))
+  expect_match(chk_warnings(gaps), "Gaps")
+})
+
+test_that("check_QWAdata informs on extra and missing optional columns", {
+  x <- new_QWAdata(cells = cells_ok, rings = dplyr::mutate(rings_ok, my_col = "x"))
+  msgs <- capture_messages(check_QWAdata(x))
+  expect_match(msgs, "extra columns", all = FALSE)
+  expect_match(msgs, "missing optional columns", all = FALSE)
+})
+
 # dating checks ----
 rings_dates <- function(years, img = "WP1_SL1_IMG1") {
   data.frame(image_label = img, year = years)

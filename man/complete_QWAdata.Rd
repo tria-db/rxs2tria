@@ -21,7 +21,7 @@ A \link{QWAdata} object with all derived columns and flag columns populated.
 Runs the full preprocessing pipeline on a \link{QWAdata} object:
 \enumerate{
 \item Aligns column types and extends \verb{$rings} to complete year sequences per
-image, with the cell count \code{cno} from \verb{$cells}; aborts on dating problems.
+image, with the cell count \code{cno} from \verb{$cells}; warns on dating problems.
 \item Adds derived cell measures and the earlywood/latewood estimates (see
 \code{\link[=complete_measures]{complete_measures()}}).
 \item Flags incomplete, missing, and duplicate rings and initialises

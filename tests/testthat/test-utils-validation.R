@@ -63,6 +63,12 @@ test_that("align_to_schema drops extra columns unless keep_extra", {
   expect_identical(res$year, c(2000L, 2001L))
 })
 
+test_that("integer columns are converted only if all values are whole numbers", {
+  expect_identical(as_whole_integer(c(1, 2, NA)), c(1L, 2L, NA))
+  expect_identical(as_whole_integer(c("3", "4")), c(3L, 4L))
+  expect_identical(as_whole_integer(c(1.5, 2)), c(1.5, 2))
+})
+
 test_that("QWAimages aborts on duplicate image_labels", {
   imgs <- dplyr::mutate(structure_df, org_img_name = image_label, software = "roxas")
   imgs$image_label[2] <- imgs$image_label[1]

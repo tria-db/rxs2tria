@@ -8,7 +8,7 @@
       "items": {
         "type": "object",
         "properties": {
-          "tree_label": { "htType": "character", "unique": true },
+          "tree_label": { "htType": "character" },
           "site_label": { "htType": "character", "otherChecks": ["valid_label"] },
           "n_woodpieces": { "htType": "numeric", "otherChecks": ["check_counts"] },
           "species_code": { "htType": "autocomplete", "options": "species_codes" },

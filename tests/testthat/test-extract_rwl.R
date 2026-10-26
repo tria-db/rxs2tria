@@ -55,6 +55,14 @@ test_that("profile-level export filters by sector, joins by image_label/year, an
   expect_equal(unname(df_rwl[["WP2"]]), c(NA, NA, 2200, 2210, 2220, 2230))
 })
 
+test_that("profile-level export aborts on profile rows without a rings row", {
+  prf_data <- dplyr::bind_rows(prf_data_multi, tibble::tibble(
+    image_label = "WP1_SL1_IMG1", year = 2010, sector_n = 1, la_mean = 1))
+
+  expect_error(extract_rwl(df_rings_multi, "la_mean", prf_data = prf_data, sector = 1),
+               "no row for 1 year")
+})
+
 test_that("profile-level export accepts quantile params as named by the profile functions", {
   prf_data <- prf_data_multi |> dplyr::mutate(la_q25.7 = la_mean, la_q100 = la_mean)
 

@@ -290,6 +290,15 @@ test_that("removed images remove rows from all hierarchy levels", {
   expect_equal(m$slides$slide_label, "S1_T1_WP1_SL1")
 })
 
+test_that("species_code is kept where it is NA in the images", {
+  images <- new_QWAimages(dplyr::mutate(imgs_meta, species_code = NA_character_), "roxas")
+
+  m <- update_QWAmetadata(meta_old, images)
+
+  expect_equal(m$trees$species_code, meta_old$trees$species_code)
+  expect_hierarchy_ok(m)
+})
+
 test_that("NULL hierarchical tables stay NULL", {
   m_in <- meta_old
   m_in["slides"] <- list(NULL)

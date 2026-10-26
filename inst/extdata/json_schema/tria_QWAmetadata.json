@@ -7,7 +7,7 @@
     "properties":
     {
         "dataset": { "$ref": "tria_dataset.json" },
-        "authors": { "$ref": "core/authors.json" },
+        "authors": { "$ref": "tria_authors.json" },
         "funding": { "$ref": "core/funding.json" },
         "datafiles": { "$ref": "tria_datafiles.json" },
         "sites": { "$ref": "core/sites.json" },

@@ -78,11 +78,103 @@ test_that("check_QWAimages informs on empty values, except fname_* and EXIF colu
   expect_no_match(paste(msgs, collapse = ""), "img_software|fname_")
 })
 
-test_that("check_QWAmetadata skips absent hierarchy tables", {
+test_that("check_QWAmetadata warns on absent required components", {
   x <- read_quiet(tria_file)
+  expect_true(suppressMessages(check_QWAmetadata(x)))
+
   x$sites <- NULL
+  expect_warning(res <- suppressMessages(check_QWAmetadata(x)), "sites.*required component")
+  expect_false(res)
+  expect_error(suppressMessages(check_QWAmetadata(x, strict = TRUE)), "sites.*required component")
+})
+
+test_that("check_QWAmetadata informs on absent optional components", {
+  x <- suppressWarnings(read_quiet(sub_file))
+  x["related"] <- list(NULL)
   msgs <- capture_messages(check_QWAmetadata(x))
-  expect_match(msgs, "sites.*not provided", all = FALSE)
+  expect_match(msgs, "related.*not provided", all = FALSE)
+})
+
+test_that("check_QWAmetadata warns on hierarchy mismatches", {
+  x <- read_quiet(tria_file)
+  x$trees$n_woodpieces[1] <- 99L
+  expect_warning(res <- suppressMessages(check_QWAmetadata(x)), "n_woodpieces.*differs")
+  expect_false(res)
+})
+
+test_that("check_QWAmetadata warns on authors issues", {
+  x <- read_quiet(tria_file)
+  check <- \(x) suppressMessages(check_QWAmetadata(x))
+
+  no_cp <- x
+  no_cp$authors$contact_person <- c(FALSE, NA, FALSE)
+  expect_warning(res <- check(no_cp), "0 contact persons")
+  expect_false(res)
+  two_cp <- x
+  two_cp$authors$contact_person <- c(TRUE, TRUE, FALSE)
+  expect_warning(check(two_cp), "2 contact persons")
+
+  gap <- x
+  gap$authors$author_nr <- c(1L, 2L, 4L)
+  expect_warning(check(gap), "author_nr")
+
+  dupl <- x
+  dupl$authors$email[3] <- dupl$authors$email[2]
+  expect_warning(check(dupl), "duplicate value in .*email")
+  masked <- x # emails of non-contact authors masked at TRIA stage
+  masked$authors$email[c(1, 3)] <- NA
+  expect_true(check(masked))
+
+  bad_country <- x
+  bad_country$authors$org_country[1] <- "XX"
+  expect_warning(check(bad_country), "unknown country code.*org_country")
+})
+
+test_that("check_QWAmetadata warns on species and description issues", {
+  x <- read_quiet(tria_file)
+  check <- \(x) suppressMessages(check_QWAmetadata(x))
+
+  name <- x
+  name$trees$species_name[1] <- "Pinus sylvestris"
+  expect_warning(res <- check(name), "species_name.*does not match")
+  expect_false(res)
+  empty_opt <- x # empty optional species columns are not compared
+  empty_opt$trees$leaf_habit[1] <- NA
+  expect_true(check(empty_opt))
+
+  stand <- x
+  stand$sites$stand_main_species_code[1] <- "ABCD"
+  expect_warning(check(stand), "unknown species code.*stand_main_species_code")
+
+  desc <- x
+  desc$dataset$description <- "Trees from [ADD INFO: site]."
+  expect_warning(check(desc), "ADD INFO")
+})
+
+test_that("check_hierarchy warns on missing, extra and differing IDs", {
+  x <- read_quiet(tria_file)
+  h <- hierarchy_tbls$trees
+  chk <- function(df, img = x$images, ...) check_hierarchy(df, "trees", h$id_col, img, h$summary_fn, ...)
+  expect_true(chk(x$trees))
+
+  expect_warning(res <- chk(x$trees[-1, ]), "missing in")
+  expect_false(res)
+  expect_error(chk(x$trees[-1, ], strict = TRUE), "missing in")
+  expect_warning(chk(dplyr::bind_rows(x$trees, dplyr::mutate(x$trees[1, ], tree_label = "EXTRA"))), "not in")
+
+  wrong_n <- x$trees
+  wrong_n$n_woodpieces[1] <- 99L
+  expect_warning(chk(wrong_n), "n_woodpieces.*differs")
+
+  expect_error(chk(dplyr::bind_rows(x$trees, x$trees[1, ])), "non-unique")
+})
+
+test_that("check_hierarchy does not compare species_code that is NA in the images", {
+  x <- read_quiet(tria_file)
+  h <- hierarchy_tbls$trees
+  img <- x$images
+  img$species_code <- NA_character_
+  expect_true(check_hierarchy(x$trees, "trees", h$id_col, img, h$summary_fn))
 })
 
 test_that("QWAmetadata round-trips at both stages", {

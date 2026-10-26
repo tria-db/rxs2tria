@@ -8,7 +8,7 @@
       "items": {
         "type": "object",
         "properties": {
-          "woodpiece_label": { "htType": "character", "unique": true },
+          "woodpiece_label": { "htType": "character" },
           "tree_label": { "htType": "character", "otherChecks": ["valid_label"] },
           "n_slides": { "htType": "numeric", "otherChecks": ["check_counts"] },
           "sampling_year": { "htType": "numeric", "htInteger": true },

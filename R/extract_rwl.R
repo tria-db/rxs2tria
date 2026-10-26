@@ -75,8 +75,9 @@ extract_rwl <- function(df_rings, param, prf_data = NULL, sector = NULL,
     checkmate::assert_names(names(prf_data),
       must.include = c("year", "image_label", "sector_n"))
     checkmate::assert_int(sector)
-
-    # TODO: check valid, matching df_rings?
+    check_rows_in_rings(prf_data, df_rings, "profile data", strict = TRUE,
+      consequence = "These profile values would be dropped from the series.",
+      hint = "Compute {.arg prf_data} from the same {.cls QWAdata} as {.arg df_rings}, after {.fn complete_QWAdata}.")
 
     # possible measurement params for the cells data:
     in_prf_data <- param %in% names(prf_data)

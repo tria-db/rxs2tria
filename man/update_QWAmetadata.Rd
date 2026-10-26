@@ -21,7 +21,8 @@ hierarchical tables (\verb{$sites}, \verb{$trees}, \verb{$woodpieces}, \verb{$sl
 accordingly:
 \itemize{
 \item the hierarchy columns and counts (\code{n_trees}, \code{n_woodpieces}, \code{n_slides},
-\code{n_images}) are derived from \code{images},
+\code{n_images}) are derived from \code{images}; \code{species_code} is kept from \code{x}
+where it is \code{NA} in \code{images},
 \item all other columns are kept from \code{x},
 \item rows for IDs new in \code{images} are added (other columns \code{NA}),
 \item rows for IDs no longer in \code{images} are removed.

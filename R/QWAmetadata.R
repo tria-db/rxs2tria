@@ -17,20 +17,30 @@ align_component <- function(data, schema, submission = TRUE) {
   data
 }
 
-# check QWAmetadata components against respective schema
+# check QWAmetadata components against respective schema; an absent component
+# warns if required at the stage, else informs
+#' @return `TRUE` if no warning was issued, `FALSE` otherwise (invisibly).
 #' @noRd
-check_component <- function(df, schema, submission = TRUE) {
-    if (is.null(df)) {
-      cli::cli_inform(c("i" = "{.field {schema}}: not provided, skipping."))
-      return(invisible(NULL))
+check_component <- function(df, schema, submission = TRUE, strict = FALSE) {
+  if (is.null(df)) {
+    main_path <- system.file(schema_rel_path("QWAmetadata", submission), package = "rxs2tria")
+    if (schema %in% unlist(jsonlite::read_json(main_path)$required)) {
+      return(report_issue(c("!" = "{.field {schema}}: required component not provided."), strict))
     }
-    schema_path <- system.file(schema_rel_path(schema, submission), package = "rxs2tria")
-    schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
-    tbl_schema <- resolve_schema(schema_obj, schema_path)
-    tbl_props <- get_tbl_props(tbl_schema)
-    check_schema(df, schema_obj, schema, greedy = FALSE)
-    check_missing_opt(df, tbl_props, schema)
+    cli::cli_inform(c("i" = "{.field {schema}}: not provided, skipping."))
+    return(invisible(TRUE))
   }
+  schema_path <- system.file(schema_rel_path(schema, submission), package = "rxs2tria")
+  schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
+  tbl_schema <- resolve_schema(schema_obj, schema_path)
+  tbl_props <- get_tbl_props(tbl_schema)
+  ok <- c(
+    check_schema(df, schema_obj, schema, strict = strict, greedy = FALSE),
+    check_unique_cols(df, tbl_props, schema, strict)
+  )
+  check_missing_opt(df, tbl_props, schema)
+  invisible(all(ok))
+}
 
 # abort for TRIA dataset files, which are not edited
 #' @noRd
@@ -65,49 +75,150 @@ hierarchy_tbls <- list(
   })
 )
 
-# check the structure of a given QWAmetadata component matches the underlying images structure
+# check the structure of a given QWAmetadata component matches the underlying images structure:
+# duplicate IDs abort; missing/extra IDs and values differing from those derived from the
+# images warn (error with strict). Derived values that are NA are not compared (only
+# species_code, optional in images, e.g. not in the filenames).
 #' @noRd
-check_hierarchy <- function(df, name, id_col, img, summary_fn) {
+check_hierarchy <- function(df, name, id_col, img, summary_fn, strict = FALSE) {
   check_dupl <- duplicated(df[[id_col]])
   if (any(check_dupl)) {
-    dupls <- unique(df[check_dupl, id_col])
+    dupls <- unique(df[[id_col]][check_dupl])
     cli::cli_abort(c(
-      "x" = "{length(dupls)} non-unique ID{?s} found for {.var ${id_col}} in {.field {name}}",
-      "i" = "Duplicates: {dupls}"
+      "x" = "{.field {name}}: {length(dupls)} non-unique ID{?s} in {.var {id_col}}: {.val {dupls}}"
     ))
   }
 
-  check_missing <- setdiff(img[[id_col]], df[[id_col]])
-  if (length(check_missing) > 0) {
-    cli::cli_abort(c(
-      "x" = "{length(check_missing)} missing ID{?s} found for {.var ${id_col}} in {.field {name}}",
-      "i" = "Missing: {check_missing}"
-    ))
+  ok <- TRUE
+  hint <- c("i" = "Run {.code update_QWAmetadata(x, x$images)} to resync {.field {name}} with {.field images}.")
+  ids_missing <- setdiff(img[[id_col]], df[[id_col]])
+  if (length(ids_missing) > 0) {
+    ok <- report_issue(c(
+      "!" = "{.field {name}}: {length(ids_missing)} ID{?s} of {.field images} missing in {.var {id_col}}: {.val {ids_missing}}",
+      hint), strict)
   }
-  check_extra <- setdiff(df[[id_col]], img[[id_col]])
-  if (length(check_extra) > 0) {
-    cli::cli_abort(c(
-      "x" = "{length(check_extra)} extra ID{?s} found for {.var ${id_col}} in {.field {name}}",
-      "i" = "Extra: {check_extra}"
-    ))
+  ids_extra <- setdiff(df[[id_col]], img[[id_col]])
+  if (length(ids_extra) > 0) {
+    ok <- report_issue(c(
+      "!" = "{.field {name}}: {length(ids_extra)} ID{?s} in {.var {id_col}} not in {.field images}: {.val {ids_extra}}",
+      hint), strict)
   }
-  # find IDs where the values from df vs imgs-derived don't match (i.e. distinct rows)
+
+  # values derived from images vs values in df, per column
   df_counts <- summary_fn(img)
-  check_mismatch <- df[names(df_counts)] |>
-    dplyr::bind_rows(df_counts, .id = "source") |>
-    dplyr::distinct(dplyr::across(names(df_counts)), .keep_all = TRUE) |>
-    dplyr::filter(source == 2) |>
-    dplyr::pull(.data[[id_col]])
-  if (length(check_mismatch) > 0) {
-    hint_cols <- setdiff(names(df_counts), id_col)
-    cli::cli_abort(c(
-      "x" = "{length(check_mismatch)} ID{?s} with mismatched data found for {.var ${id_col}} in {.field {name}}",
-      "i" = "Compare {.field {hint_cols}} in {.field {name}} vs the corresponding values derived from {.field images}",
-      "i" = "Mismatches: {check_mismatch}"
-    ))
+  cmp <- dplyr::inner_join(df_counts, df[names(df_counts)], by = id_col, suffix = c("", ".tbl"))
+  for (col in setdiff(names(df_counts), id_col)) {
+    derived <- cmp[[col]]
+    given <- cmp[[paste0(col, ".tbl")]]
+    differs <- !is.na(derived) & (is.na(given) | derived != given)
+    if (any(differs)) {
+      ids <- unique(cmp[[id_col]][differs])
+      ok <- report_issue(c(
+        "!" = "{.field {name}}: {.var {col}} differs from the value derived from {.field images} for {length(ids)} ID{?s}: {.val {ids}}",
+        hint), strict)
+    }
   }
 
+  invisible(ok)
+}
+
+# exactly one contact person among the authors; NA counts as not selected
+#' @noRd
+check_contact_person <- function(authors, strict = FALSE) {
+  cp <- authors$contact_person
+  if (is.null(cp)) return(invisible(TRUE)) # absent table or column, reported by the schema check
+  n <- sum(cp %in% TRUE)
+  if (n != 1) {
+    return(report_issue(c(
+      "!" = "{.field authors}: {n} contact person{?s} selected, exactly one expected.",
+      "i" = if (anyNA(cp)) "Empty {.field contact_person} values count as not selected."
+    ), strict))
+  }
   invisible(TRUE)
+}
+
+# author_nr numbers the authors from 1 to n
+#' @noRd
+check_author_nr <- function(authors, strict = FALSE) {
+  nr <- authors$author_nr
+  if (is.null(nr) || anyNA(nr)) return(invisible(TRUE)) # reported by the schema check
+  if (!isTRUE(all(sort(nr) == seq_along(nr)))) {
+    return(report_issue(c(
+      "!" = "{.field authors}: {.field author_nr} must number the authors from 1 to {length(nr)}, without duplicates or gaps: {.val {nr}}"
+    ), strict))
+  }
+  invisible(TRUE)
+}
+
+# lookup tables in inst/extdata, as used by the metadata app (all columns
+# character; no NA strings, "NA" is the code of Namibia)
+#' @noRd
+read_lookup <- function(file) {
+  path <- system.file("extdata", file, package = "rxs2tria")
+  vroom::vroom(path, delim = ",", na = character(), col_types = vroom::cols(.default = "c"),
+               progress = FALSE)
+}
+
+# country codes of sites and author affiliations in the ISO 3166-1 alpha-2 list
+#' @noRd
+check_country_codes <- function(x, strict = FALSE) {
+  codes <- read_lookup("country_ISO3166-1-alpha-2_20250513.csv")$country_iso_code
+  ok <- TRUE
+  for (f in list(c("sites", "country_code"), c("authors", "org_country"))) {
+    vals <- x[[f[1]]][[f[2]]]
+    unknown <- unique(vals[!is_blank(vals) & !vals %in% codes])
+    if (length(unknown) > 0) {
+      ok <- report_issue(c(
+        "!" = "{.field {f[1]}}: {length(unknown)} unknown country code{?s} in {.field {f[2]}}: {.val {unknown}}",
+        "i" = "Use ISO 3166-1 alpha-2 codes."
+      ), strict)
+    }
+  }
+  invisible(ok)
+}
+
+# species codes in the ITRDB list; for known codes, the species columns of the
+# trees (where filled) match the list
+#' @noRd
+check_species <- function(x, strict = FALSE) {
+  lookup <- read_lookup("species_ITRDB_codes_20250701.csv")
+  ok <- TRUE
+
+  sc <- x$sites$stand_main_species_code
+  unknown <- unique(sc[!is_blank(sc) & !sc %in% lookup$itrdb_species_code])
+  if (length(unknown) > 0) {
+    ok <- report_issue(c(
+      "!" = "{.field sites}: {length(unknown)} unknown species code{?s} in {.field stand_main_species_code}: {.val {unknown}}",
+      "i" = "Use ITRDB species codes."
+    ), strict)
+  }
+
+  trees <- x$trees
+  if (is.null(trees$species_code)) return(invisible(ok)) # reported by the schema check
+  unknown <- !is_blank(trees$species_code) & !trees$species_code %in% lookup$itrdb_species_code
+  if (any(unknown)) {
+    ok <- report_issue(c(
+      "!" = "{.field trees}: unknown {.field species_code} for {sum(unknown)} tree{?s}:",
+      cli_truncated_list(paste0(trees$tree_label[unknown], ": ", trees$species_code[unknown])),
+      "i" = "Use ITRDB species codes."
+    ), strict)
+  }
+
+  ref <- lookup[match(trees$species_code, lookup$itrdb_species_code), ]
+  for (col in intersect(c("species_name", "phylogenetic_group", "leaf_habit", "tree_ring_structure"),
+                        names(trees))) {
+    given <- trees[[col]]
+    differs <- !is_blank(ref[[col]]) & !is_blank(given) & given != ref[[col]]
+    if (any(differs)) {
+      ok <- report_issue(c(
+        "!" = "{.field trees}: {.field {col}} does not match {.field species_code} for {sum(differs)} tree{?s}:",
+        cli_truncated_list(paste0(trees$tree_label[differs], ": ", given[differs],
+                                  " (expected ", ref[[col]][differs], ")")),
+        "i" = "The metadata app fills in this column from {.field species_code}."
+      ), strict)
+    }
+  }
+  invisible(ok)
 }
 
 # ensure component exists (create minimal empty if NULL), expand to include all possible columns (incl. optional)
@@ -406,41 +517,64 @@ as_QWAmetadata <- function(x) {
 
 #' Validate a QWAmetadata object
 #'
-#' Runs a series of checks on each component of a [QWAmetadata] object and
-#' warns about any issues found. For `$images`, delegates to [check_QWAimages()].
-#' For all other components, checks compliance with the corresponding JSON
-#' schema and reports missing optional columns. The `$sites`, `$trees`,
-#' `$woodpieces` and `$slides` must match the IDs and counts derived from
-#' `$images` (an error is thrown otherwise). Absent components are skipped.
-#' The schemas are those of the object's stage (see [is_submission()]).
+#' Runs a series of checks on each component of a [QWAmetadata] object, as the
+#' final check before a submission. Aborts if the object is invalid or if IDs
+#' in `$sites`, `$trees`, `$woodpieces` or `$slides` are not unique. Warns on:
+#' a missing component required at the object's stage (see [is_submission()]),
+#' non-compliance with the JSON schema of the stage, duplicate values in
+#' columns that must be unique (e.g. `email`, `site_name`), not exactly one
+#' contact person, `author_nr` not numbering the authors from 1 to n, country
+#' codes not in ISO 3166-1 alpha-2, species codes not in the ITRDB list or
+#' species columns of `$trees` not matching their code, template placeholders
+#' left in the dataset `description`, and IDs or derived values (counts, parent
+#' labels, `species_code`) in the hierarchical tables not matching `$images`
+#' (resync with [update_QWAmetadata()]). For `$images`,
+#' delegates to [check_QWAimages()]. Missing optional columns and absent
+#' optional components are reported as information.
 #'
 #' @param x A [QWAmetadata] object.
-#' @returns `TRUE`, invisibly. Warnings are issued for any problems found;
-#'   an error is thrown if a component fails structural validation.
+#' @param strict If `TRUE`, throw an error instead of a warning.
+#' @returns `TRUE` if no warning was issued, `FALSE` otherwise (invisibly).
 #' @seealso [QWAmetadata()], [check_QWAimages()]
 #' @export
-check_QWAmetadata <- function(x) {
+check_QWAmetadata <- function(x, strict = FALSE) {
   validate_QWAmetadata(x)
+  checkmate::assert_flag(strict)
 
   sub <- is_submission(x)
   components <- c("dataset", "authors", "funding", if (sub) "related" else "datafiles",
                   "sites", "trees", "woodpieces", "slides")
-  for (comp in components) { # check against schema, missing optional cols
-    check_component(x[[comp]], comp, sub)
+  # check against schema, missing optional cols
+  ok <- vapply(components, \(comp) check_component(x[[comp]], comp, sub, strict), logical(1))
+
+  # checks beyond the schema, as in the metadata app
+  ok <- c(ok,
+    check_contact_person(x$authors, strict),
+    check_author_nr(x$authors, strict),
+    check_country_codes(x, strict),
+    check_species(x, strict)
+  )
+  if (any(grepl("[ADD INFO", x$dataset$description, fixed = TRUE))) {
+    ok <- c(ok, report_issue(c(
+      "!" = "{.field dataset}: {.field description} still contains {.val [ADD INFO ...]} placeholders of the template."
+    ), strict))
   }
 
   # hierarchy consistency checks against x$images
   for (tbl in names(hierarchy_tbls)) {
     if (is.null(x[[tbl]])) next # absent, reported by check_component()
     h <- hierarchy_tbls[[tbl]]
-    check_hierarchy(x[[tbl]], tbl, h$id_col, x$images, h$summary_fn)
+    ok <- c(ok, check_hierarchy(x[[tbl]], tbl, h$id_col, x$images, h$summary_fn, strict))
   }
 
-  # TODO: add advanced checks: countries, species, contact person, embargo date, license, ...
+  ok <- c(ok, check_QWAimages(x$images, submission = sub, strict = strict))
 
-  check_QWAimages(x$images, submission = sub)
-
-  invisible(TRUE)
+  if (all(ok)) {
+    cli::cli_inform(c("v" = "{.cls QWAmetadata}: all checks passed."))
+  } else {
+    cli::cli_inform(c("x" = "{.cls QWAmetadata}: issues found, see warnings."))
+  }
+  invisible(all(ok))
 }
 
 

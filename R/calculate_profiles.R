@@ -128,6 +128,11 @@ calculate_band_profiles <- function(QWA_data,
   checkmate::assert_data_frame(QWA_data$rings, null.ok = FALSE)
   checkmate::assert_names(names(QWA_data$rings),
     must.include = c("image_label", "year", "mrw"))
+  # with apply_exclusions, check_profile_args() already aborts on these
+  if (!apply_exclusions) {
+    check_rows_in_rings(QWA_data$cells, QWA_data$rings, "cells",
+      consequence = "Band positions are computed from {.field mrw} in {.field rings}, so these cells are left out of the band profiles.")
+  }
   checkmate::assert_number(bandwidth, lower = 1)
   checkmate::assert_number(stepsize, lower = 1, upper = bandwidth)
   checkmate::assert_flag(band_rebound)
@@ -234,6 +239,8 @@ check_profile_args <- function(QWA_data, sel_cell_params, quant_probs,
   checkmate::assert_flag(apply_exclusions)
   if (apply_exclusions) {
     check_rings_excl_cols(QWA_data$rings)
+    check_rows_in_rings(QWA_data$cells, QWA_data$rings, "cells", strict = TRUE,
+      consequence = "Exclusions are applied by rings row, so these cells cannot be excluded.")
     if (tissue == "affected" && !"ew_lw" %in% names(QWA_data$cells)) {
       cli::cli_abort(c(
         "{.code tissue = \"affected\"} requires the {.field ew_lw} column in {.arg QWA_data$cells}.",

@@ -137,6 +137,114 @@ check_cell_years <- function(df_cells, strict = FALSE) {
   invisible(TRUE)
 }
 
+# table properties of the cells or rings schema
+#' @noRd
+data_tbl_props <- function(schema) {
+  schema_path <- system.file(schema_rel_path(schema), package = "rxs2tria")
+  schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
+  get_tbl_props(resolve_schema(schema_obj, schema_path))
+}
+
+# align a cells or rings table to its schema, extra columns kept; abort on
+# missing key columns instead of adding them empty
+#' @noRd
+align_data <- function(df, schema) {
+  missing_keys <- setdiff(names(key_props(schema)), names(df))
+  if (length(missing_keys) > 0) {
+    cli::cli_abort(c("x" = "{.field {schema}}: missing key column{?s} {.field {missing_keys}}."))
+  }
+  align_to_schema(df, data_tbl_props(schema), schema, keep_extra = TRUE)
+}
+
+# duplicate cells key (image, year, xpix, ypix): no class invariant, as some
+# ROXAS versions produce them, but the key of the cells in TRIA
+#' @noRd
+check_cells_key <- function(df_cells, strict = FALSE) {
+  key <- c("image_label", "year", "xpix", "ypix")
+  dt <- data.table::as.data.table(df_cells[key])
+  dupl <- duplicated(dt) | duplicated(dt, fromLast = TRUE)
+  if (any(dupl)) {
+    imgs <- unique(df_cells$image_label[dupl])
+    return(report_issue(c(
+      "!" = "{.field cells}: {sum(dupl)} row{?s} with duplicate {.field {key}} (the cells key in TRIA) in {length(imgs)} image{?s}:",
+      cli_truncated_list(imgs)
+    ), strict))
+  }
+  invisible(TRUE)
+}
+
+# (image, year) of df without a rings row; warns (aborts with strict) and
+# returns the missing (image, year) invisibly
+#' @noRd
+check_rows_in_rings <- function(df, rings, what, strict = FALSE, consequence = NULL,
+                                hint = "Run {.fn complete_QWAdata} to add the rings rows.") {
+  missing <- data.frame(image_label = df$image_label, year = df$year) |>
+    dplyr::distinct() |>
+    dplyr::anti_join(rings, by = c("image_label", "year"))
+  if (nrow(missing) > 0) {
+    imgs <- unique(missing$image_label)
+    report_issue(c(
+      "!" = "{.field rings}: no row for {nrow(missing)} year{?s} with {what} in {length(imgs)} image{?s}:",
+      cli_truncated_list(imgs),
+      "i" = consequence,
+      "i" = hint
+    ), strict)
+  }
+  invisible(missing)
+}
+
+# cells vs. rings: shared images, a rings row for each (image, year) with
+# cells, and cno (if present) equal to the number of cells
+#' @noRd
+check_cells_rings <- function(x, strict = FALSE) {
+  if (is.null(x$cells) || is.null(x$rings)) return(invisible(TRUE))
+  imgs_cells <- unique(x$cells$image_label)
+  imgs_rings <- unique(x$rings$image_label)
+  if (length(intersect(imgs_cells, imgs_rings)) == 0) {
+    return(report_issue(c("!" = "{.field cells} and {.field rings} have no images in common."), strict))
+  }
+
+  ok <- TRUE
+  only_cells <- setdiff(imgs_cells, imgs_rings)
+  if (length(only_cells) > 0) {
+    ok <- report_issue(c(
+      "!" = "{length(only_cells)} image{?s} in {.field cells} but not in {.field rings}:",
+      cli_truncated_list(only_cells)
+    ), strict)
+  }
+  only_rings <- setdiff(imgs_rings, imgs_cells)
+  if (length(only_rings) > 0) {
+    ok <- report_issue(c(
+      "!" = "{length(only_rings)} image{?s} in {.field rings} but not in {.field cells}:",
+      cli_truncated_list(only_rings)
+    ), strict)
+  }
+
+  # images in both only
+  hint <- "Run {.fn complete_QWAdata} to add the rings rows and recount {.field cno}."
+  n_cells <- x$cells |>
+    dplyr::filter(.data$image_label %in% imgs_rings) |>
+    dplyr::count(.data$image_label, .data$year, name = "n_cells")
+  no_ring <- check_rows_in_rings(n_cells, x$rings, "cells", strict, hint = hint)
+  if (nrow(no_ring) > 0) ok <- FALSE
+  if ("cno" %in% names(x$rings)) {
+    cmp <- x$rings |>
+      dplyr::filter(.data$image_label %in% imgs_cells) |>
+      dplyr::select("image_label", "year", "cno") |>
+      dplyr::left_join(n_cells, by = c("image_label", "year")) |>
+      dplyr::mutate(n_cells = dplyr::coalesce(.data$n_cells, 0L))
+    differs <- dplyr::coalesce(cmp$cno != cmp$n_cells, TRUE)
+    if (any(differs)) {
+      imgs <- unique(cmp$image_label[differs])
+      ok <- report_issue(c(
+        "!" = "{.field rings}: {.field cno} differs from the number of cells in {sum(differs)} ring{?s} of {length(imgs)} image{?s}:",
+        cli_truncated_list(imgs), "i" = hint
+      ), strict)
+    }
+  }
+  invisible(ok)
+}
+
 # Helper to avoid -inf warning on all NA vectors
 #' @noRd
 max_na_inf <- function(x) {
@@ -461,7 +569,16 @@ validate_QWAdata <- function(x, hint = NULL) {
 #' - **`$rings`**: ring-level measurements, and possibly also quality flags
 #'   (one row per annual ring per image).
 #'
-#' At least one component must be provided. The typical workflow builds a
+#' At least one component must be provided. The components are aligned with
+#' their schema (column types and order); columns not in the schema are kept
+#' after the schema columns. Aborts on missing, `NA` or (in `$rings`) duplicate
+#' keys. Warns on missing measurement columns, duplicate cell keys (image,
+#' year, `xpix`, `ypix`), dating problems, images only in `$cells` or only in
+#' `$rings`, years with cells but without a rings row, and `cno` not matching
+#' the number of cells. The rings are not completed here: [complete_QWAdata()]
+#' adds the missing rings rows and `cno`.
+#'
+#' The typical workflow builds a
 #' `QWAdata` object incrementally using [collect_raw_data()], [complete_QWAdata()],
 #' and [check_QWAdata()].
 #' Metadata is kept separately as a [QWAmetadata] or [QWAimages] object.
@@ -484,73 +601,29 @@ QWAdata <- function(cells = NULL,
   checkmate::assert_data_frame(cells, null.ok = TRUE)
   checkmate::assert_data_frame(rings, null.ok = TRUE)
 
-  # minimal requirements: cells - align cols, cwt
-  if (!is.null(cells)) {
-    # get schema from file
-    schema_path <- system.file(schema_rel_path("cells"), package = "rxs2tria")
-    schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
-    tbl_schema <- resolve_schema(schema_obj, schema_path)
-    tbl_props <- get_tbl_props(tbl_schema)
-    # expected raw measurement cols
-    measure_cols <- tbl_props$properties |> purrr::keep(\(x) x$colType == "measure") |> names()
-    missing_meas_cols <- setdiff(measure_cols, names(cells))
-    if (length(missing_meas_cols)>0) {
+  # align to schema (extra columns kept), expected raw measurement columns
+  comps <- list(cells = cells, rings = rings)
+  for (comp in names(purrr::compact(comps))) {
+    missing_meas_cols <- setdiff(schema_cols(comp, "measure"), names(comps[[comp]]))
+    comps[[comp]] <- align_data(comps[[comp]], comp)
+    if (length(missing_meas_cols) > 0) {
       cli::cli_warn(c(
-        "!" = "{.field cells} has missing expected raw measurement columns:",
+        "!" = "{.field {comp}} is missing expected raw measurement columns:",
         "i" = "{missing_meas_cols}"
       ))
     }
-    # align: all measurements numeric (TODO: distinguish between numeric and integer?)
-    cells <- cells |> 
-      dplyr::mutate(
-        dplyr::across(dplyr::any_of(c("image_label", "ew_lw")), as.character),
-        dplyr::across(-dplyr::any_of(c("image_label", "ew_lw")), as.numeric)
-    )
-    # check for cwt estimates (expected for conifers)
-    check_cwt(cells)
-    if (is.null(rings)) { # if no rings, check dating in cells (just no in-future years)
-      check_cell_years(cells)
-    }
   }
-   
-  # rings - align cols
-  if (!is.null(rings)) {
-    # get schema from file
-    schema_path <- system.file(schema_rel_path("rings"), package = "rxs2tria")
-    schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
-    tbl_schema <- resolve_schema(schema_obj, schema_path)
-    tbl_props <- get_tbl_props(tbl_schema)
-    # expected measurement cols
-    measure_cols <- tbl_props$properties |> purrr::keep(\(x) x$colType == "measure") |> names()
-    missing_meas_cols <- setdiff(measure_cols, names(rings))
-    if (length(missing_meas_cols)>0) {
-      cli::cli_warn(c(
-        "!" = "{.field rings} is missing expected raw measurement columns:",
-        "i" = "{missing_meas_cols}"
-      ))
-    }
-    # align types
-    char_cols <- tbl_props$properties |> purrr::keep(\(x) "string" %in% x$type) |> names()
-    flag_cols <- tbl_props$properties |> purrr::keep(\(x) "boolean" %in% x$type) |> names()
-    num_cols <- tbl_props$properties |> purrr::keep(\(x) "number" %in% x$type) |> names()
-    int_cols <- tbl_props$properties |> purrr::keep(\(x) "integer" %in% x$type) |> names()
-    rings <- rings |> 
-      dplyr::mutate(
-        dplyr::across(dplyr::any_of(char_cols), as.character),
-        dplyr::across(dplyr::any_of(flag_cols), as.logical),
-        dplyr::across(dplyr::any_of(num_cols), as.numeric),
-        dplyr::across(dplyr::any_of(int_cols), as.integer)
-      )
-  }
+  x <- validate_QWAdata(new_QWAdata(comps$cells, comps$rings))
 
-  x <- validate_QWAdata(new_QWAdata(cells, rings))
-
-  # rings - complete years, check dating
-  if (!is.null(rings)) {
-    # ensure we have complete year sequences for each image (re-adds cno)
-    x$rings <- complete_rings(x)
-    check_ring_years(x$rings)
+  # data quality (rings rows and cno are completed by complete_QWAdata())
+  if (!is.null(x$cells)) {
+    check_cwt(x$cells) # cwt estimates expected for conifers
+    check_cells_key(x$cells)
+    # with rings, future years in cells are reported with the rings (or as missing rings rows)
+    if (is.null(x$rings)) check_cell_years(x$cells)
   }
+  if (!is.null(x$rings)) check_ring_years(x$rings)
+  check_cells_rings(x)
 
   x
 }
@@ -646,7 +719,7 @@ as_QWAdata <- function(x) {
 #'
 #' Runs the full preprocessing pipeline on a [QWAdata] object:
 #' 1. Aligns column types and extends `$rings` to complete year sequences per
-#'    image, with the cell count `cno` from `$cells`; aborts on dating problems.
+#'    image, with the cell count `cno` from `$cells`; warns on dating problems.
 #' 2. Adds derived cell measures and the earlywood/latewood estimates (see
 #'    [complete_measures()]).
 #' 3. Flags incomplete, missing, and duplicate rings and initialises
@@ -665,26 +738,10 @@ complete_QWAdata <- function(x, meta, exclude_mode = NULL) {
   validate_QWAimages(meta)
   checkmate::assert_subset(c("spatial_resolution", "outmost_year"), names(meta))
 
-  # align cells
-  if (!is.null(x$cells)) {
-    x$cells <- x$cells |> 
-      dplyr::mutate(
-        dplyr::across(dplyr::any_of(c("image_label", "ew_lw")), as.character),
-        dplyr::across(-dplyr::any_of(c("image_label", "ew_lw")), as.numeric)
-    )
-  }
+  # align to schema (extra columns kept)
+  if (!is.null(x$cells)) x$cells <- align_data(x$cells, "cells")
+  if (!is.null(x$rings)) x$rings <- align_data(x$rings, "rings")
 
-  # align rings
-  if (!is.null(x$rings)) {
-    char_cols <- c("image_label", "slide_label", "woodpiece_label", "affected_tissue")
-    flag_cols <- names(x$rings)[sapply(x$rings, is.logical)] # TODO: get from schema
-    x$rings <- x$rings |> 
-      dplyr::mutate(
-        dplyr::across(dplyr::any_of(char_cols), as.character),
-        dplyr::across(-dplyr::any_of(c(char_cols, flag_cols)), as.numeric)
-      )
-  } 
-  
   # ensure complete sequences of years (note: creates rings df from cells if null)
   x$rings <- complete_rings(x)
   check_ring_years(x$rings, meta)
@@ -702,56 +759,56 @@ complete_QWAdata <- function(x, meta, exclude_mode = NULL) {
 }
 
 
-#' Validate a QWAdata object
+#' Check a QWAdata object
 #'
-#' Re-runs data quality checks on a [QWAdata] object and warns about any
-#' issues found. Checks include:
-#' - CWT estimates present for all images.
-#' - Dating validity (undated, duplicate, future years; and if `meta` is
-#'   provided, years after `outmost_year`).
+#' Checks a [QWAdata] object before submission. Aborts if the object is not a
+#' valid `QWAdata` (missing, mistyped or `NA` keys, duplicate (image, year) in
+#' `$rings`). Warns (or, with `strict = TRUE`, aborts) on:
+#' - values violating the cells or rings schema (types, ranges, allowed values);
+#' - duplicate cell keys (image, year, `xpix`, `ypix`), the key of the cells
+#'   in TRIA;
+#' - dating problems: gaps and future years;
+#' - images only in `$cells` or only in `$rings`, years with cells but without
+#'   a rings row, and `cno` not matching the number of cells (re-run
+#'   [complete_QWAdata()]).
+#'
+#' Also informs about missing optional columns, extra columns (kept, but not
+#' imported into TRIA by default) and images without CWT estimates.
 #'
 #' @param x A [QWAdata] object.
-#' @param meta Optional [QWAimages] object. If provided, also checks that no
-#'   ring years exceed `outmost_year`.
+#' @param strict If `TRUE`, abort on the first issue instead of warning.
 #' @param exclude_mode Deprecated and ignored.
-#' @returns `TRUE`, invisibly. Warnings are issued for any problems found;
-#'   errors are thrown for structural issues.
+#' @returns `TRUE` if no issue was found, `FALSE` otherwise (invisibly).
 #' @seealso [QWAdata()], [complete_QWAdata()]
 #' @export
-check_QWAdata <- function(x, meta = NULL, exclude_mode = NULL) {
+check_QWAdata <- function(x, strict = FALSE, exclude_mode = NULL) {
   validate_QWAdata(x)
-  if (!is.null(meta)) {
-    validate_QWAimages(meta)
-  }
+  checkmate::assert_flag(strict)
   resolve_exclude_mode(exclude_mode)
 
+  ok <- TRUE
+  for (comp in c("cells", "rings")) {
+    if (is.null(x[[comp]])) next
+    tbl_props <- data_tbl_props(comp)
+    ok <- c(ok, check_data_schema(x[[comp]], tbl_props, comp, strict))
+    check_missing_opt(x[[comp]], tbl_props, comp)
+  }
+
   if (!is.null(x$cells)) {
-    # TODO: check against schema for cells
-    # TODO: complete the checks, see QWAdata
-    # check_missing_opt(cells, tbl_props)? or separate for measures and derived
-    # extra_cols <- names(x$cells) %in% all_cols
-    # char_cols <- x$cells |> dplyr::select(dplyr::where(is.character)) |> names()
-    # checkmate::assert_subset(char_cols, ...)
-    # missing (incl. optional) columns
     check_cwt(x$cells)
+    ok <- c(ok, check_cells_key(x$cells, strict))
+    # with rings, future years in cells are reported with the rings (or as missing rings rows)
+    if (is.null(x$rings)) ok <- c(ok, check_cell_years(x$cells, strict))
   }
-    
+  if (!is.null(x$rings)) ok <- c(ok, check_ring_years(x$rings, strict = strict))
+  ok <- c(ok, check_cells_rings(x, strict))
 
-  if (!is.null(x$rings)) {
-    # TODO: check against schema for rings
-    # as for cells...
-    # check dating
-    check_ring_years(x$rings, meta)
-  } else { # check dating of cells component
-    check_cell_years(x$cells)
+  if (all(ok)) {
+    cli::cli_inform(c("v" = "{.cls QWAdata}: all checks passed."))
+  } else {
+    cli::cli_inform(c("x" = "{.cls QWAdata}: issues found, see warnings."))
   }
-  
-  # check for negative values / outliers, ranges as defined in schemata
-  # plus check structure against each other, cno
-  # plus re-check calculated measures / flags are valid?
-
-  cli::cli_inform(c("v" = "All checks completed."))
-  invisible(TRUE)
+  invisible(all(ok))
 }
 
 

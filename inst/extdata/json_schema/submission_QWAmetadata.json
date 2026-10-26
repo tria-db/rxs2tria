@@ -7,7 +7,7 @@
     "properties":
     {
         "dataset": { "$ref": "submission_dataset.json" },
-        "authors": { "$ref": "core/authors.json" },
+        "authors": { "$ref": "submission_authors.json" },
         "funding": { "$ref": "core/funding.json" },
         "related": { "$ref": "submission_related.json" },
         "sites": { "$ref": "core/sites.json" },

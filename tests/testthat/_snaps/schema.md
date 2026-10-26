@@ -16,6 +16,7 @@
       i roxas missing optional columns:
       i only_ew, img_created_at, img_software, img_comment, and rw_reference_file
       v <QWAimages>: all checks passed.
+      v <QWAmetadata>: all checks passed.
 
 ---
 
@@ -41,4 +42,5 @@
         `cells_segmentation_datetime` (5 rows)
         `reference_series` (33 rows)
       v <QWAimages>: all checks passed.
+      v <QWAmetadata>: all checks passed.
 

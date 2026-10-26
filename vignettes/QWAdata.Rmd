@@ -49,7 +49,7 @@ QWA_data <- collect_raw_data(rxs_images)
 QWA_data <- complete_QWAdata(QWA_data, meta = rxs_images)
 
 # Step 3: validate
-check_QWAdata(QWA_data, meta = rxs_images)
+check_QWAdata(QWA_data)
 ```
 
 `collect_raw_data()` reads the cells and rings tables from all ROXAS
@@ -174,19 +174,22 @@ add only missing columns; to recompute a column, remove it first.
 ## Checking a QWAdata object
 
 ```{r check}
-check_QWAdata(QWA_data, meta = rxs_images)
+check_QWAdata(QWA_data)
 ```
 
-`check_QWAdata()` returns `TRUE` invisibly and issues warnings for any
-problems found:
+`check_QWAdata()` returns `TRUE` invisibly if no issue was found, `FALSE`
+otherwise. With `strict = TRUE`, it aborts on the first issue instead of
+warning.
 
-- **Missing CWT** (warning): any image where `cwttan` is entirely `NA`.
-- **Dating problems** (warning): undated years, duplicates, gaps, future
-  years, or years beyond `outmost_year` (the last only if `meta` is
-  supplied).
-- **Missing identifiers** (warning): `NA` in `image_label`, `year`,
-  `xpix` or `ypix` of `$cells`.
-- **Structural errors** (error): both components `NULL`.
+- **Errors**: invalid object, i.e. missing, mistyped or `NA` identifiers,
+  or duplicate (image, year) in `$rings`.
+- **Warnings**: values violating the schema (types, ranges, allowed
+  values); duplicate cell keys (image, year, `xpix`, `ypix`); gaps and
+  future years; images only in `$cells` or only in `$rings`, years with
+  cells but without a rings row, and `cno` not matching the number of
+  cells (re-run `complete_QWAdata()`).
+- **Information**: missing optional columns, extra columns, and images
+  where `cwttan` is entirely `NA`.
 
 The `meta` argument is optional but recommended: without it, the
 `outmost_year` check is skipped.
