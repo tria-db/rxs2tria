@@ -15,7 +15,8 @@ new_QWAprofile <- function(data, profile_type) {
 #' Abort if a QWAprofile object violates the class invariants
 #'
 #' Valid `profile_type` attribute; key columns (`image_label`, `year` and
-#' `sector_n` or `start`, `end`) present, not `NA` and unique; `start < end`.
+#' `sector_n` or `start`, `end`) present, typed, not `NA` and unique;
+#' `start < end`.
 #' @returns `x`, invisibly.
 #' @noRd
 validate_QWAprofile <- function(x) {
@@ -27,14 +28,53 @@ validate_QWAprofile <- function(x) {
       "i" = "Rebuild the object with {.fn QWAprofile}."
     ))
   }
-  # no schema for profiles; sector_n is a factor after calculate_sector_profiles()
+  # no schema for profiles (derived analysis data, not imported into TRIA)
   keys <- c(image_label = "string", year = "integer",
-            switch(pt, sector = c(sector_n = NA), band = c(start = "number", end = "number")))
+            switch(pt, sector = c(sector_n = "integer"), band = c(start = "number", end = "number")))
   validate_keys(x, keys, "QWAprofile", unique_by = names(keys))
   if (pt == "band" && any(x$start >= x$end)) {
     cli::cli_abort(c("x" = "{.cls QWAprofile}: {sum(x$start >= x$end)} band{?s} with {.field start} >= {.field end}."))
   }
   invisible(x)
+}
+
+#' Report profile data issues (warn, or abort with `strict`)
+#'
+#' No measurement column or all measurement values `NA`; band profiles with
+#' varying band widths; sector profiles with `sector_n` < 1.
+#' @returns `TRUE` if no issue was found, `FALSE` otherwise (invisibly).
+#' @noRd
+check_profile_data <- function(x, strict = FALSE) {
+  ok <- TRUE
+  # count columns (<param>_N) and ring context are not measurements
+  meas_cols <- setdiff(names(x), c("image_label", "year", "sector_n", "start", "end",
+                                   "mrw", "eww", "ew_band"))
+  meas_cols <- meas_cols[!endsWith(meas_cols, "_N")]
+  if (length(meas_cols) == 0) {
+    ok <- report_issue(c("!" = "{.cls QWAprofile}: no measurement columns."), strict)
+  } else if (all(is.na(x[meas_cols]))) {
+    ok <- report_issue(c("!" = "{.cls QWAprofile}: all measurement values are missing."), strict)
+  }
+
+  if (attr(x, "profile_type") == "band") {
+    widths <- unique(round(x$end - x$start, 6))
+    if (length(widths) > 1) {
+      ok <- report_issue(c(
+        "!" = "{.cls QWAprofile}: bands of different widths {.val {widths}}.",
+        "i" = "Bands of different widths are not comparable; recompute with a single {.arg bandwidth}."
+      ), strict)
+    }
+  } else {
+    below <- x$sector_n < 1
+    if (any(below)) {
+      imgs <- unique(x$image_label[below])
+      ok <- report_issue(c(
+        "!" = "{.cls QWAprofile}: {sum(below)} row{?s} with {.field sector_n} < 1 in {length(imgs)} image{?s}:",
+        cli_truncated_list(imgs)
+      ), strict)
+    }
+  }
+  invisible(ok)
 }
 
 # Public constructor ----
@@ -67,6 +107,7 @@ QWAprofile <- function(data, profile_type = c("sector", "band")) {
 
   x <- new_QWAprofile(data, profile_type)
   validate_QWAprofile(x)
+  check_profile_data(x)
   x
 }
 
@@ -157,36 +198,37 @@ read_QWAprofile <- function(file) {
     cli::cli_abort("Profile type could not be established in {.file {file}}. Is it a {.val QWAprofile}?")
   }
 
-  # TODO: validate profile data
-  # - valid measurement and count cols
-  # - sectors: n sectors consistent
-  # - bands: bandwidth consistent
   x <- QWAprofile(df, profile_type = pt)
   cli::cli_inform(c("v" = "QWAprofile read from {.file {file}}"))
   x
 }
 
-#' Validate a QWAprofile object
+#' Check a QWAprofile object
 #'
-#' Runs a series of checks on a [QWAprofile] object and warns about any issues
-#' found. Aborts if the object is invalid (key columns `image_label`, `year`
-#' and `sector_n` for sector profiles or `start`/`end` for band profiles
-#' missing, `NA` or not unique; bands with `start >= end`). Warns if no
-#' measurement column is present.
+#' Checks a [QWAprofile] object before analysis (profiles are derived data and
+#' not imported into TRIA). Aborts if the object is not a valid `QWAprofile`
+#' (key columns `image_label`, `year` and `sector_n` for sector profiles or
+#' `start`/`end` for band profiles missing, mistyped, `NA` or not unique;
+#' bands with `start >= end`). Warns (or, with `strict = TRUE`, aborts) on:
+#' - no measurement column, or all measurement values `NA` (the count columns
+#'   `<param>_N` and `mrw`, `eww`, `ew_band` are not measurements);
+#' - band profiles with bands of different widths;
+#' - sector profiles with `sector_n` < 1.
 #'
 #' @param x A [QWAprofile] object.
-#' @returns `TRUE`, invisibly. Warnings are issued for any problems found.
+#' @param strict If `TRUE`, abort on the first issue instead of warning.
+#' @returns `TRUE` if no issue was found, `FALSE` otherwise (invisibly).
 #' @seealso [QWAprofile()], [check_QWAdata()]
 #' @export
-check_QWAprofile <- function(x) {
+check_QWAprofile <- function(x, strict = FALSE) {
   validate_QWAprofile(x)
+  checkmate::assert_flag(strict)
 
-  # at least one measurement column
-  non_meta <- setdiff(names(x), c("image_label", "year", "sector_n", "start", "end",
-                                   "mrw", "eww", "ew_band"))
-  if (length(non_meta) == 0)
-    cli::cli_warn(c("!" = "No measurement columns found in profile."))
-
-  cli::cli_inform(c("v" = "All checks completed."))
-  invisible(TRUE)
+  ok <- check_profile_data(x, strict)
+  if (ok) {
+    cli::cli_inform(c("v" = "{.cls QWAprofile}: all checks passed."))
+  } else {
+    cli::cli_inform(c("x" = "{.cls QWAprofile}: issues found, see warnings."))
+  }
+  invisible(ok)
 }

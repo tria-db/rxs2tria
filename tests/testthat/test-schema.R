@@ -37,9 +37,10 @@ test_that("table schemas yield usable column definitions at both stages", {
   for (stage in names(stage_keys)) {
     for (key in stage_keys[[stage]]) {
       path <- system.file(schema_rel_path(key, stage == "submission"), package = "rxs2tria")
-      schema_obj <- jsonvalidate::json_schema$new(path, engine = "ajv")
-      props <- get_tbl_props(resolve_schema(schema_obj, path))
       label <- paste(stage, key)
+      # check_schema() validates with jsonvalidate
+      expect_no_error(jsonvalidate::json_schema$new(path, engine = "ajv"))
+      props <- schema_tbl_props(key, stage == "submission")
       expect_gt(length(props$properties), 0, label = label)
       expect_true(all(props$required %in% names(props$properties)), label = label)
       expect_named(create_empty_df(props), names(props$properties), label = label)
@@ -50,10 +51,10 @@ test_that("table schemas yield usable column definitions at both stages", {
 test_that("full metadata and app schemas resolve all refs", {
   for (submission in c(TRUE, FALSE)) {
     path <- system.file(schema_rel_path("QWAmetadata", submission), package = "rxs2tria")
-    expect_no_error(resolve_schema(jsonvalidate::json_schema$new(path, engine = "ajv"), path))
+    expect_no_error(resolve_schema(path))
   }
   path <- system.file(schema_rel_path("shiny_meta"), package = "rxs2tria")
-  expect_no_error(resolve_schema(jsonvalidate::json_schema$new(path, engine = "ajv"), path))
+  expect_no_error(resolve_schema(path))
 })
 
 test_that("stage-only schemas are not found at the other stage", {
@@ -105,12 +106,10 @@ test_that("dataset: embargo date may be absent for public submissions only", {
 })
 
 test_that("conditionally required fields are not extracted as required", {
-  path <- system.file(schema_rel_path("dataset", TRUE), package = "rxs2tria")
-  props <- get_tbl_props(resolve_schema(jsonvalidate::json_schema$new(path, engine = "ajv"), path))
+  props <- schema_tbl_props("dataset", TRUE)
   expect_setequal(props$required, c("ds_name", "ds_title", "description", "ds_access"))
 
-  path <- system.file(schema_rel_path("dataset", FALSE), package = "rxs2tria")
-  props <- get_tbl_props(resolve_schema(jsonvalidate::json_schema$new(path, engine = "ajv"), path))
+  props <- schema_tbl_props("dataset", FALSE)
   expect_true("ds_license" %in% props$required)
 })
 

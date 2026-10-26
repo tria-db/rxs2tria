@@ -2,22 +2,30 @@
 % Please edit documentation in R/QWAprofile.R
 \name{check_QWAprofile}
 \alias{check_QWAprofile}
-\title{Validate a QWAprofile object}
+\title{Check a QWAprofile object}
 \usage{
-check_QWAprofile(x)
+check_QWAprofile(x, strict = FALSE)
 }
 \arguments{
 \item{x}{A \link{QWAprofile} object.}
+
+\item{strict}{If \code{TRUE}, abort on the first issue instead of warning.}
 }
 \value{
-\code{TRUE}, invisibly. Warnings are issued for any problems found.
+\code{TRUE} if no issue was found, \code{FALSE} otherwise (invisibly).
 }
 \description{
-Runs a series of checks on a \link{QWAprofile} object and warns about any issues
-found. Aborts if the object is invalid (key columns \code{image_label}, \code{year}
-and \code{sector_n} for sector profiles or \code{start}/\code{end} for band profiles
-missing, \code{NA} or not unique; bands with \code{start >= end}). Warns if no
-measurement column is present.
+Checks a \link{QWAprofile} object before analysis (profiles are derived data and
+not imported into TRIA). Aborts if the object is not a valid \code{QWAprofile}
+(key columns \code{image_label}, \code{year} and \code{sector_n} for sector profiles or
+\code{start}/\code{end} for band profiles missing, mistyped, \code{NA} or not unique;
+bands with \code{start >= end}). Warns (or, with \code{strict = TRUE}, aborts) on:
+\itemize{
+\item no measurement column, or all measurement values \code{NA} (the count columns
+\verb{<param>_N} and \code{mrw}, \code{eww}, \code{ew_band} are not measurements);
+\item band profiles with bands of different widths;
+\item sector profiles with \code{sector_n} < 1.
+}
 }
 \seealso{
 \code{\link[=QWAprofile]{QWAprofile()}}, \code{\link[=check_QWAdata]{check_QWAdata()}}

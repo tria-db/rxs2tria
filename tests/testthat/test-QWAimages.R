@@ -4,11 +4,7 @@ imgs <- tibble::tribble(
   "S1", "S1_T1", "S1_T1_WP1", "S1_T1_WP1_SL1", "S1_T1_WP1_SL1_IMG2", "S1_T1_WP1_SL1_IMG2", "roxas",
 )
 
-tbl_props_roxas <- function() {
-  schema_path <- system.file(schema_rel_path("roxas"), package = "rxs2tria")
-  schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
-  get_tbl_props(resolve_schema(schema_obj, schema_path))
-}
+tbl_props_roxas <- function() schema_tbl_props("roxas")
 
 test_that("validate_QWAimages aborts on invalid objects", {
   x <- suppressMessages(QWAimages(imgs))

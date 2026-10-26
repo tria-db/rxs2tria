@@ -93,7 +93,7 @@ test_that("write_QWAdata writes NA as empty fields and drops all-empty qc_input 
 })
 
 test_that("QWAprofile defaults to sector profiles, write_QWAprofile writes NA as empty fields", {
-  prf <- QWAprofile(data.frame(image_label = "IMG1", year = 2000, sector_n = 1, la_mean = NA_real_))
+  prf <- QWAprofile(data.frame(image_label = "IMG1", year = 2000, sector_n = 1:2, la_mean = c(NA, 1)))
   expect_equal(attr(prf, "profile_type"), "sector")
 
   file <- tempfile(fileext = ".csv")

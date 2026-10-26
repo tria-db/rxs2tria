@@ -43,9 +43,7 @@ test_that("check_spatial_resolution warns on missing values and columns", {
 })
 
 test_that("align_to_schema drops extra columns unless keep_extra", {
-  schema_path <- system.file(schema_rel_path("rings"), package = "rxs2tria")
-  schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
-  tbl_props <- get_tbl_props(resolve_schema(schema_obj, schema_path))
+  tbl_props <- schema_tbl_props("rings")
   rings <- data.frame(
     woodpiece_label = "WP1", slide_label = "WP1_SL1", image_label = "WP1_SL1_IMG1",
     year = c("2000", "2001"), my_eww = c(1L, 2L)
@@ -99,9 +97,7 @@ test_that("validate_keys aborts on missing, mistyped, NA and duplicate keys", {
 })
 
 test_that("check_data_schema reports rule violations with row counts", {
-  schema_path <- system.file(schema_rel_path("cells"), package = "rxs2tria")
-  schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
-  tbl_props <- get_tbl_props(resolve_schema(schema_obj, schema_path))
+  tbl_props <- schema_tbl_props("cells")
   cells <- data.frame(
     image_label = "IMG1", year = c(2000, 2000, 2001), xpix = 1, ypix = 1,
     la = c(10, 20, 30), ew_lw = c("ew", NA, "lw")

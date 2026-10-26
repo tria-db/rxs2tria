@@ -84,10 +84,13 @@ resolve_refs <- function(x, base_path){
   purrr::map(x, resolve_refs, base_path = base_path)
 }
 
+#' Read a JSON schema file and inline its `$ref`s
+#' @param schema_path Path to the schema file.
+#' @returns The resolved schema as a nested R list.
 #' @noRd
-resolve_schema <- function(schema_obj, schema_path) {
-  tbl_schema  <- jsonlite::fromJSON(schema_obj$schema$schema, simplifyDataFrame = FALSE)
-  resolve_refs(tbl_schema, fs::path_dir(schema_path))
+resolve_schema <- function(schema_path) {
+  jsonlite::fromJSON(schema_path, simplifyDataFrame = FALSE) |>
+    resolve_refs(fs::path_dir(schema_path))
 }
 
 # "required" inside if/then/else applies conditionally only, so these
@@ -146,6 +149,16 @@ get_tbl_props <- function(tbl_schema) {
   list(properties = properties, required = required, cond_required = cond_required)
 }
 
+#' Table properties of a schema, see `get_tbl_props()`
+#' @param schema Schema name, see `schema_rel_path()`.
+#' @param submission Schema for submission files (`TRUE`) or TRIA dataset
+#'   files (`FALSE`)?
+#' @noRd
+schema_tbl_props <- function(schema, submission = TRUE) {
+  schema_path <- system.file(schema_rel_path(schema, submission), package = "rxs2tria")
+  get_tbl_props(resolve_schema(schema_path))
+}
+
 #' Names of the quality control columns set in the flags app (`colType`
 #' `"qc_input"`) in table properties
 #' @param tbl_props Output of `get_tbl_props()`.
@@ -162,26 +175,18 @@ qc_input_cols <- function(tbl_props) {
 #' @returns Character vector of column names, in schema order.
 #' @noRd
 schema_cols <- function(schema, col_types) {
-  schema_path <- system.file(schema_rel_path(schema), package = "rxs2tria")
-  schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
-  tbl_props <- get_tbl_props(resolve_schema(schema_obj, schema_path))
-  tbl_props$properties |>
+  schema_tbl_props(schema)$properties |>
     purrr::keep(\(x) isTRUE(x$colType %in% col_types)) |>
     names()
 }
 
 #' Key columns of a table schema (`colType` `"key"`) and their JSON types
-#'
-#' Reads the schema with jsonlite only (no V8 context), as the validators call
-#' it often.
 #' @param schema Schema name, see `schema_rel_path()`.
 #' @returns Named character vector: JSON type by key column, in schema order.
 #' @noRd
 key_props <- function(schema) {
   schema_path <- system.file(schema_rel_path(schema), package = "rxs2tria")
-  tbl_schema <- jsonlite::read_json(schema_path, simplifyVector = TRUE, simplifyDataFrame = FALSE) |>
-    resolve_refs(fs::path_dir(schema_path))
-  extract_properties(tbl_schema) |>
+  extract_properties(resolve_schema(schema_path)) |>
     purrr::keep(\(x) "key" %in% x$colType) |>
     vapply(\(x) x$type[1], character(1))
 }
@@ -731,9 +736,7 @@ prepare_write <- function(df, schema, drop_empty = TRUE, submission = TRUE) {
     dplyr::mutate(dplyr::across(dplyr::where(is.character), \(x) dplyr::na_if(x, "")))
   if (!drop_empty) return(df)
 
-  schema_path <- system.file(schema_rel_path(schema, submission), package = "rxs2tria")
-  schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
-  tbl_props <- get_tbl_props(resolve_schema(schema_obj, schema_path))
+  tbl_props <- schema_tbl_props(schema, submission)
 
   input_cols <- tbl_props$properties |>
     purrr::keep(\(x) isTRUE(x$colType %in% c("meta_input", "qc_input"))) |>
@@ -746,6 +749,8 @@ prepare_write <- function(df, schema, drop_empty = TRUE, submission = TRUE) {
   # keep conditionally required columns the validation asks for
   cond_cols <- intersect(drop_cols, tbl_props$cond_required)
   if (length(cond_cols) > 0) {
+    schema_path <- system.file(schema_rel_path(schema, submission), package = "rxs2tria")
+    schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
     result <- schema_obj$validate(
       jsonlite::toJSON(df[setdiff(names(df), drop_cols)], na = "null", POSIXt = "ISO8601"),
       verbose = TRUE, greedy = TRUE

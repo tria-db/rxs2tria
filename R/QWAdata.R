@@ -137,14 +137,6 @@ check_cell_years <- function(df_cells, strict = FALSE) {
   invisible(TRUE)
 }
 
-# table properties of the cells or rings schema
-#' @noRd
-data_tbl_props <- function(schema) {
-  schema_path <- system.file(schema_rel_path(schema), package = "rxs2tria")
-  schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
-  get_tbl_props(resolve_schema(schema_obj, schema_path))
-}
-
 # align a cells or rings table to its schema, extra columns kept; abort on
 # missing key columns instead of adding them empty
 #' @noRd
@@ -153,7 +145,7 @@ align_data <- function(df, schema) {
   if (length(missing_keys) > 0) {
     cli::cli_abort(c("x" = "{.field {schema}}: missing key column{?s} {.field {missing_keys}}."))
   }
-  align_to_schema(df, data_tbl_props(schema), schema, keep_extra = TRUE)
+  align_to_schema(df, schema_tbl_props(schema), schema, keep_extra = TRUE)
 }
 
 # duplicate cells key (image, year, xpix, ypix): no class invariant, as some
@@ -789,7 +781,7 @@ check_QWAdata <- function(x, strict = FALSE, exclude_mode = NULL) {
   ok <- TRUE
   for (comp in c("cells", "rings")) {
     if (is.null(x[[comp]])) next
-    tbl_props <- data_tbl_props(comp)
+    tbl_props <- schema_tbl_props(comp)
     ok <- c(ok, check_data_schema(x[[comp]], tbl_props, comp, strict))
     check_missing_opt(x[[comp]], tbl_props, comp)
   }

@@ -137,14 +137,9 @@ QWAimages <- function(data, roxas_version = NULL) {
   }
   data$software <- roxas_version
 
-  schema_path <- system.file(schema_rel_path(roxas_version), package = "rxs2tria")
-  schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
-  tbl_schema <- resolve_schema(schema_obj, schema_path)
-  tbl_props <- get_tbl_props(tbl_schema)
-
   # align to schema: add missing req cols, force correct type, remove extra cols
   # warn if this causes changes to data
-  data <- align_to_schema(data, tbl_props, roxas_version)
+  data <- align_to_schema(data, schema_tbl_props(roxas_version), roxas_version)
 
   x <- validate_QWAimages(new_QWAimages(data, roxas_version))
   # warn if label prefixes do not match
@@ -223,8 +218,7 @@ check_QWAimages <- function(x, submission = TRUE, strict = FALSE) {
 
   schema_path <- system.file(schema_rel_path(roxas_version, submission), package = "rxs2tria")
   schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
-  tbl_schema <- resolve_schema(schema_obj, schema_path)
-  tbl_props <- get_tbl_props(tbl_schema)
+  tbl_props <- schema_tbl_props(roxas_version, submission)
 
   ok <- c(
     # compliance with the schema of the stage
@@ -277,12 +271,7 @@ complete_QWAimages <- function(x) {
   validate_QWAimages(x)
   roxas_version <- attr(x, "roxas_version")
 
-  schema_path <- system.file(schema_rel_path(roxas_version), package = "rxs2tria")
-  schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
-  tbl_schema <- resolve_schema(schema_obj, schema_path)
-  tbl_props <- get_tbl_props(tbl_schema)
-
-  df <- align_to_schema(x, tbl_props, roxas_version, add_opt = TRUE)
+  df <- align_to_schema(x, schema_tbl_props(roxas_version), roxas_version, add_opt = TRUE)
 
   new_QWAimages(df, roxas_version)
 }

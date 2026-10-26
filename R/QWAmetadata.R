@@ -7,12 +7,7 @@ align_component <- function(data, schema, submission = TRUE) {
   checkmate::assert_data_frame(data, .var.name = schema)
   data <- tibble::as_tibble(data, .name_repair = janitor::make_clean_names)
 
-  schema_path <- system.file(schema_rel_path(schema, submission), package = "rxs2tria")
-  schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
-  tbl_schema <- resolve_schema(schema_obj, schema_path)
-  tbl_props <- get_tbl_props(tbl_schema)
-
-  data <- align_to_schema(data, tbl_props, schema)
+  data <- align_to_schema(data, schema_tbl_props(schema, submission), schema)
 
   data
 }
@@ -32,8 +27,7 @@ check_component <- function(df, schema, submission = TRUE, strict = FALSE) {
   }
   schema_path <- system.file(schema_rel_path(schema, submission), package = "rxs2tria")
   schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
-  tbl_schema <- resolve_schema(schema_obj, schema_path)
-  tbl_props <- get_tbl_props(tbl_schema)
+  tbl_props <- schema_tbl_props(schema, submission)
   ok <- c(
     check_schema(df, schema_obj, schema, strict = strict, greedy = FALSE),
     check_unique_cols(df, tbl_props, schema, strict)
@@ -224,13 +218,8 @@ check_species <- function(x, strict = FALSE) {
 # ensure component exists (create minimal empty if NULL), expand to include all possible columns (incl. optional)
 #' @noRd
 complete_tbl <- function(df, schema, img = NULL, summary_fn = NULL) {
-  schema_path <- system.file(schema_rel_path(schema), package = "rxs2tria")
-  schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
-  tbl_schema <- resolve_schema(schema_obj, schema_path)
-  tbl_props <- get_tbl_props(tbl_schema)
-
   df <- align_to_schema(
-    df, tbl_props, schema,
+    df, schema_tbl_props(schema), schema,
     add_opt = TRUE, # !!!
     mute_info = FALSE)
 

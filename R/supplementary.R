@@ -220,10 +220,7 @@ check_supplementary <- function(suppl_res, path, rxs_images) {
 .scan_resources <- function(path, rxs_images) {
   roxas_version <- attr(rxs_images, "roxas_version")
 
-  schema_path <- system.file(schema_rel_path("supplementary"), package = "rxs2tria")
-  schema_obj  <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
-  tbl_schema  <- resolve_schema(schema_obj, schema_path)
-  tbl_props   <- get_tbl_props(tbl_schema)
+  tbl_props <- schema_tbl_props("supplementary")
 
   if (fs::is_dir(path)) {
     # all = TRUE: include hidden files

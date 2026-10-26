@@ -162,9 +162,8 @@ build_QWAimages <- function(df_structure,
   # compliance with the submission schema
   schema_path <- system.file(schema_rel_path(rv), package = "rxs2tria")
   schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
-  tbl_schema <- resolve_schema(schema_obj, schema_path)
-  tbl_props <- get_tbl_props(tbl_schema)
-  
+  tbl_props <- schema_tbl_props(rv)
+
   # align columns and types to schema (coerce with warnings)
   df_rxsmeta <- align_to_schema(df_rxsmeta, tbl_props, rv, add_opt = FALSE, mute_info = FALSE)
 
@@ -388,10 +387,7 @@ collect_image_info <- function(files_images, batch_size = 50) {
 #' @noRd
 cast_settings_types <- function(df, roxas_version) {
 
-  schema_path <- system.file(schema_rel_path(roxas_version), package = "rxs2tria")
-  schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
-  tbl_schema <- resolve_schema(schema_obj, schema_path)
-  col_props <- get_tbl_props(tbl_schema)$properties
+  col_props <- schema_tbl_props(roxas_version)$properties
 
   int_cols <- col_props |> purrr::keep(function(x) x$type[1] == "integer") |> names()
   num_cols <- col_props |> purrr::keep(function(x) x$type[1] == "number") |> names()
