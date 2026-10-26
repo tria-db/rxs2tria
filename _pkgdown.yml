@@ -86,6 +86,8 @@ reference:
   - extract_rwl
   - scale_for_tucson
   - rename_for_tucson
+  - scale_for_tsap
+  - write_tsap
 articles:
 - title: Tutorials
   navbar: ~

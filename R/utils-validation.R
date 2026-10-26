@@ -265,7 +265,7 @@ convert_column <- function(x, target_class) {
          "integer" = as_whole_integer(x),
          "logical" = as.logical(x),
          "Date" = as.Date(x),
-         "POSIXct" = as.POSIXct(x),
+         "POSIXct" = lubridate::as_datetime(x), # as.POSIXct() drops the time of ISO 8601 strings
          x  # fallback: no conversion
   )
 }

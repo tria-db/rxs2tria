@@ -61,6 +61,11 @@ test_that("written QWAmetadata reads back with the same values", {
     expect_equal(y[[comp]], meta_example[[comp]][cols], label = comp)
   }
   expect_equal(nrow(y$images), nrow(meta_example$images))
+
+  # datetimes keep their time of day (in UTC) on read and on round trip
+  expect_equal(meta_example$images$meas_created_at[1],
+               as.POSIXct("2021-04-09 15:03:00", tz = "UTC"))
+  expect_equal(y$images$meas_created_at, meta_example$images$meas_created_at)
 })
 
 test_that("write_QWAdata writes NA as empty fields and drops all-empty qc_input columns", {

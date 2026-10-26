@@ -158,6 +158,55 @@ test_that("scale_for_tucson aborts when a manual scaling exceeds the Tucson rang
   )
 })
 
+test_that("scale_for_tsap auto-scales to at most 4 integer digits", {
+  df_rwl <- extract_rwl(df_rings = df_rings_multi, param = "mrw")
+
+  # max_val = 230 -> 9999 / 230 = 43.47... -> scaling = 10
+  expect_message(scaled <- scale_for_tsap(df_rwl), "factor of 10")
+  expect_equal(attr(scaled, "scaling"), 10)
+  expect_equal(unname(scaled[["WP2"]]), c(NA, NA, 2000, 2100, 2200, 2300))
+
+  # max_val = 0.023 -> 9999 / 0.023 = 434739.1... -> scaling = 1e5
+  scaled <- suppressMessages(scale_for_tsap(df_rwl / 10000))
+  expect_equal(attr(scaled, "scaling"), 1e5)
+})
+
+test_that("scale_for_tsap applies any manual power-of-ten scaling, and does not scale twice", {
+  df_rwl <- extract_rwl(df_rings = df_rings_multi, param = "mrw")
+
+  expect_silent(scaled <- scale_for_tsap(df_rwl, scaling = 1000))
+  expect_equal(attr(scaled, "scaling"), 1000)
+  expect_equal(unname(scaled[["WP2"]]), c(NA, NA, 200000, 210000, 220000, 230000))
+
+  expect_error(scale_for_tsap(df_rwl, scaling = 5), "power of ten")
+  expect_error(scale_for_tsap(scaled), "already scaled")
+})
+
+test_that("write_tsap writes Year first, NA as 0 and integer values, tab-delimited", {
+  df_rwl <- extract_rwl(df_rings = df_rings_multi, param = "mrw")
+  df_rwl[["WP1"]][1] <- 100.6
+  file <- tempfile(fileext = ".txt")
+
+  df <- write_tsap(df_rwl, file)
+
+  expect_named(df, c("Year", "WP1", "WP2"))
+  expect_type(df$Year, "integer")
+  expect_equal(df$Year, 2001:2006)
+  expect_equal(df$WP1, c(101L, 110L, 120L, 130L, 0L, 0L))
+  expect_equal(df$WP2, c(0L, 0L, 200L, 210L, 220L, 230L))
+  lines <- readLines(file)
+  expect_equal(lines[1], "Year\tWP1\tWP2")
+  expect_equal(lines[2], "2001\t101\t0")
+})
+
+test_that("write_tsap warns if non-zero values round to 0", {
+  df_rwl <- extract_rwl(df_rings = df_rings_multi, param = "mrw") / 1000
+  file <- tempfile(fileext = ".txt")
+
+  expect_warning(write_tsap(df_rwl, file), "8 non-zero values round to")
+  expect_silent(write_tsap(suppressMessages(scale_for_tsap(df_rwl)), file))
+})
+
 test_that("scale_for_tucson and rename_for_tucson keep each other's attributes in either order", {
   df_rwl <- extract_rwl(df_rings = df_rings_multi, param = "mrw")
   df_structure <- tibble::tibble(woodpiece_label = c("WP1", "WP2"), site_label = "SITE")
