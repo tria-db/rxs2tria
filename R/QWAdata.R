@@ -75,39 +75,23 @@ resolve_exclude_mode <- function(exclude_mode) {
   match.arg(exclude_mode, c("either", "incomplete_only"))
 }
 
-# gaps, future years and years after outmost_year warn (abort with strict);
-# undated and duplicated years abort in validate_QWAdata()
+# gaps and future years warn (abort with strict); undated and duplicated years
+# abort in validate_QWAdata(), years after outmost_year: check_outmost_year()
 #' @noRd
-check_ring_years <- function(df_rings, df_meta = NULL, strict = FALSE) {
+check_ring_years <- function(df_rings, strict = FALSE) {
   current_year <- as.numeric(format(Sys.Date(), "%Y"))
-  
-  # if df_meta (resp. $outmost_year) is not given, create dummy
-  if (is.null(df_meta$outmost_year)) {
-    df_meta <- data.frame(
-      image_label = unique(df_rings$image_label),
-      outmost_year = Inf
-    )
-  }
 
-  df <- df_rings |> dplyr::select("image_label", "year") |> 
-    dplyr::left_join(
-      df_meta |> dplyr::select("image_label", "outmost_year"), 
-      by = "image_label"
-  )
-
-  issues <- df |>
+  issues <- df_rings |>
     dplyr::summarise(
       gaps = dplyr::n_distinct(.data$year, na.rm=TRUE) != (max(.data$year, na.rm=TRUE) - min(.data$year, na.rm=TRUE) + 1),
       in_future = any(.data$year > current_year, na.rm=TRUE),
-      after_outmost = any(.data$year > .data$outmost_year + 1, na.rm=TRUE), # add 1 year for incomplete rings
       .by = "image_label"
     )
   issue_counts <- colSums(issues[-1])
 
   msg <- c(
     " " = "Gaps in dating in {issue_counts[1]} image{?s} {.val {issues$image_label[issues$gaps]}}",
-    " " = "Invalid future years in {issue_counts[2]} image{?s} {.val {issues$image_label[issues$in_future]}}",
-    " " = "After outmost years in {issue_counts[3]} image{?s} {.val {issues$image_label[issues$after_outmost]}}"
+    " " = "Invalid future years in {issue_counts[2]} image{?s} {.val {issues$image_label[issues$in_future]}}"
   )
 
   if (any(issue_counts > 0)) {
@@ -117,6 +101,38 @@ check_ring_years <- function(df_rings, df_meta = NULL, strict = FALSE) {
     ), strict))
   }
 
+  invisible(TRUE)
+}
+
+# ring years after outmost_year + 1 (incomplete outermost ring) warn (abort
+# with strict); images without outmost_year are reported (I), images not in
+# df_meta are skipped
+#' @noRd
+check_outmost_year <- function(df_rings, df_meta, strict = FALSE) {
+  outmost <- data.frame(
+    image_label = df_meta$image_label,
+    outmost_year = df_meta[["outmost_year"]] %||% rep(NA_real_, nrow(df_meta))
+  )
+  df <- df_rings |>
+    dplyr::summarise(last_year = max(.data$year), .by = "image_label") |>
+    dplyr::inner_join(outmost, by = "image_label")
+
+  unchecked <- unique(df$image_label[is.na(df$outmost_year)])
+  if (length(unchecked) > 0) {
+    cli::cli_inform(c(
+      "i" = "{.field outmost_year} missing for {length(unchecked)} image{?s}, ring years not checked against it:",
+      cli_truncated_list(unchecked)
+    ))
+  }
+
+  after <- unique(df$image_label[which(df$last_year > df$outmost_year + 1)])
+  if (length(after) > 0) {
+    return(report_issue(c(
+      "!" = "Ring years after {.field outmost_year} (+ 1 for an incomplete ring) in {length(after)} image{?s}:",
+      cli_truncated_list(after),
+      "i" = "Check the dating of these images or {.field outmost_year} in the {.cls QWAimages} object."
+    ), strict))
+  }
   invisible(TRUE)
 }
 
@@ -451,9 +467,15 @@ complete_flags <- function(x, meta, exclude_mode = NULL) {
   df_rings_log <- x$rings
 
   if ("incomplete_ring" %in% flag_cols_missing) {
+    consequence <- "Their innermost rings are flagged as incomplete."
+    check_images_in_meta(
+      unique(df_rings_log$image_label), meta, "rings",
+      consequence = consequence,
+      hint = "Pass the {.cls QWAimages} object the data were read with, or run {.fn update_QWAdata}."
+    )
     check_spatial_resolution(
       meta[meta$image_label %in% df_rings_log$image_label, ],
-      consequence = "Their innermost rings are flagged as incomplete."
+      consequence = consequence
     )
     df_rings_log <- flag_incomplete_rings(df_rings_log, x$cells, meta)
   }
@@ -736,7 +758,8 @@ complete_QWAdata <- function(x, meta, exclude_mode = NULL) {
 
   # ensure complete sequences of years (note: creates rings df from cells if null)
   x$rings <- complete_rings(x)
-  check_ring_years(x$rings, meta)
+  check_ring_years(x$rings)
+  check_outmost_year(x$rings, meta)
 
   # complete measures (derived cell measures and ew/lw estimates)
   x <- complete_measures(x)
@@ -771,7 +794,7 @@ complete_QWAdata <- function(x, meta, exclude_mode = NULL) {
 #' @param strict If `TRUE`, abort on the first issue instead of warning.
 #' @param exclude_mode Deprecated and ignored.
 #' @returns `TRUE` if no issue was found, `FALSE` otherwise (invisibly).
-#' @seealso [QWAdata()], [complete_QWAdata()]
+#' @seealso [QWAdata()], [complete_QWAdata()], [check_consistency()]
 #' @export
 check_QWAdata <- function(x, strict = FALSE, exclude_mode = NULL) {
   validate_QWAdata(x)

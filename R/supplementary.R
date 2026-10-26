@@ -95,7 +95,7 @@ compile_supplementary <- function(path, rxs_images) {
     return(NULL)
   }
 
-  .check_resources(new_res, rxs_images)
+  .check_resources(new_res, rxs_images)$res
 }
 
 #' Reconcile and re-check a supplementary resources manifest
@@ -128,6 +128,72 @@ compile_supplementary <- function(path, rxs_images) {
 #' }
 #' @export
 recompile_supplementary <- function(suppl_res, path, rxs_images, add_new_files = FALSE) {
+  .recompile(suppl_res, path, rxs_images, add_new_files)$res
+}
+
+#' Verify a supplementary resources manifest against a directory or archive
+#'
+#' A pass/fail check confirming that your finalised manifest accurately
+#' describes the content of the supplementary archive/directory and is ready
+#' for submission. A submission-time check: it applies to the submitted
+#' supplementary CSV (with `status`), not to the supplementary CSV of TRIA
+#' dataset files. `suppl_res` must be a finalised manifest, i.e. including
+#' the `status` column produced by [compile_supplementary()] or
+#' [recompile_supplementary()].
+#'
+#' Warns (or, with `strict = TRUE`, aborts) on:
+#' - files with `status == "ok"` in `suppl_res` not found in `path`;
+#' - files in `path` not declared in `suppl_res` (junk files aside);
+#' - resources that still need review (fix them and run
+#'   [recompile_supplementary()]);
+#' - schema issues of the manifest.
+#'
+#' Junk files and manual corrections in `suppl_res` are reported as
+#' information.
+#'
+#' @inheritParams compile_supplementary
+#' @param suppl_res An existing resources data frame.
+#' @param strict If `TRUE`, abort on the first issue instead of warning.
+#' @returns `TRUE` if no issue was found, `FALSE` otherwise (invisibly).
+#' @seealso [recompile_supplementary()], [compile_supplementary()], `vignette("supplementary")`
+#' @examples
+#' \dontrun{
+#' # verify a finalised manifest against an already-zipped submission
+#' suppl_res <- vroom::vroom("output_data/supplementary_files.csv",
+#'                           show_col_types = FALSE)
+#' if (!check_supplementary(suppl_res, "supplementary_data.zip", rxs_images = my_images)) {
+#'   suppl_res <- recompile_supplementary(suppl_res, "supplementary_data", rxs_images = my_images)
+#'   # fix the flagged resource(s) in suppl_res, then check again
+#' }
+#' }
+#' @export
+check_supplementary <- function(suppl_res, path, rxs_images, strict = FALSE) {
+  checkmate::assert_data_frame(suppl_res)
+  checkmate::assert_names(names(suppl_res), must.include = "status")
+  checkmate::assert_flag(strict)
+  checked <- .recompile(suppl_res, path, rxs_images, add_new_files = FALSE,
+                        check = TRUE, strict = strict)
+  if (checked$ok) {
+    cli::cli_inform(c("v" = "Supplementary resources: all checks passed."))
+  } else {
+    cli::cli_inform(c("x" = "Supplementary resources: issues found, see warnings."))
+  }
+  invisible(checked$ok)
+}
+
+# Helper functions ----
+
+#' Reconcile and re-check a manifest, see [recompile_supplementary()]
+#' @param check If `TRUE` (in [check_supplementary()]), `"ok"` files missing
+#'   from `path` and undeclared files are issues (warn, or abort with
+#'   `strict`); otherwise missing `"ok"` files abort and undeclared files are
+#'   reported as information.
+#' @param strict If `TRUE`, abort instead of warning on issues.
+#' @returns A list: `res`, the checked manifest, and `ok`, `TRUE` if no issue
+#'   was found.
+#' @noRd
+.recompile <- function(suppl_res, path, rxs_images, add_new_files = FALSE,
+                       check = FALSE, strict = FALSE) {
   checkmate::assert_data_frame(suppl_res)
   checkmate::assert_names(names(suppl_res),
                           must.include = c("resource_name", "resource_type",
@@ -158,62 +224,11 @@ recompile_supplementary <- function(suppl_res, path, rxs_images, add_new_files =
     suppl_res
   }
 
-  manifest <- .check_compare_manifests(manifest, new_res)
-  .check_resources(manifest, rxs_images)
+  compared <- .check_compare_manifests(manifest, new_res, check, strict)
+  checked <- .check_resources(compared$res, rxs_images, strict)
+  checked$ok <- compared$ok && checked$ok
+  checked
 }
-
-#' Verify a supplementary resources manifest against a directory or archive
-#'
-#' A pass/fail check confirming that your finalised manifest accurately
-#' describes the content of the supplementary archive/directory and is ready
-#' for submission. A submission-time check: it applies to the submitted
-#' supplementary CSV (with `status`), not to the supplementary CSV of TRIA
-#' dataset files. `suppl_res` must be a finalised manifest, i.e. including
-#' the `status` column produced by [compile_supplementary()] or
-#' [recompile_supplementary()].
-#' Aborts if `suppl_res` lists a file with `status == "ok"` that isn't found
-#' in `path`---a genuine inconsistency between the manifest and the archive.
-#' Returns `FALSE` (with a warning pointing you back to
-#' [recompile_supplementary()]) if any resource still needs review, or `TRUE` if
-#' everything is ready.
-#'
-#' @inheritParams compile_supplementary
-#' @param suppl_res An existing resources data frame.
-#' @returns `TRUE`/`FALSE` (invisibly), or aborts -- see Description.
-#' @seealso [recompile_supplementary()], [compile_supplementary()], `vignette("supplementary")`
-#' @examples
-#' \dontrun{
-#' # verify a finalised manifest against an already-zipped submission
-#' suppl_res <- vroom::vroom("output_data/supplementary_files.csv",
-#'                           show_col_types = FALSE)
-#' if (!check_supplementary(suppl_res, "supplementary_data.zip", rxs_images = my_images)) {
-#'   suppl_res <- recompile_supplementary(suppl_res, "supplementary_data", rxs_images = my_images)
-#'   # fix the flagged resource(s) in suppl_res, then check again
-#' }
-#' }
-#' @export
-check_supplementary <- function(suppl_res, path, rxs_images) {
-  checkmate::assert_data_frame(suppl_res)
-  checkmate::assert_names(names(suppl_res), must.include = "status")
-  checked <-recompile_supplementary(suppl_res, path, rxs_images, add_new_files = FALSE)
-  # recompile_supplementary() already aborts if a submission-ready ("ok")
-  # resource has gone missing; the only remaining failure is lingering
-  # "review" rows, already listed in detail by the call above
-  n_review <- sum(checked$status == "review")
-
-  if (n_review > 0) {
-    cli::cli_warn(c(
-      "!" = "Not ready for submission: {n_review} resource{?s} still {?need/needs} review.",
-      "i" = "Fix the manifest {.field suppl_res} or contents under {.field path}, and (re-)compile."
-    ))
-    return(invisible(FALSE))
-  }
-
-  cli::cli_inform(c("v" = "Supplementary resources in {.path {path}} match the manifest, ready for submission."))
-  invisible(TRUE)
-}
-
-# Helper functions ----
 
 #' Scan a directory or archive and compile a fresh (unchecked) resources table
 #' @noRd
@@ -282,9 +297,12 @@ check_supplementary <- function(suppl_res, path, rxs_images) {
         keep <- !is.na(lut$prefix)
         hits <- which(startsWith(rname, lut$prefix[keep]))
         if (length(hits) == 0L) return(NA_character_)
-        # Longest match wins to avoid false positives (e.g. "S22_L1" vs "S22_L10")
-        best <- hits[which.max(nchar(lut$prefix[keep][hits]))]
-        as.character(lut$label[keep][[best]])
+        # Longest match wins to avoid false positives (e.g. "S22_L1" vs "S22_L10");
+        # identical longest prefixes of different labels (e.g. duplicate
+        # org_img_name) are ambiguous and left NA
+        n_chars <- nchar(lut$prefix[keep][hits])
+        lbl <- unique(as.character(lut$label[keep][hits[n_chars == max(n_chars)]]))
+        if (length(lbl) == 1L) lbl else NA_character_
       },
       as.character(fs::path_file(new_res$resource_name[to_match])),
       new_res$linked_level[to_match],
@@ -302,17 +320,20 @@ check_supplementary <- function(suppl_res, path, rxs_images) {
 #' Given `res` (an existing manifest, possibly already merged with untracked
 #' new files -- see [recompile_supplementary()]) and `new_res` (a fresh scan of
 #' the same location), aborts if `res` lists a `status == "ok"` file no
-#' longer found in `new_res`, silently drops any other `res` row no longer
-#' found in `new_res`, and reports (but doesn't act on) files found in
-#' `new_res` that `res` doesn't know about and any type/label corrections
-#' `res` carries relative to a fresh inference.
+#' longer found in `new_res` (with `check`: warns, or aborts with `strict`),
+#' drops any other `res` row no longer found in `new_res`, and reports (but
+#' doesn't act on) files found in `new_res` that `res` doesn't know about
+#' (with `check`: warns on those that are not junk, or aborts with `strict`)
+#' and any type/label corrections `res` carries relative to a fresh inference.
 #'
 #' @param res The manifest to reconcile and return.
 #' @param new_res A freshly-scanned manifest (e.g. from `.scan_resources()`)
 #'   to reconcile `res` against.
-#' @returns `res`, with rows dropped as described above.
+#' @param check,strict See `.recompile()`.
+#' @returns A list: `res`, with rows dropped as described above, and `ok`,
+#'   `TRUE` if no issue was found.
 #' @noRd
-.check_compare_manifests <- function(res, new_res) {
+.check_compare_manifests <- function(res, new_res, check = FALSE, strict = FALSE) {
   df_comp <- new_res |> dplyr::full_join(
     res, by = "resource_name", suffix = c("", ".usr"), keep = TRUE
   )
@@ -333,26 +354,44 @@ check_supplementary <- function(suppl_res, path, rxs_images) {
   # only a problem if it's something we expected to be submitted
   missing_files <- vanished |> dplyr::filter(.data$status.usr %in% "ok")
 
+  ok <- TRUE
   if (nrow(missing_files) > 0) {
-    cli::cli_abort(c(
-      "Submission-ready resource(s) in {.field suppl_res} not found in {.field path}",
+    msg <- c(
+      "!" = "Submission-ready resource(s) in {.field suppl_res} not found in {.field path}",
       "i" = "Either remove these {nrow(missing_files)} file{?s} from the table or add them back to the dir/zip:",
       cli_truncated_list(missing_files$resource_name.usr)
-    ))
+    )
+    if (!check) cli::cli_abort(msg)
+    ok <- report_issue(msg, strict)
   }
+
+  # in the check, undeclared files (junk aside) would be submitted unchecked
+  undeclared <- if (check) {
+    setdiff(new_files, new_res$resource_name[new_res$resource_type %in% "junk"])
+  } else {
+    character()
+  }
+  if (length(undeclared) > 0) {
+    ok <- report_issue(c(
+      "!" = "{length(undeclared)} file{?s} in {.field path} not declared in {.field suppl_res}:",
+      cli_truncated_list(undeclared),
+      "i" = "Add them with {.code recompile_supplementary(add_new_files = TRUE)}, or remove them from {.field path}."
+    ), strict)
+  }
+  ignored_new <- setdiff(new_files, undeclared)
 
   already_gone <- vanished$resource_name.usr[!vanished$status.usr %in% "ok"]
   res <- res[!res$resource_name %in% already_gone, ]
 
-  if (length(new_files) + usr_overwrites + length(already_gone) > 0) {
+  if (length(ignored_new) + usr_overwrites + length(already_gone) > 0) {
     cli::cli_inform(c(
       if (usr_overwrites > 0) c("i" = "{usr_overwrites} resource{?s} have manual corrections in resource table"),
       if (length(already_gone) > 0) c("i" = '{length(already_gone)} file{?s} no longer found in dir/archive (not marked "ok"), dropped from resource table'),
-      if (length(new_files) > 0) c("i" = "{length(new_files)} file{?s} found not declared in input resource table, ignored (use {.code recompile_supplementary()} with {.code add_new_files = TRUE} to add them)")
+      if (length(ignored_new) > 0) c("i" = "{length(ignored_new)} file{?s} found not declared in input resource table, ignored (use {.code recompile_supplementary()} with {.code add_new_files = TRUE} to add them)")
     ))
   }
 
-  res
+  list(res = res, ok = ok)
 }
 
 #' Compute status/note for a resources manifest
@@ -380,15 +419,18 @@ check_supplementary <- function(suppl_res, path, rxs_images) {
 #' @param res A resources data frame.
 #' @param rxs_images A [QWAimages] object, used to validate `linked_label`
 #'   values.
-#' @returns `res` with `status` and `note` (re)computed for every row.
+#' @param strict If `TRUE`, abort instead of warning on resources that need
+#'   review or schema issues.
+#' @returns A list: `res` with `status` and `note` (re)computed for every row,
+#'   and `ok`, `TRUE` if no review rows or schema issues were found.
 #' @noRd
-.check_resources <- function(res, rxs_images) {
+.check_resources <- function(res, rxs_images, strict = FALSE) {
   checkmate::assert_data_frame(res)
   checkmate::assert_class(rxs_images, "QWAimages")
 
   schema_path <- system.file(schema_rel_path("supplementary"), package = "rxs2tria")
   schema_obj  <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
-  check_schema(res, schema_obj, "resources", greedy = FALSE)
+  schema_ok <- check_schema(res, schema_obj, "resources", strict = strict, greedy = FALSE)
 
   res_meta <- dplyr::left_join(res, .resource_type_meta(), by = "resource_type")
   roxas_version <- attr(rxs_images, "roxas_version")
@@ -411,9 +453,9 @@ check_supplementary <- function(suppl_res, path, rxs_images) {
     TRUE                 ~ NA_character_
   )
 
-  .report_resource_status(res)
+  status_ok <- .report_resource_status(res, strict)
 
-  res
+  list(res = res, ok = schema_ok && status_ok)
 }
 
 #' Load resource types table
@@ -612,7 +654,7 @@ infer_resource_types <- function(filenames, roxas_version) {
 }
 
 #' @noRd
-.report_resource_status <- function(res) {
+.report_resource_status <- function(res, strict = FALSE) {
   n_ignore <- sum(res$status == "ignore")
   n_review <- sum(res$status == "review")
   n_ok     <- sum(res$status == "ok")
@@ -622,12 +664,12 @@ infer_resource_types <- function(filenames, roxas_version) {
   }
   if (n_review > 0) {
     review <- res[res$status == "review", ]
-    cli::cli_warn(c(
+    return(report_issue(c(
       "!" = "{n_review} resource{?s} need review before this dataset can be zipped for submission:",
-      cli_truncated_list(paste0(review$resource_name, ": ", review$note))
-    ))
-  } else {
-    cli::cli_inform(c("v" = "{n_ok} resource{?s} OK ({n_ignore+n_ok} total), dir ready to zip for submission."))
+      cli_truncated_list(paste0(review$resource_name, ": ", review$note)),
+      "i" = "Fix the manifest or the files under {.field path}, then run {.fn recompile_supplementary}."
+    ), strict))
   }
-  invisible(NULL)
+  cli::cli_inform(c("v" = "{n_ok} resource{?s} OK ({n_ignore+n_ok} total), dir ready to zip for submission."))
+  invisible(TRUE)
 }

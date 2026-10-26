@@ -273,7 +273,21 @@ vroom::vroom_write(suppl_res, "path/to/output_data/example_dataset_supplementary
                    delim = ",", na = "")
 
 # ------------------------------------------------------------------------------
-# Step 8: Submit your data
+# Step 8: Check and submit your data
 # ------------------------------------------------------------------------------
-# Email tria@wsl.ch with a link to your files; see vignette("submission") for
-# what to upload and what happens to your files once we receive them.
+# Before submitting, check the files as they will be submitted (after the
+# metadata app and any edits in the flags app). Each check warns about issues
+# the TRIA admins would ask you to fix and returns TRUE if none were found;
+# with strict = TRUE, it aborts on the first issue instead.
+QWA_meta <- read_QWAmetadata("path/to/output_data/example_dataset_QWAmetadata.json")
+QWA_data <- read_QWAdata(dir = path_out, dataset_name = dataset_name)
+
+check_QWAmetadata(QWA_meta) # includes the images, see ?check_QWAimages
+check_QWAdata(QWA_data)
+check_consistency(meta = QWA_meta, data = QWA_data)
+# if submitting supplementary files (Step 7), against the final zip:
+# check_supplementary(suppl_res, "path/to/supplementary_data.zip",
+#                     rxs_images = QWA_meta$images)
+
+# Then email tria@wsl.ch with a link to your files; see vignette("submission")
+# for what to upload and what happens to your files once we receive them.

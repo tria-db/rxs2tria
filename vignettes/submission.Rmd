@@ -133,7 +133,9 @@ or annotate things, rather than during our ingestion checks. We re-run
 `check_supplementary()` on our side regardless, pointed directly at your
 uploaded zip. If you provide the manifest CSV, it's trusted as ground
 truth for anything it lists that's still in the zip. Extra files in the 
-zip the manifest doesn't mention are left out rather than guessed at. 
+zip the manifest doesn't mention are left out rather than guessed at;
+`check_supplementary()` warns about them, so you can declare them in the
+manifest or remove them from the zip.
 If you don't provide a manifest, we build one from scratch the same way
 `compile_supplementary()` would for you. But any issues with inferring the
 resource types and linked labels would mean that we have to contact

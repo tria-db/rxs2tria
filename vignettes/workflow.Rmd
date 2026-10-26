@@ -485,9 +485,31 @@ See `vignette("supplementary")` for more details on this step, including how
 to `recompile_supplementary()` after making edits, and how to run a final
 `check_supplementary()` once you are done.
 
-# Step 8: Submit your data
+# Step 8: Check and submit your data
 
-Once you are ready to share your prepared data files with us, email
+Before submitting, check the files as they will be submitted, i.e. after
+the metadata app and any edits in the flags app. Each check warns about
+issues the TRIA admins would ask you to fix and returns `TRUE` (invisibly)
+if none were found; with `strict = TRUE`, it aborts on the first issue
+instead. `check_QWAmetadata()` and `check_QWAdata()` check each object on
+its own, `check_consistency()` checks that they match each other, and
+`check_supplementary()` checks the supplementary manifest against the
+final zip. Radial profiles are not submitted; `check_QWAprofile()`
+checks them before analysis.
+
+```{r, eval = FALSE}
+QWA_meta <- read_QWAmetadata("path/to/output_data/example_dataset_QWAmetadata.json")
+QWA_data <- read_QWAdata(dir = path_out, dataset_name = dataset_name)
+
+check_QWAmetadata(QWA_meta) # includes the images, see ?check_QWAimages
+check_QWAdata(QWA_data)
+check_consistency(meta = QWA_meta, data = QWA_data)
+# if submitting supplementary files (Step 7), against the final zip:
+# check_supplementary(suppl_res, "path/to/supplementary_data.zip",
+#                     rxs_images = QWA_meta$images)
+```
+
+Once all checks pass, and you are ready to share your prepared data files with us, email
 [tria@wsl.ch](mailto:tria@wsl.ch)---either with a link to the files on a
 file transfer service of your choice, or asking for an invite link to
 WSL's own one. See `vignette("submission")` for what to upload and what

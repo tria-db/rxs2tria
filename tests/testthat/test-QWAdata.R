@@ -37,6 +37,17 @@ test_that("complete_flags warns on missing spatial_resolution", {
   expect_true(x$rings$incomplete_ring[1])
 })
 
+test_that("complete_flags warns on images not in meta", {
+  rings <- dplyr::select(rings_flags, "woodpiece_label":"mrw")
+  cells <- data.frame(image_label = "WP1_SL1_IMG1", year = 2001L,
+                      xpix = 1:3, ypix = 1:3, raddistr = 1:3)
+  meta <- data.frame(image_label = "OTHER_IMG", spatial_resolution = 1)
+  x <- new_QWAdata(cells = cells, rings = rings)
+
+  expect_warning(x <- suppressMessages(complete_flags(x, meta)), "not in .meta")
+  expect_true(x$rings$incomplete_ring[1])
+})
+
 # QWAdata helper ----
 cells_raw <- data.frame(image_label = "WP1_SL1_IMG1", year = c(2000, 2000, 2002),
                         xpix = c(1, 2, 3), ypix = c(1, 2, 3), cwttan = 1)
@@ -144,6 +155,24 @@ test_that("check_ring_years warns on gaps and future years, aborts with strict",
 
   future <- as.numeric(format(Sys.Date(), "%Y")) + 1
   expect_warning(check_ring_years(rings_dates(c(future - 1, future))), "future")
+})
+
+test_that("check_outmost_year warns after outmost_year + 1, informs if missing", {
+  meta <- data.frame(image_label = c("WP1_SL1_IMG1", "WP1_SL1_IMG2"),
+                     outmost_year = c(2001, NA))
+  # incomplete outermost ring allowed; images not in meta skipped
+  expect_true(check_outmost_year(rings_dates(2000:2002), meta))
+  expect_true(check_outmost_year(rings_dates(2000:2005, img = "OTHER"), meta))
+
+  expect_warning(res <- check_outmost_year(rings_dates(2000:2003), meta), "after")
+  expect_false(res)
+  expect_error(check_outmost_year(rings_dates(2000:2003), meta, strict = TRUE), "after")
+
+  expect_message(res <- check_outmost_year(rings_dates(2000:2002, img = "WP1_SL1_IMG2"), meta),
+                 "missing for 1 image")
+  expect_true(res)
+  expect_message(check_outmost_year(rings_dates(2000:2002), meta["image_label"]),
+                 "missing for 1 image")
 })
 
 test_that("check_cell_years warns on future years, check_cwt only informs", {

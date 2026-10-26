@@ -302,8 +302,9 @@ collect_raw_data <- function(df_meta, roxas_version = NULL) {
   check_cwt(QWA_data$cells)
   check_cells_key(QWA_data$cells)
 
-  # check dating (df_meta for outmost_year check if available)
-  check_ring_years(df_rings_complete, df_meta)
+  # check dating
+  check_ring_years(df_rings_complete)
+  check_outmost_year(df_rings_complete, df_meta)
 
   cli::cli_alert_success("Extracted cells and rings data to {.var QWAdata} object")
   

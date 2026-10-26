@@ -4,7 +4,7 @@
 \alias{check_supplementary}
 \title{Verify a supplementary resources manifest against a directory or archive}
 \usage{
-check_supplementary(suppl_res, path, rxs_images)
+check_supplementary(suppl_res, path, rxs_images, strict = FALSE)
 }
 \arguments{
 \item{suppl_res}{An existing resources data frame.}
@@ -19,9 +19,11 @@ used to disambiguate resource-type patterns shared between classic ROXAS
 and ROXAS AI, and its \code{org_img_name}, \code{image_label}, \code{slide_label}, and
 \code{woodpiece_label} columns are used to auto-populate \code{linked_label} where
 appropriate.}
+
+\item{strict}{If \code{TRUE}, abort on the first issue instead of warning.}
 }
 \value{
-\code{TRUE}/\code{FALSE} (invisibly), or aborts -- see Description.
+\code{TRUE} if no issue was found, \code{FALSE} otherwise (invisibly).
 }
 \description{
 A pass/fail check confirming that your finalised manifest accurately
@@ -31,11 +33,19 @@ supplementary CSV (with \code{status}), not to the supplementary CSV of TRIA
 dataset files. \code{suppl_res} must be a finalised manifest, i.e. including
 the \code{status} column produced by \code{\link[=compile_supplementary]{compile_supplementary()}} or
 \code{\link[=recompile_supplementary]{recompile_supplementary()}}.
-Aborts if \code{suppl_res} lists a file with \code{status == "ok"} that isn't found
-in \code{path}---a genuine inconsistency between the manifest and the archive.
-Returns \code{FALSE} (with a warning pointing you back to
-\code{\link[=recompile_supplementary]{recompile_supplementary()}}) if any resource still needs review, or \code{TRUE} if
-everything is ready.
+}
+\details{
+Warns (or, with \code{strict = TRUE}, aborts) on:
+\itemize{
+\item files with \code{status == "ok"} in \code{suppl_res} not found in \code{path};
+\item files in \code{path} not declared in \code{suppl_res} (junk files aside);
+\item resources that still need review (fix them and run
+\code{\link[=recompile_supplementary]{recompile_supplementary()}});
+\item schema issues of the manifest.
+}
+
+Junk files and manual corrections in \code{suppl_res} are reported as
+information.
 }
 \examples{
 \dontrun{

@@ -120,12 +120,20 @@ falls within the earlywood.
 check_QWAprofile(prf_sector)
 ```
 
-`check_QWAprofile()` returns `TRUE` invisibly and issues warnings for:
+`check_QWAprofile()` checks whether a profile is ready for analysis
+(profiles are derived data and not part of a TRIA submission). It returns
+`TRUE` invisibly if no issue was found, `FALSE` otherwise; with
+`strict = TRUE`, it aborts on the first issue instead of warning.
 
-- Missing or `NA`-containing identifier columns (`image_label`, `year`).
-- Missing bin column (`sector_n` for sector profiles; `start`/`end` for
-  band profiles), or invalid band definitions where `start >= end`.
-- No measurement columns present.
+- **Errors**: invalid object, i.e. `image_label`, `year` or the bin
+  columns (`sector_n` for sector profiles, `start`/`end` for band
+  profiles) missing, mistyped, `NA` or not unique; bands with
+  `start >= end`.
+- **Warnings**: no measurement columns, or all measurement values `NA`;
+  bands of different widths; `sector_n` < 1.
+
+To check that a profile matches the data it was computed from, use
+`check_consistency(data = QWA_data, profile = prf_sector)`.
 
 ---
 

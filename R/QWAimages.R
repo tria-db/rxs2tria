@@ -191,24 +191,29 @@ summary.QWAimages <- function(object, ...) {
   invisible(object)
 }
 
-#' Validate a QWAimages object
+#' Check a QWAimages object
 #'
-#' Runs a series of checks on a [QWAimages] object and warns about any issues
-#' found. Aborts if the object is invalid (structure labels missing or `NA`,
-#' duplicate `image_label`s, `$software` not matching the `roxas_version`
-#' attribute). Warns on: non-compliance with the JSON schema of the given
-#' stage, an unsound data structure (labels not starting with their parent
-#' label, or a label in more than one parent), `outmost_year` in the future
-#' and missing `spatial_resolution`. Missing optional columns and empty values
-#' are reported as information, except for the source file names (`fname_*`),
-#' which are only needed during processing.
+#' Checks a [QWAimages] object before submission; also run by
+#' [check_QWAmetadata()]. Aborts if the object is not a valid `QWAimages`
+#' (structure labels missing or `NA`, duplicate `image_label`s, `$software`
+#' not matching the `roxas_version` attribute). Warns (or, with
+#' `strict = TRUE`, aborts) on:
+#' - values violating the JSON schema of the given stage;
+#' - an unsound data structure: labels not starting with their parent label,
+#'   or a label in more than one parent;
+#' - `outmost_year` in the future;
+#' - missing `spatial_resolution`.
+#'
+#' Also informs about missing optional columns and empty values, except for
+#' the source file names (`fname_*`, only needed during processing) and the
+#' often incomplete EXIF data (`img_created_at`, `img_software`).
 #'
 #' @param x A [QWAimages] object.
 #' @param submission Check against the schema of submission files (`TRUE`)
 #'   or TRIA dataset files (`FALSE`)? Set by [check_QWAmetadata()].
-#' @param strict If `TRUE`, throw an error instead of a warning.
-#' @returns `TRUE` if no warning was issued, `FALSE` otherwise (invisibly).
-#' @seealso [QWAimages()], [check_QWAmetadata()]
+#' @param strict If `TRUE`, abort on the first issue instead of warning.
+#' @returns `TRUE` if no issue was found, `FALSE` otherwise (invisibly).
+#' @seealso [QWAimages()], [check_QWAmetadata()], [check_consistency()]
 #' @export
 check_QWAimages <- function(x, submission = TRUE, strict = FALSE) {
   validate_QWAimages(x)

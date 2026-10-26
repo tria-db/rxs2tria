@@ -1,5 +1,16 @@
 # rxs2tria (development version)
 
+* The `check_*()` functions are the final checks before a submission: they warn about issues the TRIA admins would reject, gain `strict = FALSE` (with `TRUE`, they abort on the first issue) and return `TRUE`/`FALSE` invisibly.
+  * `check_QWAimages()` also warns on a label in more than one parent, `outmost_year` in the future and missing `spatial_resolution`.
+  * `check_QWAmetadata()` also warns on missing required components, duplicate `email`/`site_name`, not exactly one contact person, `author_nr` not numbering the authors from 1 to n, unknown country or species codes, species columns not matching their code, and `[ADD INFO` placeholders in `description`. Hierarchy tables not matching `$images` warn instead of aborting.
+  * `check_QWAdata()` checks values against the schema and warns on duplicate cell keys, years with cells but without a rings row, and `cno` not matching the cells. Its `meta` argument is removed, see `check_consistency()`.
+  * `check_supplementary()` warns instead of aborting on `"ok"` files missing from the archive, and warns on undeclared files. The manifest may carry extra columns.
+* new `check_consistency()` checks `QWAimages`/`QWAmetadata`, `QWAdata` and `QWAprofile` objects against each other: images in both, rings labels matching the images, ring years after `outmost_year`, profile years with a rings row.
+* All functions taking a QWA object abort on invalid objects: missing, mistyped or `NA` key columns, duplicate `image_label`s, duplicate (image, year) in the rings, duplicate profile keys. `collect_raw_data()` aborts on such keys in the raw output instead of warning.
+* `QWAdata()` and `read_QWAdata()` no longer complete the year sequences of the rings or add `cno` (done by `complete_QWAdata()`), keep columns not in the schema, and warn instead of aborting on future years. `woodpiece_label` and `slide_label` are required in the rings.
+* `QWAimages()` sets `$software` to the `roxas_version`, with a warning if values changed.
+* `update_QWAmetadata()` keeps an existing `species_code` where it is `NA` in `images`.
+* `calculate_band_profiles()` warns if cells have no rings row; `calculate_*_profiles(apply_exclusions = TRUE)` and `extract_rwl()` with `prf_data` abort in that case (run `complete_QWAdata()`). `QWAprofile()` and `read_QWAprofile()` warn on profiles without measurements, varying band widths and `sector_n` < 1.
 * `compile_resources()` and `recompile_resources()` are renamed to `compile_supplementary()` and `recompile_supplementary()`; `vignette("resources")` is now `vignette("supplementary")`.
 * JSON schemas are renamed: `json_schema/core/<component>.json`; the Shiny metadata app extensions to `app_<component>.json`.
 * JSON schemas distinguish submission files (`submission_<component>.json`) from TRIA dataset files (`tria_<component>.json`), with shared definitions in `core/`. submission only: `$related`, `fname_*`, `ds_access`, `embargoed_until`; TRIA dataset files add `$datafiles`, `ds_label`, `url`, `doi`, `citation`, `dataset_version`.

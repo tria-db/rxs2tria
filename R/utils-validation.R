@@ -716,6 +716,28 @@ check_spatial_resolution <- function(df, strict = FALSE, consequence = NULL) {
   invisible(TRUE)
 }
 
+#' Helper to check that the images of a table are in `meta`
+#' @param images Character vector of `image_label`s.
+#' @param meta Data frame with `image_label`.
+#' @param what Name of the table the images come from.
+#' @param strict If `TRUE`, abort instead of warning.
+#' @param consequence,hint Optional messages on the consequence and the fix.
+#' @return `TRUE` if all images are in `meta`, `FALSE` otherwise (invisibly).
+#' @noRd
+check_images_in_meta <- function(images, meta, what, strict = FALSE,
+                                 consequence = NULL, hint = NULL) {
+  not_meta <- setdiff(images, meta$image_label)
+  if (length(not_meta) > 0) {
+    return(report_issue(c(
+      "!" = "{length(not_meta)} image{?s} in {.field {what}} but not in {.arg meta}:",
+      cli_truncated_list(not_meta),
+      "i" = consequence,
+      "i" = hint
+    ), strict))
+  }
+  invisible(TRUE)
+}
+
 #' Prepare a table for writing to file
 #'
 #' Converts empty strings to `NA`. With `drop_empty`, drops the optional

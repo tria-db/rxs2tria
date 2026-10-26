@@ -161,16 +161,18 @@ found in `path`:
   `suppl_res` rather than having them re-inferred, so manual edits survive.
 - A file found in `path` but not listed in `suppl_res` is, by default,
   assumed to be intentionally excluded and thus also left out of the
-  returned table. When re-compiling, you can pass `add_new_files = TRUE` 
-  to append new files instead, freshly typed, e.g. after deliberately 
-  adding files to `path` and wanting them picked up.
-- A file listed in `suppl_res` but no longer found in `path` is  
+  returned table. When re-compiling, you can pass `add_new_files = TRUE`
+  to append new files instead, freshly typed, e.g. after deliberately
+  adding files to `path` and wanting them picked up. `check_supplementary()`
+  warns on such files (junk files aside), as the manifest no longer
+  describes `path`.
+- A file listed in `suppl_res` but no longer found in `path` is
   dropped (with a message) if `status` was `"review"`, `"ignore"` or not
   set (e.g. in a hand-built manifest)---deleting it from `path` resolves
   the status issue. However, if it had `status = "ok"`
-  in the manifest, an error is raised---a submission-ready file has 
-  disappeared and either the table or `path` needs fixing before
-  proceeding.
+  in the manifest, a submission-ready file has disappeared and either the
+  table or `path` needs fixing: `recompile_supplementary()` raises an error,
+  `check_supplementary()` warns and returns `FALSE`.
 
 ```{r reconcile-check}
 suppl_res <- vroom::vroom("output_data/supplementary_files.csv",

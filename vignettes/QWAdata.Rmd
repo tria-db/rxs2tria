@@ -48,7 +48,7 @@ QWA_data <- collect_raw_data(rxs_images)
 # Step 2: add derived measures and ring quality flags
 QWA_data <- complete_QWAdata(QWA_data, meta = rxs_images)
 
-# Step 3: validate
+# Step 3: check
 check_QWAdata(QWA_data)
 ```
 
@@ -58,7 +58,7 @@ output files referenced in a `QWAimages` object, cleans invalid values
 raw measurements only.
 
 `complete_QWAdata()` then runs the full preprocessing pipeline (see
-[Completing a QWAdata object] below) and `check_QWAdata()` validates the
+[Completing a QWAdata object] below) and `check_QWAdata()` checks the
 result.
 
 You can also construct a `QWAdata` object directly from existing data
@@ -191,8 +191,8 @@ warning.
 - **Information**: missing optional columns, extra columns, and images
   where `cwttan` is entirely `NA`.
 
-The `meta` argument is optional but recommended: without it, the
-`outmost_year` check is skipped.
+To check the data against the images (e.g. ring years after
+`outmost_year`), use `check_consistency(meta = rxs_images, data = QWA_data)`.
 
 ---
 

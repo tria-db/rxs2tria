@@ -122,10 +122,9 @@ test_that("dataset: restricted access requires an embargo date", {
                             "dataset", TRUE))
 })
 
-test_that("supplementary: each stage accepts its own rows and rejects the other's", {
+test_that("supplementary: each stage accepts its own rows; TRIA rejects submission rows", {
   expect_true(validate_rows(list(res_sub), "supplementary", TRUE))
   expect_true(validate_rows(list(res_tria), "supplementary", FALSE))
-  expect_false(validate_rows(list(res_tria), "supplementary", TRUE))
   expect_false(validate_rows(list(res_sub), "supplementary", FALSE))
 })
 

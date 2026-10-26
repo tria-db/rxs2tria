@@ -28,5 +28,5 @@ bands with \code{start >= end}). Warns (or, with \code{strict = TRUE}, aborts) o
 }
 }
 \seealso{
-\code{\link[=QWAprofile]{QWAprofile()}}, \code{\link[=check_QWAdata]{check_QWAdata()}}
+\code{\link[=QWAprofile]{QWAprofile()}}, \code{\link[=check_QWAdata]{check_QWAdata()}}, \code{\link[=check_consistency]{check_consistency()}}
 }

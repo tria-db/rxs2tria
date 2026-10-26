@@ -35,5 +35,5 @@ Also informs about missing optional columns, extra columns (kept, but not
 imported into TRIA by default) and images without CWT estimates.
 }
 \seealso{
-\code{\link[=QWAdata]{QWAdata()}}, \code{\link[=complete_QWAdata]{complete_QWAdata()}}
+\code{\link[=QWAdata]{QWAdata()}}, \code{\link[=complete_QWAdata]{complete_QWAdata()}}, \code{\link[=check_consistency]{check_consistency()}}
 }

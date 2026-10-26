@@ -29,6 +29,6 @@
         }
       }
     ],
-    "unevaluatedProperties": false
+    "unevaluatedProperties": true
   }
 }

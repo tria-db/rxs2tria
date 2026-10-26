@@ -504,27 +504,32 @@ as_QWAmetadata <- function(x) {
   do.call(QWAmetadata, x[intersect(names(x), valid_args)])
 }
 
-#' Validate a QWAmetadata object
+#' Check a QWAmetadata object
 #'
-#' Runs a series of checks on each component of a [QWAmetadata] object, as the
-#' final check before a submission. Aborts if the object is invalid or if IDs
-#' in `$sites`, `$trees`, `$woodpieces` or `$slides` are not unique. Warns on:
-#' a missing component required at the object's stage (see [is_submission()]),
-#' non-compliance with the JSON schema of the stage, duplicate values in
-#' columns that must be unique (e.g. `email`, `site_name`), not exactly one
-#' contact person, `author_nr` not numbering the authors from 1 to n, country
-#' codes not in ISO 3166-1 alpha-2, species codes not in the ITRDB list or
-#' species columns of `$trees` not matching their code, template placeholders
-#' left in the dataset `description`, and IDs or derived values (counts, parent
-#' labels, `species_code`) in the hierarchical tables not matching `$images`
-#' (resync with [update_QWAmetadata()]). For `$images`,
-#' delegates to [check_QWAimages()]. Missing optional columns and absent
-#' optional components are reported as information.
+#' Checks each component of a [QWAmetadata] object, as the final check of the
+#' metadata before a submission. Aborts if the object is not a valid
+#' `QWAmetadata` or if IDs in `$sites`, `$trees`, `$woodpieces` or `$slides`
+#' are not unique. Warns (or, with `strict = TRUE`, aborts) on:
+#' - a missing component required at the object's stage (see [is_submission()]);
+#' - values violating the JSON schema of the stage;
+#' - duplicate values in columns that must be unique (e.g. `email`, `site_name`);
+#' - not exactly one contact person, or `author_nr` not numbering the authors
+#'   from 1 to n;
+#' - country codes not in ISO 3166-1 alpha-2;
+#' - species codes not in the ITRDB list, or species columns of `$trees` not
+#'   matching their code;
+#' - template placeholders left in the dataset `description`;
+#' - IDs or derived values (counts, parent labels, `species_code`) in the
+#'   hierarchical tables not matching `$images` (resync with
+#'   [update_QWAmetadata()]);
+#' - issues in `$images`, see [check_QWAimages()].
+#'
+#' Also informs about missing optional columns and absent optional components.
 #'
 #' @param x A [QWAmetadata] object.
-#' @param strict If `TRUE`, throw an error instead of a warning.
-#' @returns `TRUE` if no warning was issued, `FALSE` otherwise (invisibly).
-#' @seealso [QWAmetadata()], [check_QWAimages()]
+#' @param strict If `TRUE`, abort on the first issue instead of warning.
+#' @returns `TRUE` if no issue was found, `FALSE` otherwise (invisibly).
+#' @seealso [QWAmetadata()], [check_QWAimages()], [check_consistency()]
 #' @export
 check_QWAmetadata <- function(x, strict = FALSE) {
   validate_QWAmetadata(x)

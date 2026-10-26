@@ -218,7 +218,7 @@ read_QWAprofile <- function(file) {
 #' @param x A [QWAprofile] object.
 #' @param strict If `TRUE`, abort on the first issue instead of warning.
 #' @returns `TRUE` if no issue was found, `FALSE` otherwise (invisibly).
-#' @seealso [QWAprofile()], [check_QWAdata()]
+#' @seealso [QWAprofile()], [check_QWAdata()], [check_consistency()]
 #' @export
 check_QWAprofile <- function(x, strict = FALSE) {
   validate_QWAprofile(x)

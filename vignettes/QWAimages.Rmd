@@ -141,20 +141,19 @@ except `qc_input` columns (`comment_handled`), initialised to `NA`.
 
 `roxas_version` is stored both as the object attribute (the authoritative
 source) and as the `$software` column (a per-row record). The two must
-agree. When they do not, the package will warn:
+agree: `QWAimages()` sets `$software` to the resolved `roxas_version`
+(with a warning if values changed), and all functions taking a `QWAimages`
+object abort if they disagree:
 
 ```{r version-mismatch, eval = FALSE}
-# Warning raised by check_QWAimages() and during construction if an existing
-# attribute and the $software column disagree (a roxas_version argument
-# that conflicts with $software is an error):
-#   ! roxas_version attribute ("roxas") does not match the software column ("roxas_ai").
-#   i Check your data for mixed or incorrect software values.
+# Error if the attribute and the $software column disagree, e.g. after
+# editing $software by hand:
+#   x <QWAimages>: software must be "roxas" (the roxas_version attribute) in all rows.
+#   i Rebuild the object with QWAimages().
 ```
 
-This can happen if you manually edit the `$software` column or combine
-objects from different software versions. The attribute always wins in
-resolution; the `$software` column is used to re-derive `roxas_version`
-when reading from file (since attributes are not persisted in CSV).
+The `$software` column is used to re-derive `roxas_version` when reading
+from file (since attributes are not persisted in CSV).
 
 ---
 
@@ -164,23 +163,20 @@ when reading from file (since attributes are not persisted in CSV).
 check_QWAimages(rxs_images)
 ```
 
-`check_QWAimages()` runs a series of validations and returns `TRUE`
-invisibly when done:
+`check_QWAimages()` returns `TRUE` invisibly if no issue was found, `FALSE`
+otherwise. With `strict = TRUE`, it aborts on the first issue instead of
+warning. It is also run by `check_QWAmetadata()`.
 
-- **Schema compliance** (warning): checks that required columns are
-  present and values are within expected ranges for the given
-  `roxas_version` and stage (`submission = TRUE` for submission files,
-  `FALSE` for TRIA dataset files; set by `check_QWAmetadata()`).
-- **`roxas_version` consistency** (warning): checks that the attribute
-  matches the `$software` column.
-- **Missing optional columns** (information): lists absent optional
-  columns except `qc_input` ones. Use `complete_QWAimages()` to add them.
-- **Invalid structure**: aborts if `image_label` is missing or
-  duplicated or a hierarchy label is `NA`; warns if the labels do not
-  nest (image within slide within woodpiece …).
-
-Warnings do not stop execution; they flag things you should inspect
-before proceeding.
+- **Errors**: invalid object, i.e. structure labels missing or `NA`,
+  duplicate `image_label`s, or `$software` not matching the
+  `roxas_version` attribute.
+- **Warnings**: values violating the schema of the stage
+  (`submission = TRUE` for submission files, `FALSE` for TRIA dataset
+  files; set by `check_QWAmetadata()`); labels not starting with their
+  parent label, or a label in more than one parent; `outmost_year` in the
+  future; missing `spatial_resolution`.
+- **Information**: missing optional columns (except `qc_input` ones; add
+  them with `complete_QWAimages()`) and empty values.
 
 ---
 

@@ -72,6 +72,13 @@ reference:
   - read_QWAprofile
   - summary.QWAprofile
   - write_QWAprofile
+- title: "Checks"
+  desc: >
+    Final checks before a submission. Each class has its own check
+    (`check_QWAmetadata()`, `check_QWAdata()`, `check_supplementary()`);
+    `check_consistency()` checks the objects against each other.
+  contents:
+  - check_consistency
 - title: "Other"
   desc: "Other utility functions."
   contents:

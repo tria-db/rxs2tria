@@ -2,34 +2,42 @@
 % Please edit documentation in R/QWAmetadata.R
 \name{check_QWAmetadata}
 \alias{check_QWAmetadata}
-\title{Validate a QWAmetadata object}
+\title{Check a QWAmetadata object}
 \usage{
 check_QWAmetadata(x, strict = FALSE)
 }
 \arguments{
 \item{x}{A \link{QWAmetadata} object.}
 
-\item{strict}{If \code{TRUE}, throw an error instead of a warning.}
+\item{strict}{If \code{TRUE}, abort on the first issue instead of warning.}
 }
 \value{
-\code{TRUE} if no warning was issued, \code{FALSE} otherwise (invisibly).
+\code{TRUE} if no issue was found, \code{FALSE} otherwise (invisibly).
 }
 \description{
-Runs a series of checks on each component of a \link{QWAmetadata} object, as the
-final check before a submission. Aborts if the object is invalid or if IDs
-in \verb{$sites}, \verb{$trees}, \verb{$woodpieces} or \verb{$slides} are not unique. Warns on:
-a missing component required at the object's stage (see \code{\link[=is_submission]{is_submission()}}),
-non-compliance with the JSON schema of the stage, duplicate values in
-columns that must be unique (e.g. \code{email}, \code{site_name}), not exactly one
-contact person, \code{author_nr} not numbering the authors from 1 to n, country
-codes not in ISO 3166-1 alpha-2, species codes not in the ITRDB list or
-species columns of \verb{$trees} not matching their code, template placeholders
-left in the dataset \code{description}, and IDs or derived values (counts, parent
-labels, \code{species_code}) in the hierarchical tables not matching \verb{$images}
-(resync with \code{\link[=update_QWAmetadata]{update_QWAmetadata()}}). For \verb{$images},
-delegates to \code{\link[=check_QWAimages]{check_QWAimages()}}. Missing optional columns and absent
-optional components are reported as information.
+Checks each component of a \link{QWAmetadata} object, as the final check of the
+metadata before a submission. Aborts if the object is not a valid
+\code{QWAmetadata} or if IDs in \verb{$sites}, \verb{$trees}, \verb{$woodpieces} or \verb{$slides}
+are not unique. Warns (or, with \code{strict = TRUE}, aborts) on:
+\itemize{
+\item a missing component required at the object's stage (see \code{\link[=is_submission]{is_submission()}});
+\item values violating the JSON schema of the stage;
+\item duplicate values in columns that must be unique (e.g. \code{email}, \code{site_name});
+\item not exactly one contact person, or \code{author_nr} not numbering the authors
+from 1 to n;
+\item country codes not in ISO 3166-1 alpha-2;
+\item species codes not in the ITRDB list, or species columns of \verb{$trees} not
+matching their code;
+\item template placeholders left in the dataset \code{description};
+\item IDs or derived values (counts, parent labels, \code{species_code}) in the
+hierarchical tables not matching \verb{$images} (resync with
+\code{\link[=update_QWAmetadata]{update_QWAmetadata()}});
+\item issues in \verb{$images}, see \code{\link[=check_QWAimages]{check_QWAimages()}}.
+}
+}
+\details{
+Also informs about missing optional columns and absent optional components.
 }
 \seealso{
-\code{\link[=QWAmetadata]{QWAmetadata()}}, \code{\link[=check_QWAimages]{check_QWAimages()}}
+\code{\link[=QWAmetadata]{QWAmetadata()}}, \code{\link[=check_QWAimages]{check_QWAimages()}}, \code{\link[=check_consistency]{check_consistency()}}
 }
