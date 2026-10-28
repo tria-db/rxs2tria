@@ -30,7 +30,8 @@ Ring-width parameters in μm (e.g. \code{mrw}, \code{eww}, \code{lww}) need no s
 Auto-scaling would instead scale series with all values below 1000 by 10 or
 more.
 
-A manual \code{scaling} must be a power of ten. The applied factor is stored in
+A manual \code{scaling} must be a power of ten and keep all values within the
+integer range (at most \code{.Machine$integer.max}). The applied factor is stored in
 the \code{"scaling"} attribute of the returned \code{rwl} object; dividing the
 exported values by \code{scaling} gives back the original values (up to
 rounding). An \code{rwl} object that already has a \code{"scaling"} attribute is not

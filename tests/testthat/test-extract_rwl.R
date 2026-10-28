@@ -182,6 +182,16 @@ test_that("scale_for_tsap applies any manual power-of-ten scaling, and does not 
   expect_error(scale_for_tsap(scaled), "already scaled")
 })
 
+test_that("scale_for_tsap and write_tsap abort beyond the integer range", {
+  df_rwl <- extract_rwl(df_rings = df_rings_multi, param = "mrw")
+  file <- tempfile(fileext = ".txt")
+
+  # max_val = 230: 230 * 1e8 > .Machine$integer.max
+  expect_error(scale_for_tsap(df_rwl, scaling = 1e8), "exceeds the integer range")
+  expect_error(write_tsap(df_rwl * 1e8, file), "exceed the integer range")
+  expect_false(file.exists(file))
+})
+
 test_that("write_tsap writes Year first, NA as 0 and integer values, tab-delimited", {
   df_rwl <- extract_rwl(df_rings = df_rings_multi, param = "mrw")
   df_rwl[["WP1"]][1] <- 100.6

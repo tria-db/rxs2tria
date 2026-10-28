@@ -1,38 +1,30 @@
-# rxs2tria (development version)
+# rxs2tria (0.1.4)
 
-* The `check_*()` functions are the final checks before a submission: they warn about issues the TRIA admins would reject, gain `strict = FALSE` (with `TRUE`, they abort on the first issue) and return `TRUE`/`FALSE` invisibly.
-  * `check_QWAimages()` also warns on a label in more than one parent, `outmost_year` in the future and missing `spatial_resolution`.
-  * `check_QWAmetadata()` also warns on missing required components, duplicate `email`/`site_name`, not exactly one contact person, `author_nr` not numbering the authors from 1 to n, unknown country or species codes, species columns not matching their code, and `[ADD INFO` placeholders in `description`. Hierarchy tables not matching `$images` warn instead of aborting.
-  * `check_QWAdata()` checks values against the schema and warns on duplicate cell keys, years with cells but without a rings row, and `cno` not matching the cells. Its `meta` argument is removed, see `check_consistency()`.
-  * `check_supplementary()` warns instead of aborting on `"ok"` files missing from the archive, and warns on undeclared files. The manifest may carry extra columns.
-* new `scale_for_tsap()` and `write_tsap()` export `extract_rwl()` series as tab-delimited TSAP import files (integer values, `NA` as `0`), with power-of-ten scaling for parameters on small scales.
-* new `check_consistency()` checks `QWAimages`/`QWAmetadata`, `QWAdata` and `QWAprofile` objects against each other: images in both, rings labels matching the images, ring years after `outmost_year`, profile years with a rings row.
-* All functions taking a QWA object abort on invalid objects: missing, mistyped or `NA` key columns, duplicate `image_label`s, duplicate (image, year) in the rings, duplicate profile keys. `collect_raw_data()` aborts on such keys in the raw output instead of warning.
-* `QWAdata()` and `read_QWAdata()` no longer complete the year sequences of the rings or add `cno` (done by `complete_QWAdata()`), keep columns not in the schema, and warn instead of aborting on future years. `woodpiece_label` and `slide_label` are required in the rings.
-* `QWAimages()` sets `$software` to the `roxas_version`, with a warning if values changed.
-* `update_QWAmetadata()` keeps an existing `species_code` where it is `NA` in `images`.
-* `calculate_band_profiles()` warns if cells have no rings row; `calculate_*_profiles(apply_exclusions = TRUE)` and `extract_rwl()` with `prf_data` abort in that case (run `complete_QWAdata()`). `QWAprofile()` and `read_QWAprofile()` warn on profiles without measurements, varying band widths and `sector_n` < 1.
-* `compile_resources()` and `recompile_resources()` are renamed to `compile_supplementary()` and `recompile_supplementary()`; `vignette("resources")` is now `vignette("supplementary")`.
-* JSON schemas are renamed: `json_schema/core/<component>.json`; the Shiny metadata app extensions to `app_<component>.json`.
-* JSON schemas distinguish submission files (`submission_<component>.json`) from TRIA dataset files (`tria_<component>.json`), with shared definitions in `core/`. submission only: `$related`, `fname_*`, `ds_access`, `embargoed_until`; TRIA dataset files add `$datafiles`, `ds_label`, `url`, `doi`, `citation`, `dataset_version`.
-* `QWAmetadata` objects carry a `submission` attribute, queried with new `is_submission()` and inferred from the components: TRIA dataset files have `$datafiles` (replaces `$resources`, which is no longer read) or a `ds_label`. Components are aligned, checked and written with the schemas of their stage, and `$related` is dropped from TRIA dataset files. `check_QWAimages()` gains `submission`. `complete_QWAmetadata()`, `update_QWAmetadata()` and `combine_QWAmetadata()` apply to submission files only. `write_QWAmetadata()` no longer writes absent components.
-* Schema `colType`s are now `key`, `measure`, `derived` (recomputable arithmetic), `estimate` (`ew_lw`, `eww`, `lww`), `flag` (automatic ring flags), `meta_input` (filled in the metadata app, incl. `only_ew`, `img_comment`) and `qc_input` (set in the flags app: the optional ring flags, `comment`, `affected_tissue`, `comment_handled`). `cno` is a `measure`. The metadata component schemas carry `colType`s too.
-* `complete_QWAimages()` and `complete_QWAmetadata()` add all optional columns except `qc_input` ones (`only_ew` and `img_comment` are now added). Optional columns added this way and missing optional columns found by the `check_*()` functions are reported as information, not as warnings.
-* Empty values are written as `null` in JSON and as empty fields in CSV, never as `""` or `"NA"`. `write_QWAmetadata()`, `write_QWAdata()` and `write_QWAimages()` gain `drop_empty = TRUE`: optional `meta_input` and `qc_input` columns that are empty in all rows (`NA`, or `NA`/`FALSE` for flags) are not written. The metadata app exports via `write_QWAmetadata()`.
-* Timestamps (`img_created_at`, `meas_created_at`, `*_segmentation_datetime`) are local clock times without timezone: kept as such on alignment (stored as UTC) and written as `YYYY-MM-DDTHH:MM:SS` in both CSV and JSON. `update_QWAimages()` loses `settings_date_tz`.
-* `write_QWAprofile()` and the flags app also write empty values as empty fields. The flags app accepts `.csv.gz` rings and profile files.
-* Fixes: `extract_rwl()` and `extract_ring_measures()` include the estimate columns `eww` and `lww`; `QWAprofile()` defaults to `profile_type = "sector"`; `check_QWAmetadata()` skips absent hierarchy tables instead of aborting.
-* `write_QWAdata()` gains `keep_derived = TRUE`; with `FALSE`, derived columns are not written (recompute them with `complete_QWAdata()`).
-* `ds_license` is required for public submissions and in TRIA dataset files only, `embargoed_until` for restricted submissions only; both may be absent otherwise.
-* `update_QWAdata()` now synchronises the data with `meta`: new images are added and images not in `meta` are removed. Duplicate-ring flags are only recalculated for affected woodpiece-years, and with `reset_manual_flags = FALSE` manual `exclude_issues` edits are kept.
-* `update_QWAdata()` signature is now `update_QWAdata(x, meta, imgs_to_reread = NULL, ...)`; `imgs_to_update` is renamed to `imgs_to_reread` (also in `update_QWAimages()`) and is optional in `update_QWAdata()`.
-* new `update_QWAmetadata()` replaces the images of a `QWAmetadata` object and updates the sites, trees, woodpieces and slides tables (rows and counts) accordingly, keeping existing metadata.
-* new `combine_QWAimages()`, `combine_QWAdata()` and `combine_QWAmetadata()` combine two datasets with distinct image labels (e.g. from separate input folders) into one.
-* `exclude_issues` is now initialised from `incomplete_ring` only; missing rings are no longer excluded by default, as their zero width is a valid measurement. The `exclude_mode` argument of `complete_flags()`, `complete_QWAdata()`, `update_QWAdata()` and `check_QWAdata()` is deprecated; to also exclude missing rings, set `exclude_issues` after `complete_QWAdata()`.
-* `complete_QWAprofile()` is removed; recalculate the profile with all parameters instead.
-* new `extract_ring_measures()` returns the identifier and measurement columns of the rings data without excluded rings (`exclude_dupl`, `exclude_issues`), as input for further analyses.
-* `calculate_sector_profiles()` and `calculate_band_profiles()` gain `apply_exclusions` and `tissue` arguments: with `apply_exclusions = TRUE`, the cells of excluded rings are removed before aggregating; `tissue = "affected"` removes only the earlywood or latewood cells of rings whose `affected_tissue` is `"ew"` or `"lw"`.
-* `NA` values in `exclude_dupl` and `exclude_issues` now count as `FALSE` (ring not excluded), also in `extract_rwl()`.
+## Breaking changes
+
+* JSON schemas are split by stage: shared definitions in `core/<component>.json`, overlays `submission_<component>.json` and `tria_<component>.json`, metadata app extensions `app_<component>.json`.
+* `compile_resources()` and `recompile_resources()` are renamed to `compile_supplementary()` and `recompile_supplementary()` (`vignette("supplementary")`).
+* `update_QWAdata(x, meta, imgs_to_reread = NULL, ...)` synchronises the data with `meta` (new images added, absent ones removed); `imgs_to_update` is renamed to `imgs_to_reread`, also in `update_QWAimages()`, which loses `settings_date_tz`.
+* `QWAdata()` and `read_QWAdata()` no longer complete the ring years or add `cno` (done by `complete_QWAdata()`) and require `woodpiece_label` and `slide_label` in the rings. `check_QWAdata()` loses `meta`, see `check_consistency()`.
+* `exclude_issues` is initialised from `incomplete_ring` only; `exclude_mode` is deprecated.
+* `complete_QWAprofile()` is removed.
+
+## New features
+
+* `QWAmetadata` objects know their stage (`is_submission()`): components are aligned, checked and written with the schemas of submission files or TRIA dataset files.
+* The `check_*()` functions are the final checks before a submission: they warn on issues TRIA would reject, return `TRUE`/`FALSE` invisibly and abort with `strict = TRUE`. New `check_consistency()` checks the objects against each other.
+* New `update_QWAmetadata()`, `combine_QWAimages()`, `combine_QWAdata()`, `combine_QWAmetadata()` and `extract_ring_measures()`.
+* New `scale_for_tsap()` and `write_tsap()` write `extract_rwl()` series as TSAP import files.
+* `calculate_sector_profiles()` and `calculate_band_profiles()` gain `apply_exclusions` and `tissue`.
+* `write_QWAmetadata()`, `write_QWAdata()` and `write_QWAimages()` gain `drop_empty = TRUE` (app columns empty in all rows are not written); `write_QWAdata()` gains `keep_derived = TRUE`.
+
+## Other changes
+
+* All functions taking a QWA object abort on invalid objects (missing or `NA` keys, duplicate images or ring years).
+* Empty values are written as `null` in JSON and as empty fields in CSV. Timestamps are local clock times, written as `YYYY-MM-DDTHH:MM:SS`.
+* Schema `colType`s are `key`, `measure`, `derived`, `estimate`, `flag`, `meta_input` and `qc_input`.
+* `NA` in `exclude_dupl` and `exclude_issues` counts as FALSE, so not excluded.
+* Fixes: `extract_rwl()` includes `eww` and `lww`; `QWAprofile()` defaults to `profile_type = "sector"`.
 
 # rxs2tria 0.1.3
 

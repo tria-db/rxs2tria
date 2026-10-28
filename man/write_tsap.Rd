@@ -26,7 +26,7 @@ to integers.
 
 Ring widths in μm (e.g. \code{mrw}) can be written as they are. Scale parameters
 on smaller scales with \code{\link[=scale_for_tsap]{scale_for_tsap()}} first; the function warns if
-non-zero values round to \code{0}.
+non-zero values round to \code{0}, and aborts on values beyond the integer range.
 }
 \examples{
 \dontrun{

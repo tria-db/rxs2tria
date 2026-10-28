@@ -299,7 +299,8 @@ scale_for_tucson <- function(rwl, prec = 0.001, scaling = NULL) {
 #' Auto-scaling would instead scale series with all values below 1000 by 10 or
 #' more.
 #'
-#' A manual `scaling` must be a power of ten. The applied factor is stored in
+#' A manual `scaling` must be a power of ten and keep all values within the
+#' integer range (at most `.Machine$integer.max`). The applied factor is stored in
 #' the `"scaling"` attribute of the returned `rwl` object; dividing the
 #' exported values by `scaling` gives back the original values (up to
 #' rounding). An `rwl` object that already has a `"scaling"` attribute is not
@@ -325,8 +326,8 @@ scale_for_tucson <- function(rwl, prec = 0.001, scaling = NULL) {
 #' }
 scale_for_tsap <- function(rwl, scaling = NULL) {
   rwl <- dplR::as.rwl(rwl)
-  scale_rwl_pow10(rwl, scaling, max_auto = 9999, max_manual = Inf,
-    range_desc = "4 integer digits")
+  scale_rwl_pow10(rwl, scaling, max_auto = 9999, max_manual = .Machine$integer.max,
+    range_desc = "4 integer digits", manual_desc = "the integer range")
 }
 
 #' Write an rwl object as a TSAP import file
@@ -339,7 +340,7 @@ scale_for_tsap <- function(rwl, scaling = NULL) {
 #'
 #' Ring widths in μm (e.g. `mrw`) can be written as they are. Scale parameters
 #' on smaller scales with [scale_for_tsap()] first; the function warns if
-#' non-zero values round to `0`.
+#' non-zero values round to `0`, and aborts on values beyond the integer range.
 #'
 #' @param rwl A \pkg{dplR} `rwl` object, e.g. as returned by [extract_rwl()]
 #'   or [scale_for_tsap()].
@@ -368,6 +369,15 @@ write_tsap <- function(rwl, file, overwrite = TRUE) {
   checkmate::assert_path_for_output(file, overwrite = overwrite)
 
   vals <- unlist(rwl, use.names = FALSE)
+  # as.integer() would turn these into NA, written as "NA"
+  int_max <- .Machine$integer.max
+  n_big <- sum(abs(round(vals)) > int_max, na.rm = TRUE)
+  if (n_big > 0) {
+    cli::cli_abort(c(
+      "{n_big} value{?s} exceed{?s/} the integer range ({.val {int_max}}).",
+      "i" = "Scale {.arg rwl} with {.fn scale_for_tsap} and a smaller {.arg scaling}."
+    ))
+  }
   n_lost <- sum(!is.na(vals) & vals != 0 & round(vals) == 0)
   if (n_lost > 0) {
     cli::cli_warn(c(
@@ -388,8 +398,9 @@ write_tsap <- function(rwl, file, overwrite = TRUE) {
 # scale all values of rwl by a power of ten and store it as attribute
 # "scaling": a manual scaling must keep the values at or below max_manual,
 # NULL picks the largest factor keeping them at or below max_auto. range_desc
-# describes the range in messages.
-scale_rwl_pow10 <- function(rwl, scaling, max_auto, max_manual, range_desc) {
+# and manual_desc describe the two ranges in messages.
+scale_rwl_pow10 <- function(rwl, scaling, max_auto, max_manual, range_desc,
+                            manual_desc = range_desc) {
   if (!is.null(attr(rwl, "scaling"))) {
     cli::cli_abort("{.arg rwl} is already scaled (factor {.val {attr(rwl, 'scaling')}}).")
   }
@@ -419,7 +430,7 @@ scale_rwl_pow10 <- function(rwl, scaling, max_auto, max_manual, range_desc) {
     }
   } else if (max_val * scaling > max_manual) {
     cli::cli_abort(c(
-      "Scaling by {.val {scaling}} exceeds {range_desc}.",
+      "Scaling by {.val {scaling}} exceeds {manual_desc}.",
       "i" = "Largest scaled value would be {.val {max_val * scaling}}, maximum is {.val {max_manual}}.",
       "i" = "Use {.code scaling = {auto_scaling}} or smaller."
     ))
