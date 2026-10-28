@@ -179,7 +179,9 @@ flag_duplicate_rings <- function(df_rings_log){
       duplicate_rank = dplyr::row_number(-cno), # rank by cell count descending
       duplicate_rank = dplyr::if_else(duplicate_ring, # set rank to NA if not duplicate
                                       duplicate_rank, NA_integer_),
-      duplicate_rank = duplicate_rank + 100*as.numeric(missing_ring) + 100*as.numeric(incomplete_ring), # penalty for issues
+      duplicate_rank = duplicate_rank + # penalty for issues (NA: none, else the whole group is NA)
+        100*as.numeric(dplyr::coalesce(missing_ring, FALSE)) +
+        100*as.numeric(dplyr::coalesce(incomplete_ring, FALSE)),
       duplicate_sel = dplyr::if_else(!duplicate_ring | duplicate_rank == min(duplicate_rank), # select the best ranked duplicate
                                      TRUE, FALSE),
       exclude_dupl = !duplicate_sel) |> # the not-selected duplicates

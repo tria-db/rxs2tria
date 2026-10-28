@@ -295,7 +295,7 @@ collect_raw_data <- function(df_meta, roxas_version = NULL) {
     remove_outliers(mute_info = FALSE)
 
   # ensure we have full sequence of years in rings df (including missing)
-  df_rings_complete <- complete_rings(QWA_data)
+  df_rings_complete <- complete_rings(QWA_data, df_meta)
 
   # check for cwt estimates (expected/required for conifer data)
   # TODO: could already check in df_meta for info wrt angiosperm/conifer?

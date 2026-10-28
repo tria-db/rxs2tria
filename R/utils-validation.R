@@ -265,19 +265,21 @@ convert_column <- function(x, target_class) {
          "integer" = as_whole_integer(x),
          "logical" = as.logical(x),
          "Date" = as.Date(x),
-         "POSIXct" = lubridate::as_datetime(x), # as.POSIXct() drops the time of ISO 8601 strings
+         "POSIXct" = if (inherits(x, "POSIXct")) lubridate::force_tz(x, "UTC") # keep the local clock time
+                     else lubridate::as_datetime(x), # as.POSIXct() drops the time of ISO 8601 strings
          x  # fallback: no conversion
   )
 }
 
-#' Convert to integer if all values are whole numbers; otherwise return the
-#' values as numeric (as.integer() would truncate them silently), the schema
-#' checks then report the type
+#' Convert to integer if all values are whole numbers within the integer range;
+#' otherwise return the values as numeric (as.integer() would truncate them
+#' silently, or return NA beyond 2^31 - 1, e.g. file sizes >= 2 GiB), the
+#' schema checks then report non-whole values
 #' @noRd
 as_whole_integer <- function(x) {
   if (is.integer(x)) return(x)
   num <- suppressWarnings(as.numeric(x)) # new NAs are reported by align_to_schema()
-  if (any(num != round(num), na.rm = TRUE)) num else as.integer(num)
+  if (any(num != round(num) | abs(num) > .Machine$integer.max, na.rm = TRUE)) num else as.integer(num)
 }
 
 #' Helper to force a given df into alignment with a table schema:
@@ -367,8 +369,8 @@ align_to_schema <- function(df, tbl_props, schema = NULL, add_opt = FALSE,
 
     if (!is.null(df)) {
       # compare NA counts after conversion
-      na_counts_org <- colSums(is.na(df[common_cols]))
-      na_counts_aligned <- colSums(is.na(aligned_data[common_cols]))
+      na_counts_org <- vapply(df[common_cols], \(x) sum(is.na(x)), numeric(1))
+      na_counts_aligned <- vapply(aligned_data[common_cols], \(x) sum(is.na(x)), numeric(1))
       if (any(na_counts_aligned > na_counts_org)){
         NA_cols <- names(which(na_counts_aligned>na_counts_org))
         msg <- c(msg,
@@ -503,6 +505,7 @@ check_schema <- function(df, schema_obj, schema = NULL, strict = FALSE, greedy =
           keyword == "additionalProperties" ~ paste0(message, ": `", params$additionalProperty, "`"),
           keyword == "unevaluatedProperties" ~ paste0(message, ": `", params$unevaluatedProperty, "`"),
           keyword == "enum" ~ paste0(message, ": `", last_seg, "` (", params$allowedValues, ")"),
+          keyword == "pattern" ~ paste0("does not match the expected format: `", last_seg, "`"),
           .default = paste0(message, ": `", last_seg, "`")
         )
       ) |> dplyr::pull(full_message) |> unique()
@@ -755,7 +758,11 @@ check_images_in_meta <- function(images, meta, what, strict = FALSE,
 prepare_write <- function(df, schema, drop_empty = TRUE, submission = TRUE) {
   if (is.null(df)) return(NULL)
   df <- df |>
-    dplyr::mutate(dplyr::across(dplyr::where(is.character), \(x) dplyr::na_if(x, "")))
+    dplyr::mutate(
+      dplyr::across(dplyr::where(is.character), \(x) dplyr::na_if(x, "")),
+      # local clock time without offset, identical in CSV and JSON
+      dplyr::across(dplyr::where(lubridate::is.POSIXct), \(x) format(x, "%Y-%m-%dT%H:%M:%S"))
+    )
   if (!drop_empty) return(df)
 
   tbl_props <- schema_tbl_props(schema, submission)

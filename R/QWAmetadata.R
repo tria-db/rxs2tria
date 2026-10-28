@@ -98,10 +98,13 @@ check_hierarchy <- function(df, name, id_col, img, summary_fn, strict = FALSE) {
       hint), strict)
   }
 
-  # values derived from images vs values in df, per column
+  # values derived from images vs values in df, per column present in df
+  # (absent columns are reported by the schema check)
+  if (!id_col %in% names(df)) return(invisible(ok))
   df_counts <- summary_fn(img)
-  cmp <- dplyr::inner_join(df_counts, df[names(df_counts)], by = id_col, suffix = c("", ".tbl"))
-  for (col in setdiff(names(df_counts), id_col)) {
+  cols <- intersect(names(df_counts), names(df))
+  cmp <- dplyr::inner_join(df_counts[cols], df[cols], by = id_col, suffix = c("", ".tbl"))
+  for (col in setdiff(cols, id_col)) {
     derived <- cmp[[col]]
     given <- cmp[[paste0(col, ".tbl")]]
     differs <- !is.na(derived) & (is.na(given) | derived != given)
@@ -178,7 +181,7 @@ check_species <- function(x, strict = FALSE) {
   lookup <- read_lookup("species_ITRDB_codes_20250701.csv")
   ok <- TRUE
 
-  sc <- x$sites$stand_main_species_code
+  sc <- x$sites[["stand_main_species_code"]]
   unknown <- unique(sc[!is_blank(sc) & !sc %in% lookup$itrdb_species_code])
   if (length(unknown) > 0) {
     ok <- report_issue(c(
@@ -386,7 +389,7 @@ QWAmetadata <- function(dataset = NULL,
       "i" = "Did you mean {.code QWAmetadata(images = <your data frame>)}?"
     ))
 
-  # images: validation via QWAimages
+  # images: validation via QWAimages (default: submission stage)
   images <- QWAimages(images)
 
   # stage: TRIA dataset files have $datafiles or a ds_label
@@ -394,6 +397,11 @@ QWAmetadata <- function(dataset = NULL,
   if (!submission && length(related) > 0) {
     cli::cli_warn(c("!" = "{.field related} is not part of TRIA dataset files, dropped."))
     related <- NULL
+  }
+  # stage: TRIA dataset images should have no source file names (fname_*)
+  if (!submission) {
+    rv <- attr(images, "roxas_version")
+    images <- new_QWAimages(align_to_schema(images, schema_tbl_props(rv, FALSE), rv), rv)
   }
 
   dataset <- align_component(dataset, "dataset", submission)

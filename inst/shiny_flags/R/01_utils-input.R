@@ -283,6 +283,17 @@ load_data_csv <- function(path_prf, path_rings, path_rxsmeta,
 # check input dfs and throw error if not all checks passed
 validate_input_dfs <- function(prf_data_in, rings_data_in,
                                specs = input_specs){
+  # automatic ring flags (rxs2tria::complete_QWAdata()) must be set for all rings
+  flag_cols <- intersect(names(specs$rings_data$req_cols)[specs$rings_data$req_cols == "l"],
+                         names(rings_data_in))
+  n_na <- vapply(rings_data_in[flag_cols], \(x) sum(is.na(x)), integer(1))
+  if (any(n_na > 0)) {
+    stop("Missing values in ring flag column(s) ",
+         toString(paste0(names(n_na)[n_na > 0], " (", n_na[n_na > 0], " rings)")),
+         ". Set them, or drop the flag columns and rerun rxs2tria::complete_QWAdata().",
+         call. = FALSE)
+  }
+
   checkmate::assert_data_frame(
     rings_data_in[names(specs$rings_data$req_cols)],
     min.rows = 1, any.missing = FALSE

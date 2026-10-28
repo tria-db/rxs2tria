@@ -97,6 +97,7 @@ articles:
   - submission
   - metadata-app
   - flags-app
+  - rwl-export
   - reopen-dataset
 - title: "S3 classes"
   desc: "Vignettes describing the S3 classes defined by the package"

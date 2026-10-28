@@ -68,6 +68,23 @@ test_that("written QWAmetadata reads back with the same values", {
   expect_equal(y$images$meas_created_at, meta_example$images$meas_created_at)
 })
 
+test_that("datetimes keep their local clock time through QWAimages, CSV and JSON", {
+  x <- meta_example
+  x$images$meas_created_at <- as.POSIXct("2021-04-09 15:03:00", tz = "Europe/Zurich")
+  utc <- as.POSIXct("2021-04-09 15:03:00", tz = "UTC")
+  expect_equal(suppressMessages(QWAimages(x$images))$meas_created_at[1], utc)
+
+  file_csv <- tempfile(fileext = ".csv")
+  suppressMessages(write_QWAimages(x$images, file_csv))
+  expect_false(any(grepl("15:03:00Z|13:03", readLines(file_csv))))
+  expect_equal(suppressMessages(read_QWAimages(file_csv))$meas_created_at[1], utc)
+
+  file_json <- tempfile(fileext = ".json")
+  suppressMessages(write_QWAmetadata(x, file_json))
+  y <- suppressMessages(suppressWarnings(read_QWAmetadata(file_json)))
+  expect_equal(y$images$meas_created_at[1], utc)
+})
+
 test_that("write_QWAdata writes NA as empty fields and drops all-empty qc_input columns", {
   cells <- tibble::tibble(image_label = "IMG1", year = 2000, xpix = c(1, 2), ypix = c(1, 2),
                           la = c(10, NA), cwttan = NA_real_)

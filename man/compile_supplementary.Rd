@@ -10,7 +10,8 @@ compile_supplementary(path, rxs_images)
 \item{path}{Path to a directory to scan for files, or to an existing
 (non-nested) zip archive to read the file list from directly. Reading a
 zip archive requires the \pkg{zip} package, and does not extract any
-files---\code{fname_resource} is \code{NA} for resources found this way.}
+files---\code{fname_resource} is \code{NA} for resources found this way. System
+files (e.g. \code{.DS_Store}, \code{Thumbs.db}, \verb{__MACOSX/} entries) are skipped.}
 
 \item{rxs_images}{A \link{QWAimages} object. Its \code{roxas_version} attribute is
 used to disambiguate resource-type patterns shared between classic ROXAS
@@ -21,7 +22,9 @@ appropriate.}
 \value{
 A data frame with one row per file and columns:
 \itemize{
-\item \code{resource_name}: name and path of the file relative to \code{path}
+\item \code{resource_name}: path of the file relative to \code{path}, without the
+leading folders shared by all files (e.g. the folder a zip archive was
+made from)
 \item \code{description}: normally \code{NA}, can be filled manually if required to
 provide justification for "other" supplementary files that should
 be included in the upload

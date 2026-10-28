@@ -93,7 +93,7 @@ dataset_ui <- function(id) {
                            choices = c("CC BY 4.0", "CC BY-SA 4.0", "CC BY-NC 4.0",
                                        "CC BY-NC-SA 4.0", "CC BY-ND 4.0", "CC BY-NC-ND 4.0",
                                        "CC0 1.0", "other"),
-                           selected = "CC BY 4.0",
+                           selected = character(0),
                            options = list(placeholder = "Select a license")),
             shiny::span("CC licenses are preferred (cf. ",
                  shiny::tags$a("Creative Commons License Chooser", href="https://chooser-beta.creativecommons.org/", target='_blank'),
@@ -115,7 +115,7 @@ dataset_ui <- function(id) {
             condition = "input.ds_access == 'restricted'",
             shiny::dateInput(ns("embargoed_until"),
                       "Select an embargo date",
-                      value = Sys.Date() + 365), # TODO: no default value?
+                      value = NA),
             shiny::span(shiny::tags$i("For embargoed datasets, only the metadata will be accessible via TRIA while the data remain restricted (\"All rights reserved\"). ",
                         "The selected license applies once you lift the embargo and the data become open access; leave it empty if not yet decided.")),
             ns=shiny::NS(id))

@@ -4,12 +4,7 @@
 \alias{update_QWAimages}
 \title{Update a QWAimages object for selected images}
 \usage{
-update_QWAimages(
-  meta,
-  imgs_to_reread,
-  settings_date_orders = NULL,
-  settings_date_tz = Sys.timezone()
-)
+update_QWAimages(meta, imgs_to_reread, settings_date_orders = NULL)
 }
 \arguments{
 \item{meta}{a \link{QWAimages} object}
@@ -19,11 +14,8 @@ settings/metadata files are re-read; must be a subset of \code{meta$image_label}
 
 \item{settings_date_orders}{Character; date order string(s) passed to
 \code{\link[lubridate:parse_date_time]{lubridate::parse_date_time()}} to parse the \code{meas_created_at} field for
-ROXAS classic. Required for ROXAS classic, ignored for ROXAS AI.}
-
-\item{settings_date_tz}{Optional timezone passed to
-\code{\link[lubridate:parse_date_time]{lubridate::parse_date_time()}} to parse the \code{meas_created_at} field.
-Defaults to system timezone.}
+ROXAS classic. Required for ROXAS classic, ignored for ROXAS AI.
+Timestamps are kept as local clock time (stored as UTC).}
 }
 \value{
 An updated \link{QWAimages} object

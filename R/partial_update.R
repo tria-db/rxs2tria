@@ -10,15 +10,11 @@
 #' @param settings_date_orders Character; date order string(s) passed to
 #'   [lubridate::parse_date_time()] to parse the `meas_created_at` field for
 #'   ROXAS classic. Required for ROXAS classic, ignored for ROXAS AI.
-#' @param settings_date_tz Optional timezone passed to
-#'   [lubridate::parse_date_time()] to parse the `meas_created_at` field. 
-#'   Defaults to system timezone.
+#'   Timestamps are kept as local clock time (stored as UTC).
 #' @returns An updated [QWAimages] object
 #' @export
 update_QWAimages <- function(meta, imgs_to_reread,
-                             settings_date_orders = NULL,
-                             settings_date_tz = Sys.timezone()
-                            ) {
+                             settings_date_orders = NULL) {
   validate_QWAimages(meta)
   checkmate::assert_subset(imgs_to_reread, meta$image_label)
 
@@ -32,8 +28,7 @@ update_QWAimages <- function(meta, imgs_to_reread,
   if (roxas_version == "roxas") {
     df_settings_new$meas_created_at <- df_settings_new$meas_created_at |> 
       lubridate::parse_date_time(
-        orders = settings_date_orders, # cf. lubridate::parse_date_time
-        tz = settings_date_tz)
+        orders = settings_date_orders) # cf. lubridate::parse_date_time
   }
 
   # UPDATE THE DATAFRAME WITH THE NEW SETTINGS INFO
@@ -136,12 +131,14 @@ update_QWAdata <- function(x, meta, imgs_to_reread = NULL,
     x_new <- collect_raw_data(meta |>
       dplyr::filter(.data$image_label %in% imgs_read))
 
-    # recalculate only the measures that already exist in x
-    meas_all <- c("tca", "rwd2", "dcwt", "cwtall_adj",
-                  "cdrad", "cdtan", "cdratio", "sector100", "ew_lw",
-                  "eww", "lww")
-    meas_to_recalc <- intersect(meas_all, c(names(x$cells), names(x$rings)))
-    x_new <- complete_measures(x_new, only = meas_to_recalc)
+    # complete the new images, keeping only the measures that exist in x
+    # (e.g. no derived columns in data written with keep_derived = FALSE)
+    x_new <- complete_measures(x_new)
+    meas_all <- c(schema_cols("cells", c("derived", "estimate")),
+                  schema_cols("rings", c("derived", "estimate")))
+    meas_drop <- setdiff(meas_all, c(names(x$cells), names(x$rings)))
+    x_new$cells <- x_new$cells[setdiff(names(x_new$cells), meas_drop)]
+    x_new$rings <- x_new$rings[setdiff(names(x_new$rings), meas_drop)]
 
     # carry over manual values for re-read images (new images have none)
     if (!reset_manual_flags && length(manual_cols) > 0) {

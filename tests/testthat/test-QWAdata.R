@@ -48,6 +48,32 @@ test_that("complete_flags warns on images not in meta", {
   expect_true(x$rings$incomplete_ring[1])
 })
 
+# complete_measures ----
+cells_meas <- data.frame(image_label = "WP1_SL1_IMG1", year = 2000L, xpix = 1:20, ypix = 1,
+                         la = 100, cwa = 50, cwtrad = 2, cwttan = 3, cwtall = 2.5,
+                         drad = 10, dtan = 12, rraddistr = seq(2.5, 97.5, by = 5),
+                         rtsr = rep(c(0.5, 2), each = 10)) # EW-like, then LW-like
+rings_meas <- data.frame(woodpiece_label = "WP1", slide_label = "WP1_SL1",
+                         image_label = "WP1_SL1_IMG1", year = 2000L, mrw = 100)
+x_meas <- new_QWAdata(cells = cells_meas, rings = rings_meas)
+
+test_that("complete_measures adds the derived and estimate columns of the schemas", {
+  added <- \(x) setdiff(c(names(x$cells), names(x$rings)), c(names(cells_meas), names(rings_meas)))
+  full <- suppressMessages(complete_measures(x_meas))
+  # every derived/estimate column of the schemas has a calculation
+  expect_setequal(added(full), c(schema_cols("cells", c("derived", "estimate")),
+                                 schema_cols("rings", c("derived", "estimate"))))
+  expect_setequal(unique(full$cells$ew_lw), c("ew", "lw"))
+
+  # removed columns are recalculated, the others kept
+  x <- full
+  x$cells$sector100 <- NULL
+  x$rings$eww <- NULL
+  x <- suppressMessages(complete_measures(x))
+  expect_equal(x$cells, full$cells)
+  expect_equal(x$rings, full$rings)
+})
+
 # QWAdata helper ----
 cells_raw <- data.frame(image_label = "WP1_SL1_IMG1", year = c(2000, 2000, 2002),
                         xpix = c(1, 2, 3), ypix = c(1, 2, 3), cwttan = 1)
@@ -66,7 +92,7 @@ test_that("QWAdata aligns to the schema, keeps extra columns and does not comple
   expect_false("cno" %in% names(x$rings))
   expect_equal(x$rings$year, c(2000L, 2002L))
   expect_match(w, "Gaps", all = FALSE)
-  expect_no_match(paste(w, collapse = ""), "cno differs|no row|duplicate")
+  expect_no_match(paste(w, collapse = ""), "cno|no row|duplicate")
 })
 
 test_that("QWAdata aborts on missing key columns", {
@@ -95,6 +121,21 @@ rings_ok <- data.frame(woodpiece_label = "WP1", slide_label = "WP1_SL1",
                        image_label = "WP1_SL1_IMG1", year = 2000:2001, cno = 2:1)
 x_ok <- new_QWAdata(cells = cells_ok, rings = rings_ok)
 
+test_that("complete_rings labels images without rings rows from meta, check_QWAdata warns", {
+  cells <- data.frame(image_label = c("WP1_SL1_IMG1", "WP1_SL2_IMG2"), year = 2000L, xpix = 1, ypix = 1)
+  rings <- data.frame(woodpiece_label = "WP1", slide_label = "WP1_SL1",
+                      image_label = "WP1_SL1_IMG1", year = 2000L, mrw = 100)
+  meta <- data.frame(image_label = c("WP1_SL1_IMG1", "WP1_SL2_IMG2"), woodpiece_label = "WP1",
+                     slide_label = c("WP1_SL1", "WP1_SL2"))
+  expect_message(r <- complete_rings(new_QWAdata(cells, rings), meta), "without rings rows")
+  expect_equal(r$slide_label[r$image_label == "WP1_SL2_IMG2"], "WP1_SL2")
+  expect_equal(r$cno[r$image_label == "WP1_SL2_IMG2"], 1L)
+
+  x <- new_QWAdata(cells, r)
+  expect_match(capture_warnings(suppressMessages(check_QWAdata(x))),
+               "1 image without ring measurements", all = FALSE)
+})
+
 test_that("check_QWAdata returns TRUE without issues", {
   expect_no_warning(res <- suppressMessages(check_QWAdata(x_ok)))
   expect_true(res)
@@ -115,6 +156,18 @@ test_that("check_QWAdata warns, returns FALSE and aborts with strict", {
 
   gaps <- new_QWAdata(cells = NULL, rings = dplyr::mutate(rings_ok, year = c(2000L, 2002L)))
   expect_match(chk_warnings(gaps), "Gaps")
+
+  flags_na <- new_QWAdata(cells = NULL, rings = dplyr::mutate(rings_ok, incomplete_ring = c(FALSE, NA)))
+  expect_match(chk_warnings(flags_na), "missing values in ring flag", all = FALSE)
+})
+
+test_that("NA issue flags do not make exclude_dupl NA", {
+  rings <- dplyr::mutate(rings_flags, woodpiece_label = "WP1", year = 2001,
+                         image_label = paste0("WP1_SL1_IMG", 1:3),
+                         incomplete_ring = c(NA, FALSE, FALSE))
+  res <- flag_duplicate_rings(rings)
+  expect_false(anyNA(res$exclude_dupl))
+  expect_equal(sum(!res$exclude_dupl), 1)
 })
 
 test_that("check_QWAdata informs on extra and missing optional columns", {

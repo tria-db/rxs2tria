@@ -25,9 +25,12 @@ valid \code{QWAdata} (missing, mistyped or \code{NA} keys, duplicate (image, yea
 \item duplicate cell keys (image, year, \code{xpix}, \code{ypix}), the key of the cells
 in TRIA;
 \item dating problems: gaps and future years;
-\item images only in \verb{$cells} or only in \verb{$rings}, years with cells but without
-a rings row, and \code{cno} not matching the number of cells (re-run
-\code{\link[=complete_QWAdata]{complete_QWAdata()}}).
+\item missing values in the automatic ring flags (see \code{\link[=complete_flags]{complete_flags()}});
+\item images only in \verb{$cells} or only in \verb{$rings}, and images without ring
+measurements (no \code{mrw} > 0; check the output files and re-read them with
+\code{\link[=update_QWAdata]{update_QWAdata()}});
+\item years with cells but without a rings row, and \code{cno} not matching the
+number of cells (re-run \code{\link[=complete_QWAdata]{complete_QWAdata()}}).
 }
 }
 \details{

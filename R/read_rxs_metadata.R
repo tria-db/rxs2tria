@@ -405,7 +405,7 @@ cast_settings_types <- function(df, roxas_version) {
       # literal "NA" strings (e.g. unset reference_series) -> proper NA
       dplyr::across(dplyr::any_of(str_cols), ~ dplyr::na_if(.x, "NA")),
       dplyr::across(dplyr::any_of(num_cols), as.numeric),
-      dplyr::across(dplyr::any_of(int_cols), as.integer),
+      dplyr::across(dplyr::any_of(int_cols), as_whole_integer),
       dplyr::across(dplyr::any_of(datetime_cols), lubridate::ymd_hms),
     )
   df

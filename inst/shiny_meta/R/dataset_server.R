@@ -58,19 +58,18 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
           }
         }
 
-        if (shiny::isTruthy(ds_data$ds_license)) {
-          shiny::updateSelectizeInput(session, "ds_license", selected = ds_data$ds_license)
-        }
+        # licence and embargo date always updated, cleared if not in the file
+        shiny::updateSelectizeInput(
+          session, "ds_license",
+          selected = if (shiny::isTruthy(ds_data$ds_license)) ds_data$ds_license else ""
+        )
 
-        if (shiny::isTruthy(ds_data$embargoed_until)) {
-          if (ds_data$ds_access == "restricted") {
-            shiny::updateDateInput(
-              session, "embargoed_until", value = as.Date(ds_data$embargoed_until)
-            )
-          } else {
-            cli::cli_warn("Embargo date applies only to restricted datasets.")
-          }
+        embargo <- if (shiny::isTruthy(ds_data$embargoed_until)) as.Date(ds_data$embargoed_until) else NA
+        if (!is.na(embargo) && !identical(ds_data$ds_access, "restricted")) {
+          cli::cli_warn("Embargo date applies only to restricted datasets.")
+          embargo <- NA
         }
+        shiny::updateDateInput(session, "embargoed_until", value = embargo)
 
         if (shiny::isTruthy(ds_data$description)) {
           shiny::updateTextAreaInput(
@@ -678,7 +677,8 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
         description = input$description,
         ds_access = input$ds_access,
         ds_license = input$ds_license,
-        embargoed_until = if (input$ds_access == "restricted") input$embargoed_until else "",
+        embargoed_until = if (input$ds_access == "restricted" &&
+                                shiny::isTruthy(input$embargoed_until)) input$embargoed_until else "",
         acknowledgements = input$acknowledgements
       )
     })

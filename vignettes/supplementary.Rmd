@@ -42,6 +42,10 @@ files are expected to live in a **single directory** (which you zip up
 before uploading). `compile_supplementary()` scans it recursively, so you
 may use your preferred nested file structure within that directory. It
 also accepts a path to an already-zipped (non-nested) archive directly.
+Zipping the directory itself or only its contents gives the same manifest:
+leading folders shared by all files are dropped from the file names, and
+system files (`.DS_Store`, `Thumbs.db`, `__MACOSX/` entries, ...) are
+skipped.
 The files in the scanned directory or archive are automatically assigned
 a resource type and linked to the appropriate image or woodpiece, etc., 
 where appropriate. However, in some cases, you may need to correct or
@@ -60,7 +64,7 @@ each row has the following columns:
 
 | Column | Meaning |
 |---|---|
-| `resource_name` | Path of the file relative to the directory / archive scanned. |
+| `resource_name` | Path of the file relative to the directory / archive scanned, without the leading folders shared by all files. |
 | `resource_type` | The kind of file, inferred from its name (see [Resource types]). |
 | `linked_level` | Level of the data hierarchy the file pertains to: `"dataset"`, `"site"`, ..., or `"analysis"`. |
 | `linked_label` | Which entity at that level the file belongs to (e.g. a specific `image_label`). Auto-filled where possible, otherwise `NA` (see [Linked labels]). |
@@ -219,9 +223,9 @@ Patterns are tested most specific first and the first match wins.
 The `roxas_version` attribute of the input `rxs_images`  is used to
 subset the list of search patterns and to disambiguate patterns shared 
 between classic ROXAS and ROXAS AI.
-Known backup and junk files (ROXAS `_bu` backups, `Thumbs.db`, Office
-lock files, `.DS_Store`, macOS `._*` files, ...) are typed as `"junk"` and will be ignored
-automatically. Thus you can also set the resource type to `"junk"` for
+Known backup and junk files (ROXAS `_bu` backups, ...) are typed as
+`"junk"` and will be ignored automatically; system files (`Thumbs.db`,
+Office lock files, `.DS_Store`, macOS `._*` files, ...) are skipped. Thus you can also set the resource type to `"junk"` for
 any file you want to be excluded from the TRIA upload.
 Any rxs2tria-generated files (`QWAmetadata.json`, the
 `QWAcells`/`QWArings`/`QWAprofile` `.csv(.gz)` files) under the input
@@ -301,8 +305,7 @@ Every row is assigned a `status`, computed automatically by
   label.
 - **`"ignore"`**: a junk file (ROXAS `_bu` backups, calibration files of
   annotated, preview and reference series images, `_TRACHEIDMASK`
-  images, `Thumbs.db`, `desktop.ini`, `.DS_Store`, macOS `._*` files,
-  Office lock and temp files). Never part of what gets uploaded
+  images). Never part of what gets uploaded
   as supplementary files to TRIA. Any file where you manually set
   the `resource_type` to `"junk"` gets the same treatment.
   However, you may want to remove these files from the directory yourself 

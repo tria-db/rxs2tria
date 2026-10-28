@@ -43,6 +43,17 @@ test_that("related is dropped from TRIA dataset files", {
   expect_null(x$related)
 })
 
+test_that("TRIA dataset files drop the source file names of the images", {
+  raw <- tria_example_raw()
+  raw$images$fname_image <- "img.jpg"
+  expect_warning(x <- suppressMessages(as_QWAmetadata(raw)), "fname_image")
+  expect_false("fname_image" %in% names(x$images))
+
+  out <- tempfile(fileext = ".json")
+  suppressMessages(write_QWAmetadata(x, out))
+  expect_no_warning(suppressMessages(check_QWAmetadata(read_quiet(out))))
+})
+
 test_that("checks use the schemas of the stage", {
   x <- read_quiet(tria_file)
   x$datafiles$checksum[1] <- "not_md5"
@@ -100,6 +111,14 @@ test_that("check_QWAmetadata warns on hierarchy mismatches", {
   x$trees$n_woodpieces[1] <- 99L
   expect_warning(res <- suppressMessages(check_QWAmetadata(x)), "n_woodpieces.*differs")
   expect_false(res)
+
+  # absent count column: not compared, reported as missing optional column
+  no_counts <- read_quiet(tria_file)
+  no_counts$trees$n_woodpieces <- NULL
+  msgs <- capture_messages(res <- check_QWAmetadata(no_counts))
+  expect_true(res)
+  expect_match(msgs, "trees.*missing optional columns", all = FALSE)
+  expect_match(msgs, "n_woodpieces", all = FALSE)
 })
 
 test_that("check_QWAmetadata warns on authors issues", {
@@ -128,6 +147,10 @@ test_that("check_QWAmetadata warns on authors issues", {
   bad_country <- x
   bad_country$authors$org_country[1] <- "XX"
   expect_warning(check(bad_country), "unknown country code.*org_country")
+
+  bad_email <- x
+  bad_email$authors$email[2] <- "not-an-email"
+  expect_warning(check(bad_email), "expected format.*email")
 })
 
 test_that("check_QWAmetadata warns on species and description issues", {

@@ -49,12 +49,12 @@ df_structure <- extract_data_structure(files, pattern)
 df_settings <- collect_settings_data(df_structure)
 
 # for ROXAS only (ROXAS AI has standardised timestamps, so already converted)
+# timestamps are kept as local clock time (stored as UTC, the default)
 settings_date_orders <- c("%d.%m.%Y %H:%M:%S", "%d/%m/%Y %H:%M") # adjust to your locale
 if (roxas_version == "roxas") {
   meas_created_at_converted <- lubridate::parse_date_time(
     df_settings$meas_created_at,
-    orders = settings_date_orders,
-    tz = Sys.timezone()
+    orders = settings_date_orders
   )
   df_settings$meas_created_at <- meas_created_at_converted
 }

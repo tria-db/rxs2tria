@@ -132,8 +132,10 @@ df_settings <- collect_settings_data(files_settings = df_structure$fname_setting
 
 For classic ROXAS, `meas_created_at` is read as a raw character string,
 as its format depends on the locale. Convert it explicitly to `POSIXct`
-with the format(s) and timezone appropriate for your data, and address
-any conversion warnings before overwriting the column in `df_settings`.
+with the format(s) of your locale, and address any conversion warnings
+before overwriting the column in `df_settings`. As all timestamps in
+rxs2tria, it is kept as local clock time (stored as UTC, the default of
+`lubridate::parse_date_time()`).
 
 ```{r, eval = FALSE}
 # for ROXAS only (ROXAS AI has standardised timestamps, so already converted)
@@ -141,8 +143,7 @@ settings_date_orders <- c("%d.%m.%Y %H:%M:%S", "%d/%m/%Y %H:%M") # adjust to you
 if (roxas_version == "roxas") {
   meas_created_at_converted <- lubridate::parse_date_time(
     df_settings$meas_created_at,
-    orders = settings_date_orders,
-    tz = Sys.timezone()
+    orders = settings_date_orders
   )
   df_settings$meas_created_at <- meas_created_at_converted
 }
