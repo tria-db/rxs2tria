@@ -78,7 +78,7 @@ start_server <- function(id, main_session) {
             if (inherits(res, "data.frame")) {
               validated <- rxs2tria::QWAmetadata(images = res) |> complete_QWAmetadata_quiet()
             } else { # assume list/QWAmetadata object
-              validated <- rxs2tria::as_QWAmetadata(res) |> rxs2tria::complete_QWAmetadata()
+              validated <- rxs2tria::as_QWAmetadata(res) |> complete_QWAmetadata_quiet()
             }
           }
         } else if (input$load_type == "file") {
@@ -91,14 +91,14 @@ start_server <- function(id, main_session) {
               validated <- rxs2tria::QWAmetadata(images = df) |> complete_QWAmetadata_quiet()
             } else {
               res <- rxs2tria::read_QWAmetadata(input$input_file$datapath)
-              validated <- res |> rxs2tria::complete_QWAmetadata()
+              validated <- res |> complete_QWAmetadata_quiet()
             }
             source <- glue::glue("read from file {input$input_file$name}")
           }
         } else {
           example_file <- system.file("extdata", "TRIA_example_QWAmetadata.json", package = "rxs2tria")
           res <- rxs2tria::read_QWAmetadata(example_file)
-          validated <- res |> rxs2tria::complete_QWAmetadata()
+          validated <- res |> complete_QWAmetadata_quiet()
           source <- glue::glue("example dataset")
         }
         # generate dataset description template if empty
@@ -109,7 +109,7 @@ start_server <- function(id, main_session) {
         # store in reactive containers
         input_meta$source <- source
         input_meta$images <- validated$images
-        input_meta$dataset_tbls <- validated[c("dataset","authors","funding","related","resources")]
+        input_meta$dataset_tbls <- validated[c("dataset","authors","funding","related")]
         input_meta$site_tbls <- validated[c("sites","trees","woodpieces","slides")]
 
         shiny::removeModal()
@@ -234,11 +234,7 @@ start_server <- function(id, main_session) {
     })
 
     shiny::observeEvent(input_meta$images, {
-      df <- input_meta$images
-      # manual columns are not added by complete_QWAimages(), but are editable here
-      if (!"only_ew" %in% names(df)) df$only_ew <- NA
-      if (!"img_comment" %in% names(df)) df$img_comment <- NA_character_
-      image_data_in(df)
+      image_data_in(input_meta$images)
     })
 
     output$image_table <- rhandsontable::renderRHandsontable({

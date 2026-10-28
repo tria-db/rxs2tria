@@ -20,8 +20,8 @@ An object of class \code{c("QWAprofile", "data.frame")} with a
 }
 \description{
 \code{QWAprofile} is a subclass of \code{data.frame} that holds profiles of QWA
-measurements aggregated along the annual rings. Usually elements of the
-\verb{$profiles} slot of a \code{QWAdata} object.
+measurements aggregated along the annual rings, computed from a \link{QWAdata}
+object with \code{\link[=calculate_sector_profiles]{calculate_sector_profiles()}} or \code{\link[=calculate_band_profiles]{calculate_band_profiles()}}.
 }
 \details{
 Two profile types are supported, set via the \code{profile_type} attribute:

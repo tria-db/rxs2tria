@@ -4,7 +4,7 @@ template:
   bootswatch: darkly
 reference:
 - title: "Read raw ROXAS (AI) metadata"
-  desc: "Functions for extracing metadata from the raw ROXAS (AI) output files."
+  desc: "Functions for extracting metadata from the raw ROXAS (AI) output files."
   contents:
   - get_roxas_files
   - extract_data_structure
@@ -43,6 +43,7 @@ reference:
   - check_QWAmetadata
   - combine_QWAmetadata
   - complete_QWAmetadata
+  - is_submission
   - print.QWAmetadata
   - QWAmetadata
   - read_QWAmetadata
@@ -61,8 +62,8 @@ reference:
   - read_QWAdata
   - update_QWAdata
   - write_QWAdata
-- title: "QWAprofiles"
-  desc: "S3 class QWAprofiles"
+- title: "QWAprofile"
+  desc: "S3 class QWAprofile"
   contents: 
   - calculate_band_profiles
   - calculate_sector_profiles
@@ -71,6 +72,13 @@ reference:
   - read_QWAprofile
   - summary.QWAprofile
   - write_QWAprofile
+- title: "Checks"
+  desc: >
+    Final checks before a submission. Each class has its own check
+    (`check_QWAmetadata()`, `check_QWAdata()`, `check_supplementary()`);
+    `check_consistency()` checks the objects against each other.
+  contents:
+  - check_consistency
 - title: "Other"
   desc: "Other utility functions."
   contents:
@@ -78,15 +86,18 @@ reference:
   - extract_rwl
   - scale_for_tucson
   - rename_for_tucson
+  - scale_for_tsap
+  - write_tsap
 articles:
 - title: Tutorials
   navbar: ~
   contents:
   - workflow
-  - resources
+  - supplementary
   - submission
   - metadata-app
   - flags-app
+  - rwl-export
   - reopen-dataset
 - title: "S3 classes"
   desc: "Vignettes describing the S3 classes defined by the package"

@@ -2,23 +2,42 @@
 % Please edit documentation in R/QWAmetadata.R
 \name{check_QWAmetadata}
 \alias{check_QWAmetadata}
-\title{Validate a QWAmetadata object}
+\title{Check a QWAmetadata object}
 \usage{
-check_QWAmetadata(x)
+check_QWAmetadata(x, strict = FALSE)
 }
 \arguments{
 \item{x}{A \link{QWAmetadata} object.}
+
+\item{strict}{If \code{TRUE}, abort on the first issue instead of warning.}
 }
 \value{
-\code{TRUE}, invisibly. Warnings are issued for any problems found;
-an error is thrown if a component fails structural validation.
+\code{TRUE} if no issue was found, \code{FALSE} otherwise (invisibly).
 }
 \description{
-Runs a series of checks on each component of a \link{QWAmetadata} object and
-warns about any issues found. For \verb{$images}, delegates to \code{\link[=check_QWAimages]{check_QWAimages()}}.
-For all other components, checks compliance with the corresponding JSON schema
-and warns about missing optional columns. Absent components are skipped.
+Checks each component of a \link{QWAmetadata} object, as the final check of the
+metadata before a submission. Aborts if the object is not a valid
+\code{QWAmetadata} or if IDs in \verb{$sites}, \verb{$trees}, \verb{$woodpieces} or \verb{$slides}
+are not unique. Warns (or, with \code{strict = TRUE}, aborts) on:
+\itemize{
+\item a missing component required at the object's stage (see \code{\link[=is_submission]{is_submission()}});
+\item values violating the JSON schema of the stage;
+\item duplicate values in columns that must be unique (e.g. \code{email}, \code{site_name});
+\item not exactly one contact person, or \code{author_nr} not numbering the authors
+from 1 to n;
+\item country codes not in ISO 3166-1 alpha-2;
+\item species codes not in the ITRDB list, or species columns of \verb{$trees} not
+matching their code;
+\item template placeholders left in the dataset \code{description};
+\item IDs or derived values (counts, parent labels, \code{species_code}) in the
+hierarchical tables not matching \verb{$images} (resync with
+\code{\link[=update_QWAmetadata]{update_QWAmetadata()}});
+\item issues in \verb{$images}, see \code{\link[=check_QWAimages]{check_QWAimages()}}.
+}
+}
+\details{
+Also informs about missing optional columns and absent optional components.
 }
 \seealso{
-\code{\link[=QWAmetadata]{QWAmetadata()}}, \code{\link[=check_QWAimages]{check_QWAimages()}}
+\code{\link[=QWAmetadata]{QWAmetadata()}}, \code{\link[=check_QWAimages]{check_QWAimages()}}, \code{\link[=check_consistency]{check_consistency()}}
 }

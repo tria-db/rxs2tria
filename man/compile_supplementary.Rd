@@ -10,7 +10,8 @@ compile_supplementary(path, rxs_images)
 \item{path}{Path to a directory to scan for files, or to an existing
 (non-nested) zip archive to read the file list from directly. Reading a
 zip archive requires the \pkg{zip} package, and does not extract any
-files---\code{fname_resource} is \code{NA} for resources found this way.}
+files---\code{fname_resource} is \code{NA} for resources found this way. System
+files (e.g. \code{.DS_Store}, \code{Thumbs.db}, \verb{__MACOSX/} entries) are skipped.}
 
 \item{rxs_images}{A \link{QWAimages} object. Its \code{roxas_version} attribute is
 used to disambiguate resource-type patterns shared between classic ROXAS
@@ -21,11 +22,13 @@ appropriate.}
 \value{
 A data frame with one row per file and columns:
 \itemize{
-\item \code{resource_name}: name and path of the file relative to \code{path}
+\item \code{resource_name}: path of the file relative to \code{path}, without the
+leading folders shared by all files (e.g. the folder a zip archive was
+made from)
 \item \code{description}: normally \code{NA}, can be filled manually if required to
 provide justification for "other" supplementary files that should
 be included in the upload
-\item \code{resource_type}: inferred resource type string (see Details).
+\item \code{resource_type}: inferred resource type string (see \code{vignette("supplementary")}).
 \item \code{linked_level}: hierarchy level for this type (e.g. \code{"dataset"},
 \code{"woodpiece"}, or \code{"analysis"}).
 \item \code{linked_label}: label of the linked entity, auto-filled from where
@@ -72,10 +75,11 @@ After your edits, use \code{\link[=recompile_supplementary]{recompile_supplement
 manifest against the current contents of \code{path} and re-derive the \code{status}/\code{note}
 columns without losing any manual edits.
 
-To verify a finalized manifest against a directory or
-zip archive, ses \code{\link[=check_supplementary]{check_supplementary()}}. Then
-save the resulting table to a CSV (e.g. \code{vroom::vroom_write()}) and submit
-it alongside the supplementary zip archive.
+To verify a finalised manifest against a directory or
+zip archive, see \code{\link[=check_supplementary]{check_supplementary()}}. Then
+save the resulting table as the supplementary CSV (e.g.
+\code{vroom::vroom_write(delim = ",", na = "")}) and submit it alongside the
+supplementary zip archive.
 
 See \code{vignette("supplementary")} for a worked example and the complete list of
 recognised resource types.
@@ -83,9 +87,10 @@ recognised resource types.
 \examples{
 \dontrun{
 suppl_res <- compile_supplementary("path/to/submission_files", rxs_images = my_images)
-# review and make changes are required, then persist as a standalone CSV
-# to submit alongside the resources zip:
-vroom::vroom_write(suppl_res, "output_data/submission_files_resources.csv")
+# review and edit if required, then save as the supplementary CSV
+# to submit alongside the supplementary zip:
+vroom::vroom_write(suppl_res, "output_data/supplementary_files.csv",
+                   delim = ",", na = "")
 }
 }
 \seealso{

@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "TODO:addurltoTRIAschema",
+  "title": "TRIA image (analysis) metadata schema, core attributes",
+  "description": "Schema for general (non-software-specific) image and analysis-level metadata for a TRIA dataset",
+  "type": "object",
+  "properties": {
+    "image_label": {
+      "type": "string",
+      "minLength": 1,
+      "readOnly": true,
+      "title": "Image",
+      "description": "Unique image identifier",
+      "colType": "key"
+    },
+    "slide_label": {
+      "type": "string",
+      "minLength": 1,
+      "readOnly": true,
+      "title": "Slide",
+      "description": "Slide identifier",
+      "colType": "key"
+    },
+    "woodpiece_label": {
+      "type": "string",
+      "minLength": 1,
+      "readOnly": true,
+      "title": "Woodpiece",
+      "description": "Woodpiece identifier",
+      "colType": "key"
+    },
+    "tree_label": {
+      "type": "string",
+      "minLength": 1,
+      "title": "Tree",
+      "readOnly": true,
+      "description": "Tree identifier",
+      "colType": "key"
+    },
+    "species_code": {
+      "type": ["string", "null"],
+      "readOnly": true,
+      "title": "Species",
+      "description": "Species code"
+    },
+    "site_label": {
+      "type": "string",
+      "minLength": 1,
+      "readOnly": true,
+      "title": "Site",
+      "description": "Site identifier",
+      "colType": "key"
+    },
+    "only_ew": {
+      "type": ["boolean", "null"],
+      "title": "Only EW",
+      "description": "Only earlywood was analysed",
+      "colType": "meta_input"
+    },
+    "spatial_resolution": {
+      "type": ["number", "null"],
+      "minimum": 0,
+      "title": "Spatial resolution",
+      "description": "Spatial resolution [pixels/µm]"
+    },
+    "meas_geometry": {
+      "type": ["string", "null"],
+      "enum": ["", "linear", "circular"],
+      "title": "Geometry",
+      "description": "Measured sample geometry (linear/circular)"
+    },
+    "org_img_name": {
+      "type": "string",
+      "minLength": 1,
+      "title": "Original name",
+      "description": "Original image filename"
+    },
+    "img_filetype": {
+      "type": ["string", "null"],
+      "title": "Filetype",
+      "description": "Image filetype"
+    },
+    "img_size": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "title": "Size",
+      "description": "Image file size [bytes]"
+    },
+    "img_width": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "title": "Width",
+      "description": "Image width [pixels]"
+    },
+    "img_height": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "title": "Height",
+      "description": "Image height [pixels]"
+    },
+    "img_created_at": {
+      "type": ["string","null"],
+      "format": "date-time",
+      "title": "Image created",
+      "description": "Image creation date and time"
+    },
+    "img_software": {
+      "type": ["string", "null"],
+      "title": "Scanner software",
+      "description": "Software used to scan the image"
+    },
+    "software": {
+      "type": "string",
+      "minLength": 1,
+      "enum": ["roxas", "roxas_ai"],
+      "title": "QWA software",
+      "description": "QWA software used to analyse the image"
+    },
+    "sw_version": {
+      "type": ["string", "null"],
+      "title": "SW version",
+      "description": "QWA software version used"
+    },
+    "meas_created_at": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "title": "Measurements created",
+      "description": "Timestamp of the QWA analysis"
+    },
+    "img_comment": {
+      "type": ["string", "null"],
+      "title": "Comment",
+      "description": "Any comments regarding the analysed image",
+      "colType": "meta_input"
+    },
+    "comment_handled": {
+      "type": ["boolean", "null"],
+      "title": "Comment handled",
+      "description": "Whether the image comment was addressed during quality control (flags app)",
+      "colType": "qc_input"
+    }
+  },
+  "required": ["image_label", "slide_label", "woodpiece_label", "tree_label", 
+    "site_label", "org_img_name", "software"]
+}

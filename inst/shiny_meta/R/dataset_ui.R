@@ -92,12 +92,18 @@ dataset_ui <- function(id) {
                            "Select a license for the dataset",
                            choices = c("CC BY 4.0", "CC BY-SA 4.0", "CC BY-NC 4.0",
                                        "CC BY-NC-SA 4.0", "CC BY-ND 4.0", "CC BY-NC-ND 4.0",
-                                       "CCO 1.0"),
-                           selected = "CC BY 4.0",
-                           options = list(create = TRUE)),
+                                       "CC0 1.0", "other"),
+                           selected = character(0),
+                           options = list(placeholder = "Select a license")),
             shiny::span("CC licenses are preferred (cf. ",
                  shiny::tags$a("Creative Commons License Chooser", href="https://chooser-beta.creativecommons.org/", target='_blank'),
-                 "for more information) but a different license option can be added if required.")
+                 "for more information)."),
+            shiny::conditionalPanel(
+              condition = "input.ds_license == 'other'",
+              shiny::span(shiny::tags$i(
+                "For a different license, please contact TRIA with the license name and ",
+                "its full text or a persistent URL.")),
+              ns = shiny::NS(id))
           )
         ),
         bslib::layout_column_wrap(
@@ -109,8 +115,9 @@ dataset_ui <- function(id) {
             condition = "input.ds_access == 'restricted'",
             shiny::dateInput(ns("embargoed_until"),
                       "Select an embargo date",
-                      value = Sys.Date() + 365),
-            shiny::span("After this date, the dataset will become publically available under the selected license."),
+                      value = NA),
+            shiny::span(shiny::tags$i("For embargoed datasets, only the metadata will be accessible via TRIA while the data remain restricted (\"All rights reserved\"). ",
+                        "The selected license applies once you lift the embargo and the data become open access; leave it empty if not yet decided.")),
             ns=shiny::NS(id))
         ),
       ),

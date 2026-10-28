@@ -58,19 +58,18 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
           }
         }
 
-        if (shiny::isTruthy(ds_data$ds_license)) {
-          shiny::updateSelectizeInput(session, "ds_license", selected = ds_data$ds_license)
-        }
+        # licence and embargo date always updated, cleared if not in the file
+        shiny::updateSelectizeInput(
+          session, "ds_license",
+          selected = if (shiny::isTruthy(ds_data$ds_license)) ds_data$ds_license else ""
+        )
 
-        if (shiny::isTruthy(ds_data$embargoed_until)) {
-          if (ds_data$ds_access == "restricted") {
-            shiny::updateDateInput(
-              session, "embargoed_until", value = as.Date(ds_data$embargoed_until)
-            )
-          } else {
-            cli::cli_warn("Embargo date applies only to restricted datasets.")
-          }
+        embargo <- if (shiny::isTruthy(ds_data$embargoed_until)) as.Date(ds_data$embargoed_until) else NA
+        if (!is.na(embargo) && !identical(ds_data$ds_access, "restricted")) {
+          cli::cli_warn("Embargo date applies only to restricted datasets.")
+          embargo <- NA
         }
+        shiny::updateDateInput(session, "embargoed_until", value = embargo)
 
         if (shiny::isTruthy(ds_data$description)) {
           shiny::updateTextAreaInput(
@@ -106,6 +105,12 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
       "description",
       shinyvalidate::sv_regex("\\[ADD INFO", "Complete or adapt the description template", invert = TRUE)
     )
+    iv_gen$add_rule("ds_license", function(value) {
+      if (input$ds_access == "public" && !shiny::isTruthy(value)) "Required for public access"
+    })
+    iv_gen$add_rule("embargoed_until", function(value) {
+      if (input$ds_access == "restricted" && !shiny::isTruthy(value)) "Required for restricted access"
+    })
 
     iv_gen$enable()
 
@@ -672,7 +677,8 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
         description = input$description,
         ds_access = input$ds_access,
         ds_license = input$ds_license,
-        embargoed_until = if (input$ds_access == "restricted") input$embargoed_until else "",
+        embargoed_until = if (input$ds_access == "restricted" &&
+                                shiny::isTruthy(input$embargoed_until)) input$embargoed_until else "",
         acknowledgements = input$acknowledgements
       )
     })
@@ -683,8 +689,7 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
           dataset = ds_data_out,
           authors = author_data_export,
           funding = funding_data_export,
-          related = relres_data_out,
-          resources = shiny::reactive(dataset_tbls_in()$resources)
+          related = relres_data_out
         ),
         val_check = validation_checks
       )

@@ -1,4 +1,4 @@
-#' Update QWA metadata for selected images
+#' Update a QWAimages object for selected images
 #'
 #' Re-reads the settings/metadata files for the given images and replaces the
 #' corresponding rows in the existing [QWAimages] object. Useful when source
@@ -9,20 +9,16 @@
 #'   settings/metadata files are re-read; must be a subset of `meta$image_label`
 #' @param settings_date_orders Character; date order string(s) passed to
 #'   [lubridate::parse_date_time()] to parse the `meas_created_at` field for
-#'   ROXAS classic.
-#' @param settings_date_tz Optional timezone passed to
-#'   [lubridate::parse_date_time()] to parse the `meas_created_at` field. 
-#'   Defaults to system timezone.
+#'   ROXAS classic. Required for ROXAS classic, ignored for ROXAS AI.
+#'   Timestamps are kept as local clock time (stored as UTC).
 #' @returns An updated [QWAimages] object
 #' @export
 update_QWAimages <- function(meta, imgs_to_reread,
-                             settings_date_orders = NULL,
-                             settings_date_tz = Sys.timezone()
-                            ) {
-  checkmate::assert_class(meta, "QWAimages")
+                             settings_date_orders = NULL) {
+  validate_QWAimages(meta)
   checkmate::assert_subset(imgs_to_reread, meta$image_label)
 
-  roxas_version <- attr(meta, "roxas_version") # TODO: check roxas version ok?
+  roxas_version <- attr(meta, "roxas_version")
 
   # read in settings files again
   df_settings_new <- collect_settings_data(meta |>
@@ -32,8 +28,7 @@ update_QWAimages <- function(meta, imgs_to_reread,
   if (roxas_version == "roxas") {
     df_settings_new$meas_created_at <- df_settings_new$meas_created_at |> 
       lubridate::parse_date_time(
-        orders = settings_date_orders, # cf. lubridate::parse_date_time
-        tz = settings_date_tz)
+        orders = settings_date_orders) # cf. lubridate::parse_date_time
   }
 
   # UPDATE THE DATAFRAME WITH THE NEW SETTINGS INFO
@@ -72,15 +67,15 @@ update_QWAimages <- function(meta, imgs_to_reread,
 #' @param reset_manual_flags Logical; only applies to `imgs_to_reread`. If
 #'   `TRUE` (default), any manual edits made via the flags Shiny app are reset.
 #'   If `FALSE` (i.e. assuming the dating was not affected by the re-analysis),
-#'   the manual flag and comment columns are kept, and so is `exclude_issues`
+#'   the columns set in the flags app (`colType` `"qc_input"`) are kept, and so is `exclude_issues`
 #'   where it differs from the value derived from the old automatic flags.
 #' @returns An updated [QWAdata] object
 #' @export
 update_QWAdata <- function(x, meta, imgs_to_reread = NULL,
                            exclude_mode = NULL,
                            reset_manual_flags = TRUE) {
-  checkmate::assert_class(x, "QWAdata")
-  checkmate::assert_class(meta, "QWAimages")
+  validate_QWAdata(x)
+  validate_QWAimages(meta)
   checkmate::assert_subset(imgs_to_reread, meta$image_label)
   checkmate::assert_flag(reset_manual_flags)
   mode <- resolve_exclude_mode(exclude_mode)
@@ -136,12 +131,14 @@ update_QWAdata <- function(x, meta, imgs_to_reread = NULL,
     x_new <- collect_raw_data(meta |>
       dplyr::filter(.data$image_label %in% imgs_read))
 
-    # recalculate only the measures that already exist in x
-    meas_all <- c("tca", "rwd2", "dcwt", "cwtall_adj",
-                  "cdrad", "cdtan", "cdratio", "sector100", "ew_lw",
-                  "eww", "lww")
-    meas_to_recalc <- intersect(meas_all, c(names(x$cells), names(x$rings)))
-    x_new <- complete_measures(x_new, only = meas_to_recalc)
+    # complete the new images, keeping only the measures that exist in x
+    # (e.g. no derived columns in data written with keep_derived = FALSE)
+    x_new <- complete_measures(x_new)
+    meas_all <- c(schema_cols("cells", c("derived", "estimate")),
+                  schema_cols("rings", c("derived", "estimate")))
+    meas_drop <- setdiff(meas_all, c(names(x$cells), names(x$rings)))
+    x_new$cells <- x_new$cells[setdiff(names(x_new$cells), meas_drop)]
+    x_new$rings <- x_new$rings[setdiff(names(x_new$rings), meas_drop)]
 
     # carry over manual values for re-read images (new images have none)
     if (!reset_manual_flags && length(manual_cols) > 0) {
@@ -198,16 +195,20 @@ update_QWAdata <- function(x, meta, imgs_to_reread = NULL,
 #' hierarchical tables (`$sites`, `$trees`, `$woodpieces`, `$slides`)
 #' accordingly:
 #' - the hierarchy columns and counts (`n_trees`, `n_woodpieces`, `n_slides`,
-#'   `n_images`) are derived from `images`,
+#'   `n_images`) are derived from `images`; `species_code` is kept from `x`
+#'   where it is `NA` in `images`,
 #' - all other columns are kept from `x`,
 #' - rows for IDs new in `images` are added (other columns `NA`),
 #' - rows for IDs no longer in `images` are removed.
 #'
 #' Tables that are `NULL` in `x` remain `NULL` (see [complete_QWAmetadata()]).
-#' The manually set image columns (e.g. `only_ew`, `img_comment` from the
-#' metadata app, `comment_handled` from the flags app) are filled from
+#' The image columns set in the apps (`colType` `"meta_input"`, e.g. `only_ew`,
+#' `img_comment` from the metadata app, and `"qc_input"`, e.g.
+#' `comment_handled` from the flags app) are filled from
 #' `x$images` where they are missing or `NA` in `images`, e.g. after rebuilding
 #' it with [build_QWAimages()].
+#'
+#' Submission files only; TRIA dataset files are not edited.
 #'
 #' @param x a [QWAmetadata] object
 #' @param images a [QWAimages] object; the complete set of images of the
@@ -216,12 +217,13 @@ update_QWAdata <- function(x, meta, imgs_to_reread = NULL,
 #' @seealso [update_QWAimages()], [update_QWAdata()], [check_QWAmetadata()]
 #' @export
 update_QWAmetadata <- function(x, images) {
-  checkmate::assert_class(x, "QWAmetadata")
-  checkmate::assert_class(images, "QWAimages")
+  validate_QWAmetadata(x)
+  assert_submission(x, "update_QWAmetadata")
+  validate_QWAimages(images)
   rv <- attr(images, "roxas_version")
 
-  # images: fill manually set columns from x$images where missing or NA
-  app_cols <- intersect(schema_cols(rv, "manual"), names(x$images))
+  # images: fill columns set in the apps from x$images where missing or NA
+  app_cols <- intersect(schema_cols(rv, c("meta_input", "qc_input")), names(x$images))
   images <- tibble::as_tibble(images)
   for (col in setdiff(app_cols, names(images))) {
     images[[col]] <- x$images[[col]][NA_integer_] # typed NA
@@ -247,11 +249,16 @@ update_QWAmetadata <- function(x, images) {
         "!" = if (length(ids_del) > 0) "{.field {tbl}}: removing {length(ids_del)} row{?s}: {.val {ids_del}}"
       ))
     }
-    x[[tbl]] <- df_counts |>
+    df_new <- df_counts |>
       dplyr::left_join(
         df_old |> dplyr::select(-dplyr::any_of(setdiff(names(df_counts), h$id_col))),
-        by = h$id_col) |>
-      dplyr::select(dplyr::all_of(names(df_old)))
+        by = h$id_col)
+    # species_code is optional in images (e.g. not in the filenames): keep x's value
+    if ("species_code" %in% names(df_counts)) {
+      sp_old <- df_old$species_code[match(df_new[[h$id_col]], df_old[[h$id_col]])]
+      df_new$species_code <- dplyr::coalesce(df_new$species_code, sp_old)
+    }
+    x[[tbl]] <- dplyr::select(df_new, dplyr::all_of(names(df_old)))
   }
 
   x$images <- images

@@ -43,17 +43,18 @@ df_structure <- extract_data_structure(files, pattern)
 # ------------------------------------------------------------------------------
 # Step 3: Collect metadata from ROXAS files into QWAimages object
 # ------------------------------------------------------------------------------
-# The ROXAS version is auto-detected from the settings file names, and for
-# ROXAS data the image EXIF metadata is read from df_structure$fname_image.
+# The ROXAS version is auto-detected from the settings file names, and the
+# image files in df_structure$fname_image are read for their EXIF metadata
+# (ROXAS) or their actual file size (ROXAS AI).
 df_settings <- collect_settings_data(df_structure)
 
 # for ROXAS only (ROXAS AI has standardised timestamps, so already converted)
+# timestamps are kept as local clock time (stored as UTC, the default)
 settings_date_orders <- c("%d.%m.%Y %H:%M:%S", "%d/%m/%Y %H:%M") # adjust to your locale
 if (roxas_version == "roxas") {
   meas_created_at_converted <- lubridate::parse_date_time(
     df_settings$meas_created_at,
-    orders = settings_date_orders,
-    tz = Sys.timezone()
+    orders = settings_date_orders
   )
   df_settings$meas_created_at <- meas_created_at_converted
 }
@@ -62,10 +63,10 @@ rxs_images <- build_QWAimages(df_structure, df_settings)
 rm(df_structure, df_settings)
 
 # To save the QWAimages object to a file for later, use:
-# write_QWAimages(rxs_images, "path/to/output_data/example_dataset_QWAimages.csv")
+# write_QWAimages(rxs_images, "path/to/output_data/example_dataset_QWAimages.csv.gz")
 
 # and read it in again
-# rxs_images <- read_QWAimages("path/to/output_data/example_dataset_QWAimages.csv")
+# rxs_images <- read_QWAimages("path/to/output_data/example_dataset_QWAimages.csv.gz")
 
 # ------------------------------------------------------------------------------
 # Step 3b: Additional metadata (for TRIA submission)
@@ -82,7 +83,7 @@ launch_metadata_app()
 
 # After exporting the completed QWAmetadata and closing the Shiny app, you may
 # read it in your R session with (not required for the steps below):
-# QWAmeta <- read_QWAmetadata("path/to/output_data/example_dataset_QWAmetadata.json")
+# QWA_meta <- read_QWAmetadata("path/to/output_data/example_dataset_QWAmetadata.json")
 
 # ------------------------------------------------------------------------------
 # Step 4: Read and clean the measurement data
@@ -94,7 +95,7 @@ launch_metadata_app()
 
 QWA_data <- collect_raw_data(rxs_images)
 # or if loading full metadata from json after the Shiny app export:
-# QWA_data <- collect_raw_data(QWAmeta$images)
+# QWA_data <- collect_raw_data(QWA_meta$images)
 
 # Add additional cell and ring measures, and ring quality flags
 # for duplicate rings (overlapping years from separate images), radially
@@ -124,7 +125,7 @@ write_QWAdata(QWA_data, dir = path_out, dataset_name = dataset_name)
 # QWArings .csv files with the preprocessed measurements data.
 # The following optional steps can be completed to provide more in-depth
 # quality assessment and discrete features information of the annual rings (Step 6),
-# and to compile a list of additional resources (e.g. original and/or annotated
+# and to compile a list of supplementary files (e.g. original and/or annotated
 # image files, un-cropped images of slides, .rwl files of the reference series, ...)
 # that you want to include with your submission (Step 7).
 # ------------------------------------------------------------------------------
@@ -147,6 +148,11 @@ prf_sector <- calculate_sector_profiles(QWA_data,
 #                                     sel_cell_params = c("la", "cwttan"),
 #                                     quant_probs = c(0.1, 0.5, 0.9))
 
+# After flagging rings (Step 6b), recalculate the profiles with
+# `apply_exclusions = TRUE` to remove the cells of excluded rings, and
+# `tissue = "affected"` to remove only the affected earlywood/latewood cells
+# (see ?calculate_sector_profiles).
+
 # QWAprofile objects can be written to and read from (compressed) .csv files:
 # write_QWAprofile(prf_sector, "path/to/output_data/example_dataset_QWAprofile_sector5.csv.gz")
 # prf_sector <- read_QWAprofile("path/to/output_data/example_dataset_QWAprofile_sector5.csv.gz")
@@ -167,7 +173,9 @@ prf_sector <- calculate_sector_profiles(QWA_data,
 # image-level comments if available and to allow you to open the image files under
 # $fname_image from within the app).
 # The output (saved to file or fed back to the current R session) is the
-# QWAdata$rings component with additional columns capturing the provided flags.
+# QWAdata$rings component with additional columns for the flags, `comment` and
+# `affected_tissue`. If image-level comments were reviewed, the app also saves
+# the image metadata with the `comment_handled` column.
 launch_flags_app()
 
 # To read in and update the edited rings data from file or a data frame in the env:
@@ -175,7 +183,10 @@ launch_flags_app()
 #   file_rings = "path/to/output_data/example_dataset_edited_QWArings.csv")$rings
 # QWA_data$rings <- df_rings_edited
 # Save the edits to files:
-# write_QWAdata(QWA_data, dir = path_out, dataset_name = dataset_name)
+# write_QWAdata(QWA_data, dir = path_out, dataset_name = dataset_name, overwrite = TRUE)
+
+# The ring measurements without excluded rings, for further analyses:
+# df_meas <- extract_ring_measures(QWA_data$rings)
 
 # ------------------------------------------------------------------------------
 # Step 6c: Iteratively updating images
@@ -196,6 +207,9 @@ launch_flags_app()
 rxs_images <- update_QWAimages(rxs_images,
   imgs_to_reread = c("IMAGELABEL1", "IMAGELABEL2"),
   settings_date_orders = settings_date_orders) # same as defined in Step 3
+# If a QWAmetadata object exists, update it as well (keeps the values entered
+# in the metadata app):
+# QWA_meta <- update_QWAmetadata(QWA_meta, rxs_images)
 
 # Third, update the QWAdata object. For the `imgs_to_reread`, the raw cells
 # and rings data files are read again, any derived measures are recalculated,
@@ -234,24 +248,46 @@ QWA_data <- update_QWAdata(QWA_data, meta = rxs_images,
 # QWA_data <- combine_QWAdata(QWA_data_1, QWA_data_2)
 # QWA_meta <- combine_QWAmetadata(QWA_meta_1, QWA_meta_2)
 
+# After any of these updates, save the data again:
+# write_QWAdata(QWA_data, dir = path_out, dataset_name = dataset_name, overwrite = TRUE)
 
 # ------------------------------------------------------------------------------
-# Step 7: Compile resources information
+# Step 7: Compile supplementary files (optional)
 # ------------------------------------------------------------------------------
 # A TRIA submission must comprise at least the QWAmetadata .json and the
 # QWAdata cells and rings .csv files. If you would like to provide additional
 # (supplementary) files with your submission - e.g. original / annotated images,
 # raw ROXAS output, reference series - these are listed in a standalone
-# resources manifest, submitted alongside a zip of the files themselves.
+# supplementary CSV, submitted alongside a zip of the files themselves.
 # compile_supplementary() scans a directory (including nested subfolders) and
 # returns a table with one row per file, its inferred type, hierarchy level,
-# and a readiness status ("ok", "review", or "ignore"; see
-# vignette("supplementary")). The console reports whether the supplementary manifest
-# is ready to submit, or which files still need attention.
-# See vignette("supplementary") for details.
+# and a readiness status ("ok", "review", or "ignore"). The console reports
+# whether the supplementary files are ready to submit, or which files still
+# need attention. See vignette("supplementary") for details.
 
-QWAmeta <- read_QWAmetadata("path/to/output_data/example_dataset_QWAmetadata.json")
-suppl_res <- compile_supplementary("path/to/submission_files", rxs_images = QWAmeta$images)
+suppl_res <- compile_supplementary("path/to/supplementary_files", rxs_images = rxs_images)
+# or rxs_images = QWA_meta$images
 
 suppl_res # review status "review" rows, make edits where needed, then (re-)compile
-vroom::vroom_write(suppl_res, "path/to/output_data/example_dataset_supplementary_files.csv")
+vroom::vroom_write(suppl_res, "path/to/output_data/example_dataset_supplementary_files.csv",
+                   delim = ",", na = "")
+
+# ------------------------------------------------------------------------------
+# Step 8: Check and submit your data
+# ------------------------------------------------------------------------------
+# Before submitting, check the files as they will be submitted (after the
+# metadata app and any edits in the flags app). Each check warns about issues
+# the TRIA admins would ask you to fix and returns TRUE if none were found;
+# with strict = TRUE, it aborts on the first issue instead.
+QWA_meta <- read_QWAmetadata("path/to/output_data/example_dataset_QWAmetadata.json")
+QWA_data <- read_QWAdata(dir = path_out, dataset_name = dataset_name)
+
+check_QWAmetadata(QWA_meta) # includes the images, see ?check_QWAimages
+check_QWAdata(QWA_data)
+check_consistency(meta = QWA_meta, data = QWA_data)
+# if submitting supplementary files (Step 7), against the final zip:
+# check_supplementary(suppl_res, "path/to/supplementary_data.zip",
+#                     rxs_images = QWA_meta$images)
+
+# Then email tria@wsl.ch with a link to your files; see vignette("submission")
+# for what to upload and what happens to your files once we receive them.

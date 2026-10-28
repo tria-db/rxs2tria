@@ -7,7 +7,7 @@
 #' The extracted site, species, tree, woodpiece, slide, image identifiers are
 #' joined by underscores to derive unique codes for each level of the data
 #' structure for the subsequent calculations
-#' (e.g. `tree_code = {site}_{species}_{tree}`).
+#' (e.g. `tree_label = {site}_{species}_{tree}`).
 #'
 #' Any custom labeling pattern may be used, provided that it allows to
 #' uniquely identify each image and is consistently applied across all files.
@@ -31,8 +31,9 @@
 #' the returned structure data frame.
 #'
 #' @param filenames The character vector of file names or prefixes.
-#' @param pattern A regex with named groups (site, species, tree, slide and/or
-#'   image) to describe the labeling pattern of the `filenames`.
+#' @param pattern A regex with named groups (`site`, `species`, `tree`,
+#'   `woodpiece`, `slide` and/or `image`) to describe the labelling pattern of
+#'   the `filenames`.
 #' @param site_label Optional site label to be used if it is not part of the
 #'   `pattern`, only if all images are from the same site.
 #' @param species_code Optional species code to be used if it is not part of 

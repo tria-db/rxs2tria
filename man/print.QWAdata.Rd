@@ -21,8 +21,9 @@
 }
 \description{
 Displays a compact overview of a \link{QWAdata} object: which components are
-present, the spatial and temporal coverage of the data, and (if the data
-have been validated) a summary of ring quality flags.
+present, the spatial and temporal coverage of the data, and (if the flag
+columns are present, see \code{\link[=complete_QWAdata]{complete_QWAdata()}}) a summary of the automatic
+ring flags.
 }
 \seealso{
 \code{\link[=QWAdata]{QWAdata()}}, \code{\link[=summary.QWAdata]{summary.QWAdata()}}

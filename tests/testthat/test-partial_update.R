@@ -16,7 +16,7 @@ rings_old <- tibble::tribble(
 )
 cells_old <- rings_old |>
   dplyr::distinct(image_label, year) |>
-  dplyr::mutate(la = 1)
+  dplyr::mutate(xpix = 1, ypix = 1, la = 1)
 x_old <- new_QWAdata(cells = cells_old, rings = rings_old)
 
 # Current raw data on disk (as returned by the mocked collect_raw_data):
@@ -34,12 +34,13 @@ rings_disk <- tibble::tribble(
 )
 cells_disk <- rings_disk |>
   dplyr::distinct(image_label, year) |>
-  dplyr::mutate(la = 2)
+  dplyr::mutate(xpix = 1, ypix = 1, la = 2)
 
 make_meta <- function(labels) {
   df <- dplyr::bind_rows(rings_old, rings_disk) |>
     dplyr::distinct(woodpiece_label, slide_label, image_label) |>
-    dplyr::filter(image_label %in% labels)
+    dplyr::filter(image_label %in% labels) |>
+    dplyr::mutate(tree_label = woodpiece_label, site_label = woodpiece_label, software = "roxas")
   new_QWAimages(as.data.frame(df), "roxas")
 }
 
@@ -52,7 +53,7 @@ local_update_mocks <- function(env = parent.frame()) {
         cells = dplyr::filter(cells_disk, image_label %in% df_meta$image_label),
         rings = dplyr::filter(rings_disk, image_label %in% df_meta$image_label))
     },
-    complete_measures = function(QWA_data, only = NULL) QWA_data,
+    complete_measures = function(QWA_data) QWA_data,
     complete_flags = function(x, meta, exclude_mode = NULL) {
       mode <- resolve_exclude_mode(exclude_mode)
       x$rings <- x$rings |>
@@ -163,6 +164,24 @@ test_that("without flag columns, images are updated and no flags are added", {
   expect_false(any(c("duplicate_ring", "exclude_dupl", "exclude_issues") %in% names(x$rings)))
 })
 
+test_that("new images get only the measure columns of x", {
+  local_update_mocks()
+  testthat::local_mocked_bindings(complete_measures = function(QWA_data) {
+    QWA_data$cells <- dplyr::mutate(QWA_data$cells, tca = 1, sector100 = 1)
+    QWA_data$rings <- dplyr::mutate(QWA_data$rings, eww = 1)
+    QWA_data
+  })
+  # x with tca only (e.g. other derived columns dropped on write)
+  x_tca <- x_old
+  x_tca$cells$tca <- 0
+  meta <- make_meta(c("WP1_SL1_IMG1", "WP1_SL1_IMG2", "WP1_SL2_IMG4"))
+
+  x <- suppressMessages(update_QWAdata(x_tca, meta))
+
+  expect_false(any(c("sector100", "eww") %in% c(names(x$cells), names(x$rings))))
+  expect_equal(x$cells$tca[x$cells$image_label == "WP1_SL2_IMG4"], c(1, 1))
+})
+
 test_that("removing an image recalculates the duplicate flags of its overlaps", {
   local_update_mocks()
   meta <- make_meta(c("WP1_SL1_IMG2", "WP2_SL1_IMG3"))
@@ -183,13 +202,13 @@ test_that("update_QWAimages replaces the settings of the re-read images only", {
                      spatial_resolution = 2)
     })
   meta <- new_QWAimages(data.frame(
-    image_label = c("IMG1", "IMG2"),
+    image_label = c("IMG1", "IMG2"), slide_label = "SL1", woodpiece_label = "WP1",
+    tree_label = "T1", site_label = "S1", software = "roxas",
     fname_settings = c("IMG1_settings.txt", "IMG2_settings.txt"),
     meas_created_at = as.POSIXct(c("2020-01-01 10:00:00", "2020-01-01 11:00:00"), tz = "UTC"),
     spatial_resolution = 1), "roxas")
 
-  m <- update_QWAimages(meta, "IMG1", settings_date_orders = "dmY HMS",
-                        settings_date_tz = "UTC")
+  m <- update_QWAimages(meta, "IMG1", settings_date_orders = "dmY HMS")
 
   expect_s3_class(m, "QWAimages")
   expect_equal(attr(m, "roxas_version"), "roxas")
@@ -204,7 +223,8 @@ imgs_meta <- tibble::tribble(
   "S1", "PCAB", "S1_T1", "S1_T1_WP1", "S1_T1_WP1_SL1", "S1_T1_WP1_SL1_IMG1", TRUE,  "blurry",
   "S1", "PCAB", "S1_T1", "S1_T1_WP1", "S1_T1_WP1_SL1", "S1_T1_WP1_SL1_IMG2", FALSE, NA,
   "S2", "PCAB", "S2_T1", "S2_T1_WP1", "S2_T1_WP1_SL1", "S2_T1_WP1_SL1_IMG1", FALSE, NA,
-)
+) |>
+  dplyr::mutate(software = "roxas")
 # completed hierarchical tables with user-entered metadata
 meta_old <- new_QWAmetadata(
   sites = tibble::tibble(site_label = c("S1", "S2"), n_trees = 1L, site_name = c("Site 1", "Site 2")),
@@ -226,8 +246,8 @@ expect_hierarchy_ok <- function(m) {
 
 test_that("appended images add rows and update counts, keeping metadata", {
   img_new <- tibble::tribble(
-    ~site_label, ~species_code, ~tree_label, ~woodpiece_label, ~slide_label, ~image_label,
-    "S1", "PCAB", "S1_T1", "S1_T1_WP2", "S1_T1_WP2_SL1", "S1_T1_WP2_SL1_IMG1",
+    ~site_label, ~species_code, ~tree_label, ~woodpiece_label, ~slide_label, ~image_label, ~software,
+    "S1", "PCAB", "S1_T1", "S1_T1_WP2", "S1_T1_WP2_SL1", "S1_T1_WP2_SL1_IMG1", "roxas",
   )
   images <- new_QWAimages(dplyr::bind_rows(imgs_meta, img_new), "roxas")
 
@@ -285,6 +305,15 @@ test_that("removed images remove rows from all hierarchy levels", {
   expect_hierarchy_ok(m)
   expect_equal(m$sites$site_label, "S1")
   expect_equal(m$slides$slide_label, "S1_T1_WP1_SL1")
+})
+
+test_that("species_code is kept where it is NA in the images", {
+  images <- new_QWAimages(dplyr::mutate(imgs_meta, species_code = NA_character_), "roxas")
+
+  m <- update_QWAmetadata(meta_old, images)
+
+  expect_equal(m$trees$species_code, meta_old$trees$species_code)
+  expect_hierarchy_ok(m)
 })
 
 test_that("NULL hierarchical tables stay NULL", {

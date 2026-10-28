@@ -63,21 +63,6 @@ resolve_roxas_version <- function(x, rv_param = NULL) {
   rv
 }
 
-#' @noRd
-# check if roxas version can be inferred and matches attr
-check_roxas_version <- function(x) {
-  rv_attr <- attr(x, "roxas_version")
-  checkmate::assert_choice(rv_attr, c("roxas", "roxas_ai"))
-  rv_infer <- infer_rv_from_data(x)
-  if (!is.null(rv_infer) && rv_infer != rv_attr)
-    cli::cli_warn(c(
-      "!" = "{.arg roxas_version} attribute ({.val {rv_attr}}) does not match
-             the {.var software} column ({.val {rv_infer}}).",
-      "i" = "Check your data for mixed or incorrect software values."
-    ))
-  invisible(TRUE)
-}
-
 # Internal S3 constructor ----
 #' @noRd
 new_QWAimages <- function(data, roxas_version) {
@@ -88,6 +73,32 @@ new_QWAimages <- function(data, roxas_version) {
     class = c("QWAimages", class(data)),
     roxas_version = roxas_version
   )
+}
+
+# Internal S3 validator ----
+#' Abort if a QWAimages object violates the class invariants
+#'
+#' Valid `roxas_version` attribute, equal to `$software` in all rows; structure
+#' labels present, character and not `NA`; `image_label` unique.
+#' @returns `x`, invisibly.
+#' @noRd
+validate_QWAimages <- function(x) {
+  checkmate::assert_class(x, c("QWAimages", "data.frame"))
+  rv <- attr(x, "roxas_version")
+  if (!checkmate::test_choice(rv, c("roxas", "roxas_ai"))) {
+    cli::cli_abort(c(
+      "x" = "{.cls QWAimages}: invalid {.arg roxas_version} attribute {.val {rv}}.",
+      "i" = "Rebuild the object with {.fn QWAimages}."
+    ))
+  }
+  validate_keys(x, key_props(rv), "QWAimages", unique_by = "image_label")
+  if (!"software" %in% names(x) || !all(x$software %in% rv)) {
+    cli::cli_abort(c(
+      "x" = "{.cls QWAimages}: {.field software} must be {.val {rv}} (the {.arg roxas_version} attribute) in all rows.",
+      "i" = "Rebuild the object with {.fn QWAimages}."
+    ))
+  }
+  invisible(x)
 }
 
 # Public constructor -----
@@ -115,27 +126,25 @@ new_QWAimages <- function(data, roxas_version) {
 #' @export
 QWAimages <- function(data, roxas_version = NULL) {
   roxas_version <- resolve_roxas_version(data, rv_param = roxas_version)
-  # if we can resolve ok, then make sure that the column software exists (also forces lower_case)
-  rv_infer <- infer_rv_from_data(data)
-  if (is.null(rv_infer) || rv_infer == roxas_version) data$software <- roxas_version
 
   # prep data:
   data <- tibble::as_tibble(data, .name_repair = janitor::make_clean_names)
 
-  schema_path <- system.file(schema_rel_path(roxas_version), package = "rxs2tria")
-  schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
-  tbl_schema <- resolve_schema(schema_obj, schema_path)
-  tbl_props <- get_tbl_props(tbl_schema)
+  # software always equals roxas_version (case changes are not reported)
+  n_changed <- sum(!is.na(data$software) & tolower(data$software) != roxas_version)
+  if (n_changed > 0) {
+    cli::cli_warn(c("!" = "{.field software} set to {.val {roxas_version}} in {n_changed} row{?s}."))
+  }
+  data$software <- roxas_version
 
   # align to schema: add missing req cols, force correct type, remove extra cols
   # warn if this causes changes to data
-  data <- align_to_schema(data, tbl_props, roxas_version)
+  data <- align_to_schema(data, schema_tbl_props(roxas_version), roxas_version)
 
-  # minimal validation checks: warn if structure invalid
-  check_structure(data, warn_only = TRUE)
- 
-  # construct object:
-  new_QWAimages(data, roxas_version)
+  x <- validate_QWAimages(new_QWAimages(data, roxas_version))
+  # warn if label prefixes do not match
+  check_structure(x)
+  x
 }
 
 # Methods (general and specific) ------
@@ -182,68 +191,92 @@ summary.QWAimages <- function(object, ...) {
   invisible(object)
 }
 
-#' Validate a QWAimages object
+#' Check a QWAimages object
 #'
-#' Runs a series of checks on a [QWAimages] object and warns about any issues
-#' found. Checks include: compliance with the base JSON schema, consistency of
-#' the `roxas_version` attribute with the `$software` column, missing optional
-#' columns, and invalid data structure.
+#' Checks a [QWAimages] object before submission; also run by
+#' [check_QWAmetadata()]. Aborts if the object is not a valid `QWAimages`
+#' (structure labels missing or `NA`, duplicate `image_label`s, `$software`
+#' not matching the `roxas_version` attribute). Warns (or, with
+#' `strict = TRUE`, aborts) on:
+#' - values violating the JSON schema of the given stage;
+#' - an unsound data structure: labels not starting with their parent label,
+#'   or a label in more than one parent;
+#' - `outmost_year` in the future;
+#' - missing `spatial_resolution`.
+#'
+#' Also informs about missing optional columns and empty values, except for
+#' the source file names (`fname_*`, only needed during processing) and the
+#' often incomplete EXIF data (`img_created_at`, `img_software`).
 #'
 #' @param x A [QWAimages] object.
-#' @returns `TRUE`, invisibly. Warnings are issued for any problems found;
-#'   an error is thrown if the object structure is invalid.
-#' @seealso [QWAimages()], [check_QWAmetadata()]
+#' @param submission Check against the schema of submission files (`TRUE`)
+#'   or TRIA dataset files (`FALSE`)? Set by [check_QWAmetadata()].
+#' @param strict If `TRUE`, abort on the first issue instead of warning.
+#' @returns `TRUE` if no issue was found, `FALSE` otherwise (invisibly).
+#' @seealso [QWAimages()], [check_QWAmetadata()], [check_consistency()]
 #' @export
-check_QWAimages <- function(x) {
-  checkmate::assert_class(x, c("QWAimages", "data.frame"))
+check_QWAimages <- function(x, submission = TRUE, strict = FALSE) {
+  validate_QWAimages(x)
+  checkmate::assert_flag(submission)
+  checkmate::assert_flag(strict)
   roxas_version <- attr(x, "roxas_version")
-  checkmate::assert_choice(roxas_version, c("roxas","roxas_ai"))
 
-  schema_path <- system.file(schema_rel_path(roxas_version), package = "rxs2tria")
+  schema_path <- system.file(schema_rel_path(roxas_version, submission), package = "rxs2tria")
   schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
-  tbl_schema <- resolve_schema(schema_obj, schema_path)
-  tbl_props <- get_tbl_props(tbl_schema)
-  
-  # extended validation checks:
-  # compliance with base schema
-  check_schema(x, schema_obj, roxas_version, warn_only = TRUE, greedy = FALSE)
-  # warn if attr vs $software column mismatch
-  check_roxas_version(x)
-  # warn if missing optional columns
-  check_missing_opt(x, tbl_props, roxas_version)
+  tbl_props <- schema_tbl_props(roxas_version, submission)
 
-  checkmate::assert_character(x$image_label, unique = TRUE, any.missing = FALSE)
-  # check if structure invalid / labels start_with logic
-  check_structure(x, warn_only = TRUE)
+  ok <- c(
+    # compliance with the schema of the stage
+    check_schema(x, schema_obj, roxas_version, strict = strict, greedy = FALSE),
+    check_structure(x, strict),
+    check_spatial_resolution(x, strict)
+  )
 
-  # TODO: any additional checks?
-  # e.g.: check outmost_year is valid
+  # outmost_year not in the future
+  if ("outmost_year" %in% names(x)) {
+    current_year <- as.numeric(format(Sys.Date(), "%Y"))
+    future <- x$image_label[which(x$outmost_year > current_year)]
+    if (length(future) > 0) {
+      ok <- c(ok, report_issue(c(
+        "!" = "{.field outmost_year} in the future for {length(future)} image{?s}:",
+        cli_truncated_list(future)
+      ), strict))
+    }
+  }
 
-  cli::cli_inform(c("v" = "All checks completed."))
-  invisible(TRUE)
+  # information on missing optional columns and empty values; the source file
+  # names are only needed during processing, the image EXIF data is often
+  # incomplete
+  fname_cols <- grep("^fname_", names(tbl_props$properties), value = TRUE)
+  check_missing_opt(x, tbl_props, roxas_version, skip = fname_cols)
+  check_empty_cols(x, tbl_props, roxas_version,
+                   skip = c(fname_cols, "spatial_resolution", "img_created_at", "img_software"))
+
+  if (all(ok)) {
+    cli::cli_inform(c("v" = "{.cls QWAimages}: all checks passed."))
+  } else {
+    cli::cli_inform(c("x" = "{.cls QWAimages}: issues found, see warnings."))
+  }
+  invisible(all(ok))
 }
 
 
 #' Complete a QWAimages object
 #'
-#' Add any missing columns to a [QWAimages] object, including optional columns.
-#' New columns are intitialized as `NA`. 
+#' Add any missing columns to a [QWAimages] object, including optional columns,
+#' except the quality control columns set in the flags app (`colType`
+#' `"qc_input"`, e.g. `comment_handled`). New columns are initialised as `NA`.
 #'
 #' @param x A [QWAimages] object.
-#' @returns A [QWAimages] object extended with all possible columns.
+#' @returns A [QWAimages] object extended with all optional columns except
+#'   `qc_input` ones.
 #' @seealso [complete_QWAmetadata()], [QWAimages()]
 #' @export
 complete_QWAimages <- function(x) {
-  checkmate::assert_class(x, "QWAimages")
+  validate_QWAimages(x)
   roxas_version <- attr(x, "roxas_version")
-  checkmate::assert_choice(roxas_version, c("roxas","roxas_ai"))
 
-  schema_path <- system.file(schema_rel_path(roxas_version), package = "rxs2tria")
-  schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
-  tbl_schema <- resolve_schema(schema_obj, schema_path)
-  tbl_props <- get_tbl_props(tbl_schema)
-
-  df <- align_to_schema(x, tbl_props, roxas_version, add_opt = TRUE)
+  df <- align_to_schema(x, schema_tbl_props(roxas_version), roxas_version, add_opt = TRUE)
 
   new_QWAimages(df, roxas_version)
 }
@@ -258,21 +291,27 @@ complete_QWAimages <- function(x) {
 #'   Note that if you add an compression-related extension to the file name, 
 #'   vroom will automatically compress the output regardless of this parameter.
 #' @param overwrite Allow to overwrite existing files? (default `TRUE`).
+#' @param drop_empty If `TRUE` (default), optional columns set in the Shiny
+#'   apps (`colType` `"meta_input"` or `"qc_input"`, e.g. `img_comment`) that
+#'   are empty in all rows are not written.
 #' @returns The output file path, invisibly.
-#' @note The `roxas_version` attribute is not written to the CSV file. It is
-#'   re-derived from the `$software` column when the file is read back with
-#'   [read_QWAimages()].
+#' @note Empty values are written as empty fields. The `roxas_version`
+#'   attribute is not written to the CSV file. It is re-derived from the
+#'   `$software` column when the file is read back with [read_QWAimages()].
 #' @seealso [read_QWAimages()], [QWAimages]
 #' @export
-write_QWAimages <- function(x, file, compress = FALSE, overwrite = TRUE) {
-  checkmate::assert_class(x, "QWAimages")
+write_QWAimages <- function(x, file, compress = FALSE, overwrite = TRUE,
+                            drop_empty = TRUE) {
+  validate_QWAimages(x)
+  checkmate::assert_flag(drop_empty)
 
   # if compress, enforce .gz extension
   if (compress && fs::path_ext(file) != "gz")
     file <- paste0(file, ".gz")
   
   checkmate::assert_path_for_output(file, overwrite = overwrite)
-  vroom::vroom_write(x, file, delim = ",")
+  x_out <- prepare_write(x, attr(x, "roxas_version"), drop_empty)
+  vroom::vroom_write(x_out, file, delim = ",", na = "")
   cli::cli_inform(c("v" = "QWAimages written to {.file {file}}"))
   invisible(file)
 }

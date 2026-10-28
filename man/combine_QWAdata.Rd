@@ -15,7 +15,7 @@ A combined \link{QWAdata} object
 \description{
 Combines the cells and rings data of two \link{QWAdata} objects with distinct
 \code{image_label} values into one. Columns present in only one object are
-filled with \code{NA} (\code{FALSE} for logical ring columns).
+filled with \code{NA}; \code{NA} in logical ring columns is set to \code{FALSE}.
 }
 \details{
 If the ring flag columns are present (both objects must have them or

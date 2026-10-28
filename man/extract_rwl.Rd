@@ -47,9 +47,9 @@ ring width, \code{mrw}) or profile-level measurements at a given sector
 (aggregated cell parameters such as the 90th percentile lumen area,
 \code{la_q90}).
 
-Duplicate rings (\code{exclude_dupl}) and user-defined ring exclusions
+Duplicate rings (\code{exclude_dupl}) and rings flagged for exclusion
 (\code{exclude_issues}) are filtered out before constructing the final time
-series. These flag columns are read from \code{df_rings}, making it a required
+series; \code{NA} flags count as \code{FALSE}. These flag columns are read from \code{df_rings}, making it a required
 parameter, while \code{prf_data} (with the selected \code{sector}) is only required
 to extract a \code{param} from the profile data. With \code{tissue = "affected"},
 rings with \code{exclude_issues} and \code{affected_tissue} \code{"ew"} or \code{"lw"} are

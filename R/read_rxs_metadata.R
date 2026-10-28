@@ -133,8 +133,8 @@ build_QWAimages <- function(df_structure,
     df_structure$fname_settings,
     df_settings$fname_settings, na.ok = FALSE)
   # custom check of the hierarchy defined by the structure columns
-  checkmate::assert_character(df_structure$image_label, unique = TRUE)
-  check_structure(df_structure)
+  validate_keys(df_structure, key_props("images"), "df_structure", unique_by = "image_label")
+  check_structure(df_structure, strict = TRUE)
 
   # datetime columns must already be converted to POSIXct: ROXAS classic
   # timestamp formats are not parsed automatically further down and would
@@ -159,18 +159,17 @@ build_QWAimages <- function(df_structure,
   # auto-detect schema version from the software column
   rv <- resolve_roxas_version(df_rxsmeta)
 
-  # compliance with base schema
+  # compliance with the submission schema
   schema_path <- system.file(schema_rel_path(rv), package = "rxs2tria")
   schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
-  tbl_schema <- resolve_schema(schema_obj, schema_path)
-  tbl_props <- get_tbl_props(tbl_schema)
-  
+  tbl_props <- schema_tbl_props(rv)
+
   # align columns and types to schema (coerce with warnings)
   df_rxsmeta <- align_to_schema(df_rxsmeta, tbl_props, rv, add_opt = FALSE, mute_info = FALSE)
 
-  # validate against the base schema, but warn only. user may want to fix
+  # validate against the schema, but warn only. user may want to fix
   # things manually in the metadata app
-  check_schema(df_rxsmeta, schema_obj, rv, warn_only = TRUE, greedy = FALSE)
+  check_schema(df_rxsmeta, schema_obj, rv, greedy = FALSE)
 
   # TODO: check outmost_year is valid?
 
@@ -178,7 +177,9 @@ build_QWAimages <- function(df_structure,
     "Extracted available {rv_msg(rv)} metadata to {.var QWAimages} object."
   )
 
-  new_QWAimages(df_rxsmeta, roxas_version = rv)
+  x <- new_QWAimages(df_rxsmeta, roxas_version = rv)
+  validate_QWAimages(x)
+  x
 }
 
 #' Detect the ROXAS version from settings file names
@@ -378,18 +379,15 @@ collect_image_info <- function(files_images, batch_size = 50) {
 #'
 #' After collecting the raw settings info from multiple files, convert the 
 #' columns to their respective type.
-#' Note: Datetime columns are parsed separately by the callers, as they may
-#' require different formats.
+#' Datetime columns are parsed here, except `meas_created_at` of classic
+#' ROXAS (non-standard formats), which is converted by the user.
 #' @param df Data frame of combined raw settings columns.
 #' @param roxas_version Either `"roxas"` or `"roxas_ai"`.
 #' @returns The data frame with coerced column types.
 #' @noRd
 cast_settings_types <- function(df, roxas_version) {
 
-  schema_path <- system.file(schema_rel_path(roxas_version), package = "rxs2tria")
-  schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
-  tbl_schema <- resolve_schema(schema_obj, schema_path)
-  col_props <- get_tbl_props(tbl_schema)$properties
+  col_props <- schema_tbl_props(roxas_version)$properties
 
   int_cols <- col_props |> purrr::keep(function(x) x$type[1] == "integer") |> names()
   num_cols <- col_props |> purrr::keep(function(x) x$type[1] == "number") |> names()
@@ -407,7 +405,7 @@ cast_settings_types <- function(df, roxas_version) {
       # literal "NA" strings (e.g. unset reference_series) -> proper NA
       dplyr::across(dplyr::any_of(str_cols), ~ dplyr::na_if(.x, "NA")),
       dplyr::across(dplyr::any_of(num_cols), as.numeric),
-      dplyr::across(dplyr::any_of(int_cols), as.integer),
+      dplyr::across(dplyr::any_of(int_cols), as_whole_integer),
       dplyr::across(dplyr::any_of(datetime_cols), lubridate::ymd_hms),
     )
   df

@@ -21,7 +21,7 @@
 }
 \description{
 Displays a compact overview of a \link{QWAprofile} object: the profile type,
-the number of position bins, and the coverage (images, rings, year range).
+its dimensions, and the coverage (images, year range).
 }
 \seealso{
 \code{\link[=QWAprofile]{QWAprofile()}}

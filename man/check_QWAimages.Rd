@@ -2,23 +2,40 @@
 % Please edit documentation in R/QWAimages.R
 \name{check_QWAimages}
 \alias{check_QWAimages}
-\title{Validate a QWAimages object}
+\title{Check a QWAimages object}
 \usage{
-check_QWAimages(x)
+check_QWAimages(x, submission = TRUE, strict = FALSE)
 }
 \arguments{
 \item{x}{A \link{QWAimages} object.}
+
+\item{submission}{Check against the schema of submission files (\code{TRUE})
+or TRIA dataset files (\code{FALSE})? Set by \code{\link[=check_QWAmetadata]{check_QWAmetadata()}}.}
+
+\item{strict}{If \code{TRUE}, abort on the first issue instead of warning.}
 }
 \value{
-\code{TRUE}, invisibly. Warnings are issued for any problems found;
-an error is thrown if the object structure is invalid.
+\code{TRUE} if no issue was found, \code{FALSE} otherwise (invisibly).
 }
 \description{
-Runs a series of checks on a \link{QWAimages} object and warns about any issues
-found. Checks include: compliance with the base JSON schema, consistency of
-the \code{roxas_version} attribute with the \verb{$software} column, missing optional
-columns, and invalid data structure.
+Checks a \link{QWAimages} object before submission; also run by
+\code{\link[=check_QWAmetadata]{check_QWAmetadata()}}. Aborts if the object is not a valid \code{QWAimages}
+(structure labels missing or \code{NA}, duplicate \code{image_label}s, \verb{$software}
+not matching the \code{roxas_version} attribute). Warns (or, with
+\code{strict = TRUE}, aborts) on:
+\itemize{
+\item values violating the JSON schema of the given stage;
+\item an unsound data structure: labels not starting with their parent label,
+or a label in more than one parent;
+\item \code{outmost_year} in the future;
+\item missing \code{spatial_resolution}.
+}
+}
+\details{
+Also informs about missing optional columns and empty values, except for
+the source file names (\verb{fname_*}, only needed during processing) and the
+often incomplete EXIF data (\code{img_created_at}, \code{img_software}).
 }
 \seealso{
-\code{\link[=QWAimages]{QWAimages()}}, \code{\link[=check_QWAmetadata]{check_QWAmetadata()}}
+\code{\link[=QWAimages]{QWAimages()}}, \code{\link[=check_QWAmetadata]{check_QWAmetadata()}}, \code{\link[=check_consistency]{check_consistency()}}
 }

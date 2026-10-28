@@ -26,7 +26,7 @@ whose raw data files are read again; must be a subset of
 \item{reset_manual_flags}{Logical; only applies to \code{imgs_to_reread}. If
 \code{TRUE} (default), any manual edits made via the flags Shiny app are reset.
 If \code{FALSE} (i.e. assuming the dating was not affected by the re-analysis),
-the manual flag and comment columns are kept, and so is \code{exclude_issues}
+the columns set in the flags app (\code{colType} \code{"qc_input"}) are kept, and so is \code{exclude_issues}
 where it differs from the value derived from the old automatic flags.}
 }
 \value{

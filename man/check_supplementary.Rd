@@ -4,7 +4,7 @@
 \alias{check_supplementary}
 \title{Verify a supplementary resources manifest against a directory or archive}
 \usage{
-check_supplementary(suppl_res, path, rxs_images)
+check_supplementary(suppl_res, path, rxs_images, strict = FALSE)
 }
 \arguments{
 \item{suppl_res}{An existing resources data frame.}
@@ -12,32 +12,45 @@ check_supplementary(suppl_res, path, rxs_images)
 \item{path}{Path to a directory to scan for files, or to an existing
 (non-nested) zip archive to read the file list from directly. Reading a
 zip archive requires the \pkg{zip} package, and does not extract any
-files---\code{fname_resource} is \code{NA} for resources found this way.}
+files---\code{fname_resource} is \code{NA} for resources found this way. System
+files (e.g. \code{.DS_Store}, \code{Thumbs.db}, \verb{__MACOSX/} entries) are skipped.}
 
 \item{rxs_images}{A \link{QWAimages} object. Its \code{roxas_version} attribute is
 used to disambiguate resource-type patterns shared between classic ROXAS
 and ROXAS AI, and its \code{org_img_name}, \code{image_label}, \code{slide_label}, and
 \code{woodpiece_label} columns are used to auto-populate \code{linked_label} where
 appropriate.}
+
+\item{strict}{If \code{TRUE}, abort on the first issue instead of warning.}
 }
 \value{
-\code{TRUE}/\code{FALSE} (invisibly), or aborts -- see Description.
+\code{TRUE} if no issue was found, \code{FALSE} otherwise (invisibly).
 }
 \description{
 A pass/fail check confirming that your finalised manifest accurately
 describes the content of the supplementary archive/directory and is ready
-for submission. \code{suppl_res} must be a finalised manifest, i.e. including
+for submission. A submission-time check: it applies to the submitted
+supplementary CSV (with \code{status}), not to the supplementary CSV of TRIA
+dataset files. \code{suppl_res} must be a finalised manifest, i.e. including
 the \code{status} column produced by \code{\link[=compile_supplementary]{compile_supplementary()}} or
 \code{\link[=recompile_supplementary]{recompile_supplementary()}}.
-Aborts if \code{suppl_res} lists a file with \code{status == "ok"} that isn't found
-in \code{path}---a genuine inconsistency between the manifest and the archive.
-Returns \code{FALSE} (with a warning pointing you back to
-\code{\link[=recompile_supplementary]{recompile_supplementary()}}) if any resource still needs review, or \code{TRUE} if
-everything is ready.
+}
+\details{
+Warns (or, with \code{strict = TRUE}, aborts) on:
+\itemize{
+\item files with \code{status == "ok"} in \code{suppl_res} not found in \code{path};
+\item files in \code{path} not declared in \code{suppl_res} (junk files aside);
+\item resources that still need review (fix them and run
+\code{\link[=recompile_supplementary]{recompile_supplementary()}});
+\item schema issues of the manifest.
+}
+
+Junk files and manual corrections in \code{suppl_res} are reported as
+information.
 }
 \examples{
 \dontrun{
-# verify a finalized manifest against an already-zipped submission
+# verify a finalised manifest against an already-zipped submission
 suppl_res <- vroom::vroom("output_data/supplementary_files.csv",
                           show_col_types = FALSE)
 if (!check_supplementary(suppl_res, "supplementary_data.zip", rxs_images = my_images)) {

@@ -2,31 +2,41 @@
 % Please edit documentation in R/QWAdata.R
 \name{check_QWAdata}
 \alias{check_QWAdata}
-\title{Validate a QWAdata object}
+\title{Check a QWAdata object}
 \usage{
-check_QWAdata(x, meta = NULL, exclude_mode = NULL)
+check_QWAdata(x, strict = FALSE, exclude_mode = NULL)
 }
 \arguments{
 \item{x}{A \link{QWAdata} object.}
 
-\item{meta}{Optional \link{QWAimages} object. If provided, also checks that no
-ring years exceed \code{outmost_year}.}
+\item{strict}{If \code{TRUE}, abort on the first issue instead of warning.}
 
 \item{exclude_mode}{Deprecated and ignored.}
 }
 \value{
-\code{TRUE}, invisibly. Warnings are issued for any problems found;
-errors are thrown for structural issues.
+\code{TRUE} if no issue was found, \code{FALSE} otherwise (invisibly).
 }
 \description{
-Re-runs data quality checks on a \link{QWAdata} object and warns about any
-issues found. Checks include:
+Checks a \link{QWAdata} object before submission. Aborts if the object is not a
+valid \code{QWAdata} (missing, mistyped or \code{NA} keys, duplicate (image, year) in
+\verb{$rings}). Warns (or, with \code{strict = TRUE}, aborts) on:
 \itemize{
-\item CWT estimates present for all images.
-\item Dating validity (undated, duplicate, future years; and if \code{meta} is
-provided, years after \code{outmost_year}).
+\item values violating the cells or rings schema (types, ranges, allowed values);
+\item duplicate cell keys (image, year, \code{xpix}, \code{ypix}), the key of the cells
+in TRIA;
+\item dating problems: gaps and future years;
+\item missing values in the automatic ring flags (see \code{\link[=complete_flags]{complete_flags()}});
+\item images only in \verb{$cells} or only in \verb{$rings}, and images without ring
+measurements (no \code{mrw} > 0; check the output files and re-read them with
+\code{\link[=update_QWAdata]{update_QWAdata()}});
+\item years with cells but without a rings row, and \code{cno} not matching the
+number of cells (re-run \code{\link[=complete_QWAdata]{complete_QWAdata()}}).
 }
+}
+\details{
+Also informs about missing optional columns, extra columns (kept, but not
+imported into TRIA by default) and images without CWT estimates.
 }
 \seealso{
-\code{\link[=QWAdata]{QWAdata()}}, \code{\link[=complete_QWAdata]{complete_QWAdata()}}
+\code{\link[=QWAdata]{QWAdata()}}, \code{\link[=complete_QWAdata]{complete_QWAdata()}}, \code{\link[=check_consistency]{check_consistency()}}
 }

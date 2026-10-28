@@ -7,8 +7,9 @@
 collect_raw_outputs(df_structure, roxas_version, ftype)
 }
 \arguments{
-\item{df_structure}{Data frame of image identifiers (\verb{$image_label}) and
-corresponding data file names (\verb{$fname_cells} or \verb{$fname_rings}).}
+\item{df_structure}{Data frame of image identifiers (\verb{$image_label}; for
+rings also \verb{$woodpiece_label} and \verb{$slide_label}) and corresponding data
+file names (\verb{$fname_cells} or \verb{$fname_rings}).}
 
 \item{roxas_version}{The software used to create the files (\code{"roxas"} or \code{"roxas_ai"}).}
 

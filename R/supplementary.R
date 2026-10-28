@@ -34,10 +34,11 @@
 #' manifest against the current contents of `path` and re-derive the `status`/`note` 
 #' columns without losing any manual edits.
 #' 
-#' To verify a finalized manifest against a directory or
-#' zip archive, ses [check_supplementary()]. Then
-#' save the resulting table to a CSV (e.g. `vroom::vroom_write()`) and submit 
-#' it alongside the supplementary zip archive.
+#' To verify a finalised manifest against a directory or
+#' zip archive, see [check_supplementary()]. Then
+#' save the resulting table as the supplementary CSV (e.g.
+#' `vroom::vroom_write(delim = ",", na = "")`) and submit it alongside the
+#' supplementary zip archive.
 #'
 #' See `vignette("supplementary")` for a worked example and the complete list of
 #' recognised resource types.
@@ -45,7 +46,8 @@
 #' @param path Path to a directory to scan for files, or to an existing
 #'   (non-nested) zip archive to read the file list from directly. Reading a
 #'   zip archive requires the \pkg{zip} package, and does not extract any
-#'   files---`fname_resource` is `NA` for resources found this way.
+#'   files---`fname_resource` is `NA` for resources found this way. System
+#'   files (e.g. `.DS_Store`, `Thumbs.db`, `__MACOSX/` entries) are skipped.
 #' @param rxs_images A [QWAimages] object. Its `roxas_version` attribute is
 #'   used to disambiguate resource-type patterns shared between classic ROXAS
 #'   and ROXAS AI, and its `org_img_name`, `image_label`, `slide_label`, and
@@ -53,11 +55,13 @@
 #'   appropriate.
 #'
 #' @returns A data frame with one row per file and columns:
-#'   - `resource_name`: name and path of the file relative to `path`
+#'   - `resource_name`: path of the file relative to `path`, without the
+#'     leading folders shared by all files (e.g. the folder a zip archive was
+#'     made from)
 #'   - `description`: normally `NA`, can be filled manually if required to
 #'      provide justification for "other" supplementary files that should
 #'      be included in the upload
-#'   - `resource_type`: inferred resource type string (see Details).
+#'   - `resource_type`: inferred resource type string (see `vignette("supplementary")`).
 #'   - `linked_level`: hierarchy level for this type (e.g. `"dataset"`,
 #'     `"woodpiece"`, or `"analysis"`).
 #'   - `linked_label`: label of the linked entity, auto-filled from where
@@ -73,9 +77,10 @@
 #' @examples
 #' \dontrun{
 #' suppl_res <- compile_supplementary("path/to/submission_files", rxs_images = my_images)
-#' # review and make changes are required, then persist as a standalone CSV
-#' # to submit alongside the resources zip:
-#' vroom::vroom_write(suppl_res, "output_data/submission_files_resources.csv")
+#' # review and edit if required, then save as the supplementary CSV
+#' # to submit alongside the supplementary zip:
+#' vroom::vroom_write(suppl_res, "output_data/supplementary_files.csv",
+#'                    delim = ",", na = "")
 #' }
 #' @export
 compile_supplementary <- function(path, rxs_images) {
@@ -83,10 +88,8 @@ compile_supplementary <- function(path, rxs_images) {
     checkmate::check_directory_exists(path),
     checkmate::check_file_exists(path, extension = "zip")
   )
-  checkmate::assert_class(rxs_images, "QWAimages")
-  checkmate::assert_names(names(rxs_images),
-                          must.include = c("org_img_name", "image_label",
-                          "slide_label", "woodpiece_label"))
+  validate_QWAimages(rxs_images)
+  checkmate::assert_names(names(rxs_images), must.include = "org_img_name")
 
   new_res <- .scan_resources(path, rxs_images)
 
@@ -95,7 +98,7 @@ compile_supplementary <- function(path, rxs_images) {
     return(NULL)
   }
 
-  .check_resources(new_res, rxs_images)
+  .check_resources(new_res, rxs_images)$res
 }
 
 #' Reconcile and re-check a supplementary resources manifest
@@ -128,6 +131,72 @@ compile_supplementary <- function(path, rxs_images) {
 #' }
 #' @export
 recompile_supplementary <- function(suppl_res, path, rxs_images, add_new_files = FALSE) {
+  .recompile(suppl_res, path, rxs_images, add_new_files)$res
+}
+
+#' Verify a supplementary resources manifest against a directory or archive
+#'
+#' A pass/fail check confirming that your finalised manifest accurately
+#' describes the content of the supplementary archive/directory and is ready
+#' for submission. A submission-time check: it applies to the submitted
+#' supplementary CSV (with `status`), not to the supplementary CSV of TRIA
+#' dataset files. `suppl_res` must be a finalised manifest, i.e. including
+#' the `status` column produced by [compile_supplementary()] or
+#' [recompile_supplementary()].
+#'
+#' Warns (or, with `strict = TRUE`, aborts) on:
+#' - files with `status == "ok"` in `suppl_res` not found in `path`;
+#' - files in `path` not declared in `suppl_res` (junk files aside);
+#' - resources that still need review (fix them and run
+#'   [recompile_supplementary()]);
+#' - schema issues of the manifest.
+#'
+#' Junk files and manual corrections in `suppl_res` are reported as
+#' information.
+#'
+#' @inheritParams compile_supplementary
+#' @param suppl_res An existing resources data frame.
+#' @param strict If `TRUE`, abort on the first issue instead of warning.
+#' @returns `TRUE` if no issue was found, `FALSE` otherwise (invisibly).
+#' @seealso [recompile_supplementary()], [compile_supplementary()], `vignette("supplementary")`
+#' @examples
+#' \dontrun{
+#' # verify a finalised manifest against an already-zipped submission
+#' suppl_res <- vroom::vroom("output_data/supplementary_files.csv",
+#'                           show_col_types = FALSE)
+#' if (!check_supplementary(suppl_res, "supplementary_data.zip", rxs_images = my_images)) {
+#'   suppl_res <- recompile_supplementary(suppl_res, "supplementary_data", rxs_images = my_images)
+#'   # fix the flagged resource(s) in suppl_res, then check again
+#' }
+#' }
+#' @export
+check_supplementary <- function(suppl_res, path, rxs_images, strict = FALSE) {
+  checkmate::assert_data_frame(suppl_res)
+  checkmate::assert_names(names(suppl_res), must.include = "status")
+  checkmate::assert_flag(strict)
+  checked <- .recompile(suppl_res, path, rxs_images, add_new_files = FALSE,
+                        check = TRUE, strict = strict)
+  if (checked$ok) {
+    cli::cli_inform(c("v" = "Supplementary resources: all checks passed."))
+  } else {
+    cli::cli_inform(c("x" = "Supplementary resources: issues found, see warnings."))
+  }
+  invisible(checked$ok)
+}
+
+# Helper functions ----
+
+#' Reconcile and re-check a manifest, see [recompile_supplementary()]
+#' @param check If `TRUE` (in [check_supplementary()]), `"ok"` files missing
+#'   from `path` and undeclared files are issues (warn, or abort with
+#'   `strict`); otherwise missing `"ok"` files abort and undeclared files are
+#'   reported as information.
+#' @param strict If `TRUE`, abort instead of warning on issues.
+#' @returns A list: `res`, the checked manifest, and `ok`, `TRUE` if no issue
+#'   was found.
+#' @noRd
+.recompile <- function(suppl_res, path, rxs_images, add_new_files = FALSE,
+                       check = FALSE, strict = FALSE) {
   checkmate::assert_data_frame(suppl_res)
   checkmate::assert_names(names(suppl_res),
                           must.include = c("resource_name", "resource_type",
@@ -136,14 +205,14 @@ recompile_supplementary <- function(suppl_res, path, rxs_images, add_new_files =
     checkmate::check_directory_exists(path),
     checkmate::check_file_exists(path, extension = "zip")
   )
-  checkmate::assert_class(rxs_images, "QWAimages")
-  checkmate::assert_names(names(rxs_images),
-                          must.include = c("org_img_name", "image_label",
-                          "slide_label", "woodpiece_label"))
+  validate_QWAimages(rxs_images)
+  checkmate::assert_names(names(rxs_images), must.include = "org_img_name")
   checkmate::assert_flag(add_new_files)
 
   # status is derived; a hand-built manifest may not have it yet
   if (!"status" %in% names(suppl_res)) suppl_res$status <- NA_character_
+  # description is optional; may be missing, or all-NA logical when read from CSV
+  suppl_res$description <- as.character(suppl_res$description %||% NA_character_)
 
   new_res <- .scan_resources(path, rxs_images)
 
@@ -158,70 +227,18 @@ recompile_supplementary <- function(suppl_res, path, rxs_images, add_new_files =
     suppl_res
   }
 
-  manifest <- .check_compare_manifests(manifest, new_res)
-  .check_resources(manifest, rxs_images)
+  compared <- .check_compare_manifests(manifest, new_res, check, strict)
+  checked <- .check_resources(compared$res, rxs_images, strict, check)
+  checked$ok <- compared$ok && checked$ok
+  checked
 }
-
-#' Verify a supplementary resources manifest against a directory or archive
-#'
-#' A pass/fail check confirming that your finalised manifest accurately
-#' describes the content of the supplementary archive/directory and is ready
-#' for submission. `suppl_res` must be a finalised manifest, i.e. including
-#' the `status` column produced by [compile_supplementary()] or
-#' [recompile_supplementary()].
-#' Aborts if `suppl_res` lists a file with `status == "ok"` that isn't found
-#' in `path`---a genuine inconsistency between the manifest and the archive.
-#' Returns `FALSE` (with a warning pointing you back to
-#' [recompile_supplementary()]) if any resource still needs review, or `TRUE` if
-#' everything is ready.
-#'
-#' @inheritParams compile_supplementary
-#' @param suppl_res An existing resources data frame.
-#' @returns `TRUE`/`FALSE` (invisibly), or aborts -- see Description.
-#' @seealso [recompile_supplementary()], [compile_supplementary()], `vignette("supplementary")`
-#' @examples
-#' \dontrun{
-#' # verify a finalized manifest against an already-zipped submission
-#' suppl_res <- vroom::vroom("output_data/supplementary_files.csv",
-#'                           show_col_types = FALSE)
-#' if (!check_supplementary(suppl_res, "supplementary_data.zip", rxs_images = my_images)) {
-#'   suppl_res <- recompile_supplementary(suppl_res, "supplementary_data", rxs_images = my_images)
-#'   # fix the flagged resource(s) in suppl_res, then check again
-#' }
-#' }
-#' @export
-check_supplementary <- function(suppl_res, path, rxs_images) {
-  checkmate::assert_data_frame(suppl_res)
-  checkmate::assert_names(names(suppl_res), must.include = "status")
-  checked <-recompile_supplementary(suppl_res, path, rxs_images, add_new_files = FALSE)
-  # recompile_supplementary() already aborts if a submission-ready ("ok")
-  # resource has gone missing; the only remaining failure is lingering
-  # "review" rows, already listed in detail by the call above
-  n_review <- sum(checked$status == "review")
-
-  if (n_review > 0) {
-    cli::cli_warn(c(
-      "!" = "Not ready for submission: {n_review} resource{?s} still {?need/needs} review.",
-      "i" = "Fix the manifest {.field suppl_res} or contents under {.field path}, and (re-)compile."
-    ))
-    return(invisible(FALSE))
-  }
-
-  cli::cli_inform(c("v" = "Supplementary resources in {.path {path}} match the manifest, ready for submission."))
-  invisible(TRUE)
-}
-
-# Helper functions ----
 
 #' Scan a directory or archive and compile a fresh (unchecked) resources table
 #' @noRd
 .scan_resources <- function(path, rxs_images) {
   roxas_version <- attr(rxs_images, "roxas_version")
 
-  schema_path <- system.file(schema_rel_path("supplementary"), package = "rxs2tria")
-  schema_obj  <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
-  tbl_schema  <- resolve_schema(schema_obj, schema_path)
-  tbl_props   <- get_tbl_props(tbl_schema)
+  tbl_props <- schema_tbl_props("supplementary")
 
   if (fs::is_dir(path)) {
     # all = TRUE: include hidden files
@@ -234,16 +251,12 @@ check_supplementary <- function(suppl_res, path, rxs_images) {
     if (any(grepl("\\.zip$", entries$filename, ignore.case = TRUE))) {
       cli::cli_warn("{.path {path}} contains a nested zip archive; its contents cannot be inspected.")
     }
-    # directory entries are conventionally stored with a trailing "/"
-    if ("type" %in% names(entries)) { # for zip version > 2.3.3 we have type
-      resource_name <- entries |>
-        dplyr::filter(.data$type == "file") |>
-        dplyr::pull(.data$filename)
-    } else { # backcomp
-      resource_name <- entries |>
-        dplyr::filter(!stringr::str_detect(.data$filename, "/$")) |>
-        dplyr::pull(.data$filename)
-    }
+    # directory entries are conventionally stored with a trailing "/"; `type`
+    # (newer zip versions) alone is not enough, as it reports the directory
+    # entries written by zip::zip() as "file"
+    is_file <- !grepl("/$", entries$filename)
+    if ("type" %in% names(entries)) is_file <- is_file & entries$type == "file"
+    resource_name <- entries$filename[is_file]
     fname_resource <- rep(NA_character_, length(resource_name)) # no abs filepaths
   }
 
@@ -252,7 +265,14 @@ check_supplementary <- function(suppl_res, path, rxs_images) {
   }
 
   new_res <- infer_resource_types(resource_name, roxas_version = roxas_version)
-  new_res$fname_resource <- fname_resource
+  # platform files (e.g. .DS_Store, __MACOSX/ sidecars) are invisible to the
+  # user and never submitted: drop them silently
+  is_system <- new_res$resource_type == "junk" & new_res$source %in% "system"
+  new_res <- new_res[!is_system, ]
+  new_res$source <- NULL
+  new_res$resource_name <- .strip_common_root(new_res$resource_name,
+                                              new_res$resource_type == "junk")
+  new_res$fname_resource <- fname_resource[!is_system]
   new_res$linked_label <- NA_character_ # default: unmatched
 
   # auto-fill linked_label for image/analysis/slide/woodpiece-level resources
@@ -283,9 +303,12 @@ check_supplementary <- function(suppl_res, path, rxs_images) {
         keep <- !is.na(lut$prefix)
         hits <- which(startsWith(rname, lut$prefix[keep]))
         if (length(hits) == 0L) return(NA_character_)
-        # Longest match wins to avoid false positives (e.g. "S22_L1" vs "S22_L10")
-        best <- hits[which.max(nchar(lut$prefix[keep][hits]))]
-        as.character(lut$label[keep][[best]])
+        # Longest match wins to avoid false positives (e.g. "S22_L1" vs "S22_L10");
+        # identical longest prefixes of different labels (e.g. duplicate
+        # org_img_name) are ambiguous and left NA
+        n_chars <- nchar(lut$prefix[keep][hits])
+        lbl <- unique(as.character(lut$label[keep][hits[n_chars == max(n_chars)]]))
+        if (length(lbl) == 1L) lbl else NA_character_
       },
       as.character(fs::path_file(new_res$resource_name[to_match])),
       new_res$linked_level[to_match],
@@ -298,22 +321,59 @@ check_supplementary <- function(suppl_res, path, rxs_images) {
     dplyr::bind_rows(new_res)
 }
 
+#' Drop the leading folders shared by all non-junk resources
+#'
+#' Compressing a folder (Finder, Windows Explorer, `zip -r`) stores it as the
+#' archive's top-level entry. Stripping the shared leading folders gives the
+#' same `resource_name` whether `path` is the folder, a zip of the folder, or a
+#' zip of its contents. Junk files (e.g. ROXAS backups) are ignored when
+#' finding the shared folders, and keep their name if outside them.
+#' @param resource_name Character; file paths relative to the scanned root.
+#' @param is_junk Logical, same length as `resource_name`.
+#' @returns `resource_name` with the shared leading folders removed.
+#' @noRd
+.strip_common_root <- function(resource_name, is_junk) {
+  # folder components only: the last component is the file name
+  dirs <- lapply(strsplit(resource_name[!is_junk], "/", fixed = TRUE),
+                 \(p) p[-length(p)])
+  if (length(dirs) == 0L) return(resource_name)
+
+  n <- 0L
+  repeat {
+    nxt <- vapply(dirs, \(d) if (length(d) > n) d[[n + 1L]] else NA_character_,
+                  character(1))
+    if (anyNA(nxt) || length(unique(nxt)) > 1L) break
+    n <- n + 1L
+  }
+  if (n == 0L) return(resource_name)
+
+  root <- paste0(paste(dirs[[1]][seq_len(n)], collapse = "/"), "/")
+  cli::cli_inform(c("i" = "Shared top-level folder {.path {root}} dropped from resource names."))
+  has_root <- startsWith(resource_name, root)
+  resource_name[has_root] <- substring(resource_name[has_root], nchar(root) + 1L)
+  resource_name
+}
+
 #' Reconcile an existing manifest against a freshly-scanned one
 #'
 #' Given `res` (an existing manifest, possibly already merged with untracked
 #' new files -- see [recompile_supplementary()]) and `new_res` (a fresh scan of
 #' the same location), aborts if `res` lists a `status == "ok"` file no
-#' longer found in `new_res`, silently drops any other `res` row no longer
-#' found in `new_res`, and reports (but doesn't act on) files found in
-#' `new_res` that `res` doesn't know about and any type/label corrections
-#' `res` carries relative to a fresh inference.
+#' longer found in `new_res` (with `check`: warns on any non-junk row, as the
+#' manifest is submitted as is, or aborts with `strict`), drops the other
+#' `res` rows no longer found in `new_res`, and reports (but
+#' doesn't act on) files found in `new_res` that `res` doesn't know about
+#' (with `check`: warns on those that are not junk, or aborts with `strict`)
+#' and any type/label corrections `res` carries relative to a fresh inference.
 #'
 #' @param res The manifest to reconcile and return.
 #' @param new_res A freshly-scanned manifest (e.g. from `.scan_resources()`)
 #'   to reconcile `res` against.
-#' @returns `res`, with rows dropped as described above.
+#' @param check,strict See `.recompile()`.
+#' @returns A list: `res`, with rows dropped as described above, and `ok`,
+#'   `TRUE` if no issue was found.
 #' @noRd
-.check_compare_manifests <- function(res, new_res) {
+.check_compare_manifests <- function(res, new_res, check = FALSE, strict = FALSE) {
   df_comp <- new_res |> dplyr::full_join(
     res, by = "resource_name", suffix = c("", ".usr"), keep = TRUE
   )
@@ -331,36 +391,60 @@ check_supplementary <- function(suppl_res, path, rxs_images) {
 
   # declared in res, not found in the fresh scan
   vanished <- df_comp |> dplyr::filter(is.na(.data$resource_name))
-  # only a problem if it's something we expected to be submitted
-  missing_files <- vanished |> dplyr::filter(.data$status.usr %in% "ok")
-
-  if (nrow(missing_files) > 0) {
-    cli::cli_abort(c(
-      "Submission-ready resource(s) in {.field suppl_res} not found in {.field path}",
-      "i" = "Either remove these {nrow(missing_files)} file{?s} from the table or add them back to the dir/zip:",
-      cli_truncated_list(missing_files$resource_name.usr)
-    ))
+  # recompile: only a problem for files to be submitted ("ok"), others are
+  # dropped; check: the manifest is submitted as is, so any non-junk row is
+  missing_files <- if (check) {
+    vanished |> dplyr::filter(!.data$resource_type.usr %in% "junk")
+  } else {
+    vanished |> dplyr::filter(.data$status.usr %in% "ok")
   }
 
-  already_gone <- vanished$resource_name.usr[!vanished$status.usr %in% "ok"]
+  ok <- TRUE
+  if (nrow(missing_files) > 0) {
+    msg <- c(
+      "!" = if (check) "Resource(s) in {.field suppl_res} not found in {.field path}"
+            else "Submission-ready resource(s) in {.field suppl_res} not found in {.field path}",
+      "i" = if (check) "Drop these {nrow(missing_files)} file{?s} from the table (re-run {.fn recompile_supplementary}; rows marked {.val ok} by hand) or add them back to the dir/zip:"
+            else "Either remove these {nrow(missing_files)} file{?s} from the table or add them back to the dir/zip:",
+      cli_truncated_list(missing_files$resource_name.usr)
+    )
+    if (!check) cli::cli_abort(msg)
+    ok <- report_issue(msg, strict)
+  }
+
+  # in the check, undeclared files (junk aside) would be submitted unchecked
+  junk_files <- new_res$resource_name[new_res$resource_type %in% "junk"]
+  new_junk <- intersect(new_files, junk_files)
+  undeclared <- if (check) setdiff(new_files, junk_files) else character()
+  if (length(undeclared) > 0) {
+    ok <- report_issue(c(
+      "!" = "{length(undeclared)} file{?s} in {.field path} not declared in {.field suppl_res}:",
+      cli_truncated_list(undeclared),
+      "i" = "Add them with {.code recompile_supplementary(add_new_files = TRUE)}, or remove them from {.field path}."
+    ), strict)
+  }
+  ignored_new <- setdiff(new_files, c(undeclared, new_junk))
+
+  already_gone <- setdiff(vanished$resource_name.usr, missing_files$resource_name.usr)
   res <- res[!res$resource_name %in% already_gone, ]
 
-  if (length(new_files) + usr_overwrites + length(already_gone) > 0) {
+  if (length(ignored_new) + length(new_junk) + usr_overwrites + length(already_gone) > 0) {
     cli::cli_inform(c(
       if (usr_overwrites > 0) c("i" = "{usr_overwrites} resource{?s} have manual corrections in resource table"),
       if (length(already_gone) > 0) c("i" = '{length(already_gone)} file{?s} no longer found in dir/archive (not marked "ok"), dropped from resource table'),
-      if (length(new_files) > 0) c("i" = "{length(new_files)} file{?s} found not declared in input resource table, ignored (use {.code recompile_supplementary()} with {.code add_new_files = TRUE} to add them)")
+      if (length(ignored_new) > 0) c("i" = "{length(ignored_new)} file{?s} found not declared in input resource table, ignored (use {.code recompile_supplementary()} with {.code add_new_files = TRUE} to add them)"),
+      if (length(new_junk) > 0) c("i" = "{length(new_junk)} undeclared junk file{?s} in {.field path} will be ignored")
     ))
   }
 
-  res
+  list(res = res, ok = ok)
 }
 
 #' Compute status/note for a resources manifest
 #'
 #' Annotates every row of `res` with a `status`:
-#' - `"ignore"`: a junk file (ROXAS `_bu` backups, `Thumbs.db`, Office lock
-#'   files, ...), or any other file manually marked `resource_type = "junk"`
+#' - `"ignore"`: a junk file (ROXAS `_bu` backups, ...; system files never
+#'   reach the manifest), or any other file manually marked `resource_type = "junk"`
 #'   to permanently exclude it without deleting it from `path` (see
 #'   [recompile_supplementary()]). Never part of TRIA upload, so we will ignore
 #'   such files.
@@ -381,15 +465,20 @@ check_supplementary <- function(suppl_res, path, rxs_images) {
 #' @param res A resources data frame.
 #' @param rxs_images A [QWAimages] object, used to validate `linked_label`
 #'   values.
-#' @returns `res` with `status` and `note` (re)computed for every row.
+#' @param strict If `TRUE`, abort instead of warning on resources that need
+#'   review or schema issues.
+#' @param check If `TRUE` (in [check_supplementary()]), the summary refers to
+#'   an existing submission, not to a directory still to be zipped.
+#' @returns A list: `res` with `status` and `note` (re)computed for every row,
+#'   and `ok`, `TRUE` if no review rows or schema issues were found.
 #' @noRd
-.check_resources <- function(res, rxs_images) {
+.check_resources <- function(res, rxs_images, strict = FALSE, check = FALSE) {
   checkmate::assert_data_frame(res)
   checkmate::assert_class(rxs_images, "QWAimages")
 
   schema_path <- system.file(schema_rel_path("supplementary"), package = "rxs2tria")
   schema_obj  <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
-  check_schema(res, schema_obj, "resources", warn_only = TRUE, greedy = FALSE)
+  schema_ok <- check_schema(res, schema_obj, "resources", strict = strict, greedy = FALSE)
 
   res_meta <- dplyr::left_join(res, .resource_type_meta(), by = "resource_type")
   roxas_version <- attr(rxs_images, "roxas_version")
@@ -412,9 +501,9 @@ check_supplementary <- function(suppl_res, path, rxs_images) {
     TRUE                 ~ NA_character_
   )
 
-  .report_resource_status(res)
+  status_ok <- .report_resource_status(res, strict, check)
 
-  res
+  list(res = res, ok = schema_ok && status_ok)
 }
 
 #' Load resource types table
@@ -436,8 +525,8 @@ load_resource_types <- function() {
 #' @param filenames Character; one or more file names.
 #' @param roxas_version `"roxas"` or `"roxas_ai"`. Used to
 #'   disambiguate patterns that are specific to one ROXAS version.
-#' @returns A tibble with one row per file: `resource_name`, `fname_resource`,
-#'   `resource_type`, `linked_level`.
+#' @returns A tibble with one row per file: `resource_name`, `resource_type`,
+#'   `linked_level`, `source`.
 #' @seealso [compile_supplementary()]
 #' @noRd
 infer_resource_types <- function(filenames, roxas_version) {
@@ -464,7 +553,7 @@ infer_resource_types <- function(filenames, roxas_version) {
   tibble::tibble(
     resource_name  = filenames
   ) |>
-    dplyr::bind_cols(res_tbl[match_idx, c("resource_type", "linked_level")])
+    dplyr::bind_cols(res_tbl[match_idx, c("resource_type", "linked_level", "source")])
 }
 
 
@@ -613,22 +702,25 @@ infer_resource_types <- function(filenames, roxas_version) {
 }
 
 #' @noRd
-.report_resource_status <- function(res) {
+.report_resource_status <- function(res, strict = FALSE, check = FALSE) {
   n_ignore <- sum(res$status == "ignore")
   n_review <- sum(res$status == "review")
   n_ok     <- sum(res$status == "ok")
 
   if (n_ignore > 0) {
-    cli::cli_inform(c("i" = "{n_ignore} junk file{?s} will be ignored, consider deleting them from the directory."))
+    cli::cli_inform(c("i" = if (check) "{n_ignore} junk file{?s} will be ignored."
+                            else "{n_ignore} junk file{?s} will be ignored, consider deleting them from the directory."))
   }
   if (n_review > 0) {
     review <- res[res$status == "review", ]
-    cli::cli_warn(c(
-      "!" = "{n_review} resource{?s} need review before this dataset can be zipped for submission:",
-      cli_truncated_list(paste0(review$resource_name, ": ", review$note))
-    ))
-  } else {
-    cli::cli_inform(c("v" = "{n_ok} resource{?s} OK ({n_ignore+n_ok} total), dir ready to zip for submission."))
+    return(report_issue(c(
+      "!" = if (check) "{n_review} resource{?s} need review:"
+            else "{n_review} resource{?s} need review before this dataset can be zipped for submission:",
+      cli_truncated_list(paste0(review$resource_name, ": ", review$note)),
+      "i" = "Fix the manifest or the files under {.field path}, then run {.fn recompile_supplementary}."
+    ), strict))
   }
-  invisible(NULL)
+  cli::cli_inform(c("v" = if (check) "{n_ok} resource{?s} OK."
+                          else "{n_ok} resource{?s} OK, dir ready to zip for submission."))
+  invisible(TRUE)
 }

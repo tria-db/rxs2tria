@@ -51,9 +51,9 @@ build_csv_inputs <- function(ns) {
   shiny::tagList(
     "Provide the filepaths for the following:",
     shiny::fileInput(ns("file_prf"), "Upload the QWA profile data",
-                     accept = c(".csv")),
+                     accept = c(".csv", ".gz")),
     shiny::fileInput(ns("file_rings"), "Upload the QWA rings data",
-                     accept = c(".csv")),
+                     accept = c(".csv", ".gz")),
     shiny::fileInput(ns("file_rxsmeta"),
                      "Upload the images metadata (QWAmetadata .json or QWAimages .csv)",
                      accept = c(".json", ".csv"))
@@ -283,6 +283,17 @@ load_data_csv <- function(path_prf, path_rings, path_rxsmeta,
 # check input dfs and throw error if not all checks passed
 validate_input_dfs <- function(prf_data_in, rings_data_in,
                                specs = input_specs){
+  # automatic ring flags (rxs2tria::complete_QWAdata()) must be set for all rings
+  flag_cols <- intersect(names(specs$rings_data$req_cols)[specs$rings_data$req_cols == "l"],
+                         names(rings_data_in))
+  n_na <- vapply(rings_data_in[flag_cols], \(x) sum(is.na(x)), integer(1))
+  if (any(n_na > 0)) {
+    stop("Missing values in ring flag column(s) ",
+         toString(paste0(names(n_na)[n_na > 0], " (", n_na[n_na > 0], " rings)")),
+         ". Set them, or drop the flag columns and rerun rxs2tria::complete_QWAdata().",
+         call. = FALSE)
+  }
+
   checkmate::assert_data_frame(
     rings_data_in[names(specs$rings_data$req_cols)],
     min.rows = 1, any.missing = FALSE
@@ -562,7 +573,7 @@ save_ring_edits <- function(df, df_in, settings, rxsmeta = NULL, handled = NULL)
     if ("file" %in% settings$save_to) {
       filepath <- fs::path_abs(settings$filepath, start = launch_wd)
       checkmate::assert_path_for_output(filepath, overwrite = TRUE)
-      vroom::vroom_write(df_out, filepath, delim = ",")
+      vroom::vroom_write(df_out, filepath, delim = ",", na = "")
       shiny::showNotification(
         paste0("Saved to file: ", filepath),
         type = "message"
@@ -592,7 +603,7 @@ save_ring_edits <- function(df, df_in, settings, rxsmeta = NULL, handled = NULL)
       if ("file" %in% settings$save_imgs_to) {
         filepath_rxsmeta <- fs::path_abs(settings$filepath_rxsmeta, start = launch_wd)
         checkmate::assert_path_for_output(filepath_rxsmeta, overwrite = TRUE)
-        vroom::vroom_write(df_rxsmeta_out, filepath_rxsmeta, delim = ",")
+        vroom::vroom_write(df_rxsmeta_out, filepath_rxsmeta, delim = ",", na = "")
         shiny::showNotification(
           paste0("Image metadata saved to: ", filepath_rxsmeta),
           type = "message"

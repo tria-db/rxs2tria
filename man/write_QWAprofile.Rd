@@ -19,7 +19,7 @@ write_QWAprofile(x, file, compress = FALSE, overwrite = TRUE)
 The output file path, invisibly.
 }
 \description{
-Write a QWAprofile object to a CSV file
+Empty values are written as empty fields.
 }
 \note{
 The \code{profile_type} attribute is not written to the CSV file. It is

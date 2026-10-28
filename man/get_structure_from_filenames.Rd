@@ -17,8 +17,9 @@ extract_data_structure(files, pattern, site_label = NULL, species_code = NULL)
 \arguments{
 \item{filenames}{The character vector of file names or prefixes.}
 
-\item{pattern}{A regex with named groups (site, species, tree, slide and/or
-image) to describe the labeling pattern of the \code{filenames}.}
+\item{pattern}{A regex with named groups (\code{site}, \code{species}, \code{tree},
+\code{woodpiece}, \code{slide} and/or \code{image}) to describe the labelling pattern of
+the \code{filenames}.}
 
 \item{site_label}{Optional site label to be used if it is not part of the
 \code{pattern}, only if all images are from the same site.}
@@ -39,7 +40,7 @@ provided regex labeling pattern.
 The extracted site, species, tree, woodpiece, slide, image identifiers are
 joined by underscores to derive unique codes for each level of the data
 structure for the subsequent calculations
-(e.g. \verb{tree_code = \{site\}_\{species\}_\{tree\}}).
+(e.g. \verb{tree_label = \{site\}_\{species\}_\{tree\}}).
 
 Any custom labeling pattern may be used, provided that it allows to
 uniquely identify each image and is consistently applied across all files.

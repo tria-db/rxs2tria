@@ -10,8 +10,8 @@
 #' @seealso [combine_QWAdata()], [combine_QWAmetadata()]
 #' @export
 combine_QWAimages <- function(x, y) {
-  checkmate::assert_class(x, "QWAimages")
-  checkmate::assert_class(y, "QWAimages")
+  validate_QWAimages(x)
+  validate_QWAimages(y)
   rv <- attr(x, "roxas_version")
   if (!identical(rv, attr(y, "roxas_version"))) {
     cli::cli_abort("Cannot combine {.cls QWAimages} with different ROXAS versions.")
@@ -29,7 +29,7 @@ combine_QWAimages <- function(x, y) {
 #'
 #' Combines the cells and rings data of two [QWAdata] objects with distinct
 #' `image_label` values into one. Columns present in only one object are
-#' filled with `NA` (`FALSE` for logical ring columns).
+#' filled with `NA`; `NA` in logical ring columns is set to `FALSE`.
 #'
 #' If the ring flag columns are present (both objects must have them or
 #' neither), the duplicate-ring flags (`duplicate_ring`, `exclude_dupl`) are
@@ -41,8 +41,8 @@ combine_QWAimages <- function(x, y) {
 #' @seealso [combine_QWAimages()], [combine_QWAmetadata()]
 #' @export
 combine_QWAdata <- function(x, y) {
-  checkmate::assert_class(x, "QWAdata")
-  checkmate::assert_class(y, "QWAdata")
+  validate_QWAdata(x)
+  validate_QWAdata(y)
   shared <- intersect(x$rings$image_label, y$rings$image_label)
   if (length(shared) > 0) {
     cli::cli_abort(c("x" = "{length(shared)} image label{?s} in both objects.",
@@ -107,16 +107,19 @@ bind_by_key <- function(df_x, df_y, key = NULL) {
 #' - `$sites`, `$trees`, `$woodpieces` and `$slides` are combined and
 #'   deduplicated by their ID column (with a warning for shared IDs with
 #'   different values), and their counts are updated with
-#'   [update_QWAmetadata()],
-#' - `$resources` is `NULL` (populated by TRIA at publish time).
+#'   [update_QWAmetadata()].
+#'
+#' Submission files only; TRIA dataset files are not edited.
 #'
 #' @param x,y [QWAmetadata] objects
 #' @returns A combined [QWAmetadata] object
 #' @seealso [combine_QWAimages()], [combine_QWAdata()], [update_QWAmetadata()]
 #' @export
 combine_QWAmetadata <- function(x, y) {
-  checkmate::assert_class(x, "QWAmetadata")
-  checkmate::assert_class(y, "QWAmetadata")
+  validate_QWAmetadata(x)
+  validate_QWAmetadata(y)
+  assert_submission(x, "combine_QWAmetadata") # TODO: might it make sense to use this fct to combine published datasets into one?
+  assert_submission(y, "combine_QWAmetadata")
   images <- combine_QWAimages(x$images, y$images)
 
   if (!is.null(y$dataset)) {
@@ -155,7 +158,7 @@ combine_QWAmetadata <- function(x, y) {
   })
 
   combined <- new_QWAmetadata(x$dataset, authors, funding, related,
-    resources = NULL, # populated by TRIA at publish time
+    datafiles = NULL, # written by TRIA at publish time
     hier$sites, hier$trees, hier$woodpieces, hier$slides, images)
   # correct counts for shared IDs
   update_QWAmetadata(combined, images)

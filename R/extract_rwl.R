@@ -10,9 +10,9 @@
 #' (aggregated cell parameters such as the 90th percentile lumen area,
 #' `la_q90`).
 #'
-#' Duplicate rings (`exclude_dupl`) and user-defined ring exclusions
+#' Duplicate rings (`exclude_dupl`) and rings flagged for exclusion
 #' (`exclude_issues`) are filtered out before constructing the final time
-#' series. These flag columns are read from `df_rings`, making it a required
+#' series; `NA` flags count as `FALSE`. These flag columns are read from `df_rings`, making it a required
 #' parameter, while `prf_data` (with the selected `sector`) is only required
 #' to extract a `param` from the profile data. With `tissue = "affected"`,
 #' rings with `exclude_issues` and `affected_tissue` `"ew"` or `"lw"` are
@@ -62,7 +62,7 @@ extract_rwl <- function(df_rings, param, prf_data = NULL, sector = NULL,
   # TODO: check rings df valid?
 
   # possible measurement params for the rings data:
-  measure_cols_rings <- schema_cols("rings", c("measure", "derived"))
+  measure_cols_rings <- schema_cols("rings", c("measure", "derived", "estimate"))
 
   meas_cols <- intersect(names(df_rings), measure_cols_rings)
   is_prf_param <- FALSE
@@ -75,8 +75,9 @@ extract_rwl <- function(df_rings, param, prf_data = NULL, sector = NULL,
     checkmate::assert_names(names(prf_data),
       must.include = c("year", "image_label", "sector_n"))
     checkmate::assert_int(sector)
-
-    # TODO: check valid, matching df_rings?
+    check_rows_in_rings(prf_data, df_rings, "profile data", strict = TRUE,
+      consequence = "These profile values would be dropped from the series.",
+      hint = "Compute {.arg prf_data} from the same {.cls QWAdata} as {.arg df_rings}, after {.fn complete_QWAdata}.")
 
     # possible measurement params for the cells data:
     in_prf_data <- param %in% names(prf_data)
@@ -142,7 +143,7 @@ extract_rwl <- function(df_rings, param, prf_data = NULL, sector = NULL,
 extract_ring_measures <- function(df_rings) {
   check_rings_excl_cols(df_rings)
 
-  keep_cols <- schema_cols("rings", c("key", "measure", "derived"))
+  keep_cols <- schema_cols("rings", c("key", "measure", "derived", "estimate"))
   df <- df_rings |>
     dplyr::filter(!dplyr::coalesce(.data$exclude_dupl, FALSE),
                   !dplyr::coalesce(.data$exclude_issues, FALSE)) |>
@@ -274,6 +275,121 @@ pivot_rwl <- function(df, value_col, tissue = "all") {
 scale_for_tucson <- function(rwl, prec = 0.001, scaling = NULL) {
   rwl <- dplR::as.rwl(rwl)
   checkmate::assert_choice(prec, c(0.001, 0.01))
+
+  max_digits <- 5 # Tucson format field width, independent of prec
+  max_representable <- (10^max_digits - 1) * prec
+  scale_rwl_pow10(rwl, scaling, max_auto = max_representable,
+    max_manual = max_representable,
+    range_desc = cli::format_inline("the Tucson range at {.code prec = {prec}}"))
+}
+
+#' Scale an rwl object for TSAP export
+#'
+#' @description
+#' [write_tsap()] writes values rounded to integers, as TSAP expects ring
+#' widths in μm (typically 300--2000). QWA parameters on smaller scales (e.g.
+#' cell wall thickness, or relative measures well below 1) would lose most or
+#' all of their information. This function scales an `rwl` object (as returned
+#' by [extract_rwl()]) by a power-of-ten factor. By default, the factor is
+#' chosen automatically as the largest that keeps all values at most 9999 (4
+#' integer digits).
+#'
+#' @details
+#' Ring-width parameters in μm (e.g. `mrw`, `eww`, `lww`) need no scaling.
+#' Auto-scaling would instead scale series with all values below 1000 by 10 or
+#' more.
+#'
+#' A manual `scaling` must be a power of ten. The applied factor is stored in
+#' the `"scaling"` attribute of the returned `rwl` object; dividing the
+#' exported values by `scaling` gives back the original values (up to
+#' rounding). An `rwl` object that already has a `"scaling"` attribute is not
+#' scaled again. The attribute is dropped by most other operations (e.g.
+#' subsetting, arithmetic, \pkg{dplR} functions), so apply this function as
+#' the last step before writing.
+#'
+#' @inheritParams scale_for_tucson
+#'
+#' @return The scaled `rwl` object, with the applied factor as attribute
+#'   `"scaling"`.
+#'
+#' @seealso [scale_for_tucson()] for Tucson-format writing.
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' rwl <- extract_rwl(df_rings = QWA_data$rings, param = "cwtrad_mean",
+#'                    prf_data = prf_sector, sector = 5)
+#' scaled <- scale_for_tsap(rwl)
+#' attr(scaled, "scaling")
+#' write_tsap(scaled, "cwtrad_mean_tsap.txt")
+#' }
+scale_for_tsap <- function(rwl, scaling = NULL) {
+  rwl <- dplR::as.rwl(rwl)
+  scale_rwl_pow10(rwl, scaling, max_auto = 9999, max_manual = Inf,
+    range_desc = "4 integer digits")
+}
+
+#' Write an rwl object as a TSAP import file
+#'
+#' @description
+#' Writes an `rwl` object (as returned by [extract_rwl()]) as a tab-delimited
+#' text file for import into TSAP: the first column `Year`, followed by one
+#' column per series. Missing values are written as `0` and values are rounded
+#' to integers.
+#'
+#' Ring widths in μm (e.g. `mrw`) can be written as they are. Scale parameters
+#' on smaller scales with [scale_for_tsap()] first; the function warns if
+#' non-zero values round to `0`.
+#'
+#' @param rwl A \pkg{dplR} `rwl` object, e.g. as returned by [extract_rwl()]
+#'   or [scale_for_tsap()].
+#' @param file Path of the output file (e.g. `"mrw_tsap.txt"`).
+#' @param overwrite Logical, whether to overwrite an existing `file`.
+#'
+#' @return The written table invisibly: a tibble with an integer `Year`
+#'   column and one integer column per series.
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' # Ring widths in μm
+#' rwl <- extract_rwl(df_rings = QWA_data$rings, param = "mrw")
+#' write_tsap(rwl, "mrw_tsap.txt")
+#'
+#' # Other parameters, auto-scaled
+#' rwl <- extract_rwl(df_rings = QWA_data$rings, param = "cwtrad_mean",
+#'                    prf_data = prf_sector, sector = 5)
+#' write_tsap(scale_for_tsap(rwl), "cwtrad_mean_tsap.txt")
+#' }
+write_tsap <- function(rwl, file, overwrite = TRUE) {
+  rwl <- dplR::as.rwl(rwl)
+  checkmate::assert_flag(overwrite)
+  checkmate::assert_path_for_output(file, overwrite = overwrite)
+
+  vals <- unlist(rwl, use.names = FALSE)
+  n_lost <- sum(!is.na(vals) & vals != 0 & round(vals) == 0)
+  if (n_lost > 0) {
+    cli::cli_warn(c(
+      "{n_lost} non-zero value{?s} round{?s/} to {.val {0}}.",
+      "i" = "Scale {.arg rwl} with {.fn scale_for_tsap} first."
+    ))
+  }
+
+  df <- tibble::as_tibble(rwl, rownames = "Year") |>
+    dplyr::mutate(
+      Year = as.integer(.data$Year),
+      dplyr::across(-"Year", \(x) as.integer(round(dplyr::coalesce(x, 0))))
+    )
+  vroom::vroom_write(df, file, delim = "\t")
+  invisible(df)
+}
+
+# scale all values of rwl by a power of ten and store it as attribute
+# "scaling": a manual scaling must keep the values at or below max_manual,
+# NULL picks the largest factor keeping them at or below max_auto. range_desc
+# describes the range in messages.
+scale_rwl_pow10 <- function(rwl, scaling, max_auto, max_manual, range_desc) {
   if (!is.null(attr(rwl, "scaling"))) {
     cli::cli_abort("{.arg rwl} is already scaled (factor {.val {attr(rwl, 'scaling')}}).")
   }
@@ -285,13 +401,11 @@ scale_for_tucson <- function(rwl, prec = 0.001, scaling = NULL) {
     scaling <- 10^round(log10(scaling)) # snap floating-point error to exact power of ten
   }
 
-  max_digits <- 5 # Tucson format field width, independent of prec
-  max_representable <- (10^max_digits - 1) * prec
   vals <- unlist(rwl, use.names = FALSE)
   vals <- vals[!is.na(vals)]
   max_val <- max(c(vals, 0))
   auto_scaling <- if (max_val == 0) 1 else
-    10^floor(log10(max_representable / max_val)) # largest power of 10 that fits
+    10^floor(log10(max_auto / max_val)) # largest power of 10 that fits
 
   if (is.null(scaling)) {
     scaling <- auto_scaling
@@ -301,12 +415,12 @@ scale_for_tucson <- function(rwl, prec = 0.001, scaling = NULL) {
         "i" = "Returning {.arg rwl} unscaled ({.code scaling = 1})."
       ))
     } else {
-      cli::cli_inform("Auto-scaled by a factor of {.val {scaling}} for optimal range at {.code prec = {prec}}.")
+      cli::cli_inform("Auto-scaled by a factor of {.val {scaling}} for optimal use of {range_desc}.")
     }
-  } else if (max_val * scaling > max_representable) {
+  } else if (max_val * scaling > max_manual) {
     cli::cli_abort(c(
-      "Scaling by {.val {scaling}} exceeds the Tucson range at {.code prec = {prec}}.",
-      "i" = "Largest scaled value would be {.val {max_val * scaling}}, maximum is {.val {max_representable}}.",
+      "Scaling by {.val {scaling}} exceeds {range_desc}.",
+      "i" = "Largest scaled value would be {.val {max_val * scaling}}, maximum is {.val {max_manual}}.",
       "i" = "Use {.code scaling = {auto_scaling}} or smaller."
     ))
   }
