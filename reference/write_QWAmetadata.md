@@ -1,11 +1,18 @@
 # Write a QWAmetadata object to a JSON file
 
-Write a QWAmetadata object to a JSON file
+Empty values are written as `null`; absent (`NULL`) components are not
+written.
 
 ## Usage
 
 ``` r
-write_QWAmetadata(x, file, compress = FALSE, overwrite = TRUE)
+write_QWAmetadata(
+  x,
+  file,
+  compress = FALSE,
+  overwrite = TRUE,
+  drop_empty = TRUE
+)
 ```
 
 ## Arguments
@@ -27,6 +34,14 @@ write_QWAmetadata(x, file, compress = FALSE, overwrite = TRUE)
 - overwrite:
 
   Allow to overwrite existing files? (default `TRUE`).
+
+- drop_empty:
+
+  If `TRUE` (default), optional fields filled in the Shiny apps
+  (`colType` `"meta_input"` or `"qc_input"`) that are empty in all rows
+  of a component are not written. Fields required under a condition
+  (e.g. `embargoed_until` for restricted datasets) are kept where it
+  applies.
 
 ## Value
 

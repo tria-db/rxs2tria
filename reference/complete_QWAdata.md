@@ -4,20 +4,21 @@ Runs the full preprocessing pipeline on a
 [QWAdata](https://tria-db.github.io/rxs2tria/reference/QWAdata.md)
 object:
 
-1.  Adds derived cell measures (see
+1.  Aligns column types and extends `$rings` to complete year sequences
+    per image, with the cell count `cno` from `$cells`; warns on dating
+    problems.
+
+2.  Adds derived cell measures and the earlywood/latewood estimates (see
     [`complete_measures()`](https://tria-db.github.io/rxs2tria/reference/complete_measures.md)).
 
-2.  Extends the rings data frame to cover all years present in cells,
-    with cell counts and mean CWT per ring (see `complete_rings_log()`).
-
-3.  Flags incomplete, missing, and duplicate rings and initialises the
-    `exclude_issues` column (see
+3.  Flags incomplete, missing, and duplicate rings and initialises
+    `exclude_dupl` and `exclude_issues` (see
     [`complete_flags()`](https://tria-db.github.io/rxs2tria/reference/complete_flags.md)).
 
 ## Usage
 
 ``` r
-complete_QWAdata(x, meta, exclude_mode = c("either", "incomplete_only"))
+complete_QWAdata(x, meta, exclude_mode = NULL)
 ```
 
 ## Arguments
@@ -36,10 +37,8 @@ complete_QWAdata(x, meta, exclude_mode = c("either", "incomplete_only"))
 
 - exclude_mode:
 
-  Passed to
-  [`complete_flags()`](https://tria-db.github.io/rxs2tria/reference/complete_flags.md):
-  `"either"` (default) excludes incomplete and missing rings;
-  `"incomplete_only"` excludes only incomplete rings.
+  Deprecated, see
+  [`complete_flags()`](https://tria-db.github.io/rxs2tria/reference/complete_flags.md).
 
 ## Value
 

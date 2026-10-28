@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">rxs2tria</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.4</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -35,10 +35,11 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><a class="dropdown-item" href="../articles/workflow.html">Step-by-step instructions</a></li>
-    <li><a class="dropdown-item" href="../articles/resources.html">Adding supplementary resources</a></li>
+    <li><a class="dropdown-item" href="../articles/supplementary.html">Adding supplementary files</a></li>
     <li><a class="dropdown-item" href="../articles/submission.html">Submitting a dataset to TRIA</a></li>
     <li><a class="dropdown-item" href="../articles/metadata-app.html">The metadata Shiny app</a></li>
     <li><a class="dropdown-item" href="../articles/flags-app.html">The ring flags Shiny app</a></li>
+    <li><a class="dropdown-item" href="../articles/rwl-export.html">Interoperability with other formats</a></li>
     <li><a class="dropdown-item" href="../articles/reopen-dataset.html">Re-opening a TRIA dataset</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
@@ -78,9 +79,11 @@
 <div class="section level2">
 <h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
 </h2>
-<p>A <code>QWAmetadata</code> object is a named list that bundles all
-metadata required for a TRIA database submission. It has ten components,
-one per level of the QWA sampling hierarchy:</p>
+<p>A <code>QWAmetadata</code> object is a named list that bundles the
+metadata of a QWA dataset, either submission files or TRIA dataset files
+(see <a href="#submission-files-and-tria-dataset-files">Submission files
+and TRIA dataset files</a>). Its components cover the dataset, its
+authors and funding, and each level of the sampling hierarchy:</p>
 <table class="table">
 <colgroup>
 <col width="50%">
@@ -99,23 +102,28 @@ one per level of the QWA sampling hierarchy:</p>
 </tr>
 <tr class="even">
 <td><code>$sites</code></td>
-<td>Site-level metadata (location, coordinates, climate)</td>
+<td>Site-level metadata (name, coordinates, country, elevation,
+topography, soil, stand)</td>
 </tr>
 <tr class="odd">
 <td><code>$trees</code></td>
-<td>Tree-level metadata (species, DBH, age)</td>
+<td>Tree-level metadata (species, DBH, height, age, status)</td>
 </tr>
 <tr class="even">
 <td><code>$woodpieces</code></td>
-<td>Woodpiece-level metadata (type: disc, core, etc.)</td>
+<td>Woodpiece-level metadata (organ, sample type, sampling year)</td>
 </tr>
 <tr class="odd">
 <td><code>$slides</code></td>
-<td>Slide-level metadata (preparation method, staining)</td>
+<td>Slide-level metadata (preparation, staining, mounting)</td>
 </tr>
 <tr class="even">
 <td><code>$dataset</code></td>
-<td>Dataset name, title, description, license, embargo date</td>
+<td>Dataset name, title, description, licence, acknowledgements;
+submission files add access rights and embargo date, TRIA dataset files
+add <code>ds_label</code>, <code>url</code>, <code>doi</code>,
+<code>citation</code>, <code>dataset_version</code>
+</td>
 </tr>
 <tr class="odd">
 <td><code>$authors</code></td>
@@ -127,22 +135,40 @@ one per level of the QWA sampling hierarchy:</p>
 </tr>
 <tr class="odd">
 <td><code>$related</code></td>
-<td>Related publications or datasets (DOIs, URLs)</td>
+<td>Related publications or datasets (DOIs, URLs). Submission files
+only.</td>
 </tr>
 <tr class="even">
-<td><code>$resources</code></td>
-<td>Describes the submitted <code>QWAcells</code>/<code>QWArings</code>
-files; added by TRIA at publish time, leave <code>NULL</code>
-</td>
+<td><code>$datafiles</code></td>
+<td>The cells and rings files of a TRIA dataset, with
+<code>size_bytes</code>, <code>checksum</code> (MD5) and
+<code>s3_key</code>. TRIA dataset files only.</td>
 </tr>
 </tbody>
 </table>
-<p><code>$images</code> is the only required component. All others are
-optional and can be populated incrementally. The hierarchical components
-(<code>$sites</code>, <code>$trees</code>, <code>$woodpieces</code>,
-<code>$slides</code>) are linked to <code>$images</code> via the shared
-label columns (<code>site_label</code>, <code>tree_label</code>,
+<p><code>$images</code> is the only required component. All others may
+be absent from the object and can be populated incrementally, but a
+complete submission needs all of them except <code>$related</code>. The
+hierarchical components (<code>$sites</code>, <code>$trees</code>,
+<code>$woodpieces</code>, <code>$slides</code>) are linked to
+<code>$images</code> via the shared label columns
+(<code>site_label</code>, <code>tree_label</code>,
 <code>woodpiece_label</code>, <code>slide_label</code>).</p>
+<hr>
+</div>
+<div class="section level2">
+<h2 id="submission-files-and-tria-dataset-files">Submission files and TRIA dataset files<a class="anchor" aria-label="anchor" href="#submission-files-and-tria-dataset-files"></a>
+</h2>
+<p>The <code>submission</code> attribute, queried with
+<code><a href="../reference/is_submission.html">is_submission()</a></code>, tells submission files (<code>TRUE</code>)
+from TRIA dataset files (<code>FALSE</code>). It is inferred from the
+components: TRIA dataset files have <code>$datafiles</code> or a
+<code>ds_label</code> in <code>$dataset</code>. Each component is
+aligned with and checked against the schema of its stage.
+<code>$related</code> is dropped from TRIA dataset files with a warning.
+<code><a href="../reference/complete_QWAmetadata.html">complete_QWAmetadata()</a></code>, <code><a href="../reference/update_QWAmetadata.html">update_QWAmetadata()</a></code>
+and <code><a href="../reference/combine_QWAmetadata.html">combine_QWAmetadata()</a></code> apply to submission files
+only.</p>
 <hr>
 </div>
 <div class="section level2">
@@ -171,10 +197,13 @@ source:</p>
 <p><code><a href="../reference/QWAmetadata.html">as_QWAmetadata()</a></code> matches list names against the known
 component names, drops any unrecognised names with a warning, and calls
 <code><a href="../reference/QWAmetadata.html">QWAmetadata()</a></code> on the remainder.</p>
-<p>The constructor validates and aligns each supplied component against
-its JSON schema: column names are cleaned, types are coerced, and
+<p>The constructor aligns each supplied component with the JSON schema
+of its stage: column names are cleaned, types are coerced, and
 unrecognised columns are dropped. Missing required columns are added as
-<code>NA</code> with a warning.</p>
+<code>NA</code> with a warning. <code>$images</code> goes through
+<code><a href="../reference/QWAimages.html">QWAimages()</a></code> (see <code><a href="../articles/QWAimages.html">vignette("QWAimages")</a></code>); the
+other components are only aligned, not checked: run
+<code><a href="../reference/check_QWAmetadata.html">check_QWAmetadata()</a></code> before a submission.</p>
 <hr>
 </div>
 <div class="section level2">
@@ -183,10 +212,11 @@ unrecognised columns are dropped. Missing required columns are added as
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">QWA_metadata</span>          <span class="co"># same as print(QWA_metadata)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">QWA_metadata</span><span class="op">)</span> <span class="co"># identical output</span></span></code></pre></div>
-<p><code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> shows the image-level coverage (images, slides,
-woodpieces, trees, sites, species, year range) and the status of each
-optional component — present with row count, or flagged as not
-provided.</p>
+<p><code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> shows the stage (submission files, or TRIA
+dataset files with label, version and citation), the image-level
+coverage (images, slides, woodpieces, trees, sites, species, year range)
+and the status of each optional component — present with row count, or
+flagged as not provided.</p>
 <p>Individual components are standard data frames and can be accessed
 and edited directly:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
@@ -194,7 +224,7 @@ and edited directly:</p>
 <span><span class="va">QWA_metadata</span><span class="op">$</span><span class="va">authors</span></span>
 <span></span>
 <span><span class="co"># Edit in place:</span></span>
-<span><span class="va">QWA_metadata</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">license</span> <span class="op">&lt;-</span> <span class="st">"CC BY 4.0"</span></span></code></pre></div>
+<span><span class="va">QWA_metadata</span><span class="op">$</span><span class="va">dataset</span><span class="op">$</span><span class="va">ds_license</span> <span class="op">&lt;-</span> <span class="st">"CC BY 4.0"</span></span></code></pre></div>
 <hr>
 </div>
 <div class="section level2">
@@ -202,29 +232,40 @@ and edited directly:</p>
 </h2>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/check_QWAmetadata.html">check_QWAmetadata</a></span><span class="op">(</span><span class="va">QWA_metadata</span><span class="op">)</span></span></code></pre></div>
-<p><code><a href="../reference/check_QWAmetadata.html">check_QWAmetadata()</a></code> validates each component in turn and
-returns <code>TRUE</code> invisibly when done:</p>
+<p><code><a href="../reference/check_QWAmetadata.html">check_QWAmetadata()</a></code> returns <code>TRUE</code> invisibly
+if no issue was found, <code>FALSE</code> otherwise. With
+<code>strict = TRUE</code>, it aborts on the first issue instead of
+warning.</p>
 <ul>
 <li>
-<strong>Absent components</strong> are skipped with an informational
-message.</li>
+<strong>Errors</strong>: invalid object; duplicate IDs in
+<code>$sites</code>, <code>$trees</code>, <code>$woodpieces</code> or
+<code>$slides</code>.</li>
 <li>
-<strong>Schema compliance</strong> (warning): checks that required
-columns are present and values are within expected ranges for each
-component.</li>
+<strong>Warnings</strong>:
+<ul>
+<li>a missing component required at the object’s stage;</li>
+<li>values violating the schema of the stage (submission files or TRIA
+dataset files), and duplicate values in columns that must be unique
+(e.g. <code>email</code>, <code>site_name</code>);</li>
+<li>not exactly one contact person, or <code>author_nr</code> not
+numbering the authors from 1 to n;</li>
+<li>unknown country or species codes, or species columns of
+<code>$trees</code> not matching their code;</li>
 <li>
-<strong>Missing optional columns</strong> (warning): reports
-optional columns not yet present.</li>
+<code>[ADD INFO ...]</code> placeholders left in the dataset
+<code>description</code>;</li>
+<li>IDs of <code>$images</code> missing from the hierarchical tables,
+extra IDs, or derived values (counts, parent labels,
+<code>species_code</code>) not matching <code>$images</code> (resync
+with <code>update_QWAmetadata(x, x$images)</code>);</li>
+<li>issues in <code>$images</code>, see
+<code><a href="../reference/check_QWAimages.html">check_QWAimages()</a></code>.</li>
+</ul>
+</li>
 <li>
-<strong>Hierarchy consistency</strong> (error): for
-<code>$sites</code>, <code>$trees</code>, <code>$woodpieces</code>, and
-<code>$slides</code>, checks that every ID present in
-<code>$images</code> has exactly one matching row, with no extras and no
-duplicates. Also verifies that derived counts (e.g. number of trees per
-site) match between the component table and <code>$images</code>.</li>
-<li>
-<strong><code>$images</code> validity</strong> (delegates to
-<code><a href="../reference/check_QWAimages.html">check_QWAimages()</a></code>).</li>
+<strong>Information</strong>: absent optional components and missing
+optional columns.</li>
 </ul>
 <hr>
 </div>
@@ -234,7 +275,9 @@ site) match between the component table and <code>$images</code>.</li>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">QWA_metadata</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/complete_QWAmetadata.html">complete_QWAmetadata</a></span><span class="op">(</span><span class="va">QWA_metadata</span><span class="op">)</span></span></code></pre></div>
 <p>Returns a new <code>QWAmetadata</code> object with all optional
-columns added and existing values preserved:</p>
+columns added (except <code>qc_input</code> columns set in the flags
+app) and existing values preserved. Applies to submission files
+only.</p>
 <ul>
 <li>
 <strong><code>$images</code></strong>: delegates to
@@ -247,30 +290,23 @@ a table is absent, it is pre-filled with the IDs and counts derived from
 all other columns initialised as <code>NA</code>. If a table is already
 present, only missing optional columns are added.</li>
 <li>
-<strong>Flat tables</strong> (<code>$dataset</code>,
-<code>$authors</code>, <code>$funding</code>, <code>$related</code>): if
-absent, a one-row skeleton with all schema columns (all <code>NA</code>)
-is created so you can see the expected fields. If already present, only
-missing optional columns are added.</li>
-<li>
-<strong><code>$resources</code></strong>: not modified by
-<code><a href="../reference/complete_QWAmetadata.html">complete_QWAmetadata()</a></code> – it’s populated by TRIA at publish
-time, not by this package.</li>
+<strong>Flat tables</strong>: if absent, <code>$dataset</code>,
+<code>$authors</code> and <code>$funding</code> get a one-row skeleton
+and <code>$related</code> an empty table, each with all schema columns,
+so you can see the expected fields. If already present, only missing
+optional columns are added.</li>
 </ul>
 <hr>
 </div>
 <div class="section level2">
-<h2 id="supplementary-resources">Supplementary resources<a class="anchor" aria-label="anchor" href="#supplementary-resources"></a>
+<h2 id="supplementary-files">Supplementary files<a class="anchor" aria-label="anchor" href="#supplementary-files"></a>
 </h2>
-<p>Supplementary data files (original/annotated images, raw ROXAS
-output, reference series, etc.) are <strong>not</strong> tracked via
-<code>$resources</code> – that component describes only the submitted
-<code>QWAcells</code>/<code>QWArings</code> files, and is added by TRIA
-at publish time. The supplementary-file manifest is a separate,
-standalone artefact built with <code><a href="../reference/compile_resources.html">compile_resources()</a></code> and
-written to its own CSV, submitted alongside a zip of the files
-themselves. See <code><a href="../articles/resources.html">vignette("resources")</a></code> for the full
-workflow.</p>
+<p>Supplementary files (original/annotated images, raw ROXAS output,
+reference series, etc.) are not part of <code>QWAmetadata</code>. They
+are listed in a separate supplementary CSV built with
+<code><a href="../reference/compile_supplementary.html">compile_supplementary()</a></code> and submitted alongside a zip of
+the files themselves. See <code><a href="../articles/supplementary.html">vignette("supplementary")</a></code> for the
+full workflow.</p>
 <hr>
 </div>
 <div class="section level2">
@@ -285,6 +321,12 @@ nested list structure and all component tables in a single file:</p>
 <p>Partial submissions can be saved and reloaded at any time. The JSON
 format is human-readable, so components can also be inspected or edited
 outside of R if needed.</p>
+<p>Empty values are written as <code>null</code>, and absent components
+are not written. With <code>drop_empty = TRUE</code> (default), optional
+fields filled in the apps that are empty in all rows are not written;
+<code><a href="../reference/complete_QWAmetadata.html">complete_QWAmetadata()</a></code> adds them back.
+<code>compress = TRUE</code> writes a <code>.json.gz</code>.
+<code><a href="../reference/read_QWAmetadata.html">read_QWAmetadata()</a></code> infers the stage from the content.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

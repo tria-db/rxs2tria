@@ -26,9 +26,10 @@ DOIs), and validates your entries as you go. The output is a
 `QWAmetadata` object, exported as a `.json` file – one of the three
 files required for every TRIA submission.
 
-The app is entirely self-contained: it does not read or write anything
-outside of what you explicitly load or export, and any partially
-completed submission can be saved and reopened later.
+The app reads and writes only what you explicitly load or export; the
+search tools send your search terms to the respective online services
+(ROR, ORCID, Crossref, doi.org). Any partially completed submission can
+be saved and reopened later.
 
 ------------------------------------------------------------------------
 
@@ -66,7 +67,8 @@ sidebar, from one of three sources:
   Step 3 of
   [`vignette("workflow")`](https://tria-db.github.io/rxs2tria/articles/workflow.md)).
 - **From file**: a `QWAimages` `.csv` file, or a `QWAmetadata` `.json`
-  file – use the latter to resume a partially completed submission.
+  file – use the latter to resume a partially completed submission
+  (submission files only; TRIA dataset files cannot be loaded).
 - **Load example data**: loads the small example dataset bundled with
   the package, useful for trying out the app without your own data.
 
@@ -95,15 +97,15 @@ and start over.
 
 Dataset- and author-level information, in three parts:
 
-- **Dataset information**: title, description, access rights (public or
-  restricted, with an embargo date), licence (CC licences preferred),
-  and acknowledgements.
+- **Dataset information**: name, title, description, access rights
+  (public or restricted, with an embargo date), licence (CC licences
+  preferred; may be left empty for restricted datasets; “other” for a
+  licence to be agreed with TRIA), and acknowledgements.
 - **Authors & Funding**: two editable tables for authors and their
   affiliations as well as funding sources. Two search tools for ROR and
   ORCID data can help you find the relevant information.
-- **Related resources**: a table of related publications or datasets,
-  with a Crossref-backed search by DOI, citation text, or TRIA dataset
-  ID.
+- **Related works**: a table of related publications or datasets, with a
+  Crossref-backed search by DOI, citation text, or TRIA dataset ID.
 
 *(screenshot: author table with ORCID search results)*
 
@@ -117,7 +119,8 @@ level. Rows are pre-filled with the IDs and labels inferred from the
 `QWAimages` or (if available) taken directly from the `QWAmetadata`
 provided as input in the Start tab. The site table also drives an
 interactive map: any site with valid coordinates gets a marker, which is
-a quick way to spot mistyped coordinates.
+a quick way to spot mistyped coordinates. As in the General tab, a
+**validation check summary** in the sidebar lists any issues.
 
 *(screenshot: site map with markers)*
 
@@ -125,7 +128,10 @@ a quick way to spot mistyped coordinates.
 
 A combined validation check summary across all tabs – resolve (or
 consciously accept) any remaining issues here. Clicking **Export data to
-file** downloads the completed `QWAmetadata` object as a `.json` file.
+file** writes the `QWAmetadata` object with
+[`write_QWAmetadata()`](https://tria-db.github.io/rxs2tria/reference/write_QWAmetadata.md)
+to `<date>_TRIA_<ds_name>_collected_metadata.json`. Optional fields left
+empty in all rows are not written.
 
 *(screenshot: summary tab with validation table)*
 
@@ -140,7 +146,7 @@ R. Read it back with:
 
 ``` r
 
-QWA_meta <- read_QWAmetadata("path/to/output_data/example_dataset_QWAmetadata.json")
+QWA_meta <- read_QWAmetadata("path/to/20250101_TRIA_example_dataset_collected_metadata.json")
 ```
 
 Within the overall data preparation workflow

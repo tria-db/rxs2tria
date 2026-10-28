@@ -9,7 +9,7 @@ data produced from ROXAS output files, organised into two components:"></head><b
 
     <a class="navbar-brand me-2" href="../index.html">rxs2tria</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.4</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -22,10 +22,11 @@ data produced from ROXAS output files, organised into two components:"></head><b
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/workflow.html">Step-by-step instructions</a></li>
-    <li><a class="dropdown-item" href="../articles/resources.html">Adding supplementary resources</a></li>
+    <li><a class="dropdown-item" href="../articles/supplementary.html">Adding supplementary files</a></li>
     <li><a class="dropdown-item" href="../articles/submission.html">Submitting a dataset to TRIA</a></li>
     <li><a class="dropdown-item" href="../articles/metadata-app.html">The metadata Shiny app</a></li>
     <li><a class="dropdown-item" href="../articles/flags-app.html">The ring flags Shiny app</a></li>
+    <li><a class="dropdown-item" href="../articles/rwl-export.html">Interoperability with other formats</a></li>
     <li><a class="dropdown-item" href="../articles/reopen-dataset.html">Re-opening a TRIA dataset</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
@@ -85,12 +86,20 @@ data produced from ROXAS output files, organised into two components:</p>
 <ul><li><p><strong><code>$cells</code></strong>: cell-level measurements (one row per cell).</p></li>
 <li><p><strong><code>$rings</code></strong>: ring-level measurements, and possibly also quality flags
 (one row per annual ring per image).</p></li>
-</ul><p>At least one component must be provided. The typical workflow builds a
+</ul><p>At least one component must be provided. The components are aligned with
+their schema (column types and order); columns not in the schema are kept
+after the schema columns. Aborts on missing, <code>NA</code> or (in <code>$rings</code>) duplicate
+keys. Warns on missing measurement columns, duplicate cell keys (image,
+year, <code>xpix</code>, <code>ypix</code>), dating problems, images only in <code>$cells</code> or only in
+<code>$rings</code>, years with cells but without a rings row, and <code>cno</code> not matching
+the number of cells. The rings are not completed here: <code><a href="complete_QWAdata.html">complete_QWAdata()</a></code>
+adds the missing rings rows and <code>cno</code>.</p>
+<p>The typical workflow builds a
 <code>QWAdata</code> object incrementally using <code><a href="collect_raw_data.html">collect_raw_data()</a></code>, <code><a href="complete_QWAdata.html">complete_QWAdata()</a></code>,
 and <code><a href="check_QWAdata.html">check_QWAdata()</a></code>.
 Metadata is kept separately as a <a href="QWAmetadata.html">QWAmetadata</a> or <a href="QWAimages.html">QWAimages</a> object.
 Radial profiles are computed separately as <a href="QWAprofile.html">QWAprofile</a> objects using
-<code><a href="calculate_sector_profiles.html">calculate_sector_profiles()</a></code> or <code><a href="calculate_band_profiles.html">calculate_band_profiles()</a></code>.</p>
+<code><a href="calculate_sector_profiles.html">calculate_sector_profiles()</a></code> or <code><a href="calculate_sector_profiles.html">calculate_band_profiles()</a></code>.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

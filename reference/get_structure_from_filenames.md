@@ -5,7 +5,7 @@ belong to which slide, woodpiece, tree, site) from the given file names
 based on a provided regex labeling pattern. The extracted site, species,
 tree, woodpiece, slide, image identifiers are joined by underscores to
 derive unique codes for each level of the data structure for the
-subsequent calculations (e.g. `tree_code = {site}_{species}_{tree}`).
+subsequent calculations (e.g. `tree_label = {site}_{species}_{tree}`).
 
 Any custom labeling pattern may be used, provided that it allows to
 uniquely identify each image and is consistently applied across all
@@ -52,8 +52,9 @@ extract_data_structure(files, pattern, site_label = NULL, species_code = NULL)
 
 - pattern:
 
-  A regex with named groups (site, species, tree, slide and/or image) to
-  describe the labeling pattern of the `filenames`.
+  A regex with named groups (`site`, `species`, `tree`, `woodpiece`,
+  `slide` and/or `image`) to describe the labelling pattern of the
+  `filenames`.
 
 - site_label:
 

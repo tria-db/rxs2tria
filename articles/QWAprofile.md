@@ -59,9 +59,17 @@ prf_band <- calculate_band_profiles(
 )
 ```
 
-`sel_cell_params` selects which cell-level columns from `QWA_data$cells`
-to aggregate. `quant_probs` is optional; omitting it produces means
-only.
+`sel_cell_params` selects the cell measurement columns to aggregate
+(`measure` and `derived` columns of `$cells`, excluding positions,
+`sector100`, `ew_lw` and `nbrid`), or `"all"`. `quant_probs` is
+optional; omitting it produces counts and means only. Band profiles skip
+rings narrower than `bandwidth` or without `mrw`.
+
+With `apply_exclusions = TRUE`, the cells of excluded rings
+(`exclude_dupl`, `exclude_issues`; `NA` counts as `FALSE`) are removed
+before aggregating. With `tissue = "affected"`, rings with
+`exclude_issues` and `affected_tissue` `"ew"` or `"lw"` lose only the
+cells of that tissue (requires `ew_lw`).
 
 ------------------------------------------------------------------------
 
@@ -85,35 +93,12 @@ Columns fall into three groups:
 `n_sectors`) - Band profiles: `start` and `end` (bin boundaries in µm)
 
 **Measurements**: one or more columns per selected cell parameter, named
-`{param}_mean`, `{param}_N`, and optionally `{param}_q{prob}` for each
-quantile (e.g. `la_mean`, `la_N`, `la_q10`, `la_q50`, `la_q90`). Sector
-profiles may also include `mrw`, `eww`, and the `ew_band` flag
+`{param}_mean`, `{param}_N`, and optionally `{param}_q{pct}` for each
+quantile, with `pct` the percentage as in
+[`stats::quantile()`](https://rdrr.io/r/stats/quantile.html)
+(e.g. `la_mean`, `la_N`, `la_q05`, `la_q50`, `la_q25.7`). Band profiles
+also include `mrw` and, if available, `eww` and the `ew_band` flag
 indicating whether a bin falls within the earlywood.
-
-------------------------------------------------------------------------
-
-## Adding parameters to an existing profile
-
-If you need to add cell parameters that were not included when the
-profile was first computed, use
-[`complete_QWAprofile()`](https://tria-db.github.io/rxs2tria/reference/complete_QWAprofile.md)
-rather than recomputing from scratch. It reuses the original bin
-definitions and only computes the parameters not already present:
-
-``` r
-
-prf_sector <- complete_QWAprofile(
-  prf_sector,
-  QWA_data   = QWA_data,
-  add_params = c("drad", "dtan"),
-  quant_probs = c(0.1, 0.5, 0.9)   # should match the original
-)
-```
-
-For band profiles,
-[`complete_QWAprofile()`](https://tria-db.github.io/rxs2tria/reference/complete_QWAprofile.md)
-infers `bandwidth` and `stepsize` from the existing `start`/`end`
-columns.
 
 ------------------------------------------------------------------------
 
@@ -125,12 +110,20 @@ check_QWAprofile(prf_sector)
 ```
 
 [`check_QWAprofile()`](https://tria-db.github.io/rxs2tria/reference/check_QWAprofile.md)
-returns `TRUE` invisibly and issues warnings for:
+checks whether a profile is ready for analysis (profiles are derived
+data and not part of a TRIA submission). It returns `TRUE` invisibly if
+no issue was found, `FALSE` otherwise; with `strict = TRUE`, it aborts
+on the first issue instead of warning.
 
-- Missing or `NA`-containing identifier columns (`image_label`, `year`).
-- Missing bin column (`sector_n` for sector profiles; `start`/`end` for
-  band profiles), or invalid band definitions where `start >= end`.
-- No measurement columns present.
+- **Errors**: invalid object, i.e. `image_label`, `year` or the bin
+  columns (`sector_n` for sector profiles, `start`/`end` for band
+  profiles) missing, mistyped, `NA` or not unique; bands with
+  `start >= end`.
+- **Warnings**: no measurement columns, or all measurement values `NA`;
+  bands of different widths; `sector_n` \< 1.
+
+To check that a profile matches the data it was computed from, use
+`check_consistency(data = QWA_data, profile = prf_sector)`.
 
 ------------------------------------------------------------------------
 

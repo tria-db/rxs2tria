@@ -2,8 +2,9 @@
 
 Add any missing columns to a
 [QWAimages](https://tria-db.github.io/rxs2tria/reference/QWAimages.md)
-object, including optional columns. New columns are intitialized as
-`NA`.
+object, including optional columns, except the quality control columns
+set in the flags app (`colType` `"qc_input"`, e.g. `comment_handled`).
+New columns are initialised as `NA`.
 
 ## Usage
 
@@ -22,7 +23,7 @@ complete_QWAimages(x)
 ## Value
 
 A [QWAimages](https://tria-db.github.io/rxs2tria/reference/QWAimages.md)
-object extended with all possible columns.
+object extended with all optional columns except `qc_input` ones.
 
 ## See also
 

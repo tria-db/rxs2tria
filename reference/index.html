@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">rxs2tria</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.4</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -20,10 +20,11 @@
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/workflow.html">Step-by-step instructions</a></li>
-    <li><a class="dropdown-item" href="../articles/resources.html">Adding supplementary resources</a></li>
+    <li><a class="dropdown-item" href="../articles/supplementary.html">Adding supplementary files</a></li>
     <li><a class="dropdown-item" href="../articles/submission.html">Submitting a dataset to TRIA</a></li>
     <li><a class="dropdown-item" href="../articles/metadata-app.html">The metadata Shiny app</a></li>
     <li><a class="dropdown-item" href="../articles/flags-app.html">The ring flags Shiny app</a></li>
+    <li><a class="dropdown-item" href="../articles/rwl-export.html">Interoperability with other formats</a></li>
     <li><a class="dropdown-item" href="../articles/reopen-dataset.html">Re-opening a TRIA dataset</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
@@ -46,7 +47,7 @@
     <div class="section level2">
       <h2 id="read-raw-roxas-ai-metadata">Read raw ROXAS (AI) metadata<a class="anchor" aria-label="anchor" href="#read-raw-roxas-ai-metadata"></a></h2>
 
-      <div class="section-desc"><p>Functions for extracing metadata from the raw ROXAS (AI) output files.</p></div>
+      <div class="section-desc"><p>Functions for extracting metadata from the raw ROXAS (AI) output files.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -115,14 +116,14 @@
 
       <dl><dt>
 
-          <code><a href="compile_resources.html">compile_resources()</a></code>
+          <code><a href="compile_supplementary.html">compile_supplementary()</a></code>
 
         </dt>
         <dd>Compile a supplementary resources manifest</dd>
 
         <dt>
 
-          <code><a href="recompile_resources.html">recompile_resources()</a></code>
+          <code><a href="recompile_supplementary.html">recompile_supplementary()</a></code>
 
         </dt>
         <dd>Reconcile and re-check a supplementary resources manifest</dd>
@@ -171,7 +172,14 @@
           <code><a href="check_QWAimages.html">check_QWAimages()</a></code>
 
         </dt>
-        <dd>Validate a QWAimages object</dd>
+        <dd>Check a QWAimages object</dd>
+
+        <dt>
+
+          <code><a href="combine_QWAimages.html">combine_QWAimages()</a></code>
+
+        </dt>
+        <dd>Combine two QWAimages objects</dd>
 
         <dt>
 
@@ -206,7 +214,7 @@
           <code><a href="update_QWAimages.html">update_QWAimages()</a></code>
 
         </dt>
-        <dd>Update QWA metadata for selected images</dd>
+        <dd>Update a QWAimages object for selected images</dd>
 
         <dt>
 
@@ -229,7 +237,14 @@
           <code><a href="check_QWAmetadata.html">check_QWAmetadata()</a></code>
 
         </dt>
-        <dd>Validate a QWAmetadata object</dd>
+        <dd>Check a QWAmetadata object</dd>
+
+        <dt>
+
+          <code><a href="combine_QWAmetadata.html">combine_QWAmetadata()</a></code>
+
+        </dt>
+        <dd>Combine two QWAmetadata objects</dd>
 
         <dt>
 
@@ -237,6 +252,13 @@
 
         </dt>
         <dd>Complete a QWAmetadata object with all optional fields</dd>
+
+        <dt>
+
+          <code><a href="is_submission.html">is_submission()</a></code>
+
+        </dt>
+        <dd>Is a QWAmetadata object from submission files?</dd>
 
         <dt>
 
@@ -261,6 +283,13 @@
 
         <dt>
 
+          <code><a href="update_QWAmetadata.html">update_QWAmetadata()</a></code>
+
+        </dt>
+        <dd>Update a QWAmetadata object to match a QWAimages object</dd>
+
+        <dt>
+
           <code><a href="write_QWAmetadata.html">write_QWAmetadata()</a></code>
 
         </dt>
@@ -280,7 +309,14 @@
           <code><a href="check_QWAdata.html">check_QWAdata()</a></code>
 
         </dt>
-        <dd>Validate a QWAdata object</dd>
+        <dd>Check a QWAdata object</dd>
+
+        <dt>
+
+          <code><a href="combine_QWAdata.html">combine_QWAdata()</a></code>
+
+        </dt>
+        <dd>Combine two QWAdata objects</dd>
 
         <dt>
 
@@ -329,7 +365,7 @@
           <code><a href="update_QWAdata.html">update_QWAdata()</a></code>
 
         </dt>
-        <dd>Update a QWAdata object with re-read raw data for selected images</dd>
+        <dd>Update a QWAdata object to match a QWAimages object</dd>
 
         <dt>
 
@@ -338,9 +374,9 @@
         </dt>
         <dd>Write a QWAdata object to files</dd>
       </dl></div><div class="section level2">
-      <h2 id="qwaprofiles">QWAprofiles<a class="anchor" aria-label="anchor" href="#qwaprofiles"></a></h2>
+      <h2 id="qwaprofile">QWAprofile<a class="anchor" aria-label="anchor" href="#qwaprofile"></a></h2>
 
-      <div class="section-desc"><p>S3 class QWAprofiles</p></div>
+      <div class="section-desc"><p>S3 class QWAprofile</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -349,31 +385,17 @@
 
       <dl><dt>
 
-          <code><a href="calculate_band_profiles.html">calculate_band_profiles()</a></code>
+          <code><a href="calculate_sector_profiles.html">calculate_sector_profiles()</a></code> <code><a href="calculate_sector_profiles.html">calculate_band_profiles()</a></code>
 
         </dt>
-        <dd>Calculate band-wise radial profiles</dd>
-
-        <dt>
-
-          <code><a href="calculate_sector_profiles.html">calculate_sector_profiles()</a></code>
-
-        </dt>
-        <dd>Calculate sector-wise radial profiles</dd>
+        <dd>Calculate radial profiles</dd>
 
         <dt>
 
           <code><a href="check_QWAprofile.html">check_QWAprofile()</a></code>
 
         </dt>
-        <dd>Validate a QWAprofile object</dd>
-
-        <dt>
-
-          <code><a href="complete_QWAprofile.html">complete_QWAprofile()</a></code>
-
-        </dt>
-        <dd>Add cell parameters to an existing QWAprofile object</dd>
+        <dd>Check a QWAprofile object</dd>
 
         <dt>
 
@@ -403,6 +425,22 @@
         </dt>
         <dd>Write a QWAprofile object to a CSV file</dd>
       </dl></div><div class="section level2">
+      <h2 id="checks">Checks<a class="anchor" aria-label="anchor" href="#checks"></a></h2>
+
+      <div class="section-desc"><p>Final checks before a submission. Each class has its own check (<code><a href="../reference/check_QWAmetadata.html">check_QWAmetadata()</a></code>, <code><a href="../reference/check_QWAdata.html">check_QWAdata()</a></code>, <code><a href="../reference/check_supplementary.html">check_supplementary()</a></code>); <code><a href="../reference/check_consistency.html">check_consistency()</a></code> checks the objects against each other.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="check_consistency.html">check_consistency()</a></code>
+
+        </dt>
+        <dd>Check the consistency of QWA objects</dd>
+      </dl></div><div class="section level2">
       <h2 id="other">Other<a class="anchor" aria-label="anchor" href="#other"></a></h2>
 
       <div class="section-desc"><p>Other utility functions.</p></div>
@@ -413,6 +451,13 @@
 
 
       <dl><dt>
+
+          <code><a href="extract_ring_measures.html">extract_ring_measures()</a></code>
+
+        </dt>
+        <dd>Extract ring measurements without excluded rings</dd>
+
+        <dt>
 
           <code><a href="extract_rwl.html">extract_rwl()</a></code>
 
@@ -432,6 +477,20 @@
 
         </dt>
         <dd>Rename rwl series to short Tucson-compatible series IDs</dd>
+
+        <dt>
+
+          <code><a href="scale_for_tsap.html">scale_for_tsap()</a></code>
+
+        </dt>
+        <dd>Scale an rwl object for TSAP export</dd>
+
+        <dt>
+
+          <code><a href="write_tsap.html">write_tsap()</a></code>
+
+        </dt>
+        <dd>Write an rwl object as a TSAP import file</dd>
       </dl></div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>

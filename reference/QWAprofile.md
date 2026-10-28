@@ -1,8 +1,12 @@
 # Create a QWAprofile object
 
 `QWAprofile` is a subclass of `data.frame` that holds profiles of QWA
-measurements aggregated along the annual rings. Usually elements of the
-`$profiles` slot of a `QWAdata` object.
+measurements aggregated along the annual rings, computed from a
+[QWAdata](https://tria-db.github.io/rxs2tria/reference/QWAdata.md)
+object with
+[`calculate_sector_profiles()`](https://tria-db.github.io/rxs2tria/reference/calculate_sector_profiles.md)
+or
+[`calculate_band_profiles()`](https://tria-db.github.io/rxs2tria/reference/calculate_sector_profiles.md).
 
 ## Usage
 
@@ -37,10 +41,10 @@ Two profile types are supported, set via the `profile_type` attribute:
   [`calculate_sector_profiles()`](https://tria-db.github.io/rxs2tria/reference/calculate_sector_profiles.md)
 
 - **`"band"`**: bins defined by fixed-width distance bands in microns.
-  [`calculate_band_profiles()`](https://tria-db.github.io/rxs2tria/reference/calculate_band_profiles.md)
+  [`calculate_band_profiles()`](https://tria-db.github.io/rxs2tria/reference/calculate_sector_profiles.md)
 
 ## See also
 
 [QWAdata](https://tria-db.github.io/rxs2tria/reference/QWAdata.md),
 [`calculate_sector_profiles()`](https://tria-db.github.io/rxs2tria/reference/calculate_sector_profiles.md),
-[`calculate_band_profiles()`](https://tria-db.github.io/rxs2tria/reference/calculate_band_profiles.md)
+[`calculate_band_profiles()`](https://tria-db.github.io/rxs2tria/reference/calculate_sector_profiles.md)

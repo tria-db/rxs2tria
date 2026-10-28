@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">rxs2tria</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.4</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -35,10 +35,11 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><a class="dropdown-item" href="../articles/workflow.html">Step-by-step instructions</a></li>
-    <li><a class="dropdown-item" href="../articles/resources.html">Adding supplementary resources</a></li>
+    <li><a class="dropdown-item" href="../articles/supplementary.html">Adding supplementary files</a></li>
     <li><a class="dropdown-item" href="../articles/submission.html">Submitting a dataset to TRIA</a></li>
     <li><a class="dropdown-item" href="../articles/metadata-app.html">The metadata Shiny app</a></li>
     <li><a class="dropdown-item" href="../articles/flags-app.html">The ring flags Shiny app</a></li>
+    <li><a class="dropdown-item" href="../articles/rwl-export.html">Interoperability with other formats</a></li>
     <li><a class="dropdown-item" href="../articles/reopen-dataset.html">Re-opening a TRIA dataset</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
@@ -94,9 +95,10 @@ publications/datasets (<a href="https://www.crossref.org/" class="external-link"
 DOIs), and validates your entries as you go. The output is a
 <code>QWAmetadata</code> object, exported as a <code>.json</code> file –
 one of the three files required for every TRIA submission.</p>
-<p>The app is entirely self-contained: it does not read or write
-anything outside of what you explicitly load or export, and any
-partially completed submission can be saved and reopened later.</p>
+<p>The app reads and writes only what you explicitly load or export; the
+search tools send your search terms to the respective online services
+(ROR, ORCID, Crossref, doi.org). Any partially completed submission can
+be saved and reopened later.</p>
 <hr>
 </div>
 <div class="section level2">
@@ -136,7 +138,8 @@ your R session (e.g. <code>rxs_images</code> from Step 3 of
 <li>
 <strong>From file</strong>: a <code>QWAimages</code>
 <code>.csv</code> file, or a <code>QWAmetadata</code> <code>.json</code>
-file – use the latter to resume a partially completed submission.</li>
+file – use the latter to resume a partially completed submission
+(submission files only; TRIA dataset files cannot be loaded).</li>
 <li>
 <strong>Load example data</strong>: loads the small example dataset
 bundled with the package, useful for trying out the app without your own
@@ -169,18 +172,19 @@ Step 2 (<code><a href="../reference/get_structure_from_filenames.html">extract_d
 <p>Dataset- and author-level information, in three parts:</p>
 <ul>
 <li>
-<strong>Dataset information</strong>: title, description, access
-rights (public or restricted, with an embargo date), licence (CC
-licences preferred), and acknowledgements.</li>
+<strong>Dataset information</strong>: name, title, description,
+access rights (public or restricted, with an embargo date), licence (CC
+licences preferred; may be left empty for restricted datasets; “other”
+for a licence to be agreed with TRIA), and acknowledgements.</li>
 <li>
 <strong>Authors &amp; Funding</strong>: two editable tables for
 authors and their affiliations as well as funding sources. Two search
 tools for ROR and ORCID data can help you find the relevant
 information.</li>
 <li>
-<strong>Related resources</strong>: a table of related publications
-or datasets, with a Crossref-backed search by DOI, citation text, or
-TRIA dataset ID.</li>
+<strong>Related works</strong>: a table of related publications or
+datasets, with a Crossref-backed search by DOI, citation text, or TRIA
+dataset ID.</li>
 </ul>
 <p><em>(screenshot: author table with ORCID search results)</em></p>
 <p>A <strong>validation check summary</strong> in the sidebar lists any
@@ -194,7 +198,9 @@ level. Rows are pre-filled with the IDs and labels inferred from the
 <code>QWAimages</code> or (if available) taken directly from the
 <code>QWAmetadata</code> provided as input in the Start tab. The site
 table also drives an interactive map: any site with valid coordinates
-gets a marker, which is a quick way to spot mistyped coordinates.</p>
+gets a marker, which is a quick way to spot mistyped coordinates. As in
+the General tab, a <strong>validation check summary</strong> in the
+sidebar lists any issues.</p>
 <p><em>(screenshot: site map with markers)</em></p>
 </div>
 <div class="section level3">
@@ -202,8 +208,10 @@ gets a marker, which is a quick way to spot mistyped coordinates.</p>
 </h3>
 <p>A combined validation check summary across all tabs – resolve (or
 consciously accept) any remaining issues here. Clicking <strong>Export
-data to file</strong> downloads the completed <code>QWAmetadata</code>
-object as a <code>.json</code> file.</p>
+data to file</strong> writes the <code>QWAmetadata</code> object with
+<code><a href="../reference/write_QWAmetadata.html">write_QWAmetadata()</a></code> to
+<code>&lt;date&gt;_TRIA_&lt;ds_name&gt;_collected_metadata.json</code>.
+Optional fields left empty in all rows are not written.</p>
 <p><em>(screenshot: summary tab with validation table)</em></p>
 <hr>
 </div>
@@ -216,7 +224,7 @@ object – see <code><a href="../articles/QWAmetadata.html">vignette("QWAmetadat
 for how to inspect, check, or edit it further in R. Read it back
 with:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">QWA_meta</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/read_QWAmetadata.html">read_QWAmetadata</a></span><span class="op">(</span><span class="st">"path/to/output_data/example_dataset_QWAmetadata.json"</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">QWA_meta</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/read_QWAmetadata.html">read_QWAmetadata</a></span><span class="op">(</span><span class="st">"path/to/20250101_TRIA_example_dataset_collected_metadata.json"</span><span class="op">)</span></span></code></pre></div>
 <p>Within the overall data preparation workflow
 (<code><a href="../articles/workflow.html">vignette("workflow")</a></code>), this app covers Step 3b, run after
 building the <code>QWAimages</code> object in Step 3 and before (or

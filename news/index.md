@@ -13,9 +13,7 @@
   also added an `Export rwl` button to the flags Shiny app.
 - overhauled the supplementary resources handling. Supplementary
   resources info is no longer part of the `QWAmetadata` object.
-  [`compile_resources()`](https://tria-db.github.io/rxs2tria/reference/compile_resources.md),
-  [`recompile_resources()`](https://tria-db.github.io/rxs2tria/reference/recompile_resources.md)
-  and
+  `compile_resources()`, `recompile_resources()` and
   [`check_supplementary()`](https://tria-db.github.io/rxs2tria/reference/check_supplementary.md)
   replace the existing functions. The output suppl resource manifest is
   a slim table listing and describing each file, to be submitted
@@ -61,7 +59,7 @@
 - `collect_resources()` now records an MD5 `checksum` and `size_bytes`
   for each file (used to verify integrity of supplementary files on
   upload). Expanded documentation of the resources step, including a new
-  [`vignette("resources")`](https://tria-db.github.io/rxs2tria/articles/resources.md).
+  `vignette("resources")`.
 - New
   [`vignette("reopen-dataset")`](https://tria-db.github.io/rxs2tria/articles/reopen-dataset.md)
   documents how to re-open a downloaded TRIA dataset using the

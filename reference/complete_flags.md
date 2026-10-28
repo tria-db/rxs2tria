@@ -11,7 +11,7 @@ The function identifies the rings with the following issues:
 ## Usage
 
 ``` r
-complete_flags(x, meta, exclude_mode = c("either", "incomplete_only"))
+complete_flags(x, meta, exclude_mode = NULL)
 ```
 
 ## Arguments
@@ -30,10 +30,9 @@ complete_flags(x, meta, exclude_mode = c("either", "incomplete_only"))
 
 - exclude_mode:
 
-  how should the `$exclude_issues` flag column be initialized, to
-  exclude any incomplete or missing rings (`"either"`, default) or only
-  the incomplete rings (i.e., not flagging missing/wedging rings for
-  exclusion from analyses, `"incomplete_only"`).
+  Deprecated. `"either"` initialises `exclude_issues` from incomplete or
+  missing rings, `"incomplete_only"` from incomplete rings only (now the
+  default behaviour).
 
 ## Value
 
@@ -57,9 +56,9 @@ ring has no MRW value (except if it is actually complete either because
 it is at the at the bark or because the user removed the incomplete ring
 manually in ROXAS). Therefore, we perform an additional check on the
 border shape and position to check if an innermost ring is incomplete,
-while the outermost ring is flagged as incomplete if and only if it has
-no MRW. TODO: The correct behaviour for rings derived with ROXAS AI
-still needs to be determined
+while the outermost ring is flagged as incomplete if it has no MRW, an
+MRW of zero, or fewer than five cells. The same rules are applied to
+ROXAS AI data.
 
 **Missing** rings are for years that have no discernible ring in the
 image, but have been manually added in ROXAS during cross-dating,
@@ -68,6 +67,13 @@ leading to an entry in the rings data but no corresponding no entries
 
 **Duplicate** rings are those that are present in multiple images due to
 them overlapping. All years which have cells in more than one image are
-flagged and ranked by their number of cells. The (complete) year with
-the highest number of cells for each overlap is the one that would then
-usually be selected for further analysis when building chronologies.
+flagged and ranked by their number of cells, with missing and incomplete
+rings ranked last. `exclude_dupl` is `TRUE` for all but the best-ranked
+ring of each overlap, which is the one usually selected for further
+analysis when building chronologies.
+
+The `exclude_issues` column is initialised from `incomplete_ring`.
+Missing rings are not excluded, as their zero width is a valid
+measurement. To use a different rule, set `exclude_issues` afterwards,
+e.g.
+`x$rings$exclude_issues <- x$rings$incomplete_ring | x$rings$missing_ring`.

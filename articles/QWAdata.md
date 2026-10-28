@@ -30,11 +30,10 @@ In normal use, `QWAdata` is built incrementally in three steps:
 QWA_data <- collect_raw_data(rxs_images)
 
 # Step 2: add derived measures and ring quality flags
-QWA_data <- complete_QWAdata(QWA_data, meta = rxs_images,
-                              exclude_mode = "either")
+QWA_data <- complete_QWAdata(QWA_data, meta = rxs_images)
 
-# Step 3: validate
-check_QWAdata(QWA_data, meta = rxs_images)
+# Step 3: check
+check_QWAdata(QWA_data)
 ```
 
 [`collect_raw_data()`](https://tria-db.github.io/rxs2tria/reference/collect_raw_data.md)
@@ -46,7 +45,7 @@ in a `QWAimages` object, cleans invalid values (negatives, error codes →
 then runs the full preprocessing pipeline (see [Completing a QWAdata
 object](#completing-a-qwadata-object) below) and
 [`check_QWAdata()`](https://tria-db.github.io/rxs2tria/reference/check_QWAdata.md)
-validates the result.
+checks the result.
 
 You can also construct a `QWAdata` object directly from existing data
 frames, for example after importing from another source:
@@ -90,26 +89,38 @@ ROXAS — lumen dimensions (`drad`, `dtan`), radial distribution
 (`rraddistr`), lumen area (`la`), cell wall areas (`cwa`), and cell wall
 thicknesses (`cwtrad`, `cwttan`, `cwtall`, `rtsr`).
 
-**Derived measures** (added by
+**Derived measures** (`colType` `derived`, added by
 [`complete_QWAdata()`](https://tria-db.github.io/rxs2tria/reference/complete_QWAdata.md)):
-`tca`, `rwd2`, `dcwt`, `cwtall.adj`, `cdrad`, `cdtan`, `cdratio`,
-`sector100`, `ew_lw` (earlywood / latewood classification based on Mork
-index).
+`tca`, `rwd2`, `dcwt`, `cwtall_adj`, `cdrad`, `cdtan`, `cdratio`,
+`sector100`.
+
+**Estimate** (added by
+[`complete_QWAdata()`](https://tria-db.github.io/rxs2tria/reference/complete_QWAdata.md)):
+`ew_lw` (earlywood / latewood classification based on Mork’s index;
+depends on method choices, so always kept).
 
 ### `$rings`
 
-One row per ring per image. Columns fall into three groups:
+One row per ring per image. Columns fall into four groups:
 
-**Identifiers**: `image_label`, `year`, `woodpiece_label`,
-`slide_label`, and `cno` (cell count per ring, derived from `$cells`).
+**Identifiers**: `woodpiece_label`, `slide_label`, `image_label`,
+`year`.
 
-**Measurements**: mean ring width (`mrw`), ring area (`ra`), and after
-[`complete_QWAdata()`](https://tria-db.github.io/rxs2tria/reference/complete_QWAdata.md),
-earlywood and latewood widths (`eww`, `lww`).
+**Measurements**: cell count (`cno`, recounted from `$cells`), mean ring
+width (`mrw`), ring area (`ra`) and further ROXAS ring measures.
+**Estimates** (added by
+[`complete_QWAdata()`](https://tria-db.github.io/rxs2tria/reference/complete_QWAdata.md)):
+earlywood and latewood widths (`eww`, `lww`, based on Mork’s index).
 
 **Quality flags** (added by
 [`complete_QWAdata()`](https://tria-db.github.io/rxs2tria/reference/complete_QWAdata.md)):
 logical columns described in the next section.
+
+**Quality-control inputs** (`colType` `qc_input`): further ring flags,
+`affected_tissue` and `comment`, set in the flags app (see
+[`vignette("flags-app")`](https://tria-db.github.io/rxs2tria/articles/flags-app.md)).
+They are never added by
+[`complete_QWAdata()`](https://tria-db.github.io/rxs2tria/reference/complete_QWAdata.md).
 
 ------------------------------------------------------------------------
 
@@ -117,21 +128,20 @@ logical columns described in the next section.
 
 ``` r
 
-QWA_data <- complete_QWAdata(QWA_data, meta = rxs_images,
-                              exclude_mode = "either")
+QWA_data <- complete_QWAdata(QWA_data, meta = rxs_images)
 ```
 
 [`complete_QWAdata()`](https://tria-db.github.io/rxs2tria/reference/complete_QWAdata.md)
 runs three operations in sequence and returns a new `QWAdata` object:
 
-1.  **Derived cell measures** — computes the derived columns listed
-    above that are not yet present in `$cells`. Already-present columns
-    are skipped, so re-running is safe.
-
-2.  **Year sequence completion** — extends `$rings` to cover every year
+1.  **Year sequence completion** — extends `$rings` to cover every year
     in the cells data (filling gaps with `cno = 0` and `FALSE` for flag
-    columns), and checks that no ring year exceeds `outmost_year` from
-    `meta`.
+    columns), and aborts on dating problems, including ring years after
+    `outmost_year` from `meta` (+1 for an incomplete outermost ring).
+
+2.  **Derived measures and estimates** — computes the derived and
+    estimate columns listed above that are not yet present.
+    Already-present columns are skipped, so re-running is safe.
 
 3.  **Ring quality flags** — adds five logical columns to `$rings`:
 
@@ -141,18 +151,24 @@ runs three operations in sequence and returns a new `QWAdata` object:
     | `missing_ring` | No cells detected; ring added manually during crossdating (e.g. wedging ring) |
     | `duplicate_ring` | Year appears in more than one image due to overlapping slides |
     | `exclude_dupl` | `TRUE` for the duplicate ring(s) not selected as the preferred source |
-    | `exclude_issues` | Convenience flag combining incomplete and/or missing rings; controlled by `exclude_mode` |
+    | `exclude_issues` | Rings to exclude from analyses; initialised from `incomplete_ring` |
 
-    For the `exclude_mode` options (`"either"` or `"incomplete_only"`),
-    see the main `rxs2tria` vignette.
+    Missing rings are not excluded by default, as their zero width is a
+    valid measurement. To use a different rule, set `exclude_issues`
+    afterwards, e.g.
+    `QWA_data$rings$exclude_issues <- QWA_data$rings$incomplete_ring | QWA_data$rings$missing_ring`.
+    `NA` in `exclude_dupl` and `exclude_issues` counts as `FALSE`.
+    [`extract_ring_measures()`](https://tria-db.github.io/rxs2tria/reference/extract_ring_measures.md)
+    returns the identifier and measurement columns without the excluded
+    rings, as input for further analyses.
 
-If you need finer control — for example to add derived measures without
-touching the flags, or to recompute flags after manual edits — the
-underlying functions
+If you need finer control, e.g. to add derived measures without adding
+flags, call
 [`complete_measures()`](https://tria-db.github.io/rxs2tria/reference/complete_measures.md)
 and
 [`complete_flags()`](https://tria-db.github.io/rxs2tria/reference/complete_flags.md)
-can be called independently.
+separately. Both add only missing columns; to recompute a column, remove
+it first.
 
 ------------------------------------------------------------------------
 
@@ -160,21 +176,27 @@ can be called independently.
 
 ``` r
 
-check_QWAdata(QWA_data, meta = rxs_images)
+check_QWAdata(QWA_data)
 ```
 
 [`check_QWAdata()`](https://tria-db.github.io/rxs2tria/reference/check_QWAdata.md)
-returns `TRUE` invisibly and issues warnings for any problems found:
+returns `TRUE` invisibly if no issue was found, `FALSE` otherwise. With
+`strict = TRUE`, it aborts on the first issue instead of warning.
 
-- **Missing CWT** (warning): any image where `cwttan` is entirely `NA`.
-- **Dating problems** (warning): undated years, duplicates, gaps, future
-  years, or years beyond `outmost_year` (the last only if `meta` is
-  supplied).
-- **Structural errors** (error): both components `NULL`, or required
-  identifier columns missing.
+- **Errors**: invalid object, i.e. missing, mistyped or `NA`
+  identifiers, or duplicate (image, year) in `$rings`.
+- **Warnings**: values violating the schema (types, ranges, allowed
+  values); duplicate cell keys (image, year, `xpix`, `ypix`); gaps and
+  future years; images only in `$cells` or only in `$rings`, years with
+  cells but without a rings row, and `cno` not matching the number of
+  cells (re-run
+  [`complete_QWAdata()`](https://tria-db.github.io/rxs2tria/reference/complete_QWAdata.md)).
+- **Information**: missing optional columns, extra columns, and images
+  where `cwttan` is entirely `NA`.
 
-The `meta` argument is optional but recommended: without it, the
-`outmost_year` check is skipped.
+To check the data against the images (e.g. ring years after
+`outmost_year`), use
+`check_consistency(meta = rxs_images, data = QWA_data)`.
 
 ------------------------------------------------------------------------
 
@@ -209,3 +231,12 @@ Compression defaults to `TRUE` for
 where it defaults to `FALSE`).
 [`read_QWAdata()`](https://tria-db.github.io/rxs2tria/reference/read_QWAdata.md)
 accepts both `.csv` and `.csv.gz`.
+
+Empty values are written as empty fields. With `drop_empty = TRUE`
+(default), optional `qc_input` columns that are empty in all rows (`NA`,
+or `NA`/`FALSE` for flags) are not written;
+[`read_QWAdata()`](https://tria-db.github.io/rxs2tria/reference/read_QWAdata.md)
+does not re-create them. With `keep_derived = FALSE`, derived columns
+are not written; recompute them with
+[`complete_QWAdata()`](https://tria-db.github.io/rxs2tria/reference/complete_QWAdata.md).
+Estimates (`ew_lw`, `eww`, `lww`) are always written.

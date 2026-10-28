@@ -61,7 +61,9 @@ current R environment, or from CSV/JSON files) for up to three inputs:
   `$images` component of a `QWAmetadata` `.json` (Step 3b). This enables
   filtering by site/species, opening image files directly from the app
   (leveraging the values in the `fname_image` column), and the Comments
-  tab described below.
+  tab described below. Opening images requires local file paths in
+  `fname_image`, i.e. a `QWAimages` object or submission `QWAmetadata`
+  JSON; TRIA dataset files have no file paths.
 
 *(screenshot: input source modal)*
 
@@ -144,9 +146,10 @@ image. The corresponding `exclude_dupl` column defines for each group of
 overlapping years which one is the selected best. Specifically, for each
 distinct `(woodpiece_label, year)`, exactly one `image_label` has
 `exclude_dupl=FALSE`, all others are set to `TRUE`. The default selected
-one is the ring with the highest cell count, but you can change this
-here. Editing `exclude_dupl` for one ring automatically applies the
-corresponding change to the other overlapping image(s).
+one is the ring with the highest cell count, preferring rings not
+flagged as incomplete or missing, but you can change this here. Editing
+`exclude_dupl` for one ring automatically applies the corresponding
+change to the other overlapping image(s).
 
 Click **Update excluded in plot** to refresh the plot markers after
 editing exclusion flags.
@@ -178,8 +181,9 @@ flagged image was actually looked at during the cleaning process.
 Click **Save ring flags** (or configure the destination first via the
 gear icon next to it) to write your edits to a local CSV file and/or an
 R environment variable. If a Comments tab was shown, its “handled”
-status is saved alongside it, to the images metadata file/variable, so
-you (or a colleague) can resume exactly where you left off.
+status (`comment_handled`) is saved with the images table to a CSV file
+and/or an R environment variable, so you (or a colleague) can resume
+exactly where you left off. Empty values are written as empty fields.
 
 *(screenshot: save settings modal)*
 
@@ -205,7 +209,7 @@ In the export dialog, you can adjust:
   scaling factor is included in the default file name, so the original
   values can be recovered by dividing by it.
 - **File path** for the `.rwl` file. Relative paths are resolved from
-  the directory the app was launched in. If the rxsmeta data is loaded,
+  the directory the app was launched in. If images metadata is loaded,
   series are named by short IDs derived from the data structure
   (e.g. `YAM_LASI_122_a` to `YAM122a`, see
   [`rename_for_tucson()`](https://tria-db.github.io/rxs2tria/reference/rename_for_tucson.md)).
@@ -253,5 +257,7 @@ be re-analysed in ROXAS/ROXAS AI, use
 and
 [`update_QWAdata()`](https://tria-db.github.io/rxs2tria/reference/update_QWAdata.md)
 (Step 6c) to splice in the new results rather than reprocessing the
-whole dataset – by default this resets any manual flags for the updated
-images, since they may no longer apply to the re-analysed data.
+whole dataset – by default this resets any manual flags for the re-read
+images, since they may no longer apply to the re-analysed data. Manual
+duplicate selections are also replaced for all woodpiece-years
+overlapping a re-read image.

@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">rxs2tria</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.4</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -35,10 +35,11 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><a class="dropdown-item" href="../articles/workflow.html">Step-by-step instructions</a></li>
-    <li><a class="dropdown-item" href="../articles/resources.html">Adding supplementary resources</a></li>
+    <li><a class="dropdown-item" href="../articles/supplementary.html">Adding supplementary files</a></li>
     <li><a class="dropdown-item" href="../articles/submission.html">Submitting a dataset to TRIA</a></li>
     <li><a class="dropdown-item" href="../articles/metadata-app.html">The metadata Shiny app</a></li>
     <li><a class="dropdown-item" href="../articles/flags-app.html">The ring flags Shiny app</a></li>
+    <li><a class="dropdown-item" href="../articles/rwl-export.html">Interoperability with other formats</a></li>
     <li><a class="dropdown-item" href="../articles/reopen-dataset.html">Re-opening a TRIA dataset</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
@@ -79,17 +80,22 @@
 <h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
 </h2>
 <p>The main purpose of <code>rxs2tria</code> is to turn raw ROXAS /
-ROXAS AI output into a submission-ready TRIA dataset (see
-<code><a href="../articles/workflow.html">vignette("workflow")</a></code>). The same <code>read_*</code>
-functions that write a dataset can also <strong>read one back</strong>,
-so a dataset downloaded from the TRIA database — or one you prepared
-earlier — can be re-opened and worked with using the package.</p>
+ROXAS AI output into the files for a TRIA submission (see
+<code><a href="../articles/workflow.html">vignette("workflow")</a></code>). The <code>read_*</code> functions
+also read TRIA dataset files, so a dataset downloaded from TRIA — or
+your own submission files — can be re-opened and worked with using the
+package.</p>
 <p>A TRIA dataset consists of at minimum three files:</p>
 <ul>
 <li>the <code>QWAmetadata</code> <code>.json</code>,</li>
 <li>the <code>QWAdata</code> cells <code>.csv</code>,</li>
 <li>the <code>QWAdata</code> rings <code>.csv</code>.</li>
 </ul>
+<p>In a downloaded TRIA dataset folder these are in <code>data/</code>
+(<code>&lt;ds_label&gt;_QWAmetadata.json</code>,
+<code>&lt;ds_label&gt;_QWAcells.csv.gz</code>,
+<code>&lt;ds_label&gt;_QWArings.csv.gz</code>); supplementary files are
+in <code>supplementary/</code>.</p>
 <p>These three are all you need to re-open a dataset. The optional
 supplementary files (original images, raw ROXAS output, etc.) are
 <strong>not</strong> required for anything shown here — download them
@@ -106,19 +112,30 @@ file directly:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">QWA_meta</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/read_QWAmetadata.html">read_QWAmetadata</a></span><span class="op">(</span><span class="st">"path/to/my_dataset_QWAmetadata.json"</span><span class="op">)</span></span>
 <span><span class="va">QWA_meta</span><span class="op">$</span><span class="va">images</span></span></code></pre></div>
+<p><code><a href="../reference/read_QWAmetadata.html">read_QWAmetadata()</a></code> recognises TRIA dataset files
+(<code>is_submission(QWA_meta)</code> is <code>FALSE</code>). Their
+<code>$datafiles</code> component lists the cells and rings files with
+their MD5 <code>checksum</code>. TRIA dataset files are not edited:
+<code><a href="../reference/complete_QWAmetadata.html">complete_QWAmetadata()</a></code>, <code><a href="../reference/update_QWAmetadata.html">update_QWAmetadata()</a></code>
+and <code><a href="../reference/combine_QWAmetadata.html">combine_QWAmetadata()</a></code> abort.</p>
 <p><code><a href="../reference/read_QWAdata.html">read_QWAdata()</a></code> reads the cells and rings CSVs. Point it
-at the directory holding the downloaded files and it locates both by
-name; if the folder holds files from more than one dataset, pass
+at the directory holding the files (for a TRIA dataset, the
+<code>data/</code> folder; the search is not recursive) and it locates
+both by name; if the folder holds files from more than one dataset, pass
 <code>dataset_name</code> to disambiguate:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">QWA_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/read_QWAdata.html">read_QWAdata</a></span><span class="op">(</span>dir <span class="op">=</span> <span class="st">"path/to/downloaded_dataset"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">QWA_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/read_QWAdata.html">read_QWAdata</a></span><span class="op">(</span>dir <span class="op">=</span> <span class="st">"path/to/tria.0000/data"</span><span class="op">)</span></span>
 <span><span class="co"># or with explicit paths:</span></span>
 <span><span class="va">QWA_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/read_QWAdata.html">read_QWAdata</a></span><span class="op">(</span>file_cells <span class="op">=</span> <span class="st">"path/to/my_dataset_QWAcells.csv.gz"</span>,</span>
 <span>                         file_rings <span class="op">=</span> <span class="st">"path/to/my_dataset_QWArings.csv.gz"</span><span class="op">)</span></span></code></pre></div>
-<p>If a profile file was included in the download,
-<code><a href="../reference/read_QWAprofile.html">read_QWAprofile()</a></code> reads it back into a
-<code>QWAprofile</code> object:</p>
+<p>TRIA dataset files do not include the derived cell measures;
+recompute them with:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">QWA_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/complete_QWAdata.html">complete_QWAdata</a></span><span class="op">(</span><span class="va">QWA_data</span>, <span class="va">QWA_meta</span><span class="op">$</span><span class="va">images</span><span class="op">)</span></span></code></pre></div>
+<p>If the supplementary files include a profile (<code>QWAprofile</code>
+CSV), <code><a href="../reference/read_QWAprofile.html">read_QWAprofile()</a></code> reads it back into a
+<code>QWAprofile</code> object:</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">prf</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/read_QWAprofile.html">read_QWAprofile</a></span><span class="op">(</span><span class="st">"path/to/my_dataset_QWAprofile_sector.csv.gz"</span><span class="op">)</span></span></code></pre></div>
 <hr>
 </div>
@@ -126,11 +143,12 @@ name; if the folder holds files from more than one dataset, pass
 <h2 id="recomputing-a-qwaprofile">Recomputing a QWAprofile<a class="anchor" aria-label="anchor" href="#recomputing-a-qwaprofile"></a>
 </h2>
 <p>Because the cells and rings tables carry the columns the profile
-calculation needs (<code>rraddistr</code> in cells; <code>mrw</code> and
-<code>eww</code> in rings, plus the cell parameters you select), you can
-compute a <code>QWAprofile</code> directly from <code>QWA_data</code> —
-even if no profile was included in the download:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+calculation needs (<code>rraddistr</code> in cells, <code>mrw</code> in
+rings for band profiles), you can compute a <code>QWAprofile</code>
+directly from <code>QWA_data</code> — even if no profile was included in
+the download. To select derived cell parameters, recompute them first
+(see above):</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">prf_sector</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/calculate_sector_profiles.html">calculate_sector_profiles</a></span><span class="op">(</span></span>
 <span>  <span class="va">QWA_data</span>,</span>
 <span>  n_sectors       <span class="op">=</span> <span class="fl">5</span>,</span>
@@ -147,18 +165,22 @@ sector and band profiles and the full set of options.</p>
 <p>The ring flags shipped in the downloaded rings file
 (<code>incomplete_ring</code>, <code>missing_ring</code>,
 <code>exclude_issues</code>, …) can be inspected and edited in the flags
-app. Launch it with:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+app. In TRIA dataset files, missing flag values are stored as
+<code>FALSE</code>, and optional quality flags that are
+<code>FALSE</code> in all rows are not included. Launch the app
+with:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/launch_flags_app.html">launch_flags_app</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <p>In the app, choose <strong>“Load data from csv files”</strong> and
 provide:</p>
 <ul>
 <li>
-<strong>QWA profile data</strong> — a profile CSV, e.g. one you
-wrote with <code><a href="../reference/write_QWAprofile.html">write_QWAprofile()</a></code> after computing it as
-above.</li>
+<strong>QWA profile data</strong> (optional) — a profile CSV,
+e.g. one you wrote with <code><a href="../reference/write_QWAprofile.html">write_QWAprofile()</a></code> after computing
+it as above.</li>
 <li>
-<strong>QWA rings data</strong> — the rings CSV of the dataset.</li>
+<strong>QWA rings data</strong> — the rings CSV (<code>.csv</code>
+or <code>.csv.gz</code>) of the dataset.</li>
 <li>
 <strong>Images metadata</strong> — here you can upload the
 <strong>QWAmetadata <code>.json</code></strong> directly: the app
@@ -169,6 +191,8 @@ extracts its <code>$images</code> component automatically. (A standalone
 and refer to objects you have already read in, for example
 <code>prf_sector</code>, <code>QWA_data$rings</code>, and
 <code>QWA_meta$images</code>.</p>
+<p>Opening images from the app is not available for TRIA dataset files,
+as they carry no local image paths.</p>
 <hr>
 </div>
 <div class="section level2">
@@ -177,18 +201,18 @@ and refer to objects you have already read in, for example
 <ul>
 <li>
 <strong>Reading re-validates.</strong> <code><a href="../reference/read_QWAdata.html">read_QWAdata()</a></code>
-checks the data against the package schema, re-derives complete year
-sequences, and verifies dating. If a file is missing columns the schema
-expects, you will see warnings — these are informative and do not stop
-you from working with the data that is present.</li>
+checks the required and measurement columns, re-derives complete year
+sequences, and verifies dating. Missing measurement columns give
+warnings — these are informative and do not stop you from working with
+the data that is present.</li>
 <li>
 <strong>Supplementary files are a separate path.</strong> Re-opening
 (this vignette) needs only the three core files. Re-running the raw
 preprocessing pipeline (<code><a href="../reference/get_roxas_files.html">get_roxas_files()</a></code>,
 <code><a href="../reference/collect_raw_data.html">collect_raw_data()</a></code>, …) is a different workflow that
 operates on the raw ROXAS files, which are only available if they were
-submitted as supplementary resources (see
-<code><a href="../articles/resources.html">vignette("resources")</a></code>).</li>
+submitted as supplementary files (see
+<code><a href="../articles/supplementary.html">vignette("supplementary")</a></code>).</li>
 </ul>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

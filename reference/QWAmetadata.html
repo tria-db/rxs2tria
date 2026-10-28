@@ -4,8 +4,9 @@ structured by level of organisation:
 $dataset: dataset-level information (name, description, license).
 $authors: author information.
 $funding: funding sources and grant numbers.
-$related: related objects (publications, datasets, etc.).
-$resources: included resources (data files)
+$related: related objects (publications, datasets, etc.). Submission
+files only.
+$datafiles: the cells and rings files. TRIA dataset files only.
 $sites: site-level metadata (location, climate, etc.).
 $trees: tree-level metadata (species, DBH, age, etc.).
 $woodpieces: woodpiece-level metadata (disc, core, etc.).
@@ -17,6 +18,11 @@ and is usually populated automatically by build_QWAimages().
 
 All components except images are optional and can be filled in later to
 prepare a complete dataset submission to the TRIA database.
+The submission attribute (is_submission()) tells submission files from
+TRIA dataset files. It is inferred from the components: TRIA dataset files
+have a $datafiles component or a ds_label in $dataset. Components are
+aligned with the schema of their stage; $related is dropped from TRIA
+dataset files with a warning.
 as_QWAmetadata() safely constructs a QWAmetadata object from a named list.
 Component names are matched against the QWAmetadata() constructor parameters;
 unknown names are dropped with a warning."><meta property="og:description" content="QWAmetadata holds the hierarchical metadata associated with a QWA dataset,
@@ -24,8 +30,9 @@ structured by level of organisation:
 $dataset: dataset-level information (name, description, license).
 $authors: author information.
 $funding: funding sources and grant numbers.
-$related: related objects (publications, datasets, etc.).
-$resources: included resources (data files)
+$related: related objects (publications, datasets, etc.). Submission
+files only.
+$datafiles: the cells and rings files. TRIA dataset files only.
 $sites: site-level metadata (location, climate, etc.).
 $trees: tree-level metadata (species, DBH, age, etc.).
 $woodpieces: woodpiece-level metadata (disc, core, etc.).
@@ -37,6 +44,11 @@ and is usually populated automatically by build_QWAimages().
 
 All components except images are optional and can be filled in later to
 prepare a complete dataset submission to the TRIA database.
+The submission attribute (is_submission()) tells submission files from
+TRIA dataset files. It is inferred from the components: TRIA dataset files
+have a $datafiles component or a ds_label in $dataset. Components are
+aligned with the schema of their stage; $related is dropped from TRIA
+dataset files with a warning.
 as_QWAmetadata() safely constructs a QWAmetadata object from a named list.
 Component names are matched against the QWAmetadata() constructor parameters;
 unknown names are dropped with a warning."></head><body>
@@ -47,7 +59,7 @@ unknown names are dropped with a warning."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">rxs2tria</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.4</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -60,10 +72,11 @@ unknown names are dropped with a warning."></head><body>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/workflow.html">Step-by-step instructions</a></li>
-    <li><a class="dropdown-item" href="../articles/resources.html">Adding supplementary resources</a></li>
+    <li><a class="dropdown-item" href="../articles/supplementary.html">Adding supplementary files</a></li>
     <li><a class="dropdown-item" href="../articles/submission.html">Submitting a dataset to TRIA</a></li>
     <li><a class="dropdown-item" href="../articles/metadata-app.html">The metadata Shiny app</a></li>
     <li><a class="dropdown-item" href="../articles/flags-app.html">The ring flags Shiny app</a></li>
+    <li><a class="dropdown-item" href="../articles/rwl-export.html">Interoperability with other formats</a></li>
     <li><a class="dropdown-item" href="../articles/reopen-dataset.html">Re-opening a TRIA dataset</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
@@ -90,8 +103,9 @@ unknown names are dropped with a warning."></head><body>
 structured by level of organisation:</p><ul><li><p><strong><code>$dataset</code></strong>: dataset-level information (name, description, license).</p></li>
 <li><p><strong><code>$authors</code></strong>: author information.</p></li>
 <li><p><strong><code>$funding</code></strong>: funding sources and grant numbers.</p></li>
-<li><p><strong><code>$related</code></strong>: related objects (publications, datasets, etc.).</p></li>
-<li><p><strong><code>$resources</code></strong>: included resources (data files)</p></li>
+<li><p><strong><code>$related</code></strong>: related objects (publications, datasets, etc.). Submission
+files only.</p></li>
+<li><p><strong><code>$datafiles</code></strong>: the cells and rings files. TRIA dataset files only.</p></li>
 <li><p><strong><code>$sites</code></strong>: site-level metadata (location, climate, etc.).</p></li>
 <li><p><strong><code>$trees</code></strong>: tree-level metadata (species, DBH, age, etc.).</p></li>
 <li><p><strong><code>$woodpieces</code></strong>: woodpiece-level metadata (disc, core, etc.).</p></li>
@@ -101,6 +115,11 @@ paths, EXIF data, and ROXAS settings. This is the only required component
 and is usually populated automatically by <code><a href="build_QWAimages.html">build_QWAimages()</a></code>.</p></li>
 </ul><p>All components except <code>images</code> are optional and can be filled in later to
 prepare a complete dataset submission to the TRIA database.</p>
+<p>The <code>submission</code> attribute (<code><a href="is_submission.html">is_submission()</a></code>) tells submission files from
+TRIA dataset files. It is inferred from the components: TRIA dataset files
+have a <code>$datafiles</code> component or a <code>ds_label</code> in <code>$dataset</code>. Components are
+aligned with the schema of their stage; <code>$related</code> is dropped from TRIA
+dataset files with a warning.</p>
 <p><code>as_QWAmetadata()</code> safely constructs a QWAmetadata object from a named list.
 Component names are matched against the <code>QWAmetadata()</code> constructor parameters;
 unknown names are dropped with a warning.</p>
@@ -113,7 +132,7 @@ unknown names are dropped with a warning.</p>
 <span>  authors <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  funding <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  related <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  resources <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  datafiles <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  sites <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  trees <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  woodpieces <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -148,12 +167,12 @@ metadata Shiny app.</p></dd>
 provided via metadata Shiny app.</p></dd>
 
 
-<dt id="arg-resources">resources<a class="anchor" aria-label="anchor" href="#arg-resources"></a></dt>
-<dd><p>Data frame describing the submitted <code>QWAdata</code> cells/rings
-files. Populated by TRIA at publish time rather than by this package –
-leave <code>NULL</code>. (The supplementary-file manifest built by
-<code><a href="compile_resources.html">compile_resources()</a></code> is a separate, standalone artefact – see
-<code><a href="../articles/resources.html">vignette("resources")</a></code> – not a component of <code>QWAmetadata</code>.)</p></dd>
+<dt id="arg-datafiles">datafiles<a class="anchor" aria-label="anchor" href="#arg-datafiles"></a></dt>
+<dd><p>Data frame listing the cells and rings files of a TRIA
+dataset, with size, checksum and S3 key. Written by TRIA at publish time;
+leave <code>NULL</code> for submission files. (The supplementary CSV built by
+<code><a href="compile_supplementary.html">compile_supplementary()</a></code> is a separate file, see
+<code><a href="../articles/supplementary.html">vignette("supplementary")</a></code>.)</p></dd>
 
 
 <dt id="arg-sites">sites<a class="anchor" aria-label="anchor" href="#arg-sites"></a></dt>

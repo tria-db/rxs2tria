@@ -11,11 +11,14 @@ measurements (e.g. mean ring width, `mrw`) or profile-level measurements
 at a given sector (aggregated cell parameters such as the 90th
 percentile lumen area, `la_q90`).
 
-Duplicate rings (`exclude_dupl`) and user-defined ring exclusions
+Duplicate rings (`exclude_dupl`) and rings flagged for exclusion
 (`exclude_issues`) are filtered out before constructing the final time
-series. These flag columns are read from `df_rings`, making it a
-required parameter, while `prf_data` (with the selected `sector`) is
-only required to extract a `param` from the profile data.
+series; `NA` flags count as `FALSE`. These flag columns are read from
+`df_rings`, making it a required parameter, while `prf_data` (with the
+selected `sector`) is only required to extract a `param` from the
+profile data. With `tissue = "affected"`, rings with `exclude_issues`
+and `affected_tissue` `"ew"` or `"lw"` are kept, using the values of the
+unaffected tissue from `prf_data`.
 
 Series are grouped by **woodpiece** (each core/sample yields one
 series); thus the `woodpiece_label`s become the column names.
@@ -23,7 +26,13 @@ series); thus the `woodpiece_label`s become the column names.
 ## Usage
 
 ``` r
-extract_rwl(df_rings, param, prf_data = NULL, sector = NULL)
+extract_rwl(
+  df_rings,
+  param,
+  prf_data = NULL,
+  sector = NULL,
+  tissue = c("all", "affected")
+)
 ```
 
 ## Arguments
@@ -52,6 +61,15 @@ extract_rwl(df_rings, param, prf_data = NULL, sector = NULL)
 
   Integer specifying which sector to use when exporting a `prf_data`
   parameter. Required in that case, otherwise ignored.
+
+- tissue:
+
+  `"all"` (default) removes all rings with `exclude_issues`;
+  `"affected"` keeps those with `affected_tissue` `"ew"` or `"lw"`. Only
+  for `prf_data` parameters, and requires `prf_data` computed with
+  `apply_exclusions = TRUE, tissue = "affected"` (see
+  [`calculate_sector_profiles()`](https://tria-db.github.io/rxs2tria/reference/calculate_sector_profiles.md));
+  otherwise the affected tissue is included.
 
 ## Value
 

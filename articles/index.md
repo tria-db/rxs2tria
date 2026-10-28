@@ -5,13 +5,15 @@
 - [Step-by-step
   instructions](https://tria-db.github.io/rxs2tria/articles/workflow.md):
 - [Adding supplementary
-  resources](https://tria-db.github.io/rxs2tria/articles/resources.md):
+  files](https://tria-db.github.io/rxs2tria/articles/supplementary.md):
 - [Submitting a dataset to
   TRIA](https://tria-db.github.io/rxs2tria/articles/submission.md):
 - [The metadata Shiny
   app](https://tria-db.github.io/rxs2tria/articles/metadata-app.md):
 - [The ring flags Shiny
   app](https://tria-db.github.io/rxs2tria/articles/flags-app.md):
+- [Interoperability with other
+  formats](https://tria-db.github.io/rxs2tria/articles/rwl-export.md):
 - [Re-opening a TRIA
   dataset](https://tria-db.github.io/rxs2tria/articles/reopen-dataset.md):
 

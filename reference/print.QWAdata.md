@@ -3,8 +3,9 @@
 Displays a compact overview of a
 [QWAdata](https://tria-db.github.io/rxs2tria/reference/QWAdata.md)
 object: which components are present, the spatial and temporal coverage
-of the data, and (if the data have been validated) a summary of ring
-quality flags.
+of the data, and (if the flag columns are present, see
+[`complete_QWAdata()`](https://tria-db.github.io/rxs2tria/reference/complete_QWAdata.md))
+a summary of the automatic ring flags.
 
 ## Usage
 

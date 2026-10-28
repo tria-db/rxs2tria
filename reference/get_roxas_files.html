@@ -19,7 +19,7 @@ by ROXAS resp. ROXAS AI, see the Details below."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">rxs2tria</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.4</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -32,10 +32,11 @@ by ROXAS resp. ROXAS AI, see the Details below."></head><body>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/workflow.html">Step-by-step instructions</a></li>
-    <li><a class="dropdown-item" href="../articles/resources.html">Adding supplementary resources</a></li>
+    <li><a class="dropdown-item" href="../articles/supplementary.html">Adding supplementary files</a></li>
     <li><a class="dropdown-item" href="../articles/submission.html">Submitting a dataset to TRIA</a></li>
     <li><a class="dropdown-item" href="../articles/metadata-app.html">The metadata Shiny app</a></li>
     <li><a class="dropdown-item" href="../articles/flags-app.html">The ring flags Shiny app</a></li>
+    <li><a class="dropdown-item" href="../articles/rwl-export.html">Interoperability with other formats</a></li>
     <li><a class="dropdown-item" href="../articles/reopen-dataset.html">Re-opening a TRIA dataset</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
@@ -98,11 +99,13 @@ file paths.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>For ROXAS, the required files per image are:</p><ul><li><p>The original image file (<code>{IMAGEID}.jpg</code> or <code>.jpeg</code>).</p></li>
+    <p>For ROXAS, the required files per image are:</p><ul><li><p>The original image file (<code>{IMAGEID}.jpg</code>; also <code>.jpeg</code>, <code>.png</code>, <code>.bmp</code> or
+<code>.tiff</code>, in that order of preference if several exist).</p></li>
 <li><p>The ROXAS settings file (<code>{IMAGEID}_ROXAS_Settings.txt</code>).</p></li>
 <li><p>The cell measurements output (<code>{IMAGEID}_Output_Cells.txt</code>).</p></li>
 <li><p>The ring measurements output (<code>{IMAGEID}_Output_Rings.txt</code>).</p></li>
-</ul><p>For ROXAS AI, the required files per image are:</p><ul><li><p>The original image file (<code>{IMAGEID}.scan.jpg</code> or <code>.jpeg</code>).</p></li>
+</ul><p>For ROXAS AI, the required files per image are:</p><ul><li><p>The original image file (<code>{IMAGEID}.scan.jpg</code>; also <code>.jpeg</code>, <code>.png</code>,
+<code>.bmp</code> or <code>.tiff</code>, in that order of preference if several exist).</p></li>
 <li><p>The ROXAS AI metadata file (<code>{IMAGEID}.metadata.json</code>).</p></li>
 <li><p>The cell measurements table (<code>{IMAGEID}.cells_table.csv</code> or <code>.txt</code>).</p></li>
 <li><p>The ring measurements table (<code>{IMAGEID}.rings_table.csv</code> or <code>.txt</code>).</p></li>

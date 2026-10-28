@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">rxs2tria</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.4</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -35,10 +35,11 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><a class="dropdown-item" href="../articles/workflow.html">Step-by-step instructions</a></li>
-    <li><a class="dropdown-item" href="../articles/resources.html">Adding supplementary resources</a></li>
+    <li><a class="dropdown-item" href="../articles/supplementary.html">Adding supplementary files</a></li>
     <li><a class="dropdown-item" href="../articles/submission.html">Submitting a dataset to TRIA</a></li>
     <li><a class="dropdown-item" href="../articles/metadata-app.html">The metadata Shiny app</a></li>
     <li><a class="dropdown-item" href="../articles/flags-app.html">The ring flags Shiny app</a></li>
+    <li><a class="dropdown-item" href="../articles/rwl-export.html">Interoperability with other formats</a></li>
     <li><a class="dropdown-item" href="../articles/reopen-dataset.html">Re-opening a TRIA dataset</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
@@ -86,20 +87,20 @@ optionally, a validated zip of supplementary files) ready on disk.</p>
 <p>A submission consists of:</p>
 <ol style="list-style-type: decimal">
 <li>
-<strong><code>{dataset_name}_QWAmetadata.json</code></strong>:
-usually the output of the Shiny metadata app, or written with
-<code><a href="../reference/write_QWAmetadata.html">write_QWAmetadata()</a></code>.</li>
+<strong>The <code>QWAmetadata</code> <code>.json</code></strong>:
+exported from the Shiny metadata app
+(<code>&lt;date&gt;_TRIA_&lt;ds_name&gt;_collected_metadata.json</code>)
+or written with <code><a href="../reference/write_QWAmetadata.html">write_QWAmetadata()</a></code>.</li>
 <li>
 <strong><code>{dataset_name}_QWAcells.csv(.gz)</code></strong> and
 <strong><code>{dataset_name}_QWArings.csv(.gz)</code></strong>: written
 with <code><a href="../reference/write_QWAdata.html">write_QWAdata()</a></code>. The rings file may also have been
 saved via the Shiny flags app, if it was used for assigning data quality
 flags to years.</li>
-<li>Optionally, <strong>one zip archive of supplementary
-resources</strong> (original and annotated images, raw ROXAS / ROXAS AI
-output, reference series, etc.) and the <strong>resources manifest
-CSV</strong> describing it (see
-<code><a href="../articles/resources.html">vignette("resources")</a></code>).</li>
+<li>Optionally, <strong>one zip archive of supplementary files</strong>
+(original and annotated images, raw ROXAS / ROXAS AI output, reference
+series, etc.) and the <strong>supplementary CSV</strong> describing it
+(see <code><a href="../articles/supplementary.html">vignette("supplementary")</a></code>).</li>
 </ol>
 <p>To hand over these files, email <a href="mailto:tria@wsl.ch">tria@wsl.ch</a> and either:</p>
 <ul>
@@ -121,10 +122,11 @@ publicly available (meta-)data is visible via the website.</p>
 <div class="section level3">
 <h3 id="s3-bucket">S3 bucket<a class="anchor" aria-label="anchor" href="#s3-bucket"></a>
 </h3>
-<p>For datasets that are public, we store a copy of the (meta-)data
-files as well as any supplementary data in an S3 bucket, so the data are
-easily accessible and downloadable. Each dataset gets its own folder
-like this:</p>
+<p>For every dataset, we store the TRIA dataset files (metadata, cells,
+rings and any supplementary files) in an S3 bucket: public datasets in
+the public bucket, where they are easily accessible and downloadable,
+and embargoed ones in a restricted bucket until their release. Each
+dataset gets its own folder like this:</p>
 <pre><code>tria.0000/
   data/
     tria.0000_QWAmetadata.json
@@ -150,14 +152,16 @@ isn’t a surprise.</p>
 <code>dcwt</code>, <code>cwtall_adj</code>, <code>cdrad</code>,
 <code>cdtan</code>, <code>cdratio</code>, <code>sector100</code>) are
 <strong>removed</strong>. They are trivially recomputed from the raw
-measurements, so we don’t store a second, potentially stale copy.</p>
+measurements, so we don’t store a second, potentially stale copy.
+Recompute them with <code><a href="../reference/complete_QWAdata.html">complete_QWAdata()</a></code>.</p>
 </div>
 <div class="section level3">
 <h3 id="qwarings-csv">
 <code>QWArings.csv</code><a class="anchor" aria-label="anchor" href="#qwarings-csv"></a>
 </h3>
-<p>Mostly unchanged, but we remove any all <code>NA</code> columns to
-reduce size.</p>
+<p>Ring flags are stored as in the database: missing flag values become
+<code>FALSE</code>, and optional quality flag and comment columns that
+are empty in all rows are not written.</p>
 </div>
 <div class="section level3">
 <h3 id="qwametadata-json">
@@ -176,24 +180,41 @@ reduce size.</p>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td><code>$dataset$ds_access</code></td>
+<td>
+<code>$dataset$ds_access</code>, <code>embargoed_until</code>
+</td>
 <td>Removed</td>
 <td>On ingestion</td>
 </tr>
 <tr class="even">
-<td><code>$dataset$citation</code></td>
-<td>Added (with DOI if available)</td>
+<td>
+<code>$dataset$ds_label</code>, <code>url</code>
+</td>
+<td>Added</td>
 <td>On ingestion</td>
 </tr>
 <tr class="odd">
-<td><code>$dataset$version</code></td>
-<td>Added (for reproducibility in case of later changes)</td>
+<td><code>$dataset$citation</code></td>
+<td>Added (with the DOI if registered, otherwise the TRIA web app
+URL)</td>
 <td>On ingestion</td>
 </tr>
 <tr class="even">
+<td><code>$dataset$dataset_version</code></td>
+<td>Added (for reproducibility in case of later changes)</td>
+<td>On ingestion</td>
+</tr>
+<tr class="odd">
 <td><code>$dataset$doi</code></td>
 <td>Added</td>
-<td>When the dataset is made public and registered for a DOI</td>
+<td>When a DOI is registered</td>
+</tr>
+<tr class="even">
+<td><code>$dataset$ds_license</code></td>
+<td>
+<code>"All rights reserved"</code> while embargoed; the submitted
+licence applies on release</td>
+<td>On ingestion / release</td>
 </tr>
 <tr class="odd">
 <td>
@@ -204,10 +225,14 @@ reduce size.</p>
 <td>On ingestion</td>
 </tr>
 <tr class="even">
-<td><code>$resources</code></td>
-<td>Added: two rows pointing to the submitted
-<code>QWAcells</code>/<code>QWArings</code> files, for
-reproducibility</td>
+<td><code>$related</code></td>
+<td>Removed (shown on the TRIA web app landing page)</td>
+<td>On ingestion</td>
+</tr>
+<tr class="odd">
+<td><code>$datafiles</code></td>
+<td>Added: two rows for the <code>QWAcells</code>/<code>QWArings</code>
+files</td>
 <td>On ingestion</td>
 </tr>
 </tbody>
@@ -215,14 +240,14 @@ reproducibility</td>
 <p>The <code>fname_*</code> columns hold absolute paths from your own
 machine— meaningful while you’re preparing the data, meaningless (and
 potentially revealing local file-system structure) once archived, so
-they are always stripped rather than carried into the database. The
-<code>$resources</code> itself contains only two rows with the info
-(incl. <code>s3_key</code> and <code>checksum</code>) of the uploaded
-<code>QWAcells</code> and <code>QWArings</code> files (as described
-above). So for each <code>version</code> of the dataset, we know exactly
-which data files are the correct ones. Note that the
-supplementary-resources manifest is a separate CSV (see below), not a
-component of <code>QWAmetadata.json</code>.</p>
+they are always stripped rather than carried into the database.
+<code>$datafiles</code> contains two rows describing the
+<code>QWAcells</code> and <code>QWArings</code> files, with
+<code>size_bytes</code>, <code>checksum</code> (MD5) and
+<code>s3_key</code>, so the data files of each
+<code>dataset_version</code> are identified exactly. Note that the
+supplementary CSV is a separate file (see below), not a component of
+<code>QWAmetadata.json</code>.</p>
 </div>
 <div class="section level3">
 <h3 id="supplementary_files-csv-and-supplementary_data-zip">
@@ -236,16 +261,18 @@ our ingestion checks. We re-run <code><a href="../reference/check_supplementary.
 our side regardless, pointed directly at your uploaded zip. If you
 provide the manifest CSV, it’s trusted as ground truth for anything it
 lists that’s still in the zip. Extra files in the zip the manifest
-doesn’t mention are left out rather than guessed at. If you don’t
-provide a manifest, we build one from scratch the same way
-<code><a href="../reference/compile_resources.html">compile_resources()</a></code> would for you. But any issues with
+doesn’t mention are left out rather than guessed at;
+<code><a href="../reference/check_supplementary.html">check_supplementary()</a></code> warns about them, so you can declare
+them in the manifest or remove them from the zip. If you don’t provide a
+manifest, we build one from scratch the same way
+<code><a href="../reference/compile_supplementary.html">compile_supplementary()</a></code> would for you. But any issues with
 inferring the resource types and linked labels would mean that we have
 to contact you for clarification—prolonging the submission process.</p>
-<p>The checked and ‘cleaned’ archive is re-zipped. For the manifest, the
-columns <code>fname_resource</code>, <code>status</code>,
-<code>note</code> are removed while <code>checksum</code>,
-<code>size_bytes</code> and <code>s3_key</code> are added to uniquely
-identify each resource file within the bucket archive.</p>
+<p>The checked and ‘cleaned’ archive is re-zipped. For the supplementary
+CSV, the columns <code>fname_resource</code>, <code>status</code> and
+<code>note</code> are removed, and <code>size_bytes</code> and
+<code>checksum</code> are added to identify each file within the
+archive.</p>
 </div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

@@ -1,6 +1,6 @@
 # Write a QWAprofile object to a CSV file
 
-Write a QWAprofile object to a CSV file
+Empty values are written as empty fields.
 
 ## Usage
 

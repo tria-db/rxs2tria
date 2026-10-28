@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">rxs2tria</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.4</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -35,10 +35,11 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><a class="dropdown-item" href="../articles/workflow.html">Step-by-step instructions</a></li>
-    <li><a class="dropdown-item" href="../articles/resources.html">Adding supplementary resources</a></li>
+    <li><a class="dropdown-item" href="../articles/supplementary.html">Adding supplementary files</a></li>
     <li><a class="dropdown-item" href="../articles/submission.html">Submitting a dataset to TRIA</a></li>
     <li><a class="dropdown-item" href="../articles/metadata-app.html">The metadata Shiny app</a></li>
     <li><a class="dropdown-item" href="../articles/flags-app.html">The ring flags Shiny app</a></li>
+    <li><a class="dropdown-item" href="../articles/rwl-export.html">Interoperability with other formats</a></li>
     <li><a class="dropdown-item" href="../articles/reopen-dataset.html">Re-opening a TRIA dataset</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
@@ -105,18 +106,17 @@ steps:</p>
 <span><span class="va">QWA_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/collect_raw_data.html">collect_raw_data</a></span><span class="op">(</span><span class="va">rxs_images</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Step 2: add derived measures and ring quality flags</span></span>
-<span><span class="va">QWA_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/complete_QWAdata.html">complete_QWAdata</a></span><span class="op">(</span><span class="va">QWA_data</span>, meta <span class="op">=</span> <span class="va">rxs_images</span>,</span>
-<span>                              exclude_mode <span class="op">=</span> <span class="st">"either"</span><span class="op">)</span></span>
+<span><span class="va">QWA_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/complete_QWAdata.html">complete_QWAdata</a></span><span class="op">(</span><span class="va">QWA_data</span>, meta <span class="op">=</span> <span class="va">rxs_images</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Step 3: validate</span></span>
-<span><span class="fu"><a href="../reference/check_QWAdata.html">check_QWAdata</a></span><span class="op">(</span><span class="va">QWA_data</span>, meta <span class="op">=</span> <span class="va">rxs_images</span><span class="op">)</span></span></code></pre></div>
+<span><span class="co"># Step 3: check</span></span>
+<span><span class="fu"><a href="../reference/check_QWAdata.html">check_QWAdata</a></span><span class="op">(</span><span class="va">QWA_data</span><span class="op">)</span></span></code></pre></div>
 <p><code><a href="../reference/collect_raw_data.html">collect_raw_data()</a></code> reads the cells and rings tables from
 all ROXAS output files referenced in a <code>QWAimages</code> object,
 cleans invalid values (negatives, error codes → <code>NA</code>), and
 returns a minimal <code>QWAdata</code> with raw measurements only.</p>
 <p><code><a href="../reference/complete_QWAdata.html">complete_QWAdata()</a></code> then runs the full preprocessing
 pipeline (see <a href="#completing-a-qwadata-object">Completing a
-QWAdata object</a> below) and <code><a href="../reference/check_QWAdata.html">check_QWAdata()</a></code> validates the
+QWAdata object</a> below) and <code><a href="../reference/check_QWAdata.html">check_QWAdata()</a></code> checks the
 result.</p>
 <p>You can also construct a <code>QWAdata</code> object directly from
 existing data frames, for example after importing from another
@@ -157,28 +157,37 @@ directly from ROXAS — lumen dimensions (<code>drad</code>,
 area (<code>la</code>), cell wall areas (<code>cwa</code>), and cell
 wall thicknesses (<code>cwtrad</code>, <code>cwttan</code>,
 <code>cwtall</code>, <code>rtsr</code>).</p>
-<p><strong>Derived measures</strong> (added by
-<code><a href="../reference/complete_QWAdata.html">complete_QWAdata()</a></code>): <code>tca</code>, <code>rwd2</code>,
-<code>dcwt</code>, <code>cwtall.adj</code>, <code>cdrad</code>,
-<code>cdtan</code>, <code>cdratio</code>, <code>sector100</code>,
-<code>ew_lw</code> (earlywood / latewood classification based on Mork
-index).</p>
+<p><strong>Derived measures</strong> (<code>colType</code>
+<code>derived</code>, added by <code><a href="../reference/complete_QWAdata.html">complete_QWAdata()</a></code>):
+<code>tca</code>, <code>rwd2</code>, <code>dcwt</code>,
+<code>cwtall_adj</code>, <code>cdrad</code>, <code>cdtan</code>,
+<code>cdratio</code>, <code>sector100</code>.</p>
+<p><strong>Estimate</strong> (added by <code><a href="../reference/complete_QWAdata.html">complete_QWAdata()</a></code>):
+<code>ew_lw</code> (earlywood / latewood classification based on Mork’s
+index; depends on method choices, so always kept).</p>
 </div>
 <div class="section level3">
 <h3 id="rings">
 <code>$rings</code><a class="anchor" aria-label="anchor" href="#rings"></a>
 </h3>
-<p>One row per ring per image. Columns fall into three groups:</p>
-<p><strong>Identifiers</strong>: <code>image_label</code>,
-<code>year</code>, <code>woodpiece_label</code>,
-<code>slide_label</code>, and <code>cno</code> (cell count per ring,
-derived from <code>$cells</code>).</p>
-<p><strong>Measurements</strong>: mean ring width (<code>mrw</code>),
-ring area (<code>ra</code>), and after <code><a href="../reference/complete_QWAdata.html">complete_QWAdata()</a></code>,
-earlywood and latewood widths (<code>eww</code>, <code>lww</code>).</p>
+<p>One row per ring per image. Columns fall into four groups:</p>
+<p><strong>Identifiers</strong>: <code>woodpiece_label</code>,
+<code>slide_label</code>, <code>image_label</code>,
+<code>year</code>.</p>
+<p><strong>Measurements</strong>: cell count (<code>cno</code>,
+recounted from <code>$cells</code>), mean ring width (<code>mrw</code>),
+ring area (<code>ra</code>) and further ROXAS ring measures.
+<strong>Estimates</strong> (added by <code><a href="../reference/complete_QWAdata.html">complete_QWAdata()</a></code>):
+earlywood and latewood widths (<code>eww</code>, <code>lww</code>, based
+on Mork’s index).</p>
 <p><strong>Quality flags</strong> (added by
 <code><a href="../reference/complete_QWAdata.html">complete_QWAdata()</a></code>): logical columns described in the next
 section.</p>
+<p><strong>Quality-control inputs</strong> (<code>colType</code>
+<code>qc_input</code>): further ring flags, <code>affected_tissue</code>
+and <code>comment</code>, set in the flags app (see
+<code><a href="../articles/flags-app.html">vignette("flags-app")</a></code>). They are never added by
+<code><a href="../reference/complete_QWAdata.html">complete_QWAdata()</a></code>.</p>
 <hr>
 </div>
 </div>
@@ -186,19 +195,19 @@ section.</p>
 <h2 id="completing-a-qwadata-object">Completing a QWAdata object<a class="anchor" aria-label="anchor" href="#completing-a-qwadata-object"></a>
 </h2>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">QWA_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/complete_QWAdata.html">complete_QWAdata</a></span><span class="op">(</span><span class="va">QWA_data</span>, meta <span class="op">=</span> <span class="va">rxs_images</span>,</span>
-<span>                              exclude_mode <span class="op">=</span> <span class="st">"either"</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">QWA_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/complete_QWAdata.html">complete_QWAdata</a></span><span class="op">(</span><span class="va">QWA_data</span>, meta <span class="op">=</span> <span class="va">rxs_images</span><span class="op">)</span></span></code></pre></div>
 <p><code><a href="../reference/complete_QWAdata.html">complete_QWAdata()</a></code> runs three operations in sequence and
 returns a new <code>QWAdata</code> object:</p>
 <ol style="list-style-type: decimal">
-<li><p><strong>Derived cell measures</strong> — computes the derived
-columns listed above that are not yet present in <code>$cells</code>.
-Already-present columns are skipped, so re-running is safe.</p></li>
 <li><p><strong>Year sequence completion</strong> — extends
 <code>$rings</code> to cover every year in the cells data (filling gaps
 with <code>cno = 0</code> and <code>FALSE</code> for flag columns), and
-checks that no ring year exceeds <code>outmost_year</code> from
-<code>meta</code>.</p></li>
+aborts on dating problems, including ring years after
+<code>outmost_year</code> from <code>meta</code> (+1 for an incomplete
+outermost ring).</p></li>
+<li><p><strong>Derived measures and estimates</strong> — computes the
+derived and estimate columns listed above that are not yet present.
+Already-present columns are skipped, so re-running is safe.</p></li>
 <li>
 <p><strong>Ring quality flags</strong> — adds five logical columns
 to <code>$rings</code>:</p>
@@ -234,45 +243,58 @@ preferred source</td>
 </tr>
 <tr class="odd">
 <td><code>exclude_issues</code></td>
-<td>Convenience flag combining incomplete and/or missing rings;
-controlled by <code>exclude_mode</code>
+<td>Rings to exclude from analyses; initialised from
+<code>incomplete_ring</code>
 </td>
 </tr>
 </tbody>
 </table>
-<p>For the <code>exclude_mode</code> options (<code>"either"</code> or
-<code>"incomplete_only"</code>), see the main <code>rxs2tria</code>
-vignette.</p>
+<p>Missing rings are not excluded by default, as their zero width is a
+valid measurement. To use a different rule, set
+<code>exclude_issues</code> afterwards, e.g.
+<code>QWA_data$rings$exclude_issues &lt;- QWA_data$rings$incomplete_ring | QWA_data$rings$missing_ring</code>.
+<code>NA</code> in <code>exclude_dupl</code> and
+<code>exclude_issues</code> counts as <code>FALSE</code>.
+<code><a href="../reference/extract_ring_measures.html">extract_ring_measures()</a></code> returns the identifier and
+measurement columns without the excluded rings, as input for further
+analyses.</p>
 </li>
 </ol>
-<p>If you need finer control — for example to add derived measures
-without touching the flags, or to recompute flags after manual edits —
-the underlying functions <code><a href="../reference/complete_measures.html">complete_measures()</a></code> and
-<code><a href="../reference/complete_flags.html">complete_flags()</a></code> can be called independently.</p>
+<p>If you need finer control, e.g. to add derived measures without
+adding flags, call <code><a href="../reference/complete_measures.html">complete_measures()</a></code> and
+<code><a href="../reference/complete_flags.html">complete_flags()</a></code> separately. Both add only missing columns;
+to recompute a column, remove it first.</p>
 <hr>
 </div>
 <div class="section level2">
 <h2 id="checking-a-qwadata-object">Checking a QWAdata object<a class="anchor" aria-label="anchor" href="#checking-a-qwadata-object"></a>
 </h2>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/check_QWAdata.html">check_QWAdata</a></span><span class="op">(</span><span class="va">QWA_data</span>, meta <span class="op">=</span> <span class="va">rxs_images</span><span class="op">)</span></span></code></pre></div>
-<p><code><a href="../reference/check_QWAdata.html">check_QWAdata()</a></code> returns <code>TRUE</code> invisibly and
-issues warnings for any problems found:</p>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/check_QWAdata.html">check_QWAdata</a></span><span class="op">(</span><span class="va">QWA_data</span><span class="op">)</span></span></code></pre></div>
+<p><code><a href="../reference/check_QWAdata.html">check_QWAdata()</a></code> returns <code>TRUE</code> invisibly if
+no issue was found, <code>FALSE</code> otherwise. With
+<code>strict = TRUE</code>, it aborts on the first issue instead of
+warning.</p>
 <ul>
 <li>
-<strong>Missing CWT</strong> (warning): any image where
-<code>cwttan</code> is entirely <code>NA</code>.</li>
+<strong>Errors</strong>: invalid object, i.e. missing, mistyped or
+<code>NA</code> identifiers, or duplicate (image, year) in
+<code>$rings</code>.</li>
 <li>
-<strong>Dating problems</strong> (warning): undated years,
-duplicates, gaps, future years, or years beyond
-<code>outmost_year</code> (the last only if <code>meta</code> is
-supplied).</li>
+<strong>Warnings</strong>: values violating the schema (types,
+ranges, allowed values); duplicate cell keys (image, year,
+<code>xpix</code>, <code>ypix</code>); gaps and future years; images
+only in <code>$cells</code> or only in <code>$rings</code>, years with
+cells but without a rings row, and <code>cno</code> not matching the
+number of cells (re-run <code><a href="../reference/complete_QWAdata.html">complete_QWAdata()</a></code>).</li>
 <li>
-<strong>Structural errors</strong> (error): both components
-<code>NULL</code>, or required identifier columns missing.</li>
+<strong>Information</strong>: missing optional columns, extra
+columns, and images where <code>cwttan</code> is entirely
+<code>NA</code>.</li>
 </ul>
-<p>The <code>meta</code> argument is optional but recommended: without
-it, the <code>outmost_year</code> check is skipped.</p>
+<p>To check the data against the images (e.g. ring years after
+<code>outmost_year</code>), use
+<code>check_consistency(meta = rxs_images, data = QWA_data)</code>.</p>
 <hr>
 </div>
 <div class="section level2">
@@ -300,6 +322,15 @@ automatically) or explicit paths:</p>
 <code><a href="../reference/write_QWAdata.html">write_QWAdata()</a></code> (unlike <code><a href="../reference/write_QWAimages.html">write_QWAimages()</a></code>,
 where it defaults to <code>FALSE</code>). <code><a href="../reference/read_QWAdata.html">read_QWAdata()</a></code>
 accepts both <code>.csv</code> and <code>.csv.gz</code>.</p>
+<p>Empty values are written as empty fields. With
+<code>drop_empty = TRUE</code> (default), optional <code>qc_input</code>
+columns that are empty in all rows (<code>NA</code>, or
+<code>NA</code>/<code>FALSE</code> for flags) are not written;
+<code><a href="../reference/read_QWAdata.html">read_QWAdata()</a></code> does not re-create them. With
+<code>keep_derived = FALSE</code>, derived columns are not written;
+recompute them with <code><a href="../reference/complete_QWAdata.html">complete_QWAdata()</a></code>. Estimates
+(<code>ew_lw</code>, <code>eww</code>, <code>lww</code>) are always
+written.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

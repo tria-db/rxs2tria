@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">rxs2tria</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.4</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -35,10 +35,11 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><a class="dropdown-item" href="../articles/workflow.html">Step-by-step instructions</a></li>
-    <li><a class="dropdown-item" href="../articles/resources.html">Adding supplementary resources</a></li>
+    <li><a class="dropdown-item" href="../articles/supplementary.html">Adding supplementary files</a></li>
     <li><a class="dropdown-item" href="../articles/submission.html">Submitting a dataset to TRIA</a></li>
     <li><a class="dropdown-item" href="../articles/metadata-app.html">The metadata Shiny app</a></li>
     <li><a class="dropdown-item" href="../articles/flags-app.html">The ring flags Shiny app</a></li>
+    <li><a class="dropdown-item" href="../articles/rwl-export.html">Interoperability with other formats</a></li>
     <li><a class="dropdown-item" href="../articles/reopen-dataset.html">Re-opening a TRIA dataset</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
@@ -117,16 +118,27 @@ earlywood.</p>
 <span>  quant_probs    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.1</span>, <span class="fl">0.5</span>, <span class="fl">0.9</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">prf_band</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/calculate_band_profiles.html">calculate_band_profiles</a></span><span class="op">(</span></span>
+<code class="sourceCode R"><span><span class="va">prf_band</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/calculate_sector_profiles.html">calculate_band_profiles</a></span><span class="op">(</span></span>
 <span>  <span class="va">QWA_data</span>,</span>
 <span>  bandwidth       <span class="op">=</span> <span class="fl">50</span>,</span>
 <span>  stepsize        <span class="op">=</span> <span class="fl">25</span>,</span>
 <span>  sel_cell_params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"la"</span>, <span class="st">"cwttan"</span><span class="op">)</span>,</span>
 <span>  quant_probs     <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.1</span>, <span class="fl">0.5</span>, <span class="fl">0.9</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p><code>sel_cell_params</code> selects which cell-level columns from
-<code>QWA_data$cells</code> to aggregate. <code>quant_probs</code> is
-optional; omitting it produces means only.</p>
+<p><code>sel_cell_params</code> selects the cell measurement columns to
+aggregate (<code>measure</code> and <code>derived</code> columns of
+<code>$cells</code>, excluding positions, <code>sector100</code>,
+<code>ew_lw</code> and <code>nbrid</code>), or <code>"all"</code>.
+<code>quant_probs</code> is optional; omitting it produces counts and
+means only. Band profiles skip rings narrower than
+<code>bandwidth</code> or without <code>mrw</code>.</p>
+<p>With <code>apply_exclusions = TRUE</code>, the cells of excluded
+rings (<code>exclude_dupl</code>, <code>exclude_issues</code>;
+<code>NA</code> counts as <code>FALSE</code>) are removed before
+aggregating. With <code>tissue = "affected"</code>, rings with
+<code>exclude_issues</code> and <code>affected_tissue</code>
+<code>"ew"</code> or <code>"lw"</code> lose only the cells of that
+tissue (requires <code>ew_lw</code>).</p>
 <hr>
 </div>
 <div class="section level2">
@@ -146,53 +158,46 @@ profiles: <code>start</code> and <code>end</code> (bin boundaries in
 µm)</p>
 <p><strong>Measurements</strong>: one or more columns per selected cell
 parameter, named <code>{param}_mean</code>, <code>{param}_N</code>, and
-optionally <code>{param}_q{prob}</code> for each quantile
-(e.g. <code>la_mean</code>, <code>la_N</code>, <code>la_q10</code>,
-<code>la_q50</code>, <code>la_q90</code>). Sector profiles may also
-include <code>mrw</code>, <code>eww</code>, and the <code>ew_band</code>
-flag indicating whether a bin falls within the earlywood.</p>
-<hr>
-</div>
-<div class="section level2">
-<h2 id="adding-parameters-to-an-existing-profile">Adding parameters to an existing profile<a class="anchor" aria-label="anchor" href="#adding-parameters-to-an-existing-profile"></a>
-</h2>
-<p>If you need to add cell parameters that were not included when the
-profile was first computed, use <code><a href="../reference/complete_QWAprofile.html">complete_QWAprofile()</a></code>
-rather than recomputing from scratch. It reuses the original bin
-definitions and only computes the parameters not already present:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">prf_sector</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/complete_QWAprofile.html">complete_QWAprofile</a></span><span class="op">(</span></span>
-<span>  <span class="va">prf_sector</span>,</span>
-<span>  QWA_data   <span class="op">=</span> <span class="va">QWA_data</span>,</span>
-<span>  add_params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"drad"</span>, <span class="st">"dtan"</span><span class="op">)</span>,</span>
-<span>  quant_probs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.1</span>, <span class="fl">0.5</span>, <span class="fl">0.9</span><span class="op">)</span>   <span class="co"># should match the original</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>For band profiles, <code><a href="../reference/complete_QWAprofile.html">complete_QWAprofile()</a></code> infers
-<code>bandwidth</code> and <code>stepsize</code> from the existing
-<code>start</code>/<code>end</code> columns.</p>
+optionally <code>{param}_q{pct}</code> for each quantile, with
+<code>pct</code> the percentage as in <code><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">stats::quantile()</a></code>
+(e.g. <code>la_mean</code>, <code>la_N</code>, <code>la_q05</code>,
+<code>la_q50</code>, <code>la_q25.7</code>). Band profiles also include
+<code>mrw</code> and, if available, <code>eww</code> and the
+<code>ew_band</code> flag indicating whether a bin falls within the
+earlywood.</p>
 <hr>
 </div>
 <div class="section level2">
 <h2 id="checking-a-qwaprofile-object">Checking a QWAprofile object<a class="anchor" aria-label="anchor" href="#checking-a-qwaprofile-object"></a>
 </h2>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/check_QWAprofile.html">check_QWAprofile</a></span><span class="op">(</span><span class="va">prf_sector</span><span class="op">)</span></span></code></pre></div>
-<p><code><a href="../reference/check_QWAprofile.html">check_QWAprofile()</a></code> returns <code>TRUE</code> invisibly
-and issues warnings for:</p>
+<p><code><a href="../reference/check_QWAprofile.html">check_QWAprofile()</a></code> checks whether a profile is ready for
+analysis (profiles are derived data and not part of a TRIA submission).
+It returns <code>TRUE</code> invisibly if no issue was found,
+<code>FALSE</code> otherwise; with <code>strict = TRUE</code>, it aborts
+on the first issue instead of warning.</p>
 <ul>
-<li>Missing or <code>NA</code>-containing identifier columns
-(<code>image_label</code>, <code>year</code>).</li>
-<li>Missing bin column (<code>sector_n</code> for sector profiles;
-<code>start</code>/<code>end</code> for band profiles), or invalid band
-definitions where <code>start &gt;= end</code>.</li>
-<li>No measurement columns present.</li>
+<li>
+<strong>Errors</strong>: invalid object,
+i.e. <code>image_label</code>, <code>year</code> or the bin columns
+(<code>sector_n</code> for sector profiles,
+<code>start</code>/<code>end</code> for band profiles) missing,
+mistyped, <code>NA</code> or not unique; bands with
+<code>start &gt;= end</code>.</li>
+<li>
+<strong>Warnings</strong>: no measurement columns, or all
+measurement values <code>NA</code>; bands of different widths;
+<code>sector_n</code> &lt; 1.</li>
 </ul>
+<p>To check that a profile matches the data it was computed from, use
+<code>check_consistency(data = QWA_data, profile = prf_sector)</code>.</p>
 <hr>
 </div>
 <div class="section level2">
 <h2 id="persisting-to-disk">Persisting to disk<a class="anchor" aria-label="anchor" href="#persisting-to-disk"></a>
 </h2>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/write_QWAprofile.html">write_QWAprofile</a></span><span class="op">(</span><span class="va">prf_sector</span>, <span class="st">"output/my_dataset_QWAprofile_sector5.csv.gz"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">prf_sector</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/read_QWAprofile.html">read_QWAprofile</a></span><span class="op">(</span><span class="st">"output/my_dataset_QWAprofile_sector5.csv.gz"</span><span class="op">)</span></span></code></pre></div>

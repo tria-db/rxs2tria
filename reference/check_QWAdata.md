@@ -1,23 +1,35 @@
-# Validate a QWAdata object
+# Check a QWAdata object
 
-Re-runs data quality checks on a
+Checks a
 [QWAdata](https://tria-db.github.io/rxs2tria/reference/QWAdata.md)
-object and warns about any issues found. Checks include:
+object before submission. Aborts if the object is not a valid `QWAdata`
+(missing, mistyped or `NA` keys, duplicate (image, year) in `$rings`).
+Warns (or, with `strict = TRUE`, aborts) on:
 
-- CWT estimates present for all images.
+- values violating the cells or rings schema (types, ranges, allowed
+  values);
 
-- Dating validity (undated, duplicate, future years; and if `meta` is
-  provided, years after `outmost_year`).
+- duplicate cell keys (image, year, `xpix`, `ypix`), the key of the
+  cells in TRIA;
 
-- Flag columns (`incomplete_ring`, `missing_ring`, `duplicate_ring`,
-  `exclude_issues`) are present, non-`NA`, and internally consistent
-  (e.g. `exclude_issues` agrees with the flag columns given
-  `exclude_mode`).
+- dating problems: gaps and future years;
+
+- missing values in the automatic ring flags (see
+  [`complete_flags()`](https://tria-db.github.io/rxs2tria/reference/complete_flags.md));
+
+- images only in `$cells` or only in `$rings`, and images without ring
+  measurements (no `mrw` \> 0; check the output files and re-read them
+  with
+  [`update_QWAdata()`](https://tria-db.github.io/rxs2tria/reference/update_QWAdata.md));
+
+- years with cells but without a rings row, and `cno` not matching the
+  number of cells (re-run
+  [`complete_QWAdata()`](https://tria-db.github.io/rxs2tria/reference/complete_QWAdata.md)).
 
 ## Usage
 
 ``` r
-check_QWAdata(x, meta = NULL, exclude_mode = c("either", "incomplete_only"))
+check_QWAdata(x, strict = FALSE, exclude_mode = NULL)
 ```
 
 ## Arguments
@@ -27,24 +39,25 @@ check_QWAdata(x, meta = NULL, exclude_mode = c("either", "incomplete_only"))
   A [QWAdata](https://tria-db.github.io/rxs2tria/reference/QWAdata.md)
   object.
 
-- meta:
+- strict:
 
-  Optional
-  [QWAimages](https://tria-db.github.io/rxs2tria/reference/QWAimages.md)
-  object. If provided, also checks that no ring years exceed
-  `outmost_year`.
+  If `TRUE`, abort on the first issue instead of warning.
 
 - exclude_mode:
 
-  Which flag combination is expected in `exclude_issues`: `"either"`
-  (default) or `"incomplete_only"`. Used to check consistency.
+  Deprecated and ignored.
 
 ## Value
 
-`TRUE`, invisibly. Warnings are issued for any problems found; errors
-are thrown for structural issues.
+`TRUE` if no issue was found, `FALSE` otherwise (invisibly).
+
+## Details
+
+Also informs about missing optional columns, extra columns (kept, but
+not imported into TRIA by default) and images without CWT estimates.
 
 ## See also
 
 [`QWAdata()`](https://tria-db.github.io/rxs2tria/reference/QWAdata.md),
-[`complete_QWAdata()`](https://tria-db.github.io/rxs2tria/reference/complete_QWAdata.md)
+[`complete_QWAdata()`](https://tria-db.github.io/rxs2tria/reference/complete_QWAdata.md),
+[`check_consistency()`](https://tria-db.github.io/rxs2tria/reference/check_consistency.md)

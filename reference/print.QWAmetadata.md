@@ -2,9 +2,10 @@
 
 Displays a compact overview of a
 [QWAmetadata](https://tria-db.github.io/rxs2tria/reference/QWAmetadata.md)
-object: image-level coverage (number of images, slides, woodpieces,
-species, and sites) and the availability of the optional metadata
-components.
+object: the stage (submission files, or TRIA dataset files with label,
+version and citation), image-level coverage (number of images, slides,
+woodpieces, species, and sites) and the availability of the optional
+metadata components.
 
 ## Usage
 

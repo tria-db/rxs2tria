@@ -2,7 +2,7 @@
 
 ## Read raw ROXAS (AI) metadata
 
-Functions for extracing metadata from the raw ROXAS (AI) output files.
+Functions for extracting metadata from the raw ROXAS (AI) output files.
 
 - [`get_roxas_files()`](https://tria-db.github.io/rxs2tria/reference/get_roxas_files.md)
   : Identify the ROXAS (AI) files in a directory
@@ -27,9 +27,9 @@ Functions for reading the raw ROXAS (AI) cells and rings output files.
 
 Functions for compiling and checking supplementary files
 
-- [`compile_resources()`](https://tria-db.github.io/rxs2tria/reference/compile_resources.md)
+- [`compile_supplementary()`](https://tria-db.github.io/rxs2tria/reference/compile_supplementary.md)
   : Compile a supplementary resources manifest
-- [`recompile_resources()`](https://tria-db.github.io/rxs2tria/reference/recompile_resources.md)
+- [`recompile_supplementary()`](https://tria-db.github.io/rxs2tria/reference/recompile_supplementary.md)
   : Reconcile and re-check a supplementary resources manifest
 - [`check_supplementary()`](https://tria-db.github.io/rxs2tria/reference/check_supplementary.md)
   : Verify a supplementary resources manifest against a directory or
@@ -49,7 +49,9 @@ Commands to launch the integrated Shiny apps
 S3 class QWAimages
 
 - [`check_QWAimages()`](https://tria-db.github.io/rxs2tria/reference/check_QWAimages.md)
-  : Validate a QWAimages object
+  : Check a QWAimages object
+- [`combine_QWAimages()`](https://tria-db.github.io/rxs2tria/reference/combine_QWAimages.md)
+  : Combine two QWAimages objects
 - [`complete_QWAimages()`](https://tria-db.github.io/rxs2tria/reference/complete_QWAimages.md)
   : Complete a QWAimages object
 - [`QWAimages()`](https://tria-db.github.io/rxs2tria/reference/QWAimages.md)
@@ -60,7 +62,7 @@ S3 class QWAimages
   [`summary(`*`<QWAimages>`*`)`](https://tria-db.github.io/rxs2tria/reference/summary.QWAimages.md)
   : Print summary of a QWAimages object
 - [`update_QWAimages()`](https://tria-db.github.io/rxs2tria/reference/update_QWAimages.md)
-  : Update QWA metadata for selected images
+  : Update a QWAimages object for selected images
 - [`write_QWAimages()`](https://tria-db.github.io/rxs2tria/reference/write_QWAimages.md)
   : Write a QWAimages object to a CSV file.
 
@@ -69,9 +71,13 @@ S3 class QWAimages
 S3 class QWAmetadata
 
 - [`check_QWAmetadata()`](https://tria-db.github.io/rxs2tria/reference/check_QWAmetadata.md)
-  : Validate a QWAmetadata object
+  : Check a QWAmetadata object
+- [`combine_QWAmetadata()`](https://tria-db.github.io/rxs2tria/reference/combine_QWAmetadata.md)
+  : Combine two QWAmetadata objects
 - [`complete_QWAmetadata()`](https://tria-db.github.io/rxs2tria/reference/complete_QWAmetadata.md)
   : Complete a QWAmetadata object with all optional fields
+- [`is_submission()`](https://tria-db.github.io/rxs2tria/reference/is_submission.md)
+  : Is a QWAmetadata object from submission files?
 - [`print(`*`<QWAmetadata>`*`)`](https://tria-db.github.io/rxs2tria/reference/print.QWAmetadata.md)
   [`summary(`*`<QWAmetadata>`*`)`](https://tria-db.github.io/rxs2tria/reference/print.QWAmetadata.md)
   : Print a QWAmetadata object
@@ -80,6 +86,8 @@ S3 class QWAmetadata
   : Create a QWAmetadata object
 - [`read_QWAmetadata()`](https://tria-db.github.io/rxs2tria/reference/read_QWAmetadata.md)
   : Read a QWAmetadata object from a JSON file
+- [`update_QWAmetadata()`](https://tria-db.github.io/rxs2tria/reference/update_QWAmetadata.md)
+  : Update a QWAmetadata object to match a QWAimages object
 - [`write_QWAmetadata()`](https://tria-db.github.io/rxs2tria/reference/write_QWAmetadata.md)
   : Write a QWAmetadata object to a JSON file
 
@@ -88,7 +96,9 @@ S3 class QWAmetadata
 S3 class QWAdata
 
 - [`check_QWAdata()`](https://tria-db.github.io/rxs2tria/reference/check_QWAdata.md)
-  : Validate a QWAdata object
+  : Check a QWAdata object
+- [`combine_QWAdata()`](https://tria-db.github.io/rxs2tria/reference/combine_QWAdata.md)
+  : Combine two QWAdata objects
 - [`complete_flags()`](https://tria-db.github.io/rxs2tria/reference/complete_flags.md)
   : Add the initial flags columns to QWAdata
 - [`complete_measures()`](https://tria-db.github.io/rxs2tria/reference/complete_measures.md)
@@ -104,22 +114,19 @@ S3 class QWAdata
 - [`read_QWAdata()`](https://tria-db.github.io/rxs2tria/reference/read_QWAdata.md)
   : Read a QWAdata object from CSV files
 - [`update_QWAdata()`](https://tria-db.github.io/rxs2tria/reference/update_QWAdata.md)
-  : Update a QWAdata object with re-read raw data for selected images
+  : Update a QWAdata object to match a QWAimages object
 - [`write_QWAdata()`](https://tria-db.github.io/rxs2tria/reference/write_QWAdata.md)
   : Write a QWAdata object to files
 
-## QWAprofiles
+## QWAprofile
 
-S3 class QWAprofiles
+S3 class QWAprofile
 
-- [`calculate_band_profiles()`](https://tria-db.github.io/rxs2tria/reference/calculate_band_profiles.md)
-  : Calculate band-wise radial profiles
 - [`calculate_sector_profiles()`](https://tria-db.github.io/rxs2tria/reference/calculate_sector_profiles.md)
-  : Calculate sector-wise radial profiles
+  [`calculate_band_profiles()`](https://tria-db.github.io/rxs2tria/reference/calculate_sector_profiles.md)
+  : Calculate radial profiles
 - [`check_QWAprofile()`](https://tria-db.github.io/rxs2tria/reference/check_QWAprofile.md)
-  : Validate a QWAprofile object
-- [`complete_QWAprofile()`](https://tria-db.github.io/rxs2tria/reference/complete_QWAprofile.md)
-  : Add cell parameters to an existing QWAprofile object
+  : Check a QWAprofile object
 - [`QWAprofile()`](https://tria-db.github.io/rxs2tria/reference/QWAprofile.md)
   : Create a QWAprofile object
 - [`read_QWAprofile()`](https://tria-db.github.io/rxs2tria/reference/read_QWAprofile.md)
@@ -130,10 +137,24 @@ S3 class QWAprofiles
 - [`write_QWAprofile()`](https://tria-db.github.io/rxs2tria/reference/write_QWAprofile.md)
   : Write a QWAprofile object to a CSV file
 
+## Checks
+
+Final checks before a submission. Each class has its own check
+([`check_QWAmetadata()`](https://tria-db.github.io/rxs2tria/reference/check_QWAmetadata.md),
+[`check_QWAdata()`](https://tria-db.github.io/rxs2tria/reference/check_QWAdata.md),
+[`check_supplementary()`](https://tria-db.github.io/rxs2tria/reference/check_supplementary.md));
+[`check_consistency()`](https://tria-db.github.io/rxs2tria/reference/check_consistency.md)
+checks the objects against each other.
+
+- [`check_consistency()`](https://tria-db.github.io/rxs2tria/reference/check_consistency.md)
+  : Check the consistency of QWA objects
+
 ## Other
 
 Other utility functions.
 
+- [`extract_ring_measures()`](https://tria-db.github.io/rxs2tria/reference/extract_ring_measures.md)
+  : Extract ring measurements without excluded rings
 - [`extract_rwl()`](https://tria-db.github.io/rxs2tria/reference/extract_rwl.md)
   : Extract an rwl series from ring or sector profile data
 - [`scale_for_tucson()`](https://tria-db.github.io/rxs2tria/reference/scale_for_tucson.md)
@@ -141,3 +162,7 @@ Other utility functions.
 - [`rename_for_tucson()`](https://tria-db.github.io/rxs2tria/reference/rename_for_tucson.md)
   [`make_short_series_ids()`](https://tria-db.github.io/rxs2tria/reference/rename_for_tucson.md)
   : Rename rwl series to short Tucson-compatible series IDs
+- [`scale_for_tsap()`](https://tria-db.github.io/rxs2tria/reference/scale_for_tsap.md)
+  : Scale an rwl object for TSAP export
+- [`write_tsap()`](https://tria-db.github.io/rxs2tria/reference/write_tsap.md)
+  : Write an rwl object as a TSAP import file

@@ -37,8 +37,18 @@ An object of class `QWAdata`.
 - **`$rings`**: ring-level measurements, and possibly also quality flags
   (one row per annual ring per image).
 
-At least one component must be provided. The typical workflow builds a
-`QWAdata` object incrementally using
+At least one component must be provided. The components are aligned with
+their schema (column types and order); columns not in the schema are
+kept after the schema columns. Aborts on missing, `NA` or (in `$rings`)
+duplicate keys. Warns on missing measurement columns, duplicate cell
+keys (image, year, `xpix`, `ypix`), dating problems, images only in
+`$cells` or only in `$rings`, years with cells but without a rings row,
+and `cno` not matching the number of cells. The rings are not completed
+here:
+[`complete_QWAdata()`](https://tria-db.github.io/rxs2tria/reference/complete_QWAdata.md)
+adds the missing rings rows and `cno`.
+
+The typical workflow builds a `QWAdata` object incrementally using
 [`collect_raw_data()`](https://tria-db.github.io/rxs2tria/reference/collect_raw_data.md),
 [`complete_QWAdata()`](https://tria-db.github.io/rxs2tria/reference/complete_QWAdata.md),
 and
@@ -52,7 +62,7 @@ object. Radial profiles are computed separately as
 objects using
 [`calculate_sector_profiles()`](https://tria-db.github.io/rxs2tria/reference/calculate_sector_profiles.md)
 or
-[`calculate_band_profiles()`](https://tria-db.github.io/rxs2tria/reference/calculate_band_profiles.md).
+[`calculate_band_profiles()`](https://tria-db.github.io/rxs2tria/reference/calculate_sector_profiles.md).
 
 ## See also
 

@@ -2,8 +2,8 @@
 
 Displays a compact overview of a
 [QWAprofile](https://tria-db.github.io/rxs2tria/reference/QWAprofile.md)
-object: the profile type, the number of position bins, and the coverage
-(images, rings, year range).
+object: the profile type, its dimensions, and the coverage (images, year
+range).
 
 ## Usage
 

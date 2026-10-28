@@ -16,8 +16,9 @@ collect_raw_outputs(df_structure, roxas_version, ftype)
 
 - df_structure:
 
-  Data frame of image identifiers (`$image_label`) and corresponding
-  data file names (`$fname_cells` or `$fname_rings`).
+  Data frame of image identifiers (`$image_label`; for rings also
+  `$woodpiece_label` and `$slide_label`) and corresponding data file
+  names (`$fname_cells` or `$fname_rings`).
 
 - roxas_version:
 

@@ -39,7 +39,8 @@ file paths.
 
 For ROXAS, the required files per image are:
 
-- The original image file (`{IMAGEID}.jpg` or `.jpeg`).
+- The original image file (`{IMAGEID}.jpg`; also `.jpeg`, `.png`, `.bmp`
+  or `.tiff`, in that order of preference if several exist).
 
 - The ROXAS settings file (`{IMAGEID}_ROXAS_Settings.txt`).
 
@@ -49,7 +50,8 @@ For ROXAS, the required files per image are:
 
 For ROXAS AI, the required files per image are:
 
-- The original image file (`{IMAGEID}.scan.jpg` or `.jpeg`).
+- The original image file (`{IMAGEID}.scan.jpg`; also `.jpeg`, `.png`,
+  `.bmp` or `.tiff`, in that order of preference if several exist).
 
 - The ROXAS AI metadata file (`{IMAGEID}.metadata.json`).
 

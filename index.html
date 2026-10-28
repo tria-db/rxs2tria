@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="index.html">rxs2tria</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.4</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -37,10 +37,11 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><a class="dropdown-item" href="articles/workflow.html">Step-by-step instructions</a></li>
-    <li><a class="dropdown-item" href="articles/resources.html">Adding supplementary resources</a></li>
+    <li><a class="dropdown-item" href="articles/supplementary.html">Adding supplementary files</a></li>
     <li><a class="dropdown-item" href="articles/submission.html">Submitting a dataset to TRIA</a></li>
     <li><a class="dropdown-item" href="articles/metadata-app.html">The metadata Shiny app</a></li>
     <li><a class="dropdown-item" href="articles/flags-app.html">The ring flags Shiny app</a></li>
+    <li><a class="dropdown-item" href="articles/rwl-export.html">Interoperability with other formats</a></li>
     <li><a class="dropdown-item" href="articles/reopen-dataset.html">Re-opening a TRIA dataset</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><a class="dropdown-item" href="articles/index.html">More articles...</a></li>
@@ -73,7 +74,7 @@
 </h1>
 <p>The package is (not yet) on CRAN. You can install <code>rxs2tria</code> from <a href="https://github.com/tria-db/rxs2tria/" class="external-link">GitHub</a>:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/pak/man/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"tria-db/rxs2tria"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"tria-db/rxs2tria"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># or with another remote package installer, such as:</span></span>
 <span><span class="co"># devtools::install_github("tria-db/rxs2tria")</span></span>
@@ -83,7 +84,7 @@
 </h2>
 <p>To get the newest features and bug fixes, you can install the development version:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/pak/man/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"tria-db/rxs2tria@develop"</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"tria-db/rxs2tria@develop"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="troubleshooting">Troubleshooting<a class="anchor" aria-label="anchor" href="#troubleshooting"></a>

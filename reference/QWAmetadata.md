@@ -11,8 +11,9 @@ dataset, structured by level of organisation:
 - **`$funding`**: funding sources and grant numbers.
 
 - **`$related`**: related objects (publications, datasets, etc.).
+  Submission files only.
 
-- **`$resources`**: included resources (data files)
+- **`$datafiles`**: the cells and rings files. TRIA dataset files only.
 
 - **`$sites`**: site-level metadata (location, climate, etc.).
 
@@ -30,6 +31,14 @@ dataset, structured by level of organisation:
 All components except `images` are optional and can be filled in later
 to prepare a complete dataset submission to the TRIA database.
 
+The `submission` attribute
+([`is_submission()`](https://tria-db.github.io/rxs2tria/reference/is_submission.md))
+tells submission files from TRIA dataset files. It is inferred from the
+components: TRIA dataset files have a `$datafiles` component or a
+`ds_label` in `$dataset`. Components are aligned with the schema of
+their stage; `$related` is dropped from TRIA dataset files with a
+warning.
+
 `as_QWAmetadata()` safely constructs a QWAmetadata object from a named
 list. Component names are matched against the `QWAmetadata()`
 constructor parameters; unknown names are dropped with a warning.
@@ -42,7 +51,7 @@ QWAmetadata(
   authors = NULL,
   funding = NULL,
   related = NULL,
-  resources = NULL,
+  datafiles = NULL,
   sites = NULL,
   trees = NULL,
   woodpieces = NULL,
@@ -76,15 +85,14 @@ as_QWAmetadata(x)
   Data frame with related publications or datasets. Typically provided
   via metadata Shiny app.
 
-- resources:
+- datafiles:
 
-  Data frame describing the submitted `QWAdata` cells/rings files.
-  Populated by TRIA at publish time rather than by this package – leave
-  `NULL`. (The supplementary-file manifest built by
-  [`compile_resources()`](https://tria-db.github.io/rxs2tria/reference/compile_resources.md)
-  is a separate, standalone artefact – see
-  [`vignette("resources")`](https://tria-db.github.io/rxs2tria/articles/resources.md)
-  – not a component of `QWAmetadata`.)
+  Data frame listing the cells and rings files of a TRIA dataset, with
+  size, checksum and S3 key. Written by TRIA at publish time; leave
+  `NULL` for submission files. (The supplementary CSV built by
+  [`compile_supplementary()`](https://tria-db.github.io/rxs2tria/reference/compile_supplementary.md)
+  is a separate file, see
+  [`vignette("supplementary")`](https://tria-db.github.io/rxs2tria/articles/supplementary.md).)
 
 - sites:
 
