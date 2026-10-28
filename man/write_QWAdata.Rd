@@ -11,7 +11,9 @@ write_QWAdata(
   file_rings = NULL,
   dataset_name = NULL,
   compress = TRUE,
-  overwrite = FALSE
+  overwrite = FALSE,
+  drop_empty = TRUE,
+  keep_derived = TRUE
 )
 }
 \arguments{
@@ -32,12 +34,21 @@ CSV files. Both must be provided together. Mutually exclusive with \code{dir}.}
 \item{compress}{If \code{TRUE} (default), write \code{.csv.gz} files.}
 
 \item{overwrite}{Allow to overwrite existing files? (default \code{FALSE}).}
+
+\item{drop_empty}{If \code{TRUE} (default), optional columns set in the flags app
+(\code{colType} \code{"qc_input"}, e.g. ring quality flags and comments) that are
+empty (\code{NA}, or \code{NA}/\code{FALSE} for flags) in all rows are not written.}
+
+\item{keep_derived}{If \code{FALSE}, derived columns (\code{colType} \code{"derived"}, e.g.
+cell measures computed from other columns) are not written. They can be
+recomputed with \code{\link[=complete_QWAdata]{complete_QWAdata()}}. Default \code{TRUE}.}
 }
 \value{
 A named list of written file paths, invisibly.
 }
 \description{
-Cells and rings are written as (compressed) CSV files.
+Cells and rings are written as (compressed) CSV files. Empty values are
+written as empty fields.
 }
 \seealso{
 \code{\link[=read_QWAdata]{read_QWAdata()}}, \code{\link[=write_QWAprofile]{write_QWAprofile()}}

@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "TODO:addurltoTRIAschema",
+  "title": "TRIA author metadata schema",
+  "description": "Schema for authorship-related data for a TRIA dataset",
+  "type": "array",
+  "minItems": 1,
+  "items": {
+    "type": "object",
+    "properties": {
+      "author_nr": {
+        "type": "integer",
+        "minimum": 1,
+        "title": "Author Nr",
+        "description": "Order of authorship from first (1) to last (n)",
+        "colType": "meta_input"
+      },
+      "last_name": {
+        "type": "string",
+        "minLength": 1,
+        "title": "Last name",
+        "description": "Family name(s) of the author",
+        "colType": "meta_input"
+      },
+      "first_name": {
+        "type": "string",
+        "minLength": 1,
+        "title": "First name",
+        "description": "Given name(s) of the author",
+        "colType": "meta_input"
+      },
+      "email": {
+        "type": ["string", "null"],
+        "pattern": "^(|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})$",
+        "title": "Email",
+        "description": "Email address; required for all authors in submission files, for the contact person only in TRIA dataset files",
+        "unique": true,
+        "colType": "meta_input"
+      },
+      "orcid": {
+        "type": ["string", "null"],
+        "pattern": "^(|[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X])$",
+        "title": "ORCID",
+        "description": "ORCID, e.g. 0000-0002-7070-3292",
+        "colType": "meta_input"
+      },
+      "org_name": {
+        "type": "string",
+        "minLength": 1,
+        "title": "Research institution",
+        "description": "Primary affiliation",
+        "colType": "meta_input"
+      },
+      "rorid": {
+        "type": ["string", "null"],
+        "pattern": "^(|[0-9a-zA-Z]{9})$",
+        "title": "RORID",
+        "description": "RORID, e.g. 04bs5yc70",
+        "colType": "meta_input"
+      },
+      "aff_department": {
+        "type": ["string", "null"],
+        "title": "Department",
+        "description": "Department at primary affiliation",
+        "colType": "meta_input"
+      },
+      "aff_street": {
+        "type": ["string", "null"],
+        "title": "Street",
+        "description": "",
+        "colType": "meta_input"
+      },
+      "aff_plz": {
+        "type": ["string", "null"],
+        "title": "Postal code",
+        "description": "",
+        "colType": "meta_input"
+      },
+      "aff_city": {
+        "type": ["string", "null"],
+        "title": "City",
+        "description": "",
+        "colType": "meta_input"
+      },
+      "org_country": {
+        "type": "string",
+        "pattern": "^[A-Z]{2}$",
+        "title": "Country",
+        "description": "Country code and name (ISO 3166-1 alpha-2)",
+        "colType": "meta_input"
+      },
+      "contact_person": {
+        "type": ["boolean", "null"],
+        "title": "Contact person",
+        "description": "Select one author as contact person",
+        "$comment": "null is considered as false",
+        "colType": "meta_input"
+      }
+    },
+    "required": ["author_nr", "last_name", "first_name", "org_name", "org_country", "contact_person"],
+    "additionalProperties": false
+  }
+}

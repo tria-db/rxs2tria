@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "TODO:addurltoTRIAschema",
+  "title": "TRIA ROXAS image metadata schema, submission files",
+  "description": "Schema for image metadata in submission files, incl. the source file names",
+  "type": "array",
+  "minItems": 1,
+  "items": {
+    "type": "object",
+    "allOf": [
+      { "$ref": "core/roxas.json" },
+      {
+        "properties": {
+          "fname_image": {
+            "type": ["string", "null"],
+            "title": "File image",
+            "description": "Image file name"
+          },
+          "fname_cells": {
+            "type": ["string", "null"],
+            "title": "File cells",
+            "description": "Cell data file name"
+          },
+          "fname_rings": {
+            "type": ["string", "null"],
+            "title": "File rings",
+            "description": "Ring data file name"
+          },
+          "fname_settings": {
+            "type": ["string", "null"],
+            "title": "File Settings",
+            "description": "Settings file name"
+          }
+        }
+      }
+    ],
+    "unevaluatedProperties": false
+  }
+}

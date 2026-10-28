@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "TODO:addurltoTRIAschema",
+  "title": "TRIA dataset metadata schema, submission files",
+  "description": "Schema for main dataset-related data in submission files",
+  "type": "array",
+  "minItems": 1,
+  "maxItems": 1,
+  "items": {
+    "type": "object",
+    "allOf": [
+      { "$ref": "core/dataset.json" },
+      {
+        "properties": {
+          "ds_access": {
+            "type": "string",
+            "enum": ["public", "restricted"],
+            "colType": "meta_input"
+          },
+          "ds_license": {
+            "not": { "const": "All rights reserved" },
+            "description": "Intended license; required for public datasets, may be left empty for restricted ones (applies once the embargo ends)"
+          },
+          "embargoed_until": {
+            "type": ["string", "null"],
+            "format": "date",
+            "description": "Date until which the dataset is embargoed (YYYY-MM-DD); required for restricted datasets only",
+            "colType": "meta_input"
+          }
+        },
+        "required": ["ds_access"]
+      },
+      {
+        "if": {
+          "properties": { "ds_access": { "const": "restricted" } }
+        },
+        "then": {
+          "properties": { "embargoed_until": { "type": "string", "minLength": 1 } },
+          "required": ["embargoed_until"]
+        },
+        "else": {
+          "properties": { "ds_license": { "type": "string", "minLength": 1 } },
+          "required": ["ds_license"]
+        }
+      }
+    ],
+    "unevaluatedProperties": false
+  }
+}

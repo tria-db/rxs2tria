@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "TODO:addurltoTRIAschema",
+  "title": "TRIA dataset metadata schema, shared attributes",
+  "description": "Schema for one row of main dataset-related data, shared by submission files and TRIA dataset files",
+  "type": "object",
+  "properties": {
+    "ds_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "colType": "meta_input"
+    },
+    "ds_title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300,
+      "description": "Descriptive title for the dataset, for use in citations (similar to a paper title).",
+      "colType": "meta_input"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "colType": "meta_input"
+    },
+    "ds_license": {
+      "type": ["string", "null"],
+      "enum": ["CC BY 4.0", "CC BY-SA 4.0", "CC BY-NC 4.0", "CC BY-NC-SA 4.0", "CC BY-ND 4.0", "CC BY-NC-ND 4.0", "CC0 1.0", "other", "All rights reserved", "", null],
+      "description": "License of the dataset, as in the TRIA license lookup table. \"other\": placeholder in submission files for a license to be agreed with TRIA. \"All rights reserved\": TRIA dataset files of embargoed datasets.",
+      "colType": "meta_input"
+    },
+    "acknowledgements": {
+      "type": ["string", "null"],
+      "description": "Acknowledgements",
+      "colType": "meta_input"
+    }
+  },
+  "required": ["ds_name", "ds_title", "description"]
+}

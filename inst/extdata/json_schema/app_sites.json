@@ -1,0 +1,39 @@
+{
+  "$id": "https://example.com/schemas/extended_site.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "allOf": [
+    { "$ref": "core/sites.json"},
+    { 
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "site_label": { "htType": "character" },
+          "n_trees": { "htType": "numeric", "otherChecks": ["check_counts"] },
+          "site_name": { "htType": "character" },
+          "site_desc": { "htType": "text" },
+          "latitude": { "htType": "numeric", "htFormat": { "mantissa": 6, "trimMantissa": true } },
+          "longitude": { "htType": "numeric", "htFormat": { "mantissa": 6, "trimMantissa": true } },
+          "country_code": { 
+            "htType": "autocomplete", 
+            "options" : "country_codes_names", 
+            "otherChecks": ["check_coords"]
+          },
+          "elevation": { "htType": "numeric" },
+          "aspect": { "htType": "numeric" },
+          "slope": { "htType": "numeric" },
+          "topography": { "htType": "dropdown" },
+          "soil_depth": { "htType": "dropdown" },
+          "soil_water_capacity": { "htType": "dropdown" },
+          "soil_moisture": { "htType": "dropdown" },
+          "stand_composition": { "htType": "dropdown" },
+          "stand_structure": { "htType": "dropdown" },
+          "stand_age_str": { "htType": "dropdown" },
+          "stand_age_class": { "htType": "dropdown" },
+          "stand_main_species_code": { "htType": "autocomplete", "options": "species_codes" },
+          "stand_management": { "htType": "dropdown" }
+        }
+      } 
+    }
+  ]
+}

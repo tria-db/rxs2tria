@@ -1,0 +1,143 @@
+meta_example <- suppressMessages(suppressWarnings(read_QWAmetadata(
+  system.file("extdata", "TRIA_example_QWAmetadata.json", package = "rxs2tria"))))
+
+# write x to a temp JSON file, return the file content as a list of rows
+write_read_raw <- function(x, ...) {
+  file <- tempfile(fileext = ".json")
+  suppressMessages(write_QWAmetadata(x, file, ...))
+  jsonlite::read_json(file, simplifyVector = FALSE)
+}
+
+test_that("write_QWAmetadata writes empty values as null, never as empty strings", {
+  x <- meta_example
+  x$sites$site_desc[1] <- ""
+  file <- tempfile(fileext = ".json")
+  suppressMessages(write_QWAmetadata(x, file))
+
+  expect_false(any(grepl('""', readLines(file))))
+  raw <- jsonlite::read_json(file, simplifyVector = FALSE)
+  expect_null(raw$sites[[1]]$site_desc)
+  expect_true("site_desc" %in% names(raw$sites[[1]]))
+})
+
+test_that("write_QWAmetadata drops all-empty optional meta_input fields only", {
+  x <- meta_example
+  x$dataset$description <- NA_character_ # required
+  raw <- write_read_raw(x)
+
+  expect_false(any(c("aff_department", "aff_street", "aff_plz") %in% names(raw$authors[[1]])))
+  expect_false(any(c("embargoed_until", "acknowledgements") %in% names(raw$dataset[[1]])))
+  expect_true("description" %in% names(raw$dataset[[1]]))
+  expect_true("n_trees" %in% names(raw$sites[[1]])) # derived
+
+  raw <- write_read_raw(x, drop_empty = FALSE)
+  expect_true("aff_department" %in% names(raw$authors[[1]]))
+  expect_true("acknowledgements" %in% names(raw$dataset[[1]]))
+})
+
+test_that("write_QWAmetadata keeps empty conditionally required fields where they apply", {
+  # public: license kept if empty, embargo date dropped
+  x <- meta_example
+  x$dataset$ds_license <- NA_character_
+  x$dataset$embargoed_until <- NA_character_
+  ds <- write_read_raw(x)$dataset[[1]]
+  expect_true("ds_license" %in% names(ds))
+  expect_false("embargoed_until" %in% names(ds))
+
+  # restricted: embargo date kept if empty, license dropped
+  x$dataset$ds_access <- "restricted"
+  ds <- write_read_raw(x)$dataset[[1]]
+  expect_true("embargoed_until" %in% names(ds))
+  expect_false("ds_license" %in% names(ds))
+})
+
+test_that("written QWAmetadata reads back with the same values", {
+  file <- tempfile(fileext = ".json")
+  suppressMessages(write_QWAmetadata(meta_example, file))
+  y <- suppressMessages(suppressWarnings(read_QWAmetadata(file)))
+
+  for (comp in c("dataset", "authors", "funding", "sites", "trees", "woodpieces", "slides")) {
+    cols <- names(y[[comp]])
+    expect_equal(y[[comp]], meta_example[[comp]][cols], label = comp)
+  }
+  expect_equal(nrow(y$images), nrow(meta_example$images))
+
+  # datetimes keep their time of day (in UTC) on read and on round trip
+  expect_equal(meta_example$images$meas_created_at[1],
+               as.POSIXct("2021-04-09 15:03:00", tz = "UTC"))
+  expect_equal(y$images$meas_created_at, meta_example$images$meas_created_at)
+})
+
+test_that("datetimes keep their local clock time through QWAimages, CSV and JSON", {
+  x <- meta_example
+  x$images$meas_created_at <- as.POSIXct("2021-04-09 15:03:00", tz = "Europe/Zurich")
+  utc <- as.POSIXct("2021-04-09 15:03:00", tz = "UTC")
+  expect_equal(suppressMessages(QWAimages(x$images))$meas_created_at[1], utc)
+
+  file_csv <- tempfile(fileext = ".csv")
+  suppressMessages(write_QWAimages(x$images, file_csv))
+  expect_false(any(grepl("15:03:00Z|13:03", readLines(file_csv))))
+  expect_equal(suppressMessages(read_QWAimages(file_csv))$meas_created_at[1], utc)
+
+  file_json <- tempfile(fileext = ".json")
+  suppressMessages(write_QWAmetadata(x, file_json))
+  y <- suppressMessages(suppressWarnings(read_QWAmetadata(file_json)))
+  expect_equal(y$images$meas_created_at[1], utc)
+})
+
+test_that("write_QWAdata writes NA as empty fields and drops all-empty qc_input columns", {
+  cells <- tibble::tibble(image_label = "IMG1", year = 2000, xpix = c(1, 2), ypix = c(1, 2),
+                          la = c(10, NA), cwttan = NA_real_)
+  rings <- tibble::tibble(woodpiece_label = "WP1", slide_label = "WP1_SL1",
+                          image_label = "IMG1", year = c(2000, 2001), mrw = NA_real_,
+                          x_dating = c(TRUE, NA), comment = c(NA, ""))
+  dir <- tempfile()
+  dir.create(dir)
+  files <- suppressMessages(write_QWAdata(new_QWAdata(cells, rings), dir, compress = FALSE))
+
+  rings_txt <- readLines(files$file_rings)
+  expect_equal(rings_txt[1], "woodpiece_label,slide_label,image_label,year,mrw,x_dating") # mrw kept, comment dropped
+  expect_false(any(grepl("NA", rings_txt)))
+  cells_txt <- readLines(files$file_cells)
+  expect_equal(cells_txt[1], "image_label,year,xpix,ypix,la,cwttan")
+  expect_false(any(grepl("NA", cells_txt)))
+
+  files <- suppressMessages(write_QWAdata(new_QWAdata(cells, rings), dir, compress = FALSE,
+                                          overwrite = TRUE, drop_empty = FALSE))
+  expect_equal(readLines(files$file_rings)[1], "woodpiece_label,slide_label,image_label,year,mrw,x_dating,comment")
+
+  # all-FALSE logical qc_input columns count as empty, automatic flags are kept
+  rings$x_dating <- c(FALSE, NA)
+  rings$duplicate_ring <- FALSE
+  files <- suppressMessages(write_QWAdata(new_QWAdata(cells, rings), dir, compress = FALSE,
+                                          overwrite = TRUE))
+  expect_equal(readLines(files$file_rings)[1], "woodpiece_label,slide_label,image_label,year,mrw,duplicate_ring")
+})
+
+test_that("QWAprofile defaults to sector profiles, write_QWAprofile writes NA as empty fields", {
+  prf <- QWAprofile(data.frame(image_label = "IMG1", year = 2000, sector_n = 1:2, la_mean = c(NA, 1)))
+  expect_equal(attr(prf, "profile_type"), "sector")
+
+  file <- tempfile(fileext = ".csv")
+  suppressMessages(write_QWAprofile(prf, file))
+  expect_equal(readLines(file)[2], "IMG1,2000,1,")
+})
+
+test_that("write_QWAdata drops derived columns with keep_derived = FALSE", {
+  derived <- schema_cols("cells", "derived")
+  cells <- tibble::tibble(image_label = "IMG1", year = 2000, xpix = 1, ypix = 1, la = 10)
+  cells[derived] <- 1
+  rings <- tibble::tibble(woodpiece_label = "WP1", slide_label = "WP1_SL1",
+                          image_label = "IMG1", year = 2000, mrw = 100)
+  dir <- tempfile()
+  dir.create(dir)
+
+  files <- suppressMessages(write_QWAdata(new_QWAdata(cells, rings), dir, compress = FALSE))
+  expect_equal(readLines(files$file_cells)[1],
+               paste(c("image_label,year,xpix,ypix,la", derived), collapse = ","))
+
+  files <- suppressMessages(write_QWAdata(new_QWAdata(cells, rings), dir, compress = FALSE,
+                                          overwrite = TRUE, keep_derived = FALSE))
+  expect_equal(readLines(files$file_cells)[1], "image_label,year,xpix,ypix,la")
+  expect_equal(readLines(files$file_rings)[1], "woodpiece_label,slide_label,image_label,year,mrw")
+})

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "TODO:addurltoTRIAschema",
+  "title": "TRIA author metadata schema, TRIA dataset files",
+  "description": "Schema for authorship-related data in TRIA dataset files; emails of authors other than the contact person are masked (null)",
+  "allOf": [
+    { "$ref": "core/authors.json" },
+    {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "if": {
+          "properties": { "contact_person": { "const": true } },
+          "required": ["contact_person"]
+        },
+        "then": {
+          "properties": { "email": { "type": "string", "minLength": 1 } },
+          "required": ["email"]
+        }
+      }
+    }
+  ]
+}

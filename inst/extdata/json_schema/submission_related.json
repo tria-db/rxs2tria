@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "TODO:addurltoTRIAschema",
+  "title": "TRIA related publications/datasets metadata schema",
+  "description": "Schema for data on related publications and datasets for a TRIA dataset",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "citation": {
+        "type": "string",
+        "minLength": 1,
+        "title": "Citation",
+        "description": "",
+        "colType": "meta_input"
+      },
+      "doi": {
+        "type": ["string", "null"],
+        "pattern": "^(|(https?://(dx[.])?doi[.]org/)?10[.][0-9]{4,9}/[^ ]+)$",
+        "title": "DOI",
+        "description": "DOI, e.g. 10.1234/abc or https://doi.org/10.1234/abc",
+        "colType": "meta_input"
+      },
+      "description": {
+        "type": ["string", "null"],
+        "title": "Description",
+        "description": "Optional description of the resource (e.g. how it relates to the dataset)",
+        "colType": "meta_input"
+      },
+      "url": {
+        "type": ["string", "null"], 
+        "title": "URL",
+        "description": "",
+        "$comment": "TODO: add url format check?",
+        "colType": "meta_input"
+      },   
+      "rel_ds_label": {
+        "type": ["string", "null"], 
+        "title": "Dataset ID",
+        "description": "TRIA dataset ID, e.g. tria.0001",
+        "pattern": "^(|tria[.][0-9]{4})$",
+        "colType": "meta_input"
+      }
+    },
+    "required": ["citation"],
+    "additionalProperties": false
+  }
+}

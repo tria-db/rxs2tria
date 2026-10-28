@@ -127,6 +127,12 @@ ol.custom-indent {
 /* change header color of ht */
 .handsontable th {
   background-color: $sec-col-grad-5 !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+}
+/* read-only cells: grey background, editable cells stay white */
+.handsontable td.htDimmed {
+  background-color: $gray-100 !important;
 }
 
 /* shiny inputs */

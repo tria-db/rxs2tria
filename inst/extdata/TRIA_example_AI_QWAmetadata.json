@@ -7,8 +7,7 @@
             "description": "This dataset contains 3 trees of Pinus sylvestris collected in Pogorelsky and Stolby (Russia), covering the period from 1955 to 2018. The selected trees used in this collection are a selected subset from the original collected ad archived wood.",
             "ds_access": "public",
             "ds_license": "CC BY 4.0",
-            "embargoed_until": "",
-            "acknowledgements": ""
+            "acknowledgements": null
         }
     ],
     "authors":
@@ -21,9 +20,9 @@
             "orcid": "0000-0002-3361-5349",
             "org_name": "Siberian Federal University",
             "rorid": "05fw97k56",
-            "aff_department": "",
-            "aff_street": "",
-            "aff_plz": "",
+            "aff_department": null,
+            "aff_street": null,
+            "aff_plz": null,
             "aff_city": "Krasnoyarsk",
             "org_country": "RU",
             "contact_person": false
@@ -36,9 +35,9 @@
             "orcid": "0000-0002-7070-3292",
             "org_name": "Swiss Federal Institute for Forest, Snow and Landscape Research",
             "rorid": "04bs5yc70",
-            "aff_department": "",
-            "aff_street": "",
-            "aff_plz": "",
+            "aff_department": null,
+            "aff_street": null,
+            "aff_plz": null,
             "aff_city": "Birmensdorf",
             "org_country": "CH",
             "contact_person": true
@@ -51,9 +50,9 @@
             "orcid": "0000-0002-0490-7510",
             "org_name": "Swiss Federal Institute for Forest, Snow and Landscape Research",
             "rorid": "04bs5yc70",
-            "aff_department": "",
-            "aff_street": "",
-            "aff_plz": "",
+            "aff_department": null,
+            "aff_street": null,
+            "aff_plz": null,
             "aff_city": "Birmensdorf",
             "org_country": "CH",
             "contact_person": false
@@ -65,7 +64,7 @@
             "org_name": "Swiss Federal Institute for Forest, Snow and Landscape Research",
             "rorid": "04bs5yc70",
             "org_country": "CH",
-            "grant_name": "",
+            "grant_name": null,
             "grant_nr": "unknown"
         }
     ],
@@ -89,7 +88,7 @@
             "elevation": 164,
             "stand_composition": "mono gymnosperm",
             "stand_structure": "regular",
-            "stand_main_species_code": "",
+            "stand_main_species_code": null,
             "stand_management": "extensive"
         },
         {
@@ -101,9 +100,9 @@
             "longitude": 92.72,
             "country_code": "RU",
             "elevation": 450,
-            "topography": "",
-            "soil_depth": "",
-            "stand_composition": ""
+            "topography": null,
+            "soil_depth": null,
+            "stand_composition": null
         }
     ],
     "trees":
@@ -351,10 +350,10 @@
     "images":
     [
         {
-            "image_label": "POG_PISY_02B_1_1",
-            "slide_label": "POG_PISY_02B_1",
-            "woodpiece_label": "POG_PISY_02B",
-            "tree_label": "POG_PISY_02B",
+            "image_label": "POG_PISY_02_B_1_1",
+            "slide_label": "POG_PISY_02_B_1",
+            "woodpiece_label": "POG_PISY_02_B",
+            "tree_label": "POG_PISY_02",
             "species_code": "PISY",
             "site_label": "POG",
             "spatial_resolution": 2.2675,
@@ -387,10 +386,10 @@
             "reference_series": null
         },
         {
-            "image_label": "POG_PISY_02B_1_2",
-            "slide_label": "POG_PISY_02B_1",
-            "woodpiece_label": "POG_PISY_02B",
-            "tree_label": "POG_PISY_02B",
+            "image_label": "POG_PISY_02_B_1_2",
+            "slide_label": "POG_PISY_02_B_1",
+            "woodpiece_label": "POG_PISY_02_B",
+            "tree_label": "POG_PISY_02",
             "species_code": "PISY",
             "site_label": "POG",
             "spatial_resolution": 2.2675,
@@ -423,10 +422,10 @@
             "reference_series": null
         },
         {
-            "image_label": "POG_PISY_02B_1_3",
-            "slide_label": "POG_PISY_02B_1",
-            "woodpiece_label": "POG_PISY_02B",
-            "tree_label": "POG_PISY_02B",
+            "image_label": "POG_PISY_02_B_1_3",
+            "slide_label": "POG_PISY_02_B_1",
+            "woodpiece_label": "POG_PISY_02_B",
+            "tree_label": "POG_PISY_02",
             "species_code": "PISY",
             "site_label": "POG",
             "spatial_resolution": 2.2675,
@@ -459,10 +458,10 @@
             "reference_series": null
         },
         {
-            "image_label": "POG_PISY_02B_2_1",
-            "slide_label": "POG_PISY_02B_2",
-            "woodpiece_label": "POG_PISY_02B",
-            "tree_label": "POG_PISY_02B",
+            "image_label": "POG_PISY_02_B_2_1",
+            "slide_label": "POG_PISY_02_B_2",
+            "woodpiece_label": "POG_PISY_02_B",
+            "tree_label": "POG_PISY_02",
             "species_code": "PISY",
             "site_label": "POG",
             "spatial_resolution": 2.2675,
@@ -495,10 +494,10 @@
             "reference_series": null
         },
         {
-            "image_label": "POG_PISY_02B_2_2",
-            "slide_label": "POG_PISY_02B_2",
-            "woodpiece_label": "POG_PISY_02B",
-            "tree_label": "POG_PISY_02B",
+            "image_label": "POG_PISY_02_B_2_2",
+            "slide_label": "POG_PISY_02_B_2",
+            "woodpiece_label": "POG_PISY_02_B",
+            "tree_label": "POG_PISY_02",
             "species_code": "PISY",
             "site_label": "POG",
             "spatial_resolution": 2.2675,
@@ -531,10 +530,10 @@
             "reference_series": null
         },
         {
-            "image_label": "POG_PISY_02B_2_3",
-            "slide_label": "POG_PISY_02B_2",
-            "woodpiece_label": "POG_PISY_02B",
-            "tree_label": "POG_PISY_02B",
+            "image_label": "POG_PISY_02_B_2_3",
+            "slide_label": "POG_PISY_02_B_2",
+            "woodpiece_label": "POG_PISY_02_B",
+            "tree_label": "POG_PISY_02",
             "species_code": "PISY",
             "site_label": "POG",
             "spatial_resolution": 2.2675,
@@ -567,10 +566,10 @@
             "reference_series": null
         },
         {
-            "image_label": "POG_PISY_02B_3_1",
-            "slide_label": "POG_PISY_02B_3",
-            "woodpiece_label": "POG_PISY_02B",
-            "tree_label": "POG_PISY_02B",
+            "image_label": "POG_PISY_02_B_3_1",
+            "slide_label": "POG_PISY_02_B_3",
+            "woodpiece_label": "POG_PISY_02_B",
+            "tree_label": "POG_PISY_02",
             "species_code": "PISY",
             "site_label": "POG",
             "spatial_resolution": 2.2675,
@@ -603,10 +602,10 @@
             "reference_series": null
         },
         {
-            "image_label": "POG_PISY_02B_3_2",
-            "slide_label": "POG_PISY_02B_3",
-            "woodpiece_label": "POG_PISY_02B",
-            "tree_label": "POG_PISY_02B",
+            "image_label": "POG_PISY_02_B_3_2",
+            "slide_label": "POG_PISY_02_B_3",
+            "woodpiece_label": "POG_PISY_02_B",
+            "tree_label": "POG_PISY_02",
             "species_code": "PISY",
             "site_label": "POG",
             "spatial_resolution": 2.2675,
@@ -639,10 +638,10 @@
             "reference_series": null
         },
         {
-            "image_label": "POG_PISY_02B_3_3",
-            "slide_label": "POG_PISY_02B_3",
-            "woodpiece_label": "POG_PISY_02B",
-            "tree_label": "POG_PISY_02B",
+            "image_label": "POG_PISY_02_B_3_3",
+            "slide_label": "POG_PISY_02_B_3",
+            "woodpiece_label": "POG_PISY_02_B",
+            "tree_label": "POG_PISY_02",
             "species_code": "PISY",
             "site_label": "POG",
             "spatial_resolution": 2.2675,
@@ -675,10 +674,10 @@
             "reference_series": null
         },
         {
-            "image_label": "POG_PISY_02B_4_1",
-            "slide_label": "POG_PISY_02B_4",
-            "woodpiece_label": "POG_PISY_02B",
-            "tree_label": "POG_PISY_02B",
+            "image_label": "POG_PISY_02_B_4_1",
+            "slide_label": "POG_PISY_02_B_4",
+            "woodpiece_label": "POG_PISY_02_B",
+            "tree_label": "POG_PISY_02",
             "species_code": "PISY",
             "site_label": "POG",
             "spatial_resolution": 2.2675,
@@ -711,10 +710,10 @@
             "reference_series": null
         },
         {
-            "image_label": "POG_PISY_02B_4_2",
-            "slide_label": "POG_PISY_02B_4",
-            "woodpiece_label": "POG_PISY_02B",
-            "tree_label": "POG_PISY_02B",
+            "image_label": "POG_PISY_02_B_4_2",
+            "slide_label": "POG_PISY_02_B_4",
+            "woodpiece_label": "POG_PISY_02_B",
+            "tree_label": "POG_PISY_02",
             "species_code": "PISY",
             "site_label": "POG",
             "spatial_resolution": 2.2675,
@@ -747,10 +746,10 @@
             "reference_series": null
         },
         {
-            "image_label": "POG_PISY_08B_1_1",
-            "slide_label": "POG_PISY_08B_1",
-            "woodpiece_label": "POG_PISY_08B",
-            "tree_label": "POG_PISY_08B",
+            "image_label": "POG_PISY_08_B_1_1",
+            "slide_label": "POG_PISY_08_B_1",
+            "woodpiece_label": "POG_PISY_08_B",
+            "tree_label": "POG_PISY_08",
             "species_code": "PISY",
             "site_label": "POG",
             "spatial_resolution": 2.2675,
@@ -783,10 +782,10 @@
             "reference_series": null
         },
         {
-            "image_label": "POG_PISY_08B_1_2",
-            "slide_label": "POG_PISY_08B_1",
-            "woodpiece_label": "POG_PISY_08B",
-            "tree_label": "POG_PISY_08B",
+            "image_label": "POG_PISY_08_B_1_2",
+            "slide_label": "POG_PISY_08_B_1",
+            "woodpiece_label": "POG_PISY_08_B",
+            "tree_label": "POG_PISY_08",
             "species_code": "PISY",
             "site_label": "POG",
             "spatial_resolution": 2.2675,
@@ -819,10 +818,10 @@
             "reference_series": null
         },
         {
-            "image_label": "POG_PISY_08B_1_3",
-            "slide_label": "POG_PISY_08B_1",
-            "woodpiece_label": "POG_PISY_08B",
-            "tree_label": "POG_PISY_08B",
+            "image_label": "POG_PISY_08_B_1_3",
+            "slide_label": "POG_PISY_08_B_1",
+            "woodpiece_label": "POG_PISY_08_B",
+            "tree_label": "POG_PISY_08",
             "species_code": "PISY",
             "site_label": "POG",
             "spatial_resolution": 2.2675,
@@ -855,10 +854,10 @@
             "reference_series": null
         },
         {
-            "image_label": "POG_PISY_08B_2_1",
-            "slide_label": "POG_PISY_08B_2",
-            "woodpiece_label": "POG_PISY_08B",
-            "tree_label": "POG_PISY_08B",
+            "image_label": "POG_PISY_08_B_2_1",
+            "slide_label": "POG_PISY_08_B_2",
+            "woodpiece_label": "POG_PISY_08_B",
+            "tree_label": "POG_PISY_08",
             "species_code": "PISY",
             "site_label": "POG",
             "spatial_resolution": 2.2675,
@@ -891,10 +890,10 @@
             "reference_series": null
         },
         {
-            "image_label": "POG_PISY_08B_2_2",
-            "slide_label": "POG_PISY_08B_2",
-            "woodpiece_label": "POG_PISY_08B",
-            "tree_label": "POG_PISY_08B",
+            "image_label": "POG_PISY_08_B_2_2",
+            "slide_label": "POG_PISY_08_B_2",
+            "woodpiece_label": "POG_PISY_08_B",
+            "tree_label": "POG_PISY_08",
             "species_code": "PISY",
             "site_label": "POG",
             "spatial_resolution": 2.2675,
@@ -927,10 +926,10 @@
             "reference_series": null
         },
         {
-            "image_label": "POG_PISY_08B_2_3",
-            "slide_label": "POG_PISY_08B_2",
-            "woodpiece_label": "POG_PISY_08B",
-            "tree_label": "POG_PISY_08B",
+            "image_label": "POG_PISY_08_B_2_3",
+            "slide_label": "POG_PISY_08_B_2",
+            "woodpiece_label": "POG_PISY_08_B",
+            "tree_label": "POG_PISY_08",
             "species_code": "PISY",
             "site_label": "POG",
             "spatial_resolution": 2.2675,
@@ -963,10 +962,10 @@
             "reference_series": null
         },
         {
-            "image_label": "POG_PISY_08B_3_1",
-            "slide_label": "POG_PISY_08B_3",
-            "woodpiece_label": "POG_PISY_08B",
-            "tree_label": "POG_PISY_08B",
+            "image_label": "POG_PISY_08_B_3_1",
+            "slide_label": "POG_PISY_08_B_3",
+            "woodpiece_label": "POG_PISY_08_B",
+            "tree_label": "POG_PISY_08",
             "species_code": "PISY",
             "site_label": "POG",
             "spatial_resolution": 2.2675,
@@ -999,10 +998,10 @@
             "reference_series": null
         },
         {
-            "image_label": "POG_PISY_08B_3_2",
-            "slide_label": "POG_PISY_08B_3",
-            "woodpiece_label": "POG_PISY_08B",
-            "tree_label": "POG_PISY_08B",
+            "image_label": "POG_PISY_08_B_3_2",
+            "slide_label": "POG_PISY_08_B_3",
+            "woodpiece_label": "POG_PISY_08_B",
+            "tree_label": "POG_PISY_08",
             "species_code": "PISY",
             "site_label": "POG",
             "spatial_resolution": 2.2675,
@@ -1035,10 +1034,10 @@
             "reference_series": null
         },
         {
-            "image_label": "POG_PISY_08B_3_3",
-            "slide_label": "POG_PISY_08B_3",
-            "woodpiece_label": "POG_PISY_08B",
-            "tree_label": "POG_PISY_08B",
+            "image_label": "POG_PISY_08_B_3_3",
+            "slide_label": "POG_PISY_08_B_3",
+            "woodpiece_label": "POG_PISY_08_B",
+            "tree_label": "POG_PISY_08",
             "species_code": "PISY",
             "site_label": "POG",
             "spatial_resolution": 2.2675,
@@ -1071,10 +1070,10 @@
             "reference_series": null
         },
         {
-            "image_label": "POG_PISY_08B_4_1",
-            "slide_label": "POG_PISY_08B_4",
-            "woodpiece_label": "POG_PISY_08B",
-            "tree_label": "POG_PISY_08B",
+            "image_label": "POG_PISY_08_B_4_1",
+            "slide_label": "POG_PISY_08_B_4",
+            "woodpiece_label": "POG_PISY_08_B",
+            "tree_label": "POG_PISY_08",
             "species_code": "PISY",
             "site_label": "POG",
             "spatial_resolution": 2.2675,
@@ -1107,10 +1106,10 @@
             "reference_series": null
         },
         {
-            "image_label": "POG_PISY_08B_4_2",
-            "slide_label": "POG_PISY_08B_4",
-            "woodpiece_label": "POG_PISY_08B",
-            "tree_label": "POG_PISY_08B",
+            "image_label": "POG_PISY_08_B_4_2",
+            "slide_label": "POG_PISY_08_B_4",
+            "woodpiece_label": "POG_PISY_08_B",
+            "tree_label": "POG_PISY_08",
             "species_code": "PISY",
             "site_label": "POG",
             "spatial_resolution": 2.2675,
@@ -1143,10 +1142,10 @@
             "reference_series": null
         },
         {
-            "image_label": "POG_PISY_08B_4_3",
-            "slide_label": "POG_PISY_08B_4",
-            "woodpiece_label": "POG_PISY_08B",
-            "tree_label": "POG_PISY_08B",
+            "image_label": "POG_PISY_08_B_4_3",
+            "slide_label": "POG_PISY_08_B_4",
+            "woodpiece_label": "POG_PISY_08_B",
+            "tree_label": "POG_PISY_08",
             "species_code": "PISY",
             "site_label": "POG",
             "spatial_resolution": 2.2675,
@@ -1179,10 +1178,10 @@
             "reference_series": null
         },
         {
-            "image_label": "POG_PISY_08B_5_1",
-            "slide_label": "POG_PISY_08B_5",
-            "woodpiece_label": "POG_PISY_08B",
-            "tree_label": "POG_PISY_08B",
+            "image_label": "POG_PISY_08_B_5_1",
+            "slide_label": "POG_PISY_08_B_5",
+            "woodpiece_label": "POG_PISY_08_B",
+            "tree_label": "POG_PISY_08",
             "species_code": "PISY",
             "site_label": "POG",
             "spatial_resolution": 2.2675,
@@ -1215,10 +1214,10 @@
             "reference_series": null
         },
         {
-            "image_label": "POG_PISY_08B_5_2",
-            "slide_label": "POG_PISY_08B_5",
-            "woodpiece_label": "POG_PISY_08B",
-            "tree_label": "POG_PISY_08B",
+            "image_label": "POG_PISY_08_B_5_2",
+            "slide_label": "POG_PISY_08_B_5",
+            "woodpiece_label": "POG_PISY_08_B",
+            "tree_label": "POG_PISY_08",
             "species_code": "PISY",
             "site_label": "POG",
             "spatial_resolution": 2.2675,
@@ -1251,10 +1250,10 @@
             "reference_series": null
         },
         {
-            "image_label": "POG_PISY_08B_5_3",
-            "slide_label": "POG_PISY_08B_5",
-            "woodpiece_label": "POG_PISY_08B",
-            "tree_label": "POG_PISY_08B",
+            "image_label": "POG_PISY_08_B_5_3",
+            "slide_label": "POG_PISY_08_B_5",
+            "woodpiece_label": "POG_PISY_08_B",
+            "tree_label": "POG_PISY_08",
             "species_code": "PISY",
             "site_label": "POG",
             "spatial_resolution": 2.2675,
@@ -1287,10 +1286,10 @@
             "reference_series": null
         },
         {
-            "image_label": "POG_PISY_08B_6_1",
-            "slide_label": "POG_PISY_08B_6",
-            "woodpiece_label": "POG_PISY_08B",
-            "tree_label": "POG_PISY_08B",
+            "image_label": "POG_PISY_08_B_6_1",
+            "slide_label": "POG_PISY_08_B_6",
+            "woodpiece_label": "POG_PISY_08_B",
+            "tree_label": "POG_PISY_08",
             "species_code": "PISY",
             "site_label": "POG",
             "spatial_resolution": 2.2675,
@@ -1323,10 +1322,10 @@
             "reference_series": null
         },
         {
-            "image_label": "POG_PISY_08B_6_2",
-            "slide_label": "POG_PISY_08B_6",
-            "woodpiece_label": "POG_PISY_08B",
-            "tree_label": "POG_PISY_08B",
+            "image_label": "POG_PISY_08_B_6_2",
+            "slide_label": "POG_PISY_08_B_6",
+            "woodpiece_label": "POG_PISY_08_B",
+            "tree_label": "POG_PISY_08",
             "species_code": "PISY",
             "site_label": "POG",
             "spatial_resolution": 2.2675,

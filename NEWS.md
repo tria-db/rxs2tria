@@ -1,5 +1,32 @@
-# rxs2tria 0.1.3
+# rxs2tria (0.1.4)
 
+## Breaking changes
+
+* JSON schemas are split by stage: shared definitions in `core/<component>.json`, overlays `submission_<component>.json` and `tria_<component>.json`, metadata app extensions `app_<component>.json`.
+* `compile_resources()` and `recompile_resources()` are renamed to `compile_supplementary()` and `recompile_supplementary()` (`vignette("supplementary")`).
+* `update_QWAdata(x, meta, imgs_to_reread = NULL, ...)` synchronises the data with `meta` (new images added, absent ones removed); `imgs_to_update` is renamed to `imgs_to_reread`, also in `update_QWAimages()`, which loses `settings_date_tz`.
+* `QWAdata()` and `read_QWAdata()` no longer complete the ring years or add `cno` (done by `complete_QWAdata()`) and require `woodpiece_label` and `slide_label` in the rings. `check_QWAdata()` loses `meta`, see `check_consistency()`.
+* `exclude_issues` is initialised from `incomplete_ring` only; `exclude_mode` is deprecated.
+* `complete_QWAprofile()` is removed.
+
+## New features
+
+* `QWAmetadata` objects know their stage (`is_submission()`): components are aligned, checked and written with the schemas of submission files or TRIA dataset files.
+* The `check_*()` functions are the final checks before a submission: they warn on issues TRIA would reject, return `TRUE`/`FALSE` invisibly and abort with `strict = TRUE`. New `check_consistency()` checks the objects against each other.
+* New `update_QWAmetadata()`, `combine_QWAimages()`, `combine_QWAdata()`, `combine_QWAmetadata()` and `extract_ring_measures()`.
+* New `scale_for_tsap()` and `write_tsap()` write `extract_rwl()` series as TSAP import files.
+* `calculate_sector_profiles()` and `calculate_band_profiles()` gain `apply_exclusions` and `tissue`.
+* `write_QWAmetadata()`, `write_QWAdata()` and `write_QWAimages()` gain `drop_empty = TRUE` (app columns empty in all rows are not written); `write_QWAdata()` gains `keep_derived = TRUE`.
+
+## Other changes
+
+* All functions taking a QWA object abort on invalid objects (missing or `NA` keys, duplicate images or ring years).
+* Empty values are written as `null` in JSON and as empty fields in CSV. Timestamps are local clock times, written as `YYYY-MM-DDTHH:MM:SS`.
+* Schema `colType`s are `key`, `measure`, `derived`, `estimate`, `flag`, `meta_input` and `qc_input`.
+* `NA` in `exclude_dupl` and `exclude_issues` counts as FALSE, so not excluded.
+* Fixes: `extract_rwl()` includes `eww` and `lww`; `QWAprofile()` defaults to `profile_type = "sector"`.
+
+# rxs2tria 0.1.3
 
 * overhauled and finalised the extract rwl logic: new `extract_rwl()` with `scale_for_tucson()` and `rename_for_tucson()` (then write with `dplR::write.tucson()`), also added an `Export rwl` button to the flags Shiny app.
 * overhauled the supplementary resources handling. Supplementary resources info is no longer part of the `QWAmetadata` object. `compile_resources()`, `recompile_resources()` and `check_supplementary()` replace the existing functions. The output suppl resource manifest is a slim table listing and describing each file, to be submitted alongside the zip.

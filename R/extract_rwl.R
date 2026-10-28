@@ -10,11 +10,13 @@
 #' (aggregated cell parameters such as the 90th percentile lumen area,
 #' `la_q90`).
 #'
-#' Duplicate rings (`exclude_dupl`) and user-defined ring exclusions
+#' Duplicate rings (`exclude_dupl`) and rings flagged for exclusion
 #' (`exclude_issues`) are filtered out before constructing the final time
-#' series. These flag columns are read from `df_rings`, making it a required
+#' series; `NA` flags count as `FALSE`. These flag columns are read from `df_rings`, making it a required
 #' parameter, while `prf_data` (with the selected `sector`) is only required
-#' to extract a `param` from the profile data.
+#' to extract a `param` from the profile data. With `tissue = "affected"`,
+#' rings with `exclude_issues` and `affected_tissue` `"ew"` or `"lw"` are
+#' kept, using the values of the unaffected tissue from `prf_data`.
 #'
 #' Series are grouped by **woodpiece** (each core/sample yields one series);
 #' thus the `woodpiece_label`s become the column names.
@@ -30,6 +32,11 @@
 #'   required when `param` is not a `df_rings` column.
 #' @param sector Integer specifying which sector to use when exporting a
 #'   `prf_data` parameter. Required in that case, otherwise ignored.
+#' @param tissue `"all"` (default) removes all rings with `exclude_issues`;
+#'   `"affected"` keeps those with `affected_tissue` `"ew"` or `"lw"`. Only
+#'   for `prf_data` parameters, and requires `prf_data` computed with
+#'   `apply_exclusions = TRUE, tissue = "affected"` (see
+#'   [calculate_sector_profiles()]); otherwise the affected tissue is included.
 #'
 #' @return A \pkg{dplR} `rwl` object with the selected `param` data.
 #'
@@ -47,28 +54,15 @@
 #'            prf_data = prf_sector,
 #'            sector = 5)
 #' }
-extract_rwl <- function(df_rings, param, prf_data = NULL, sector = NULL) {
-  checkmate::assert_data_frame(df_rings)
-  checkmate::assert_names(names(df_rings),
-    must.include = c("year", "image_label", "slide_label", "woodpiece_label"))
-  required_flags <- c("exclude_issues", "exclude_dupl")
-  missing_flags <- setdiff(required_flags, names(df_rings))
-  if (length(missing_flags)>0) {
-    cli::cli_abort(c(
-      "Missing required column{?s} {.field {missing_flags}} in {.arg df_rings}",
-      "i" = "Hint: Have you run {.fn complete_QWAdata} first?"
-    ))
-  }
+extract_rwl <- function(df_rings, param, prf_data = NULL, sector = NULL,
+                        tissue = c("all", "affected")) {
+  check_rings_excl_cols(df_rings)
   checkmate::assert_string(param, min.chars = 1)
+  tissue <- rlang::arg_match(tissue)
   # TODO: check rings df valid?
 
   # possible measurement params for the rings data:
-  schema_path <- system.file(schema_rel_path("rings"), package = "rxs2tria")
-  schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
-  tbl_schema <- resolve_schema(schema_obj, schema_path)
-  tbl_props <- get_tbl_props(tbl_schema)
-  measure_cols_rings <- tbl_props$properties |>
-    purrr::keep(\(x) x$colType %in% c("measure","derived")) |> names()
+  measure_cols_rings <- schema_cols("rings", c("measure", "derived", "estimate"))
 
   meas_cols <- intersect(names(df_rings), measure_cols_rings)
   is_prf_param <- FALSE
@@ -81,21 +75,14 @@ extract_rwl <- function(df_rings, param, prf_data = NULL, sector = NULL) {
     checkmate::assert_names(names(prf_data),
       must.include = c("year", "image_label", "sector_n"))
     checkmate::assert_int(sector)
-
-    # TODO: check valid, matching df_rings?
+    check_rows_in_rings(prf_data, df_rings, "profile data", strict = TRUE,
+      consequence = "These profile values would be dropped from the series.",
+      hint = "Compute {.arg prf_data} from the same {.cls QWAdata} as {.arg df_rings}, after {.fn complete_QWAdata}.")
 
     # possible measurement params for the cells data:
-    schema_path <- system.file(schema_rel_path("cells"), package = "rxs2tria")
-    schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
-    tbl_schema <- resolve_schema(schema_obj, schema_path)
-    tbl_props <- get_tbl_props(tbl_schema)
-    measure_cols_cells <- tbl_props$properties |>
-      purrr::keep(\(x) x$colType %in% c("measure","derived")) |> names()
-    measure_cols_cells <- setdiff(measure_cols_cells, c("sector100", "ew_lw")) # not actually valid params
-
     in_prf_data <- param %in% names(prf_data)
-    is_agg <- stringr::str_detect(param, "_(mean|q\\d+)$")
-    is_measure <- sub("_(mean|q\\d+)$", "", param) %in% measure_cols_cells
+    is_agg <- stringr::str_detect(param, "_(mean|q\\d+(\\.\\d+)?)$")
+    is_measure <- sub("_(mean|q\\d+(\\.\\d+)?)$", "", param) %in% cell_param_cols()
     if (!in_prf_data || !is_agg || !is_measure) {
       cli::cli_abort("{.val {param}} is not a measurements column in {.arg prf_data} or {.arg df_rings}.")
     }
@@ -107,10 +94,15 @@ extract_rwl <- function(df_rings, param, prf_data = NULL, sector = NULL) {
     is_prf_param <- TRUE
   }
 
+  if (!is_prf_param && tissue == "affected") {
+    cli::cli_abort("{.code tissue = \"affected\"} is only possible for {.arg prf_data} parameters, not for ring parameter {.val {param}}.")
+  }
+
   # extract selected and prepare for rwl
   df_data <- df_rings |>
     dplyr::select(dplyr::any_of(c("woodpiece_label", "image_label", "year",
-                                   "exclude_dupl", "exclude_issues", param)))
+                                   "exclude_dupl", "exclude_issues",
+                                   "affected_tissue", param)))
 
   if (is_prf_param) {
     df_data <- prf_data |>
@@ -119,20 +111,66 @@ extract_rwl <- function(df_rings, param, prf_data = NULL, sector = NULL) {
       dplyr::right_join(df_data, by = c("image_label", "year"))
   }
 
-  pivot_rwl(df_data, param)
+  pivot_rwl(df_data, param, tissue)
 }
 
-# build a dplR rwl object from a long-format df with woodpiece_label, year,
-# exclude_dupl, exclude_issues and value_col columns (one row per
-# woodpiece_label/year after excluding flagged rows)
-pivot_rwl <- function(df, value_col) {
-  df <- df |>
-    dplyr::filter(!.data$exclude_dupl, !.data$exclude_issues) |>
-    dplyr::select(dplyr::all_of(c("woodpiece_label", "year", value_col)))
+#' Extract ring measurements without excluded rings
+#'
+#' Returns the ring-level measurements of a `QWAdata$rings` data frame without
+#' the excluded rings, i.e. duplicate rings not selected as the preferred copy
+#' (`exclude_dupl`) and rings flagged for exclusion (`exclude_issues`). The
+#' result has one row per woodpiece and year; years of removed rings are
+#' absent, so the series may contain gaps.
+#'
+#' Only the identifier and measurement columns are kept; flag and comment
+#' columns are dropped. The result is meant as input for further analyses. To
+#' change which rings are excluded, edit the flags in the full `QWAdata` object
+#' and extract again.
+#'
+#' @param df_rings A data frame containing ROXAS ring-level measurements and
+#'   logical flag columns (the `$rings` component of a `QWAdata` object, after
+#'   calling `complete_QWAdata()` to instantiate the flag columns).
+#' @returns A data frame with the identifier columns (`woodpiece_label`,
+#'   `slide_label`, `image_label`, `year`) and the measurement columns of
+#'   `df_rings` (e.g. `cno`, `mrw`, `eww`, `lww`).
+#' @seealso [extract_rwl()], [complete_QWAdata()]
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' df_meas <- extract_ring_measures(QWA_data$rings)
+#' }
+extract_ring_measures <- function(df_rings) {
+  check_rings_excl_cols(df_rings)
 
-  if (nrow(df) == 0) {
-    cli::cli_abort("No rings left after removing excluded rings ({.field exclude_dupl}, {.field exclude_issues}).")
+  keep_cols <- schema_cols("rings", c("key", "measure", "derived", "estimate"))
+  df <- df_rings |>
+    dplyr::filter(!dplyr::coalesce(.data$exclude_dupl, FALSE),
+                  !dplyr::coalesce(.data$exclude_issues, FALSE)) |>
+    dplyr::select(dplyr::any_of(keep_cols))
+  check_one_per_wp_year(df)
+
+  df
+}
+
+# check that df_rings has the identifier and exclusion flag columns
+check_rings_excl_cols <- function(df_rings) {
+  checkmate::assert_data_frame(df_rings)
+  checkmate::assert_names(names(df_rings),
+    must.include = c("year", "image_label", "woodpiece_label"))
+  required_flags <- c("exclude_issues", "exclude_dupl")
+  missing_flags <- setdiff(required_flags, names(df_rings))
+  if (length(missing_flags) > 0) {
+    cli::cli_abort(c(
+      "Missing required column{?s} {.field {missing_flags}} in {.arg df_rings}",
+      "i" = "Hint: Have you run {.fn complete_QWAdata} first?"
+    ))
   }
+  invisible(TRUE)
+}
+
+# abort if df (excluded rings removed) has more than one row per woodpiece and year
+check_one_per_wp_year <- function(df) {
   dupl <- duplicated(df[, c("woodpiece_label", "year")])
   if (any(dupl)) {
     cli::cli_abort(c(
@@ -140,6 +178,28 @@ pivot_rwl <- function(df, value_col) {
       "i" = "Check the {.field exclude_dupl} flags of woodpiece{?s} {.val {unique(df$woodpiece_label[dupl])}}."
     ))
   }
+  invisible(TRUE)
+}
+
+# build a dplR rwl object from a long-format df with woodpiece_label, year,
+# exclude_dupl, exclude_issues and value_col columns (one row per
+# woodpiece_label/year after excluding flagged rows). With tissue = "affected",
+# rings with exclude_issues and affected_tissue "ew" or "lw" are kept.
+pivot_rwl <- function(df, value_col, tissue = "all") {
+  partial <- if (tissue == "affected" && "affected_tissue" %in% names(df)) {
+    df$affected_tissue %in% c("ew", "lw")
+  } else {
+    FALSE
+  }
+  df <- df |>
+    dplyr::filter(!dplyr::coalesce(.data$exclude_dupl, FALSE),
+                  !dplyr::coalesce(.data$exclude_issues, FALSE) | partial) |>
+    dplyr::select(dplyr::all_of(c("woodpiece_label", "year", value_col)))
+
+  if (nrow(df) == 0) {
+    cli::cli_abort("No rings left after removing excluded rings ({.field exclude_dupl}, {.field exclude_issues}).")
+  }
+  check_one_per_wp_year(df)
 
   df |>
     tidyr::pivot_wider(names_from = "woodpiece_label", values_from = !!value_col) |>
@@ -215,6 +275,132 @@ pivot_rwl <- function(df, value_col) {
 scale_for_tucson <- function(rwl, prec = 0.001, scaling = NULL) {
   rwl <- dplR::as.rwl(rwl)
   checkmate::assert_choice(prec, c(0.001, 0.01))
+
+  max_digits <- 5 # Tucson format field width, independent of prec
+  max_representable <- (10^max_digits - 1) * prec
+  scale_rwl_pow10(rwl, scaling, max_auto = max_representable,
+    max_manual = max_representable,
+    range_desc = cli::format_inline("the Tucson range at {.code prec = {prec}}"))
+}
+
+#' Scale an rwl object for TSAP export
+#'
+#' @description
+#' [write_tsap()] writes values rounded to integers, as TSAP expects ring
+#' widths in μm (typically 300--2000). QWA parameters on smaller scales (e.g.
+#' cell wall thickness, or relative measures well below 1) would lose most or
+#' all of their information. This function scales an `rwl` object (as returned
+#' by [extract_rwl()]) by a power-of-ten factor. By default, the factor is
+#' chosen automatically as the largest that keeps all values at most 9999 (4
+#' integer digits).
+#'
+#' @details
+#' Ring-width parameters in μm (e.g. `mrw`, `eww`, `lww`) need no scaling.
+#' Auto-scaling would instead scale series with all values below 1000 by 10 or
+#' more.
+#'
+#' A manual `scaling` must be a power of ten and keep all values within the
+#' integer range (at most `.Machine$integer.max`). The applied factor is stored in
+#' the `"scaling"` attribute of the returned `rwl` object; dividing the
+#' exported values by `scaling` gives back the original values (up to
+#' rounding). An `rwl` object that already has a `"scaling"` attribute is not
+#' scaled again. The attribute is dropped by most other operations (e.g.
+#' subsetting, arithmetic, \pkg{dplR} functions), so apply this function as
+#' the last step before writing.
+#'
+#' @inheritParams scale_for_tucson
+#'
+#' @return The scaled `rwl` object, with the applied factor as attribute
+#'   `"scaling"`.
+#'
+#' @seealso [scale_for_tucson()] for Tucson-format writing.
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' rwl <- extract_rwl(df_rings = QWA_data$rings, param = "cwtrad_mean",
+#'                    prf_data = prf_sector, sector = 5)
+#' scaled <- scale_for_tsap(rwl)
+#' attr(scaled, "scaling")
+#' write_tsap(scaled, "cwtrad_mean_tsap.txt")
+#' }
+scale_for_tsap <- function(rwl, scaling = NULL) {
+  rwl <- dplR::as.rwl(rwl)
+  scale_rwl_pow10(rwl, scaling, max_auto = 9999, max_manual = .Machine$integer.max,
+    range_desc = "4 integer digits", manual_desc = "the integer range")
+}
+
+#' Write an rwl object as a TSAP import file
+#'
+#' @description
+#' Writes an `rwl` object (as returned by [extract_rwl()]) as a tab-delimited
+#' text file for import into TSAP: the first column `Year`, followed by one
+#' column per series. Missing values are written as `0` and values are rounded
+#' to integers.
+#'
+#' Ring widths in μm (e.g. `mrw`) can be written as they are. Scale parameters
+#' on smaller scales with [scale_for_tsap()] first; the function warns if
+#' non-zero values round to `0`, and aborts on values beyond the integer range.
+#'
+#' @param rwl A \pkg{dplR} `rwl` object, e.g. as returned by [extract_rwl()]
+#'   or [scale_for_tsap()].
+#' @param file Path of the output file (e.g. `"mrw_tsap.txt"`).
+#' @param overwrite Logical, whether to overwrite an existing `file`.
+#'
+#' @return The written table invisibly: a tibble with an integer `Year`
+#'   column and one integer column per series.
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' # Ring widths in μm
+#' rwl <- extract_rwl(df_rings = QWA_data$rings, param = "mrw")
+#' write_tsap(rwl, "mrw_tsap.txt")
+#'
+#' # Other parameters, auto-scaled
+#' rwl <- extract_rwl(df_rings = QWA_data$rings, param = "cwtrad_mean",
+#'                    prf_data = prf_sector, sector = 5)
+#' write_tsap(scale_for_tsap(rwl), "cwtrad_mean_tsap.txt")
+#' }
+write_tsap <- function(rwl, file, overwrite = TRUE) {
+  rwl <- dplR::as.rwl(rwl)
+  checkmate::assert_flag(overwrite)
+  checkmate::assert_path_for_output(file, overwrite = overwrite)
+
+  vals <- unlist(rwl, use.names = FALSE)
+  # as.integer() would turn these into NA, written as "NA"
+  int_max <- .Machine$integer.max
+  n_big <- sum(abs(round(vals)) > int_max, na.rm = TRUE)
+  if (n_big > 0) {
+    cli::cli_abort(c(
+      "{n_big} value{?s} exceed{?s/} the integer range ({.val {int_max}}).",
+      "i" = "Scale {.arg rwl} with {.fn scale_for_tsap} and a smaller {.arg scaling}."
+    ))
+  }
+  n_lost <- sum(!is.na(vals) & vals != 0 & round(vals) == 0)
+  if (n_lost > 0) {
+    cli::cli_warn(c(
+      "{n_lost} non-zero value{?s} round{?s/} to {.val {0}}.",
+      "i" = "Scale {.arg rwl} with {.fn scale_for_tsap} first."
+    ))
+  }
+
+  df <- tibble::as_tibble(rwl, rownames = "Year") |>
+    dplyr::mutate(
+      Year = as.integer(.data$Year),
+      dplyr::across(-"Year", \(x) as.integer(round(dplyr::coalesce(x, 0))))
+    )
+  vroom::vroom_write(df, file, delim = "\t")
+  invisible(df)
+}
+
+# scale all values of rwl by a power of ten and store it as attribute
+# "scaling": a manual scaling must keep the values at or below max_manual,
+# NULL picks the largest factor keeping them at or below max_auto. range_desc
+# and manual_desc describe the two ranges in messages.
+scale_rwl_pow10 <- function(rwl, scaling, max_auto, max_manual, range_desc,
+                            manual_desc = range_desc) {
   if (!is.null(attr(rwl, "scaling"))) {
     cli::cli_abort("{.arg rwl} is already scaled (factor {.val {attr(rwl, 'scaling')}}).")
   }
@@ -226,13 +412,11 @@ scale_for_tucson <- function(rwl, prec = 0.001, scaling = NULL) {
     scaling <- 10^round(log10(scaling)) # snap floating-point error to exact power of ten
   }
 
-  max_digits <- 5 # Tucson format field width, independent of prec
-  max_representable <- (10^max_digits - 1) * prec
   vals <- unlist(rwl, use.names = FALSE)
   vals <- vals[!is.na(vals)]
   max_val <- max(c(vals, 0))
   auto_scaling <- if (max_val == 0) 1 else
-    10^floor(log10(max_representable / max_val)) # largest power of 10 that fits
+    10^floor(log10(max_auto / max_val)) # largest power of 10 that fits
 
   if (is.null(scaling)) {
     scaling <- auto_scaling
@@ -242,12 +426,12 @@ scale_for_tucson <- function(rwl, prec = 0.001, scaling = NULL) {
         "i" = "Returning {.arg rwl} unscaled ({.code scaling = 1})."
       ))
     } else {
-      cli::cli_inform("Auto-scaled by a factor of {.val {scaling}} for optimal range at {.code prec = {prec}}.")
+      cli::cli_inform("Auto-scaled by a factor of {.val {scaling}} for optimal use of {range_desc}.")
     }
-  } else if (max_val * scaling > max_representable) {
+  } else if (max_val * scaling > max_manual) {
     cli::cli_abort(c(
-      "Scaling by {.val {scaling}} exceeds the Tucson range at {.code prec = {prec}}.",
-      "i" = "Largest scaled value would be {.val {max_val * scaling}}, maximum is {.val {max_representable}}.",
+      "Scaling by {.val {scaling}} exceeds {manual_desc}.",
+      "i" = "Largest scaled value would be {.val {max_val * scaling}}, maximum is {.val {max_manual}}.",
       "i" = "Use {.code scaling = {auto_scaling}} or smaller."
     ))
   }

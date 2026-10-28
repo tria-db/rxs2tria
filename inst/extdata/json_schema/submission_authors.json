@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "TODO:addurltoTRIAschema",
+  "title": "TRIA author metadata schema, submission files",
+  "description": "Schema for authorship-related data in submission files",
+  "allOf": [
+    { "$ref": "core/authors.json" },
+    {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string", "minLength": 1 }
+        },
+        "required": ["email"]
+      }
+    }
+  ]
+}

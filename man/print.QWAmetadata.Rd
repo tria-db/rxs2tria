@@ -20,8 +20,9 @@
 \code{x}, invisibly.
 }
 \description{
-Displays a compact overview of a \link{QWAmetadata} object: image-level coverage
-(number of images, slides, woodpieces, species, and sites) and the
+Displays a compact overview of a \link{QWAmetadata} object: the stage (submission
+files, or TRIA dataset files with label, version and citation), image-level
+coverage (number of images, slides, woodpieces, species, and sites) and the
 availability of the optional metadata components.
 }
 \seealso{

@@ -4,7 +4,7 @@
 \alias{complete_QWAdata}
 \title{Complete a QWAdata object}
 \usage{
-complete_QWAdata(x, meta, exclude_mode = c("either", "incomplete_only"))
+complete_QWAdata(x, meta, exclude_mode = NULL)
 }
 \arguments{
 \item{x}{A \link{QWAdata} object with both \verb{$cells} and \verb{$rings}.}
@@ -12,9 +12,7 @@ complete_QWAdata(x, meta, exclude_mode = c("either", "incomplete_only"))
 \item{meta}{A \link{QWAimages} object providing \code{spatial_resolution} and
 \code{outmost_year}, required for the incomplete-innermost and dating checks.}
 
-\item{exclude_mode}{Passed to \code{\link[=complete_flags]{complete_flags()}}: \code{"either"} (default)
-excludes incomplete and missing rings; \code{"incomplete_only"} excludes only
-incomplete rings.}
+\item{exclude_mode}{Deprecated, see \code{\link[=complete_flags]{complete_flags()}}.}
 }
 \value{
 A \link{QWAdata} object with all derived columns and flag columns populated.
@@ -22,11 +20,12 @@ A \link{QWAdata} object with all derived columns and flag columns populated.
 \description{
 Runs the full preprocessing pipeline on a \link{QWAdata} object:
 \enumerate{
-\item Adds derived cell measures (see \code{\link[=complete_measures]{complete_measures()}}).
-\item Extends the rings data frame to cover all years present in cells,
-with cell counts and mean CWT per ring (see \code{complete_rings_log()}).
+\item Aligns column types and extends \verb{$rings} to complete year sequences per
+image, with the cell count \code{cno} from \verb{$cells}; warns on dating problems.
+\item Adds derived cell measures and the earlywood/latewood estimates (see
+\code{\link[=complete_measures]{complete_measures()}}).
 \item Flags incomplete, missing, and duplicate rings and initialises
-the \code{exclude_issues} column (see \code{\link[=complete_flags]{complete_flags()}}).
+\code{exclude_dupl} and \code{exclude_issues} (see \code{\link[=complete_flags]{complete_flags()}}).
 }
 }
 \seealso{

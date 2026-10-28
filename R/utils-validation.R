@@ -37,32 +37,30 @@ cli_truncated_groups <- function(
   )
 }
 
-#' Map a QWAmetadata slot name to its package-relative schema file path
+#' Map a schema name to its package-relative schema file path
 #'
-#' @param schema QWAmetadata slot name.
-#' @param roxas_version Required when `schema = "images"`: `"roxas"` selects
-#'   the classic ROXAS schema, `"roxas_ai"` the ROXAS AI schema.
-#'   Ignored for all other schema names.
+#' Schema files are named after the schema. The stage overlay
+#' (`submission_<schema>.json` or `tria_<schema>.json`) is used if it exists,
+#' otherwise the definition shared by both stages (`core/<schema>.json`).
+#'
+#' @param schema Schema name: a QWAmetadata component (e.g. `"dataset"`,
+#'   `"datafiles"`), `"supplementary"`, `"roxas"` / `"roxas_ai"` for images,
+#'   `"cells"`, `"rings"`, `"QWAmetadata"` (full schema) or `"shiny_meta"`
+#'   (metadata app).
+#' @param submission Schema for submission files (`TRUE`) or TRIA dataset
+#'   files (`FALSE`)?
 #' @return Package-relative path to the JSON schema file.
 #' @noRd
-schema_rel_path <- function(schema) {
-  switch(schema,
-    "QWAmetadata" = "extdata/json_schema/base_schema/tria_metadata_schema.json",
-    "shiny_meta" = "extdata/json_schema/tria_shinyext_schema.json",
-    "dataset" = "extdata/json_schema/base_schema/tria_ds_data_schema.json",
-    "authors" = "extdata/json_schema/base_schema/tria_author_data_schema.json",
-    "funding" = "extdata/json_schema/base_schema/tria_funding_data_schema.json",
-    "related" = "extdata/json_schema/base_schema/tria_related_data_schema.json",
-    "resources" = "extdata/json_schema/base_schema/tria_resource_data_schema.json",
-    "sites" = "extdata/json_schema/base_schema/tria_site_data_schema.json",
-    "trees" = "extdata/json_schema/base_schema/tria_tree_data_schema.json",
-    "woodpieces" = "extdata/json_schema/base_schema/tria_woodpiece_data_schema.json",
-    "slides" = "extdata/json_schema/base_schema/tria_slide_data_schema.json",
-    "roxas" = "extdata/json_schema/base_schema/tria_roxas_data_schema.json",
-    "roxas_ai" = "extdata/json_schema/base_schema/tria_roxasai_data_schema.json",
-    "cells" = "extdata/json_schema/base_schema/tria_cell_data_schema.json",
-    "rings" = "extdata/json_schema/base_schema/tria_ring_data_schema.json"
-  )
+schema_rel_path <- function(schema, submission = TRUE) {
+  if (schema == "shiny_meta") return("extdata/json_schema/app_QWAmetadata.json")
+  stage <- if (submission) "submission" else "tria"
+  candidates <- file.path("extdata/json_schema",
+                          c(paste0(stage, "_", schema, ".json"),
+                            paste0("core/", schema, ".json")))
+  for (rel_path in candidates) {
+    if (nzchar(system.file(rel_path, package = "rxs2tria"))) return(rel_path)
+  }
+  cli::cli_abort("No schema {.val {schema}} for {.val {stage}} files.")
 }
 
 #' Inline all references in a JSON schema list
@@ -86,19 +84,25 @@ resolve_refs <- function(x, base_path){
   purrr::map(x, resolve_refs, base_path = base_path)
 }
 
+#' Read a JSON schema file and inline its `$ref`s
+#' @param schema_path Path to the schema file.
+#' @returns The resolved schema as a nested R list.
 #' @noRd
-resolve_schema <- function(schema_obj, schema_path) {
-  tbl_schema  <- jsonlite::fromJSON(schema_obj$schema$schema, simplifyDataFrame = FALSE)
-  resolve_refs(tbl_schema, fs::path_dir(schema_path))
+resolve_schema <- function(schema_path) {
+  jsonlite::fromJSON(schema_path, simplifyDataFrame = FALSE) |>
+    resolve_refs(fs::path_dir(schema_path))
 }
 
+# "required" inside if/then/else applies conditionally only, so these
+# branches are skipped by default
 #' @noRd
-extract_required <- function(x) {
+extract_required <- function(x, skip = c("if", "then", "else")) {
   if (!is.list(x)) return(NULL)
   # collect "required" at this level
   current <- if (!is.null(x$required)) list(x$required) else list()
-  # recurse into all children and combine
-  children <- purrr::map(x, extract_required) 
+  # recurse into all children except the skipped ones and combine
+  if (!is.null(names(x))) x <- x[setdiff(names(x), skip)]
+  children <- purrr::map(x, extract_required, skip = skip)
   c(current, children) |> purrr::list_flatten() |> unname()
 }
 #' @noRd
@@ -128,16 +132,74 @@ extract_properties <- function(x) {
 }
 
 #' Helper to extract specific column definitions from a imported schema
+#' @returns A list with the column definitions (`properties`), the required
+#'   columns (`required`) and the columns required only under an
+#'   `if`/`then`/`else` condition (`cond_required`).
 #' @noRd
 get_tbl_props <- function(tbl_schema) {
   required <- tbl_schema |> extract_required() |> unlist()
+  cond_required <- tbl_schema |> extract_required(skip = NULL) |> unlist() |>
+    setdiff(required)
   properties <- tbl_schema |> extract_properties()
   prop_names <- names(properties)
   properties <- lapply(prop_names, function(nm) {
     c(properties[[nm]], list(required = nm %in% required))
   })
   names(properties) <- prop_names
-  list(properties = properties, required = required)
+  list(properties = properties, required = required, cond_required = cond_required)
+}
+
+#' Table properties of a schema, see `get_tbl_props()`
+#' @param schema Schema name, see `schema_rel_path()`.
+#' @param submission Schema for submission files (`TRUE`) or TRIA dataset
+#'   files (`FALSE`)?
+#' @noRd
+schema_tbl_props <- function(schema, submission = TRUE) {
+  schema_path <- system.file(schema_rel_path(schema, submission), package = "rxs2tria")
+  get_tbl_props(resolve_schema(schema_path))
+}
+
+#' Names of the quality control columns set in the flags app (`colType`
+#' `"qc_input"`) in table properties
+#' @param tbl_props Output of `get_tbl_props()`.
+#' @noRd
+qc_input_cols <- function(tbl_props) {
+  tbl_props$properties |>
+    purrr::keep(\(x) isTRUE(x$colType == "qc_input")) |>
+    names()
+}
+
+#' Names of the columns of a table schema with the given colType(s)
+#' @param schema Schema name, see `schema_rel_path()`.
+#' @param col_types Character vector of `colType` values.
+#' @returns Character vector of column names, in schema order.
+#' @noRd
+schema_cols <- function(schema, col_types) {
+  schema_tbl_props(schema)$properties |>
+    purrr::keep(\(x) isTRUE(x$colType %in% col_types)) |>
+    names()
+}
+
+#' Key columns of a table schema (`colType` `"key"`) and their JSON types
+#' @param schema Schema name, see `schema_rel_path()`.
+#' @returns Named character vector: JSON type by key column, in schema order.
+#' @noRd
+key_props <- function(schema) {
+  schema_path <- system.file(schema_rel_path(schema), package = "rxs2tria")
+  extract_properties(resolve_schema(schema_path)) |>
+    purrr::keep(\(x) "key" %in% x$colType) |>
+    vapply(\(x) x$type[1], character(1))
+}
+
+#' Names of the cell measurement columns that can be aggregated
+#'
+#' All `measure` and `derived` columns of the cells schema except radial
+#' positions, categorical columns and neighbour IDs.
+#' @returns Character vector of column names, in schema order.
+#' @noRd
+cell_param_cols <- function() {
+  setdiff(schema_cols("cells", c("measure", "derived")),
+          c("raddistr", "rraddistr", "sector100", "ew_lw", "nbrid"))
 }
 
 # tbl_props <- get_tbl_props(full_schema$properties$tbl_name)
@@ -200,29 +262,46 @@ convert_column <- function(x, target_class) {
          "character" = as.character(x),
          "factor" = as.factor(x),
          "numeric" = as.numeric(x),
-         "integer" = as.integer(x),
+         "integer" = as_whole_integer(x),
          "logical" = as.logical(x),
          "Date" = as.Date(x),
-         "POSIXct" = as.POSIXct(x),
+         "POSIXct" = if (inherits(x, "POSIXct")) lubridate::force_tz(x, "UTC") # keep the local clock time
+                     else lubridate::as_datetime(x), # as.POSIXct() drops the time of ISO 8601 strings
          x  # fallback: no conversion
   )
 }
 
-#' Helper to force a given df into alignment with the base schema
-#' ensure it has required columns, remove any extra columns
+#' Convert to integer if all values are whole numbers within the integer range;
+#' otherwise return the values as numeric (as.integer() would truncate them
+#' silently, or return NA beyond 2^31 - 1, e.g. file sizes >= 2 GiB), the
+#' schema checks then report non-whole values
+#' @noRd
+as_whole_integer <- function(x) {
+  if (is.integer(x)) return(x)
+  num <- suppressWarnings(as.numeric(x)) # new NAs are reported by align_to_schema()
+  if (any(num != round(num) | abs(num) > .Machine$integer.max, na.rm = TRUE)) num else as.integer(num)
+}
+
+#' Helper to force a given df into alignment with a table schema:
+#' ensure it has required columns, remove extra columns unless `keep_extra`,
 #' force all columns to have the correct type
 #' @param df  The data frame to be aligned
 #' @param tbl_props  Table properties read from schema (output of get_tbl_props()) 
 #' @param schema  Schema name, only used for warning messages
-#' @param add_opt  Should missing optional columns be added as well, or only required?
-#' @param mute_info  Should warning messages (missing req columns, 
-#'   dropped extra cols, NAs due to type conversions) be displayed
+#' @param add_opt  Should missing optional columns be added as well, or only
+#'   required? Columns with `colType` `"qc_input"` (set in the flags app) are
+#'   never added.
+#' @param mute_info  If `TRUE`, suppress the messages on missing required
+#'   columns, dropped extra columns and `NA`s from type conversions
 #' @param ignore_colnames  Should the column names of df be ignored
 #'   in favor of position?
+#' @param keep_extra  Keep columns not in the schema (appended after the schema
+#'   columns, type unchanged) instead of removing them?
 #' @noRd
 align_to_schema <- function(df, tbl_props, schema = NULL, add_opt = FALSE,
-                            mute_info = FALSE, ignore_colnames = FALSE
-                            ) {  
+                            mute_info = FALSE, ignore_colnames = FALSE,
+                            keep_extra = FALSE
+                            ) {
   # get target empty df to align data to
   target_structure <- create_empty_df(tbl_props, nrows = 0)
   target_cols <- names(target_structure)
@@ -243,34 +322,45 @@ align_to_schema <- function(df, tbl_props, schema = NULL, add_opt = FALSE,
     names(aligned_data)[1:min(length(aligned_data),length(target_cols))] <- target_cols
   }
 
-  req_cols <- if (add_opt) target_cols else tbl_props$required
+  req_cols <- if (add_opt) {
+    setdiff(target_cols, qc_input_cols(tbl_props))
+  } else {
+    tbl_props$required
+  }
   source_cols <- names(aligned_data)
   common_cols <- intersect(target_cols, source_cols)
+  extra_cols <- setdiff(source_cols, target_cols)
 
   # enforce the correct class for all columns in df
   for (col in common_cols) {
     aligned_data[[col]] <- convert_column(aligned_data[[col]], class(target_structure[[col]]))
   }
-  
+  source_data <- aligned_data
+
   # bind to target_structure to ensure required+common columns are present
   res_cols <- intersect(target_cols, c(req_cols, common_cols)) # ensures correct order
   aligned_data <- dplyr::bind_rows(target_structure[res_cols], aligned_data[common_cols])
+  if (keep_extra && length(extra_cols) > 0) {
+    aligned_data[extra_cols] <- source_data[extra_cols]
+  }
 
   # if not muted, collect messages on changes made
   if (!mute_info) {
     msg <- c()
     
-    missing_cols <- setdiff(req_cols, source_cols)
-    extra_cols <- setdiff(source_cols, target_cols)
+    # missing required columns are a warning, optional ones added on request
+    # (add_opt) only an information
+    missing_cols <- setdiff(tbl_props$required, source_cols)
+    added_opt_cols <- setdiff(req_cols, c(source_cols, tbl_props$required))
 
     if (length(missing_cols) > 0) {
-      msg <- c(msg, 
-        "i" = "Missing columns added:", 
+      msg <- c(msg,
+        "i" = "Missing required columns added:",
         " " = "{missing_cols}"
       )
     }
 
-    if (length(extra_cols) > 0) {
+    if (length(extra_cols) > 0 && !keep_extra) {
       msg <- c(msg,
         "i" = "Extra columns ignored:", 
         " " = "{extra_cols}"
@@ -279,8 +369,8 @@ align_to_schema <- function(df, tbl_props, schema = NULL, add_opt = FALSE,
 
     if (!is.null(df)) {
       # compare NA counts after conversion
-      na_counts_org <- colSums(is.na(df[common_cols]))
-      na_counts_aligned <- colSums(is.na(aligned_data[common_cols]))
+      na_counts_org <- vapply(df[common_cols], \(x) sum(is.na(x)), numeric(1))
+      na_counts_aligned <- vapply(aligned_data[common_cols], \(x) sum(is.na(x)), numeric(1))
       if (any(na_counts_aligned > na_counts_org)){
         NA_cols <- names(which(na_counts_aligned>na_counts_org))
         msg <- c(msg,
@@ -295,14 +385,104 @@ align_to_schema <- function(df, tbl_props, schema = NULL, add_opt = FALSE,
     } else {
       cli::cli_inform(c("i" = "{.field {schema}} data frame aligned with schema"))
     }
+    if (length(added_opt_cols) > 0) {
+      cli::cli_inform(c("i" = "{.field {schema}} optional columns added:", " " = "{added_opt_cols}"))
+    }
+    if (length(extra_cols) > 0 && keep_extra) {
+      cli::cli_inform(c("i" = "{.field {schema}} extra columns kept:", " " = "{extra_cols}"))
+    }
   }
 
   aligned_data
 }
 
-#' Helper to check df against schema
+#' Report a check issue as a warning, or as an error with `strict`
+#' @param msg Message for cli, interpolated in the caller's environment.
+#' @param strict If `TRUE`, abort instead of warning.
+#' @return `FALSE`, invisibly.
 #' @noRd
-check_schema <- function(df, schema_obj, schema = NULL, warn_only = TRUE, greedy = FALSE) {
+report_issue <- function(msg, strict = FALSE, .envir = parent.frame()) {
+  if (strict) {
+    cli::cli_abort(msg, .envir = .envir)
+  } else {
+    cli::cli_warn(msg, .envir = .envir)
+  }
+  invisible(FALSE)
+}
+
+#' Does a column match a JSON schema type? Whole numbers count as integer;
+#' unknown types pass.
+#' @noRd
+is_json_type <- function(x, type) {
+  switch(type,
+    string = is.character(x),
+    boolean = is.logical(x),
+    number = is.numeric(x),
+    integer = is.numeric(x) && all(x == round(x), na.rm = TRUE),
+    TRUE
+  )
+}
+
+#' Abort if key columns are missing, of the wrong type or `NA`, or if rows are
+#' not unique by `unique_by`
+#' @param df Data frame.
+#' @param keys Named character vector: JSON type by key column (`NA` skips the
+#'   type check), see `key_props()`.
+#' @param what Table name, for messages.
+#' @param unique_by Columns that must identify the rows uniquely, or `NULL`.
+#' @param hint Optional hint added to the messages on `NA` and duplicate keys.
+#' @return `df`, invisibly.
+#' @noRd
+validate_keys <- function(df, keys, what, unique_by = NULL, hint = NULL) {
+  key_cols <- names(keys)
+  missing_cols <- setdiff(key_cols, names(df))
+  if (length(missing_cols) > 0) {
+    cli::cli_abort(c("x" = "{.field {what}}: missing key column{?s} {.field {missing_cols}}."))
+  }
+
+  wrong_type <- key_cols[!purrr::map2_lgl(df[key_cols], keys, \(x, t) is.na(t) || is_json_type(x, t))]
+  if (length(wrong_type) > 0) {
+    cli::cli_abort(c(
+      "x" = "{.field {what}}: key column{?s} of the wrong type:",
+      cli_truncated_list(paste0("`", wrong_type, "` must be ", keys[wrong_type]), max_show = Inf)
+    ))
+  }
+
+  # images affected by the rows in `rows`, if known
+  affected_imgs <- function(rows) {
+    if (!"image_label" %in% names(df)) return(NULL)
+    imgs <- unique(stats::na.omit(df$image_label[rows]))
+    if (length(imgs) > 0) c("i" = "Affected images:", cli_truncated_list(imgs))
+  }
+
+  na_rows <- !stats::complete.cases(df[key_cols])
+  if (any(na_rows)) {
+    na_cols <- key_cols[vapply(df[key_cols], anyNA, logical(1))]
+    cli::cli_abort(c(
+      "x" = "{.field {what}}: {sum(na_rows)} row{?s} with missing values in key column{?s} {.field {na_cols}}.",
+      affected_imgs(na_rows),
+      "i" = hint
+    ))
+  }
+
+  if (!is.null(unique_by)) {
+    dupl_rows <- duplicated(df[unique_by]) | duplicated(df[unique_by], fromLast = TRUE)
+    if (any(dupl_rows)) {
+      cli::cli_abort(c(
+        "x" = "{.field {what}}: {sum(dupl_rows)} row{?s} with duplicate {.field {unique_by}}.",
+        affected_imgs(dupl_rows),
+        "i" = hint
+      ))
+    }
+  }
+
+  invisible(df)
+}
+
+#' Helper to check df against schema
+#' @return `TRUE` if valid, `FALSE` otherwise (invisibly).
+#' @noRd
+check_schema <- function(df, schema_obj, schema = NULL, strict = FALSE, greedy = FALSE) {
   # convert NA_character to empty strings for $validate to work correctly
   df_na <- df |> 
     dplyr::mutate(dplyr::across(dplyr::where(is.character), \(x) tidyr::replace_na(x,"")))
@@ -325,76 +505,291 @@ check_schema <- function(df, schema_obj, schema = NULL, warn_only = TRUE, greedy
           keyword == "additionalProperties" ~ paste0(message, ": `", params$additionalProperty, "`"),
           keyword == "unevaluatedProperties" ~ paste0(message, ": `", params$unevaluatedProperty, "`"),
           keyword == "enum" ~ paste0(message, ": `", last_seg, "` (", params$allowedValues, ")"),
+          keyword == "pattern" ~ paste0("does not match the expected format: `", last_seg, "`"),
           .default = paste0(message, ": `", last_seg, "`")
         )
       ) |> dplyr::pull(full_message) |> unique()
     names(msg) <- rep("*", length(msg))
-    if (warn_only) {
-      cli::cli_warn(c("!" = "{.field {schema}} data frame failed validation checks:", msg))
-    } else {
-     cli::cli_abort(c("x" = "{.field {schema}} data frame failed validation checks:", msg))
-    }
-  }
-  invisible(result)
-}
-
-
-#' Helper to check the structure columns define a sound hierarchy
-#' @param df data frame containing the structure columns image_label, slide_label,
-#'   woodpiece_label, tree_label and site_label
-#' @noRd
-check_structure <- function(df, warn_only = FALSE) {
-  checkmate::assert_data_frame(df[c('image_label','slide_label','woodpiece_label','tree_label','site_label')], 
-    any.missing = FALSE, .var.name = "No missing values allowed in structure columns of QWAimages")
-  msg <- c()
-  # ensure we have unique image_labels
-  if (any(duplicated(df$image_label))) {
-    msg <- c(msg,
-      "x" = "Duplicate image_labels found. Fix manually!", 
-      " " = "{df$image_label[duplicated(df$image_label)]}"
-    )
-    #data$image_label <- janitor::make_clean_names(data$image_label, case = "none")
-  }
-  valid <- (
-    stringr::str_starts(df$image_label, df$slide_label) &
-      stringr::str_starts(df$slide_label, df$woodpiece_label) &
-      stringr::str_starts(df$woodpiece_label, df$tree_label) &
-      stringr::str_starts(df$tree_label, df$site_label)
-  )
-  if (any(!valid)) {
-    msg <- c(msg,
-      "!" = "Invalid data structure or not using rxs2tria labels for:",
-      " " = "{df$image_label[!valid]}"
-    )
-  }
-  if (length(msg)>0) {
-    if (warn_only) {
-      cli::cli_warn(c("!" = "{.cls QWAimages} structure check failed with {length(msg)%/%2} warning{?s}", msg))
-    } else {
-      cli::cli_abort(c("!" = "{.cls QWAimages} structure check failed with {length(msg)%/%2} error{?s}", msg))
-    }
+    return(report_issue(
+      c("!" = "{.field {schema}} data frame failed validation checks:", msg),
+      strict
+    ))
   }
   invisible(TRUE)
 }
 
+#' Helper to check a large data frame against the column rules of its schema
+#'
+#' Vectorised alternative to `check_schema()` for the cells and rings tables:
+#' checks `type`, `minimum`, `maximum` and `enum` of the schema columns, with
+#' the messages of `check_schema()` plus the number of rows affected. Extra
+#' columns are reported as information only.
+#' @param df Data frame to check.
+#' @param tbl_props Output of `get_tbl_props()`.
+#' @param schema Schema name, only used for messages.
+#' @param strict If `TRUE`, abort instead of warning.
+#' @return `TRUE` if valid, `FALSE` otherwise (invisibly).
 #' @noRd
-check_missing_opt <- function(df, tbl_props, schema = NULL) {
-  missing_opt_cols <- setdiff(
-    names(tbl_props$properties), 
-    c(tbl_props$required, names(df))
-  )
-  if (length(missing_opt_cols)>0) {
-    cli::cli_warn(c(
-      "!" = "{.field {schema}} missing optional columns:",
-      "i" = "{missing_opt_cols}"
+check_data_schema <- function(df, tbl_props, schema = NULL, strict = FALSE) {
+  fmt_n <- \(n) if (n == 1) "1 row" else paste(n, "rows")
+
+  msg <- c()
+  for (col in intersect(names(tbl_props$properties), names(df))) {
+    prop <- tbl_props$properties[[col]]
+    x <- df[[col]]
+    if (all(is.na(x))) next
+    type <- prop$type[1]
+    if (!is_json_type(x, type)) {
+      msg <- c(msg, paste0("must be ", type, ": `", col, "`"))
+      next
+    }
+    if (!is.null(prop$minimum)) {
+      n <- sum(x < prop$minimum, na.rm = TRUE)
+      if (n > 0) msg <- c(msg, paste0("must be >= ", prop$minimum, ": `", col, "` (", fmt_n(n), ")"))
+    }
+    if (!is.null(prop$maximum)) {
+      n <- sum(x > prop$maximum, na.rm = TRUE)
+      if (n > 0) msg <- c(msg, paste0("must be <= ", prop$maximum, ": `", col, "` (", fmt_n(n), ")"))
+    }
+    if (!is.null(prop$enum)) {
+      n <- sum(!is.na(x) & !x %in% unlist(prop$enum))
+      if (n > 0) msg <- c(msg, paste0(
+        "must be equal to one of the allowed values: `", col, "` (",
+        paste(unlist(prop$enum), collapse = ", "), ") (", fmt_n(n), ")"
+      ))
+    }
+  }
+
+  extra_cols <- setdiff(names(df), names(tbl_props$properties))
+  if (length(extra_cols) > 0) {
+    cli::cli_inform(c(
+      "i" = "{.field {schema}} extra columns (kept, not imported into TRIA by default):",
+      " " = "{extra_cols}"
+    ))
+  }
+
+  if (length(msg) > 0) {
+    names(msg) <- rep("*", length(msg))
+    return(report_issue(
+      c("!" = "{.field {schema}} data frame failed validation checks:", msg),
+      strict
     ))
   }
   invisible(TRUE)
 }
 
 
+#' Helper to check the structure columns define a sound hierarchy
+#'
+#' Each label starts with its parent label (rxs2tria labels), and each slide is
+#' in one woodpiece, each woodpiece in one tree and each tree in one site (the
+#' package groups by single label columns).
+#' @param df data frame containing the structure columns image_label, slide_label,
+#'   woodpiece_label, tree_label and site_label, not `NA` (see
+#'   `validate_QWAimages()`)
+#' @param strict If `TRUE`, abort instead of warning.
+#' @return `TRUE` if the structure is sound, `FALSE` otherwise (invisibly).
+#' @noRd
+check_structure <- function(df, strict = FALSE) {
+  valid <- (
+    stringr::str_starts(df$image_label, df$slide_label) &
+      stringr::str_starts(df$slide_label, df$woodpiece_label) &
+      stringr::str_starts(df$woodpiece_label, df$tree_label) &
+      stringr::str_starts(df$tree_label, df$site_label)
+  )
+  msg <- c()
+  if (any(!valid)) {
+    msg <- c(msg,
+      "i" = "Labels not starting with their parent label (not using rxs2tria labels):",
+      cli_truncated_list(df$image_label[!valid])
+    )
+  }
 
+  # each label in exactly one parent
+  lvls <- c("slide_label", "woodpiece_label", "tree_label", "site_label")
+  for (i in 1:3) {
+    pairs <- unique(df[lvls[i:(i + 1)]])
+    multi <- unique(pairs[[1]][duplicated(pairs[[1]])])
+    if (length(multi) > 0) {
+      msg <- c(msg,
+        "i" = paste0("`", lvls[i], "` in more than one `", lvls[i + 1], "`:"),
+        cli_truncated_list(multi)
+      )
+    }
+  }
 
+  if (length(msg) > 0) {
+    return(report_issue(c("!" = "{.cls QWAimages} structure check failed:", msg), strict))
+  }
+  invisible(TRUE)
+}
 
-# TODO: other additional validation checks beyond the base schema
-# - example: check that outmost year in rxs_images is not in future
+# report the missing optional columns that complete_*() would add (all except
+# "qc_input" columns and the columns in `skip`); conditionally required columns
+# are left to the schema validation
+#' @noRd
+check_missing_opt <- function(df, tbl_props, schema = NULL, skip = NULL) {
+  missing_opt_cols <- setdiff(
+    names(tbl_props$properties),
+    c(tbl_props$required, tbl_props$cond_required, qc_input_cols(tbl_props), names(df), skip)
+  )
+  if (length(missing_opt_cols)>0) {
+    cli::cli_inform(c(
+      "i" = "{.field {schema}} missing optional columns:",
+      "i" = "{missing_opt_cols}"
+    ))
+  }
+  invisible(TRUE)
+}
+
+#' Empty values: `NA` or `""`
+#' @noRd
+is_blank <- function(x) is.na(x) | x == ""
+
+#' Warn on duplicate values in the columns marked `"unique": true` in the
+#' schema, ignoring empty values (as the metadata app). Key columns are
+#' skipped, their uniqueness is checked with the hierarchy (`check_hierarchy()`).
+#' @param df Data frame.
+#' @param tbl_props Output of `get_tbl_props()`.
+#' @param schema Schema name, only used for messages.
+#' @param strict If `TRUE`, abort instead of warning.
+#' @return `TRUE` if no duplicates were found, `FALSE` otherwise (invisibly).
+#' @noRd
+check_unique_cols <- function(df, tbl_props, schema = NULL, strict = FALSE) {
+  cols <- tbl_props$properties |>
+    purrr::keep(\(x) isTRUE(x$unique) && !isTRUE(x$colType == "key")) |>
+    names() |>
+    intersect(names(df))
+  ok <- TRUE
+  for (col in cols) {
+    vals <- df[[col]][!is_blank(df[[col]])]
+    dupls <- unique(vals[duplicated(vals)])
+    if (length(dupls) > 0) {
+      ok <- report_issue(c(
+        "!" = "{.field {schema}}: {length(dupls)} duplicate value{?s} in {.field {col}}: {.val {dupls}}"
+      ), strict)
+    }
+  }
+  invisible(ok)
+}
+
+#' Report the optional schema columns with empty values (information only)
+#' @param df Data frame.
+#' @param tbl_props Output of `get_tbl_props()`.
+#' @param schema Schema name, only used for messages.
+#' @param skip Further columns expected to be empty in some rows. Required
+#'   columns and the app columns (`colType` `"meta_input"`, `"qc_input"`) are
+#'   always skipped.
+#' @noRd
+check_empty_cols <- function(df, tbl_props, schema = NULL, skip = NULL) {
+  input_cols <- tbl_props$properties |>
+    purrr::keep(\(x) isTRUE(x$colType %in% c("meta_input", "qc_input"))) |>
+    names()
+  cols <- setdiff(intersect(names(tbl_props$properties), names(df)),
+                  c(tbl_props$required, input_cols, skip))
+  n_empty <- vapply(df[cols], \(x) sum(is.na(x)), integer(1))
+  n_empty <- n_empty[n_empty > 0]
+  if (length(n_empty) > 0) {
+    cli::cli_inform(c(
+      "i" = "{.field {schema}} columns with empty values:",
+      cli_truncated_list(paste0("`", names(n_empty), "` (", n_empty,
+                                ifelse(n_empty == 1, " row)", " rows)")), max_show = Inf)
+    ))
+  }
+  invisible(TRUE)
+}
+
+#' Helper to check `spatial_resolution` is given for all images
+#' @param df Data frame with `image_label` and (optionally) `spatial_resolution`.
+#' @param strict If `TRUE`, abort instead of warning.
+#' @param consequence Optional message on the consequence of missing values.
+#' @return `TRUE` if given for all images, `FALSE` otherwise (invisibly).
+#' @noRd
+check_spatial_resolution <- function(df, strict = FALSE, consequence = NULL) {
+  res <- df[["spatial_resolution"]] %||% rep(NA_real_, nrow(df))
+  no_res <- df$image_label[is.na(res)]
+  if (length(no_res) > 0) {
+    return(report_issue(c(
+      "!" = "{.field spatial_resolution} missing for {length(no_res)} image{?s}:",
+      cli_truncated_list(no_res),
+      "i" = consequence,
+      "i" = "Check the ROXAS (AI) settings files of these images and set {.field spatial_resolution} in the {.cls QWAimages} object."
+    ), strict))
+  }
+  invisible(TRUE)
+}
+
+#' Helper to check that the images of a table are in `meta`
+#' @param images Character vector of `image_label`s.
+#' @param meta Data frame with `image_label`.
+#' @param what Name of the table the images come from.
+#' @param strict If `TRUE`, abort instead of warning.
+#' @param consequence,hint Optional messages on the consequence and the fix.
+#' @return `TRUE` if all images are in `meta`, `FALSE` otherwise (invisibly).
+#' @noRd
+check_images_in_meta <- function(images, meta, what, strict = FALSE,
+                                 consequence = NULL, hint = NULL) {
+  not_meta <- setdiff(images, meta$image_label)
+  if (length(not_meta) > 0) {
+    return(report_issue(c(
+      "!" = "{length(not_meta)} image{?s} in {.field {what}} but not in {.arg meta}:",
+      cli_truncated_list(not_meta),
+      "i" = consequence,
+      "i" = hint
+    ), strict))
+  }
+  invisible(TRUE)
+}
+
+#' Prepare a table for writing to file
+#'
+#' Converts empty strings to `NA`. With `drop_empty`, drops the optional
+#' columns set in the apps (`colType` `"meta_input"` or `"qc_input"`) that are
+#' entirely `NA` (or `NA`/`FALSE` for logical columns). A column that is required only under a schema condition
+#' (e.g. `embargoed_until` for restricted datasets) is kept if the schema
+#' validation reports it as missing without it.
+#' @param df Data frame, or `NULL`.
+#' @param schema Schema name, see `schema_rel_path()`.
+#' @param drop_empty Drop all-empty optional app columns?
+#' @param submission Schema for submission files (`TRUE`) or TRIA dataset
+#'   files (`FALSE`)?
+#' @returns `df` prepared for writing, `NULL` if `df` is `NULL`.
+#' @noRd
+prepare_write <- function(df, schema, drop_empty = TRUE, submission = TRUE) {
+  if (is.null(df)) return(NULL)
+  df <- df |>
+    dplyr::mutate(
+      dplyr::across(dplyr::where(is.character), \(x) dplyr::na_if(x, "")),
+      # local clock time without offset, identical in CSV and JSON
+      dplyr::across(dplyr::where(lubridate::is.POSIXct), \(x) format(x, "%Y-%m-%dT%H:%M:%S"))
+    )
+  if (!drop_empty) return(df)
+
+  tbl_props <- schema_tbl_props(schema, submission)
+
+  input_cols <- tbl_props$properties |>
+    purrr::keep(\(x) isTRUE(x$colType %in% c("meta_input", "qc_input"))) |>
+    names()
+  # FALSE is the default of logical app columns (flags app), so counts as empty
+  is_empty <- \(x) all(is.na(x) | (is.logical(x) & x %in% FALSE))
+  empty_cols <- names(df)[vapply(df, is_empty, logical(1))]
+  drop_cols <- setdiff(intersect(empty_cols, input_cols), tbl_props$required)
+
+  # keep conditionally required columns the validation asks for
+  cond_cols <- intersect(drop_cols, tbl_props$cond_required)
+  if (length(cond_cols) > 0) {
+    schema_path <- system.file(schema_rel_path(schema, submission), package = "rxs2tria")
+    schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
+    result <- schema_obj$validate(
+      jsonlite::toJSON(df[setdiff(names(df), drop_cols)], na = "null", POSIXt = "ISO8601"),
+      verbose = TRUE, greedy = TRUE
+    )
+    errors <- attr(result, "errors")
+    missing_props <- if (is.null(errors)) character(0) else
+      errors$params$missingProperty[errors$keyword == "required"]
+    drop_cols <- setdiff(drop_cols, missing_props)
+  }
+
+  df[setdiff(names(df), drop_cols)]
+}
+

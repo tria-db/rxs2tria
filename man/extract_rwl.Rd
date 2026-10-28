@@ -4,7 +4,13 @@
 \alias{extract_rwl}
 \title{Extract an rwl series from ring or sector profile data}
 \usage{
-extract_rwl(df_rings, param, prf_data = NULL, sector = NULL)
+extract_rwl(
+  df_rings,
+  param,
+  prf_data = NULL,
+  sector = NULL,
+  tissue = c("all", "affected")
+)
 }
 \arguments{
 \item{df_rings}{A data frame containing ROXAS ring-level measurements and
@@ -21,6 +27,12 @@ required when \code{param} is not a \code{df_rings} column.}
 
 \item{sector}{Integer specifying which sector to use when exporting a
 \code{prf_data} parameter. Required in that case, otherwise ignored.}
+
+\item{tissue}{\code{"all"} (default) removes all rings with \code{exclude_issues};
+\code{"affected"} keeps those with \code{affected_tissue} \code{"ew"} or \code{"lw"}. Only
+for \code{prf_data} parameters, and requires \code{prf_data} computed with
+\verb{apply_exclusions = TRUE, tissue = "affected"} (see
+\code{\link[=calculate_sector_profiles]{calculate_sector_profiles()}}); otherwise the affected tissue is included.}
 }
 \value{
 A \pkg{dplR} \code{rwl} object with the selected \code{param} data.
@@ -35,11 +47,13 @@ ring width, \code{mrw}) or profile-level measurements at a given sector
 (aggregated cell parameters such as the 90th percentile lumen area,
 \code{la_q90}).
 
-Duplicate rings (\code{exclude_dupl}) and user-defined ring exclusions
+Duplicate rings (\code{exclude_dupl}) and rings flagged for exclusion
 (\code{exclude_issues}) are filtered out before constructing the final time
-series. These flag columns are read from \code{df_rings}, making it a required
+series; \code{NA} flags count as \code{FALSE}. These flag columns are read from \code{df_rings}, making it a required
 parameter, while \code{prf_data} (with the selected \code{sector}) is only required
-to extract a \code{param} from the profile data.
+to extract a \code{param} from the profile data. With \code{tissue = "affected"},
+rings with \code{exclude_issues} and \code{affected_tissue} \code{"ew"} or \code{"lw"} are
+kept, using the values of the unaffected tissue from \code{prf_data}.
 
 Series are grouped by \strong{woodpiece} (each core/sample yields one series);
 thus the \code{woodpiece_label}s become the column names.

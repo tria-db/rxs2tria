@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "TODO:addurltoTRIAschema",
+  "title": "TRIA site metadata schema",
+  "description": "Schema for site-related metadata for a TRIA dataset",
+  "type": "array",
+  "minItems": 1,
+  "items": {
+    "type": "object",
+    "properties": {
+      "site_label": {
+        "type": "string",
+        "minLength": 1,
+        "readOnly": true,
+        "title": "Site label",
+        "description": "Unique site identifier",
+        "unique": true,
+        "colType": "key"
+      },
+      "n_trees": {
+        "type": ["integer", "null"],
+        "minimum": 1,
+        "readOnly": true,
+        "title": "Nr of trees",
+        "description": "Nr. of sampled trees at each site",
+        "colType": "derived"
+      },
+      "site_name": {
+        "type": "string",
+        "minLength": 1,
+        "title": "Site name",
+        "description": "",
+        "unique": true,
+        "colType": "meta_input"
+      },
+      "site_desc": {
+        "type": ["string", "null"],
+        "title": "Site description",
+        "description": "",
+        "colType": "meta_input"
+      },
+      "latitude": {
+        "type": "number",
+        "minimum": -90,
+        "maximum": 90,
+        "title": "Latitude",
+        "description": "Latitude of the site in decimal degrees (WGS84), e.g. 46.802361. Use a dot as decimal separator; southern hemisphere is negative.",
+        "colType": "meta_input"
+      },
+      "longitude": {
+        "type": "number",
+        "minimum": -180,
+        "maximum": 180,
+        "title": "Longitude",
+        "description": "Longitude of the site in decimal degrees (WGS84), e.g. 9.835444. Use a dot as decimal separator; west of Greenwich is negative.",
+        "colType": "meta_input"
+      },
+      "country_code": {
+        "type": "string",
+        "pattern": "^[A-Z]{2}$", 
+        "title": "Country",
+        "description": "Country code and name (ISO 3166-1 alpha-2)",
+        "colType": "meta_input"
+      },
+      "elevation": {
+        "type": "integer",
+        "minimum": -420,
+        "maximum": 8848,
+        "title": "Elevation",
+        "description": "Elevation of the site above sea level (in m)",
+        "colType": "meta_input"
+      },
+      "aspect": {
+        "type": ["number","null"],
+        "minimum": 0,
+        "maximum": 360,
+        "title": "Aspect",
+        "description": "Direction the slope faces, in degrees clockwise from north (0-360), e.g. 0 = N, 90 = E, 180 = S, 270 = W. Leave empty for flat terrain.",
+        "colType": "meta_input"
+      },
+      "slope": {
+        "type": ["number","null"],
+        "minimum": 0,
+        "maximum": 90,
+        "title": "Slope",
+        "description": "Slope of the terrain at the site in degrees (0 = flat, 90 = vertical).",
+        "colType": "meta_input"
+      },
+      "topography": {
+        "type": ["string","null"],
+        "enum": ["", "summit", "plateau", "upper slope", "middle slope", "lower slope", "valley bottom", "flat"],
+        "title": "Site topography",
+        "description": "Small-scale terrain features",
+        "colType": "meta_input"
+      },
+      "soil_depth": {
+        "type": ["string","null"],
+        "enum": ["", "0-20 cm", "20-50 cm", "50-100 cm", ">100 cm"],
+        "title": "Soil depth",
+        "description": "Depth of the soil at the site",
+        "colType": "meta_input"
+      },
+      "soil_water_capacity": {
+        "type": ["string","null"],
+        "enum": ["", "low", "medium", "high"],
+        "title": "Soil water holding cap.",
+        "description": "Water holding capacity of the soil at the site",
+        "colType": "meta_input"
+      },
+      "soil_moisture": {
+        "type": ["string","null"],
+        "enum": ["", "low", "medium", "high"],
+        "title": "Soil moisture",
+        "description": "Moisture level of soil at the site",
+        "colType": "meta_input"
+      },
+      "stand_composition": {
+        "type": ["string","null"],
+        "enum": ["", "mono gymnosperm", "mixed gymnosperm", "mixed forest", "mixed angiosperm", "mono angiosperm"],
+        "title": "Stand composition",
+        "description": "Composition of forest stand",
+        "colType": "meta_input"
+      },
+      "stand_structure": {
+        "type": ["string","null"],
+        "enum": ["", "regular", "irregular"],
+        "title": "Stand structure",
+        "description": "Structural description of the forest stand",
+        "colType": "meta_input"
+      },
+      "stand_age_str": {
+        "type": ["string","null"],
+        "enum": ["", "evenaged", "unevenaged"],
+        "title": "Age structure",
+        "description": "Structure of the forest stand age",
+        "colType": "meta_input"
+      },
+      "stand_age_class": {
+        "type": ["string","null"],
+        "enum": ["", "<5 years", "5-30 years", "30-100 years", "100-200 years", "200-300 years", ">300 years"],
+        "title": "Stand age",
+        "description": "Age class of the forest stand",
+        "colType": "meta_input"
+      },
+      "stand_main_species_code": {
+        "type": ["string", "null"], 
+        "pattern": "^(|[A-Z]{4})$",
+        "title": "Main species",
+        "description": "Dominant tree species in the forest stand (ITRDB species code)",
+        "colType": "meta_input"
+      },
+      "stand_management": {
+        "type": ["string","null"],
+        "enum": ["", "primary", "unmanaged", "extensive", "moderate", "intensive"],
+        "title": "Management",
+        "description": "Level of management applied at the site",
+        "colType": "meta_input"
+      }
+    },
+    "required": ["site_label", "site_name", "latitude", "longitude", "country_code", "elevation"],
+    "additionalProperties": false
+  }
+}

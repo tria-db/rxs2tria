@@ -4,7 +4,7 @@ template:
   bootswatch: darkly
 reference:
 - title: "Read raw ROXAS (AI) metadata"
-  desc: "Functions for extracing metadata from the raw ROXAS (AI) output files."
+  desc: "Functions for extracting metadata from the raw ROXAS (AI) output files."
   contents:
   - get_roxas_files
   - extract_data_structure
@@ -18,8 +18,8 @@ reference:
 - title: "Prepare supplementary data"
   desc: "Functions for compiling and checking supplementary files"
   contents:
-  - compile_resources
-  - recompile_resources
+  - compile_supplementary
+  - recompile_supplementary
   - check_supplementary
 - title: "Shiny apps"
   desc: "Commands to launch the integrated Shiny apps"
@@ -30,6 +30,7 @@ reference:
   desc: "S3 class QWAimages"
   contents:
   - check_QWAimages
+  - combine_QWAimages
   - complete_QWAimages
   - QWAimages
   - read_QWAimages
@@ -40,15 +41,19 @@ reference:
   desc: "S3 class QWAmetadata"
   contents:
   - check_QWAmetadata
+  - combine_QWAmetadata
   - complete_QWAmetadata
+  - is_submission
   - print.QWAmetadata
   - QWAmetadata
   - read_QWAmetadata
+  - update_QWAmetadata
   - write_QWAmetadata
 - title: "QWAdata"
   desc: "S3 class QWAdata"
   contents:
   - check_QWAdata
+  - combine_QWAdata
   - complete_flags
   - complete_measures
   - complete_QWAdata
@@ -57,32 +62,42 @@ reference:
   - read_QWAdata
   - update_QWAdata
   - write_QWAdata
-- title: "QWAprofiles"
-  desc: "S3 class QWAprofiles"
+- title: "QWAprofile"
+  desc: "S3 class QWAprofile"
   contents: 
   - calculate_band_profiles
   - calculate_sector_profiles
   - check_QWAprofile
-  - complete_QWAprofile
   - QWAprofile
   - read_QWAprofile
   - summary.QWAprofile
   - write_QWAprofile
+- title: "Checks"
+  desc: >
+    Final checks before a submission. Each class has its own check
+    (`check_QWAmetadata()`, `check_QWAdata()`, `check_supplementary()`);
+    `check_consistency()` checks the objects against each other.
+  contents:
+  - check_consistency
 - title: "Other"
   desc: "Other utility functions."
   contents:
+  - extract_ring_measures
   - extract_rwl
   - scale_for_tucson
   - rename_for_tucson
+  - scale_for_tsap
+  - write_tsap
 articles:
 - title: Tutorials
   navbar: ~
   contents:
   - workflow
-  - resources
+  - supplementary
   - submission
   - metadata-app
   - flags-app
+  - rwl-export
   - reopen-dataset
 - title: "S3 classes"
   desc: "Vignettes describing the S3 classes defined by the package"

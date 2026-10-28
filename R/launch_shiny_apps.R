@@ -10,7 +10,7 @@ launch_metadata_app <- function(server_run = FALSE) {
     reason = "required to run the metadata Shiny app"
   )
   checkmate::assert_flag(server_run)
-  options(rxs2xcell.shinymeta.server_run = server_run)
+  options(rxs2tria.shinymeta.server_run = server_run)
 
   app_dir <- system.file("shiny_meta", package = "rxs2tria")
   if (app_dir == "") {

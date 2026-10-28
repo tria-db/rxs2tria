@@ -41,8 +41,9 @@ read_output_file <- function(filename, selcols, colname_variants, delim) {
 #' ROXAS output .txt or ROXAS AI table .csv files with the raw measurements).
 #' Used by [collect_raw_data()] to read each `QWAdata` component.
 #'
-#' @param df_structure Data frame of image identifiers (`$image_label`) and
-#'   corresponding data file names (`$fname_cells` or `$fname_rings`).
+#' @param df_structure Data frame of image identifiers (`$image_label`; for
+#'   rings also `$woodpiece_label` and `$slide_label`) and corresponding data
+#'   file names (`$fname_cells` or `$fname_rings`).
 #' @param roxas_version The software used to create the files (`"roxas"` or `"roxas_ai"`).
 #' @param ftype which type of files should be read (`"cells"` or `"rings"`).
 #' @returns A data frame with the relevant raw measurements data from all
@@ -279,6 +280,7 @@ collect_raw_data <- function(df_meta, roxas_version = NULL) {
       'slide_label', 'image_label'),
     names(df_meta))
 
+  if (inherits(df_meta, "QWAimages")) validate_QWAimages(df_meta)
   roxas_version <- resolve_roxas_version(df_meta, rv_param = roxas_version)
 
   df_cells_all <- collect_raw_outputs(df_meta, roxas_version, "cells")
@@ -286,36 +288,23 @@ collect_raw_data <- function(df_meta, roxas_version = NULL) {
   # these dfs have correct required columns and types per definition
   # except if there was an issue with one or more files -> warning message
 
-  # check for missing values in required columns:
-  check_missing_cells <- checkmate::check_data_frame(
-      df_cells_all[c("image_label","year","xpix","ypix")], any.missing = FALSE)
-  check_missing_rings <- checkmate::check_data_frame(
-      df_rings_all[c("image_label","year")], any.missing = FALSE)
-
-  if (!isTRUE(check_missing_cells)) {
-    cli::cli_warn(c("Missing required values detected in {.field cells} data",
-    check_missing_cells))
-  }
-  if (!isTRUE(check_missing_rings)) {
-    cli::cli_warn(c("Missing required values detected in {.field rings} data",
-    check_missing_rings))
-  }
-
-  # forcibly remove any error codes and "negative" values that are actually outliers
-  QWA_data <- remove_outliers(
-    new_QWAdata(cells = df_cells_all, rings = df_rings_all),
-    mute_info = FALSE
-  )
+  # abort on missing or duplicate key values, then forcibly remove any error
+  # codes and "negative" values that are actually outliers
+  QWA_data <- new_QWAdata(cells = df_cells_all, rings = df_rings_all) |>
+    validate_QWAdata(hint = "Check the ROXAS output files ({.field fname_cells}, {.field fname_rings}) of the affected images, or remove the images from {.arg df_meta}.") |>
+    remove_outliers(mute_info = FALSE)
 
   # ensure we have full sequence of years in rings df (including missing)
-  df_rings_complete <- complete_rings(QWA_data)
+  df_rings_complete <- complete_rings(QWA_data, df_meta)
 
   # check for cwt estimates (expected/required for conifer data)
   # TODO: could already check in df_meta for info wrt angiosperm/conifer?
-  check_cwt(QWA_data$cells, warn_only = TRUE)
-  
-  # check dating (df_meta for outmost_year check if available)
-  check_ring_years(df_rings_complete, df_meta, warn_only = TRUE)
+  check_cwt(QWA_data$cells)
+  check_cells_key(QWA_data$cells)
+
+  # check dating
+  check_ring_years(df_rings_complete)
+  check_outmost_year(df_rings_complete, df_meta)
 
   cli::cli_alert_success("Extracted cells and rings data to {.var QWAdata} object")
   

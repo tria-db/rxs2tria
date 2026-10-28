@@ -7,10 +7,12 @@
 #' ROXAS used the image border instead of the true ring border to estimate MRW.
 #'
 #' @param cells.innermost a dataframe containing the cells data for the innermost ring
-#' @param res the spatial resolution of the image in microns per pixel
+#' @param res the spatial resolution of the image in pixels per micron
 #'
-#' @return a logical indicating whether the true inner ring border lies outside
-#' the image border and the ring is thus incomplete
+#' @return a list with the border fit statistics (`mae`, `medYleft`,
+#' `medYright`, `mindist`) and the logicals `incomplete_inner` and
+#' `incomplete_innerv2`, indicating whether the true inner ring border lies
+#' outside the image border and the ring is thus incomplete
 #' @noRd
 # TODO: compare my method with GvA's original one, check thresholds
 check_incomplete_innermost <- function(cells.innermost, res){
@@ -111,7 +113,9 @@ check_incomplete_innermost <- function(cells.innermost, res){
 #' @param df_meta the dataframe containing the metadata of the images (needed
 #' for the spatial resolution)
 #'
-#' @return the input dataframe with additional logical columns 'incomplete_ring'
+#' @return the input dataframe with the logical column 'incomplete_ring' and
+#' helper columns ('innermost_ring', 'outermost_ring', the border fit
+#' statistics, 'incomplete_fct_check'), removed later by `complete_flags()`
 #' @noRd
 # TODO: additional columns
 # TODO: what about circular samples?
@@ -162,8 +166,8 @@ flag_incomplete_rings <- function(df_rings_log, df_cells_all, df_meta){
 #'
 #' @param df_rings_log the dataframe containing the rings data
 #'
-#' @return the input dataframe with additional logical column 'duplicate_ring'
-#' and integer column 'duplicate_sel' with the selected ring among duplicates
+#' @return the input dataframe with additional logical columns 'duplicate_ring'
+#' and 'exclude_dupl' (`TRUE` for the duplicates not selected)
 #' @noRd
 # TODO: avoid switching too often?
 flag_duplicate_rings <- function(df_rings_log){
@@ -175,11 +179,25 @@ flag_duplicate_rings <- function(df_rings_log){
       duplicate_rank = dplyr::row_number(-cno), # rank by cell count descending
       duplicate_rank = dplyr::if_else(duplicate_ring, # set rank to NA if not duplicate
                                       duplicate_rank, NA_integer_),
-      duplicate_rank = duplicate_rank + 100*as.numeric(missing_ring) + 100*as.numeric(incomplete_ring), # penalty for issues
+      duplicate_rank = duplicate_rank + # penalty for issues (NA: none, else the whole group is NA)
+        100*as.numeric(dplyr::coalesce(missing_ring, FALSE)) +
+        100*as.numeric(dplyr::coalesce(incomplete_ring, FALSE)),
       duplicate_sel = dplyr::if_else(!duplicate_ring | duplicate_rank == min(duplicate_rank), # select the best ranked duplicate
                                      TRUE, FALSE),
       exclude_dupl = !duplicate_sel) |> # the not-selected duplicates
     dplyr::ungroup() |>
     dplyr::select(-duplicate_rank, -duplicate_sel)
   df_rings_log
+}
+
+# recalculate duplicate-ring flags for the given woodpiece-years only
+#' @noRd
+recalc_duplicates <- function(df_rings, wp_yrs) {
+  by_wp_yr <- c("woodpiece_label", "year")
+  df_rings |>
+    dplyr::anti_join(wp_yrs, by = by_wp_yr) |>
+    dplyr::bind_rows(
+      df_rings |>
+        dplyr::semi_join(wp_yrs, by = by_wp_yr) |>
+        flag_duplicate_rings())
 }

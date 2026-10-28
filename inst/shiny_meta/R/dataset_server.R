@@ -58,19 +58,18 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
           }
         }
 
-        if (shiny::isTruthy(ds_data$ds_license)) {
-          shiny::updateSelectizeInput(session, "ds_license", selected = ds_data$ds_license)
-        }
+        # licence and embargo date always updated, cleared if not in the file
+        shiny::updateSelectizeInput(
+          session, "ds_license",
+          selected = if (shiny::isTruthy(ds_data$ds_license)) ds_data$ds_license else ""
+        )
 
-        if (shiny::isTruthy(ds_data$embargoed_until)) {
-          if (ds_data$ds_access == "restricted") {
-            shiny::updateDateInput(
-              session, "embargoed_until", value = as.Date(ds_data$embargoed_until)
-            )
-          } else {
-            cli::cli_warn("Embargo date applies only to restricted datasets.")
-          }
+        embargo <- if (shiny::isTruthy(ds_data$embargoed_until)) as.Date(ds_data$embargoed_until) else NA
+        if (!is.na(embargo) && !identical(ds_data$ds_access, "restricted")) {
+          cli::cli_warn("Embargo date applies only to restricted datasets.")
+          embargo <- NA
         }
+        shiny::updateDateInput(session, "embargoed_until", value = embargo)
 
         if (shiny::isTruthy(ds_data$description)) {
           shiny::updateTextAreaInput(
@@ -106,6 +105,12 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
       "description",
       shinyvalidate::sv_regex("\\[ADD INFO", "Complete or adapt the description template", invert = TRUE)
     )
+    iv_gen$add_rule("ds_license", function(value) {
+      if (input$ds_access == "public" && !shiny::isTruthy(value)) "Required for public access"
+    })
+    iv_gen$add_rule("embargoed_until", function(value) {
+      if (input$ds_access == "restricted" && !shiny::isTruthy(value)) "Required for restricted access"
+    })
 
     iv_gen$enable()
 
@@ -181,7 +186,7 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
       if (!is.null(input$selected_authors) && !is.null(input$ror_results_rows_selected)) {
         # get the ROR data of the selected row (NOTE that only 1 row can be selected)
         selected_ror_data <- ror_df()[input$ror_results_rows_selected, c("RORID", "Name", "city", "country_code")]
-        selected_ror_data$Name <- gsub('\n','<br>',stringr::str_wrap(selected_ror_data$Name, width = 50))
+        #selected_ror_data$Name <- gsub('\n','<br>',stringr::str_wrap(selected_ror_data$Name, width = 50))
         selected_ror_data$country_code <- iso_to_combined(selected_ror_data$country_code)
         # update the author data table for the selected authors
         current_df <- author_data_out()
@@ -323,7 +328,6 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
         if (!is.null(input$sel_author_orc) && !is.null(input$orcid_results_rows_selected)) {
           # get the ORCID data of the selected row (NOTE: only 1 row can be selected)
           sel_orcid_data <- orcid_df()[input$orcid_results_rows_selected,]
-          sel_orcid_data$org_name <- gsub('\n','<br>',stringr::str_wrap(sel_orcid_data$org_name, width = 50))
           # update in the author data table for the selected author (NOTE: only 1 can be selected)
           current_df <- author_data_out()
           if (input$sel_author_orc == "new"){
@@ -475,26 +479,27 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
 
 
     # DOI SEARCH ---------------------------------------------------------------
-    # toggle add button: only enable if we have a DOI or citation to add
-    # TODO: add tria lookup?
+    # toggle search buttons: only enable if the respective input is provided
     shiny::observe({
-      shinyjs::toggleState(id = "btn_cite_search",
-                           condition = (input$doi_string != "" || input$citation_string != ""))
+      shinyjs::toggleState(id = "btn_doi_search", condition = input$doi_string != "")
+      shinyjs::toggleState(id = "btn_cr_search", condition = input$citation_string != "")
+      shinyjs::toggleState(id = "btn_tria_search", condition = input$tria_id != "")
     })
 
-    # doi_df: a reactive updated only in the event of the search button being clicked
-    doi_df <- shiny::eventReactive(input$btn_cite_search, {
-      # run the DOI/crossref API request with the input search string
-      if (input$doi_string != "") {
-        doi_res <- doi_api_request(input$doi_string)
-        shiny::updateTextInput(session, "doi_string", value = "")
-        return(doi_res)
-      } else if (input$citation_string != "") {
-        cite_res <- cr_api_request(input$citation_string)
-        shiny::updateTextAreaInput(session, "citation_string", value = "")
-        return(cite_res)
-      }
-      # TODO: tria ds search
+    # doi_df: search results, replaced by each search
+    doi_df <- shiny::reactiveVal(NULL)
+
+    shiny::observeEvent(input$btn_doi_search, {
+      doi_df(doi_api_request(input$doi_string))
+    })
+
+    shiny::observeEvent(input$btn_cr_search, {
+      doi_df(cr_api_request(input$citation_string))
+    })
+
+    shiny::observeEvent(input$btn_tria_search, {
+      shiny::showNotification("Lookup of TRIA dataset IDs is not implemented yet.",
+                              type = "message")
     })
 
     # render instructions
@@ -502,7 +507,7 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
       if (is.null(doi_df())) {
         shiny::tags$i("Run DOI search first...")
       } else {
-        shiny::tags$i("Click on a row to select and transfer the DOI data to the tables below.")
+        shiny::tags$i("Click on a row to transfer the related work to the table below.")
       }
     })
 
@@ -519,14 +524,43 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
                                    searching = FALSE))
     })
 
-    # observe DOI row selection: transfer data
+    # observe DOI row selection: open modal for confirmation
+    sel_doi_row <- shiny::reactiveVal(NULL)
     shiny::observeEvent(input$doi_results_rows_selected, {
-      selected_doi_data <- doi_df()[input$doi_results_rows_selected, c("citation", "doi")]
-      selected_doi_data$citation <- gsub('\n','<br>',stringr::str_wrap(selected_doi_data$citation, width = 50))
-      # add to relres data table
+      sel_doi_row(input$doi_results_rows_selected)
+      sel <- doi_df()[sel_doi_row(), ]
+      shiny::showModal(shiny::modalDialog(
+        title = "Transfer related work",
+        shiny::p("Do you want to transfer the selected work to the related works table?"),
+        shiny::p(shiny::strong("Citation: "), sel$citation),
+        shiny::p(shiny::strong("DOI: "), sel$doi),
+        shiny::radioButtons(
+          ns("sel_relres_doi"),
+          label = "Select related work to update:",
+          choices = c(get_relres_choices(relres_data_out()), "Add as new row" = "new"),
+          selected = "new"
+        ),
+        easyClose = TRUE,
+        footer = shiny::tagList(
+          shiny::modalButton("Cancel"),
+          shiny::actionButton(ns("btn_trans_doi"), "Transfer")
+        )
+      ))
+      # clear selection, so that the same row can be selected again
+      DT::selectRows(DT::dataTableProxy("doi_results"), NULL)
+    })
+
+    # transfer DOI data to relres table on confirm
+    shiny::observeEvent(input$btn_trans_doi, {
+      shiny::removeModal()
+      shiny::req(sel_doi_row(), input$sel_relres_doi)
       current_df <- relres_data_out()
-      nrows <- nrow(current_df)
-      current_df[nrows+1, c("citation", "doi")] <- selected_doi_data
+      if (is.null(current_df)) {
+        current_df <- rxs2tria:::create_empty_df(relres_tbl_props_full, nrows = 0)
+      }
+      # new row, or overwrite citation and doi of the selected row
+      row <- if (input$sel_relres_doi == "new") nrow(current_df) + 1 else as.integer(input$sel_relres_doi)
+      current_df[row, c("citation", "doi")] <- doi_df()[sel_doi_row(), c("citation", "doi")]
       relres_data_in(current_df)
     })
 
@@ -643,7 +677,8 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
         description = input$description,
         ds_access = input$ds_access,
         ds_license = input$ds_license,
-        embargoed_until = if (input$ds_access == "restricted") input$embargoed_until else "",
+        embargoed_until = if (input$ds_access == "restricted" &&
+                                shiny::isTruthy(input$embargoed_until)) input$embargoed_until else "",
         acknowledgements = input$acknowledgements
       )
     })
@@ -654,8 +689,7 @@ dataset_server <- function(id, main_session, dataset_tbls_in) {
           dataset = ds_data_out,
           authors = author_data_export,
           funding = funding_data_export,
-          related = relres_data_out,
-          resources = shiny::reactive(dataset_tbls_in()$resources)
+          related = relres_data_out
         ),
         val_check = validation_checks
       )

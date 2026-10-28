@@ -62,7 +62,7 @@ dataset_ui <- function(id) {
 
     # main content ----
     bslib::accordion(
-      open = c('General Info','Authors & Funding', 'Related resources'),
+      open = c('General Info','Authors & Funding', 'Related works'),
 
       ## Dataset info
       bslib::accordion_panel(
@@ -92,12 +92,18 @@ dataset_ui <- function(id) {
                            "Select a license for the dataset",
                            choices = c("CC BY 4.0", "CC BY-SA 4.0", "CC BY-NC 4.0",
                                        "CC BY-NC-SA 4.0", "CC BY-ND 4.0", "CC BY-NC-ND 4.0",
-                                       "CCO 1.0"),
-                           selected = "CC BY 4.0",
-                           options = list(create = TRUE)),
+                                       "CC0 1.0", "other"),
+                           selected = character(0),
+                           options = list(placeholder = "Select a license")),
             shiny::span("CC licenses are preferred (cf. ",
                  shiny::tags$a("Creative Commons License Chooser", href="https://chooser-beta.creativecommons.org/", target='_blank'),
-                 "for more information) but a different license option can be added if required.")
+                 "for more information)."),
+            shiny::conditionalPanel(
+              condition = "input.ds_license == 'other'",
+              shiny::span(shiny::tags$i(
+                "For a different license, please contact TRIA with the license name and ",
+                "its full text or a persistent URL.")),
+              ns = shiny::NS(id))
           )
         ),
         bslib::layout_column_wrap(
@@ -109,8 +115,9 @@ dataset_ui <- function(id) {
             condition = "input.ds_access == 'restricted'",
             shiny::dateInput(ns("embargoed_until"),
                       "Select an embargo date",
-                      value = Sys.Date() + 365),
-            shiny::span("After this date, the dataset will become publically available under the selected license."),
+                      value = NA),
+            shiny::span(shiny::tags$i("For embargoed datasets, only the metadata will be accessible via TRIA while the data remain restricted (\"All rights reserved\"). ",
+                        "The selected license applies once you lift the embargo and the data become open access; leave it empty if not yet decided.")),
             ns=shiny::NS(id))
         ),
       ),
@@ -221,9 +228,9 @@ dataset_ui <- function(id) {
 
       ),
 
-      ## Related resources
+      ## Related works
       bslib::accordion_panel(
-        'Related resources',
+        'Related works',
         shiny::h5('4. Related publications and datasets'),
 
         bslib::accordion(
@@ -233,20 +240,27 @@ dataset_ui <- function(id) {
 
           #### DOI search tool
           bslib::accordion_panel(
-            'Resources search tool (DOI)',
+            'Related works search tool',
             bslib::layout_columns(
               bslib::card(
                 class = "card-tert",
-                shiny::textInput(ns("doi_string"), "Enter DOI", placeholder = "e.g., 10.3389/fpls.2016.00781"),
-                shiny::textAreaInput(ns("citation_string"), "Or enter citation search terms (*)", "", rows = 3,
-                              placeholder = "e.g., von Arx, G Quantitative Wood Anatomy Guidelines 2016"),
-                shiny::textInput(ns("tria_id"), "Or enter QWA dataset ID", placeholder = "e.g., tria.001"),
-                shiny::actionButton(ns("btn_cite_search"), "Search for resource", class = "btn btn-info"),
+                search_input_row(
+                  shiny::textInput(ns("doi_string"), "Enter DOI", width = "100%",
+                                   placeholder = "e.g., 10.3389/fpls.2016.00781"),
+                  ns("btn_doi_search"), "Resolve DOI"),
+                search_input_row(
+                  shiny::textInput(ns("citation_string"), "Or enter citation search terms (*)", width = "100%",
+                                   placeholder = "e.g., von Arx, G Quantitative Wood Anatomy Guidelines 2016"),
+                  ns("btn_cr_search"), "Search Crossref"),
+                search_input_row(
+                  shiny::textInput(ns("tria_id"), "Or enter QWA dataset ID", width = "100%",
+                                   placeholder = "e.g., tria.0001"),
+                  ns("btn_tria_search"), "Look up dataset"),
                 shiny::p(shiny::tags$i("(*) querying the Crossref API might take a while."))
               ),
               bslib::card(
                 class = "card-tert",
-                shiny::h6('Resource search results'),
+                shiny::h6('Search results'),
                 shiny::htmlOutput(ns("doi_instr")),
                 DT::DTOutput(ns("doi_results")),
                 max_height = '350px'
@@ -259,16 +273,16 @@ dataset_ui <- function(id) {
 
         shiny::div(style="display: flex; justify-content: space-between; align-items: center;",
             shiny::div(style="display: flex; gap: 10px;",
-                shiny::actionButton(ns("btn_add_res"), "Add resource", style = "width: 130px",
+                shiny::actionButton(ns("btn_add_res"), "Add work", style = "width: 130px",
                              class = "btn btn-secondary", icon = shiny::icon('plus', lib = "glyphicon")),
-                shiny::actionButton(ns("btn_del_res"), "Delete resource", style = "width: 130px",
+                shiny::actionButton(ns("btn_del_res"), "Delete work", style = "width: 130px",
                              class = "btn btn-secondary", icon = shiny::icon('trash', lib = "glyphicon"))),
 
             shiny::div(style = "margin-left: auto; margin-bottom: 0;",
               shiny::div(
                 title = "Coming soon",
                 style = "pointer-events: none; opacity: 0.5;",
-                shiny::fileInput(ns('file_relres'), "Load related resource data from file", accept = ".csv")))
+                shiny::fileInput(ns('file_relres'), "Load related works data from file", accept = ".csv")))
         ),
 
         rhandsontable::rHandsontableOutput(ns("relres_table"))
