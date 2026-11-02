@@ -850,7 +850,8 @@ check_QWAdata <- function(x, strict = FALSE, exclude_mode = NULL) {
     if (is.null(x[[comp]])) next
     tbl_props <- schema_tbl_props(comp)
     ok <- c(ok, check_data_schema(x[[comp]], tbl_props, comp, strict))
-    check_missing_opt(x[[comp]], tbl_props, comp)
+    # derived columns are recomputed by complete_QWAdata(), not part of TRIA files
+    check_missing_opt(x[[comp]], tbl_props, comp, skip = schema_cols(comp, "derived"))
   }
 
   if (!is.null(x$cells)) {
@@ -877,15 +878,17 @@ check_QWAdata <- function(x, strict = FALSE, exclude_mode = NULL) {
 #' Write a QWAdata object to files
 #'
 #' Cells and rings are written as (compressed) CSV files. Empty values are
-#' written as empty fields.
+#' written as empty fields. To write only one component, provide only the
+#' corresponding `file_cells`/`file_rings` argument.
 #'
 #' @param x A [QWAdata] object.
-#' @param dir Directory to write to. Files are auto-named
-#'   `{dataset_name}_QWAcells.csv(.gz)` and
+#' @param dir Directory to write the components present in `x` to. Files are
+#'   auto-named `{dataset_name}_QWAcells.csv(.gz)` and
 #'   `{dataset_name}_QWArings.csv(.gz)`. Mutually exclusive with
 #'   `file_cells`/`file_rings`.
 #' @param file_cells,file_rings Explicit output paths for the cells and rings
-#'   CSV files. Both must be provided together. Mutually exclusive with `dir`.
+#'   CSV files. Either or both may be given; only the given components are
+#'   written. Mutually exclusive with `dir`.
 #' @param dataset_name Name prefix for auto-generated filenames when using
 #'   `dir`. If omitted, files are named `QWAcells.csv(.gz)` and
 #'   `QWArings.csv(.gz)`.
@@ -897,7 +900,8 @@ check_QWAdata <- function(x, strict = FALSE, exclude_mode = NULL) {
 #' @param keep_derived If `FALSE`, derived columns (`colType` `"derived"`, e.g.
 #'   cell measures computed from other columns) are not written. They can be
 #'   recomputed with [complete_QWAdata()]. Default `TRUE`.
-#' @returns A named list of written file paths, invisibly.
+#' @returns A named list of written file paths (`NULL` for components not
+#'   written), invisibly.
 #' @seealso [read_QWAdata()], [write_QWAprofile()]
 #' @export
 write_QWAdata <- function(x, dir = NULL,
@@ -909,10 +913,10 @@ write_QWAdata <- function(x, dir = NULL,
   checkmate::assert_flag(drop_empty)
   checkmate::assert_flag(keep_derived)
   use_dir <- !is.null(dir)
-  use_files <- !is.null(file_cells) && !is.null(file_rings)
-  if (use_dir == use_files) {
+  any_files <- !is.null(file_cells) || !is.null(file_rings)
+  if (use_dir == any_files) {
     cli::cli_abort(
-      "Provide either {.arg dir} or both {.arg file_cells} and {.arg file_rings}.")
+      "Provide either {.arg dir} or {.arg file_cells}/{.arg file_rings}, not both or neither.")
   }
 
   if (use_dir) {
@@ -926,33 +930,32 @@ write_QWAdata <- function(x, dir = NULL,
       base_cells <- paste0(prefix, "_QWAcells")
       base_rings <- paste0(prefix, "_QWArings")
     }
-    file_cells <- file.path(dir, paste0(base_cells, ext))
-    file_rings <- file.path(dir, paste0(base_rings, ext))
+    if (!is.null(x$cells)) file_cells <- file.path(dir, paste0(base_cells, ext))
+    if (!is.null(x$rings)) file_rings <- file.path(dir, paste0(base_rings, ext))
   } else {
-    if (compress && fs::path_ext(file_cells) != "gz") {
+    if (!is.null(file_cells) && is.null(x$cells)) {
+      cli::cli_abort("{.arg file_cells} is given, but {.arg x} has no cells.")
+    }
+    if (!is.null(file_rings) && is.null(x$rings)) {
+      cli::cli_abort("{.arg file_rings} is given, but {.arg x} has no rings.")
+    }
+    if (!is.null(file_cells) && compress && fs::path_ext(file_cells) != "gz") {
       file_cells <- paste0(file_cells, ".gz")
     }
-    if (compress && fs::path_ext(file_rings) != "gz") {
+    if (!is.null(file_rings) && compress && fs::path_ext(file_rings) != "gz") {
       file_rings <- paste0(file_rings, ".gz")
     }
   }
-  checkmate::assert_path_for_output(file_cells, overwrite = overwrite)
-  checkmate::assert_path_for_output(file_rings, overwrite = overwrite)
+  files <- purrr::compact(list(cells = file_cells, rings = file_rings))
+  for (f in files) checkmate::assert_path_for_output(f, overwrite = overwrite)
 
-  if (!keep_derived) {
-    x$cells <- x$cells[setdiff(names(x$cells), schema_cols("cells", "derived"))]
-    x$rings <- x$rings[setdiff(names(x$rings), schema_cols("rings", "derived"))]
+  for (comp in names(files)) {
+    df <- x[[comp]]
+    if (!keep_derived) df <- df[setdiff(names(df), schema_cols(comp, "derived"))]
+    vroom::vroom_write(prepare_write(df, comp, drop_empty), files[[comp]],
+                       delim = ",", na = "")
+    cli::cli_inform(c("v" = "{.field {comp}} written to {.file {files[[comp]]}}"))
   }
-
-  vroom::vroom_write(prepare_write(x$cells, "cells", drop_empty), file_cells,
-                     delim = ",", na = "")
-  vroom::vroom_write(prepare_write(x$rings, "rings", drop_empty), file_rings,
-                     delim = ",", na = "")
-
-  cli::cli_inform(c(
-    "v" = "Cells written to {.file {file_cells}}",
-    "v" = "Rings written to {.file {file_rings}}"
-  ))
 
   invisible(list(file_cells = file_cells, file_rings = file_rings))
 }

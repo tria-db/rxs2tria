@@ -60,12 +60,14 @@
       },
       "rvgi": {
         "type": ["number", "null"],
+        "minimum": 0,
         "title": "Ring vessel grouping index",
         "description": "Vessel grouping index per annual rings: Mean number of cells per group (solitary cells are also considered as a group)",
         "colType": "measure"
       },
       "rvsf": {
         "type": ["number", "null"],
+        "minimum": 0,
         "unit": "%",
         "title": "Ring vessel solitary fraction",
         "description": "Vessel solitary fraction per annual rings: Fraction of solitary cells with respect to all cells",
@@ -73,6 +75,7 @@
       },
       "rgsgv": {
         "type": ["number", "null"],
+        "minimum": 0,
         "title": "Ring group size of grouped vessels",
         "description": "Mean group size of grouped / non-solitary cells per annual rings;",
         "colType": "measure"

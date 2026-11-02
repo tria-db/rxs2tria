@@ -106,6 +106,14 @@ test_that("check_QWAmetadata informs on absent optional components", {
   expect_match(msgs, "related.*not provided", all = FALSE)
 })
 
+test_that("check_QWAmetadata informs on licence 'other' without an issue", {
+  x <- suppressWarnings(read_quiet(sub_file))
+  x$dataset$ds_license <- "other"
+  msgs <- capture_messages(res <- check_QWAmetadata(x))
+  expect_match(msgs, "ds_license.*other.*licence text", all = FALSE)
+  expect_true(res)
+})
+
 test_that("check_QWAmetadata warns on hierarchy mismatches", {
   x <- read_quiet(tria_file)
   x$trees$n_woodpieces[1] <- 99L
@@ -151,6 +159,17 @@ test_that("check_QWAmetadata warns on authors issues", {
   bad_email <- x
   bad_email$authors$email[2] <- "not-an-email"
   expect_warning(check(bad_email), "expected format.*email")
+
+  bad_orcid <- x
+  bad_orcid$authors$orcid[2] <- "0000-0002-1825-0098"
+  expect_warning(check(bad_orcid), "invalid ORCID check digit.*0000-0002-1825-0098")
+})
+
+test_that("orcid_checksum_ok validates the ISO 7064 MOD 11-2 check digit", {
+  expect_true(orcid_checksum_ok("0000-0002-1825-0097"))
+  expect_true(orcid_checksum_ok("0000-0002-1694-233X"))
+  expect_false(orcid_checksum_ok("0000-0002-1825-0098"))
+  expect_false(orcid_checksum_ok("0000-0002-1694-2330"))
 })
 
 test_that("check_QWAmetadata warns on species and description issues", {

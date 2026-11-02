@@ -72,7 +72,7 @@ and_collapse <- function(x, oxford_comma = FALSE) {
 # COUNTRIES
 # read the list of country codes and names
 get_countries_info <- function(){
-  file_path <- system.file("extdata", "country_ISO3166-1-alpha-2_20250513.csv", package = "rxs2tria")
+  file_path <- system.file("extdata", "country_ISO3166-1-alpha-2.csv", package = "rxs2tria")
   df_countries <- read.csv(file_path, stringsAsFactors = FALSE, na.strings=c(""))
   return(df_countries)
 }
@@ -96,7 +96,7 @@ country_from_coords <- function(lng, lat, countries_sf){
 
 # SPECIES
 get_species_info <- function(){
-  file_path <- system.file("extdata", "species_ITRDB_codes_20250701.csv", package = "rxs2tria")
+  file_path <- system.file("extdata", "species_ITRDB_codes.csv", package = "rxs2tria")
   df_species <- vroom::vroom(file_path, show_col_types = FALSE) |>
     dplyr::select(species_name, itrdb_species_code, phylogenetic_group, leaf_habit, tree_ring_structure)
   return(df_species)

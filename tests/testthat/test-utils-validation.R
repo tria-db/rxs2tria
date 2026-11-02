@@ -14,6 +14,11 @@ test_that("report_issue warns by default, aborts with strict, in caller's env", 
   expect_error(f(TRUE), "3 images affected")
 })
 
+test_that("report_issue signals class rxs2tria_issue", {
+  expect_warning(report_issue("an issue"), class = "rxs2tria_issue")
+  expect_error(report_issue("an issue", strict = TRUE), class = "rxs2tria_issue")
+})
+
 test_that("check_structure warns on prefix mismatch, aborts with strict", {
   expect_true(check_structure(structure_df))
 

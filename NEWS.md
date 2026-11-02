@@ -1,4 +1,8 @@
-# rxs2tria (0.1.4)
+# rxs2tria (development version)
+
+* `write_QWAdata()` writes only the components given by `file_cells`/`file_rings`, mirroring `read_QWAdata()`; with `dir`, it writes the components present in `x`.
+
+# rxs2tria 0.1.4
 
 ## Breaking changes
 
