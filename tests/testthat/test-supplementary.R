@@ -161,6 +161,33 @@ test_that("check_supplementary warns or aborts on resources that need review", {
   )
 })
 
+test_that("lower-priority formats of an original image are marked as junk", {
+  dir <- make_suppl_dir(paste0("S1_T1_WP1_SL1_IMG1", c(".tif", ".jpg", ".png")))
+  on.exit(fs::dir_delete(dir), add = TRUE)
+  rxs_images <- suppressMessages(QWAimages(imgs))
+
+  msgs <- capture_messages(suppl_res <- compile_supplementary(dir, rxs_images))
+  expect_match(msgs, "lower-priority", all = FALSE)
+  suppl_res <- suppl_res[order(suppl_res$resource_name), ]
+  expect_equal(suppl_res$resource_type, c("junk", "junk", "image_original"))
+  expect_equal(suppl_res$status, c("ignore", "ignore", "ok"))
+  expect_equal(suppl_res$linked_label[3], "S1_T1_WP1_SL1_IMG1")
+
+  expect_true(suppressMessages(check_supplementary(suppl_res, dir, rxs_images)))
+})
+
+test_that("copies of an original image in the same format are left for review", {
+  dir <- tempfile()
+  on.exit(fs::dir_delete(dir), add = TRUE)
+  fs::dir_create(fs::path(dir, c("a", "b")))
+  fs::file_create(fs::path(dir, c("a", "b"), "S1_T1_WP1_SL1_IMG1.jpg"))
+  rxs_images <- suppressMessages(QWAimages(imgs))
+
+  suppl_res <- suppressMessages(suppressWarnings(compile_supplementary(dir, rxs_images)))
+  expect_equal(suppl_res$resource_type, c("image_original", "image_original"))
+  expect_equal(suppl_res$status, c("review", "review"))
+})
+
 test_that("zip of the folder (with system files) matches a manifest compiled from the folder", {
   skip_if_not_installed("zip")
   parent <- tempfile()

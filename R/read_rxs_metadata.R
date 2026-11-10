@@ -81,7 +81,8 @@ collect_settings_data <- function(df = NULL,
   } else {
     df_settings_all <- df_settings_all |> dplyr::mutate(
       # get actual size due to roxas_ai compression issues
-      img_size = as.numeric(fs::file_size(files_images)) 
+      # (follow symlinks, as exiftool does for classic ROXAS)
+      img_size = as.numeric(fs::file_info(files_images, follow = TRUE)$size)
     )
   }
   

@@ -305,7 +305,8 @@ Every row is assigned a `status`, computed automatically by
   label.
 - **`"ignore"`**: a junk file (ROXAS `_bu` backups, calibration files of
   annotated, preview and reference series images, `_TRACHEIDMASK`
-  images). Never part of what gets uploaded
+  images, copies of an original image in lower-priority formats, as in
+  `get_roxas_files()`). Never part of what gets uploaded
   as supplementary files to TRIA. Any file where you manually set
   the `resource_type` to `"junk"` gets the same treatment.
   However, you may want to remove these files from the directory yourself 
