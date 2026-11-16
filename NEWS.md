@@ -1,6 +1,8 @@
 # rxs2tria (development version)
 
 * `write_QWAdata()` writes only the components given by `file_cells`/`file_rings`, mirroring `read_QWAdata()`; with `dir`, it writes the components present in `x`.
+* extended validation in `check_` functions: $authors ORCID duplicates and digit check, license "other" info, additional components, negatvie values in QWAdata
+* get_roxas_files() and compile_supplementary() now handle all ROXAS (AI)-supported image formats for the original images, and prioritize them in same order.
 
 # rxs2tria 0.1.4
 
