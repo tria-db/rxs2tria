@@ -212,6 +212,10 @@ write_QWAdata(QWA_data,
               file_cells = "output/my_dataset_QWAcells.csv.gz",
               file_rings = "output/my_dataset_QWArings.csv.gz")
 
+# Write only rings (e.g. after editing flags):
+write_QWAdata(QWA_data, file_rings = "output/my_dataset_QWArings.csv.gz",
+              overwrite = TRUE)
+
 # Read back:
 QWA_data <- read_QWAdata(dir = "output/", dataset_name = "my_dataset")
 

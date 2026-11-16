@@ -266,7 +266,7 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
 
     # TREE TABLE ---------------------------------------------------------------
     output$tree_table <- rhandsontable::renderRHandsontable({
-      shiny::validate(shiny::need(!is.null(site_data_in()), "No data to show. Load input data."))
+      shiny::validate(shiny::need(!is.null(tree_data_in()), "No data to show. Load input data."))
       render_meta_hot(tree_data_in(), tree_tbl_props, tree_renderers, fixed_cols = 1)
     })
 
@@ -325,7 +325,7 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
 
     # WOODPIECE TABLE ----------------------------------------------------------
     output$wp_table <- rhandsontable::renderRHandsontable({
-      shiny::validate(shiny::need(!is.null(site_data_in()), "No data to show. Load input data."))
+      shiny::validate(shiny::need(!is.null(wp_data_in()), "No data to show. Load input data."))
       render_meta_hot(wp_data_in(), wp_tbl_props, wp_renderers, fixed_cols = 1)
     })
 
@@ -343,7 +343,7 @@ site_server <- function(id, main_session, images_in, site_tbls_in, countries_lis
 
     # SLIDE TABLE --------------------------------------------------------------
     output$slide_table <- rhandsontable::renderRHandsontable({
-      shiny::validate(shiny::need(!is.null(site_data_in()), "No data to show. Load input data."))
+      shiny::validate(shiny::need(!is.null(slide_data_in()), "No data to show. Load input data."))
       render_meta_hot(slide_data_in(), slide_tbl_props, slide_renderers, fixed_cols = 1)
     })
 

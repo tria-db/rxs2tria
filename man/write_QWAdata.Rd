@@ -19,13 +19,14 @@ write_QWAdata(
 \arguments{
 \item{x}{A \link{QWAdata} object.}
 
-\item{dir}{Directory to write to. Files are auto-named
-\verb{\{dataset_name\}_QWAcells.csv(.gz)} and
+\item{dir}{Directory to write the components present in \code{x} to. Files are
+auto-named \verb{\{dataset_name\}_QWAcells.csv(.gz)} and
 \verb{\{dataset_name\}_QWArings.csv(.gz)}. Mutually exclusive with
 \code{file_cells}/\code{file_rings}.}
 
 \item{file_cells, file_rings}{Explicit output paths for the cells and rings
-CSV files. Both must be provided together. Mutually exclusive with \code{dir}.}
+CSV files. Either or both may be given; only the given components are
+written. Mutually exclusive with \code{dir}.}
 
 \item{dataset_name}{Name prefix for auto-generated filenames when using
 \code{dir}. If omitted, files are named \code{QWAcells.csv(.gz)} and
@@ -44,11 +45,13 @@ cell measures computed from other columns) are not written. They can be
 recomputed with \code{\link[=complete_QWAdata]{complete_QWAdata()}}. Default \code{TRUE}.}
 }
 \value{
-A named list of written file paths, invisibly.
+A named list of written file paths (\code{NULL} for components not
+written), invisibly.
 }
 \description{
 Cells and rings are written as (compressed) CSV files. Empty values are
-written as empty fields.
+written as empty fields. To write only one component, provide only the
+corresponding \code{file_cells}/\code{file_rings} argument.
 }
 \seealso{
 \code{\link[=read_QWAdata]{read_QWAdata()}}, \code{\link[=write_QWAprofile]{write_QWAprofile()}}

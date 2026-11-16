@@ -25,6 +25,7 @@ are not unique. Warns (or, with \code{strict = TRUE}, aborts) on:
 \item duplicate values in columns that must be unique (e.g. \code{email}, \code{site_name});
 \item not exactly one contact person, or \code{author_nr} not numbering the authors
 from 1 to n;
+\item ORCIDs with an invalid check digit;
 \item country codes not in ISO 3166-1 alpha-2;
 \item species codes not in the ITRDB list, or species columns of \verb{$trees} not
 matching their code;
@@ -36,7 +37,8 @@ hierarchical tables not matching \verb{$images} (resync with
 }
 }
 \details{
-Also informs about missing optional columns and absent optional components.
+Also informs about missing optional columns, absent optional components and
+a licence \code{"other"} (to be sent with the submission).
 }
 \seealso{
 \code{\link[=QWAmetadata]{QWAmetadata()}}, \code{\link[=check_QWAimages]{check_QWAimages()}}, \code{\link[=check_consistency]{check_consistency()}}

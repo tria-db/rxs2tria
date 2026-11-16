@@ -42,6 +42,7 @@
         "pattern": "^(|[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X])$",
         "title": "ORCID",
         "description": "ORCID, e.g. 0000-0002-7070-3292",
+        "unique": true,
         "colType": "meta_input"
       },
       "org_name": {

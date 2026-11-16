@@ -397,15 +397,17 @@ align_to_schema <- function(df, tbl_props, schema = NULL, add_opt = FALSE,
 }
 
 #' Report a check issue as a warning, or as an error with `strict`
+#'
+#' Both carry class `rxs2tria_issue`, so callers can collect the issues.
 #' @param msg Message for cli, interpolated in the caller's environment.
 #' @param strict If `TRUE`, abort instead of warning.
 #' @return `FALSE`, invisibly.
 #' @noRd
 report_issue <- function(msg, strict = FALSE, .envir = parent.frame()) {
   if (strict) {
-    cli::cli_abort(msg, .envir = .envir)
+    cli::cli_abort(msg, class = "rxs2tria_issue", .envir = .envir)
   } else {
-    cli::cli_warn(msg, .envir = .envir)
+    cli::cli_warn(msg, class = "rxs2tria_issue", .envir = .envir)
   }
   invisible(FALSE)
 }

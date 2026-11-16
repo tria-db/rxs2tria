@@ -210,5 +210,5 @@ extract_data_structure <- function(
 #' Strip image file extension (incl. ROXAS AI `.scan`) from file names
 #' @noRd
 strip_img_ext <- function(x) {
-  sub("(\\.scan)?\\.(jpe?g|png|bmp|tiff?)$", "", x, ignore.case = TRUE)
+  sub("(\\.scan)?\\.(jpe?g|png|bmp|tiff?|jp2|pct|pict)$", "", x, ignore.case = TRUE)
 }

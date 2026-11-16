@@ -33,5 +33,5 @@
         "slides",
         "images"
     ],
-    "additionalProperties": true
+    "additionalProperties": false
 }

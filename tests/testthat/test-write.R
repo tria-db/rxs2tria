@@ -141,3 +141,32 @@ test_that("write_QWAdata drops derived columns with keep_derived = FALSE", {
   expect_equal(readLines(files$file_cells)[1], "image_label,year,xpix,ypix,la")
   expect_equal(readLines(files$file_rings)[1], "woodpiece_label,slide_label,image_label,year,mrw")
 })
+
+test_that("write_QWAdata writes only the given or present components", {
+  cells <- tibble::tibble(image_label = "IMG1", year = 2000, xpix = 1, ypix = 1, la = 10)
+  rings <- tibble::tibble(woodpiece_label = "WP1", slide_label = "WP1_SL1",
+                          image_label = "IMG1", year = 2000, mrw = 100)
+  dir <- tempfile()
+  dir.create(dir)
+
+  # only file_rings given
+  file_rings <- file.path(dir, "rings.csv")
+  files <- suppressMessages(write_QWAdata(new_QWAdata(cells, rings), file_rings = file_rings,
+                                          compress = FALSE))
+  expect_null(files$file_cells)
+  expect_equal(files$file_rings, file_rings)
+  expect_equal(fs::path_file(fs::dir_ls(dir)), "rings.csv")
+
+  # dir with a rings-only object
+  dir2 <- tempfile()
+  dir.create(dir2)
+  files <- suppressMessages(write_QWAdata(new_QWAdata(rings = rings), dir2, compress = FALSE))
+  expect_null(files$file_cells)
+  expect_equal(fs::path_file(fs::dir_ls(dir2)), "QWArings.csv")
+
+  # path for a missing component, dir and file together
+  expect_error(write_QWAdata(new_QWAdata(rings = rings), file_cells = file.path(dir, "cells.csv")),
+               "has no cells")
+  expect_error(write_QWAdata(new_QWAdata(cells, rings), dir, file_rings = file_rings),
+               "not both or neither")
+})

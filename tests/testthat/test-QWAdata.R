@@ -175,6 +175,13 @@ test_that("check_QWAdata informs on extra and missing optional columns", {
   msgs <- capture_messages(check_QWAdata(x))
   expect_match(msgs, "extra columns", all = FALSE)
   expect_match(msgs, "missing optional columns", all = FALSE)
+  expect_no_match(paste(msgs, collapse = "\n"), "\\bcdratio\\b") # derived columns not listed
+})
+
+test_that("check_QWAdata warns on negative ring vessel indices", {
+  x <- new_QWAdata(cells = NULL, rings = dplyr::mutate(rings_ok, rvgi = c(1.5, -99)))
+  expect_match(capture_warnings(suppressMessages(check_QWAdata(x))),
+               "must be >= 0.*rvgi", all = FALSE)
 })
 
 # dating checks ----

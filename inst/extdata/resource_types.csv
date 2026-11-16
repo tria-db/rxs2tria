@@ -5,7 +5,7 @@ QWAmetadata\.json$,QWAmetadata,dataset,,x,1,required,DSName_QWAmetadata.json,rxs
 QWAprofile\.csv(\.gz)?$,QWAprofile,dataset,,,1,optional,DSName_QWAprofile.csv,rxs2tria,
 \.rwl$,reference_series,dataset,,,1,wanted,SITE_SPECIES.rwl,processing,
 Panorama\.(png|xcf|tif|tiff)$,image_panorama,woodpiece,x,,1,optional,WPNAME_Panorama.png; WPNAME_Panorama.xcf,processing,
-(\.(scan|rxs))?\.(jpg|jpeg|png)$,image_original,image,x,x,2,wanted,IMGNAME.jpg; IMGNAME.scan.jpg; IMGNAME.scan.jpeg; IMGNAME.rxs.jpg; IMGNAME.png,processing,required to rerun
+(\.(scan|rxs))?\.(jpe?g|png|tiff?|bmp|jp2|pct|pict)$,image_original,image,x,x,2,wanted,IMGNAME.jpg; IMGNAME.tif; IMGNAME.scan.jpg; IMGNAME.scan.jpeg; IMGNAME.rxs.jpg; IMGNAME.png,processing,required to rerun
 Preview\.(jpg|jpeg)$,image_preview,slide,x,,1,nicetohave,SLIDENAME_Preview.jpg,processing,SLIDENAME__v2_Preview.jpg?
 ROXAS_Output_Summary.*\.xlsx$,roxas_full_output_summary,dataset,,,1,optional,_ROXAS_Output_Summary__DSNAME.xlsx,roxas,
 _ReferenceSeries(Long|_Original)?\.(jpg|jpeg|gif)$,image_refseries,analysis,x,,1,nicetohave,IMGNAME_ReferenceSeries.jpg; IMGNAME_ReferenceSeries.gif; IMGNAME_ReferenceSeries_Original.jpg; IMGNAME_ReferenceSeriesLong.jpg,roxas,

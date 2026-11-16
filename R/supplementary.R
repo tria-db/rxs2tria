@@ -19,7 +19,9 @@
 #' 
 #' The automatic inference of resource type and linked label leverages the
 #' suffix file name conventions used by ROXAS and ROXAS AI plus the original
-#' image file names. The results are checked for validity (e.g. if there were
+#' image file names. If an original image exists in several formats, only the
+#' highest-priority format is kept (as in [get_roxas_files()]) and the other
+#' copies are marked as junk. The results are checked for validity (e.g. if there were
 #' files for which the resource type or label could not be inferred), with
 #' warnings raised in case of issues. Two additional columns (`status`/`note`)
 #' are generated during the validity check and describe how the resource would
@@ -314,6 +316,34 @@ check_supplementary <- function(suppl_res, path, rxs_images, strict = FALSE) {
       new_res$linked_level[to_match],
       USE.NAMES = FALSE
     )
+  }
+
+  # The same original image might exist in several formats (e.g. the original
+  # .tif alongside an exported .jpg copy): keep the highest-priority format
+  # (as in get_roxas_files()) and mark the others as junk. Copies in the same
+  # format are left for review.
+  is_img <- new_res$resource_type %in% "image_original" & !is.na(new_res$linked_label)
+  if (sum(is_img) > 1) {
+    img_priority <- img_ext_priority(roxas_version)
+    lower_copies <- new_res[is_img, ] |>
+      dplyr::mutate(ext_rank = match(
+        tolower(fs::path_ext(.data$resource_name)), img_priority,
+        nomatch = length(img_priority) + 1L # unsupported formats (e.g. .png for classic ROXAS) rank last
+      )) |>
+      dplyr::group_by(.data$linked_label) |>
+      dplyr::filter(.data$ext_rank > min(.data$ext_rank)) |>
+      dplyr::pull("resource_name")
+
+    if (length(lower_copies)) {
+      cli::cli_inform(c(
+        "!" = "Marked {length(lower_copies)} image file{?s} of lower-priority formats as junk (copies of an original image):",
+        cli_truncated_list(lower_copies)
+      ))
+      is_lower <- new_res$resource_name %in% lower_copies
+      new_res$resource_type[is_lower] <- "junk"
+      new_res$linked_level[is_lower] <- NA_character_
+      new_res$linked_label[is_lower] <- NA_character_
+    }
   }
 
   # ensure we have all schema columns

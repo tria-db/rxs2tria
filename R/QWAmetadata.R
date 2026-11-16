@@ -147,8 +147,36 @@ check_author_nr <- function(authors, strict = FALSE) {
   invisible(TRUE)
 }
 
+# ORCID check digit (ISO 7064 MOD 11-2) of the values in ORCID format; other
+# values are reported by the schema check
+#' @noRd
+check_orcids <- function(authors, strict = FALSE) {
+  orcid <- authors$orcid
+  if (is.null(orcid)) return(invisible(TRUE))
+  orcid <- unique(orcid[grepl("^\\d{4}-\\d{4}-\\d{4}-\\d{3}[\\dX]$", orcid, perl = TRUE)])
+  bad <- orcid[!vapply(orcid, orcid_checksum_ok, logical(1))]
+  if (length(bad) > 0) {
+    return(report_issue(c(
+      "!" = "{.field authors}: invalid ORCID check digit in {.val {bad}}.",
+      "i" = "Check the {.field orcid} values for typos."
+    ), strict))
+  }
+  invisible(TRUE)
+}
+
+# is the last character of an ORCID ("0000-0002-1825-0097") its check digit?
+#' @noRd
+orcid_checksum_ok <- function(orcid) {
+  chars <- strsplit(gsub("-", "", orcid, fixed = TRUE), "")[[1]]
+  total <- 0
+  for (d in as.integer(chars[1:15])) total <- (total + d) * 2
+  check <- (12 - total %% 11) %% 11
+  chars[16] == if (check == 10) "X" else as.character(check)
+}
+
 # lookup tables in inst/extdata, as used by the metadata app (all columns
-# character; no NA strings, "NA" is the code of Namibia)
+# character; no NA strings, "NA" is the code of Namibia). Copies of the TRIA
+# lookup tables: countries as of 2025-05-13, species as of 2025-07-01.
 #' @noRd
 read_lookup <- function(file) {
   path <- system.file("extdata", file, package = "rxs2tria")
@@ -159,7 +187,7 @@ read_lookup <- function(file) {
 # country codes of sites and author affiliations in the ISO 3166-1 alpha-2 list
 #' @noRd
 check_country_codes <- function(x, strict = FALSE) {
-  codes <- read_lookup("country_ISO3166-1-alpha-2_20250513.csv")$country_iso_code
+  codes <- read_lookup("country_ISO3166-1-alpha-2.csv")$country_iso_code
   ok <- TRUE
   for (f in list(c("sites", "country_code"), c("authors", "org_country"))) {
     vals <- x[[f[1]]][[f[2]]]
@@ -178,7 +206,7 @@ check_country_codes <- function(x, strict = FALSE) {
 # trees (where filled) match the list
 #' @noRd
 check_species <- function(x, strict = FALSE) {
-  lookup <- read_lookup("species_ITRDB_codes_20250701.csv")
+  lookup <- read_lookup("species_ITRDB_codes.csv")
   ok <- TRUE
 
   sc <- x$sites[["stand_main_species_code"]]
@@ -523,6 +551,7 @@ as_QWAmetadata <- function(x) {
 #' - duplicate values in columns that must be unique (e.g. `email`, `site_name`);
 #' - not exactly one contact person, or `author_nr` not numbering the authors
 #'   from 1 to n;
+#' - ORCIDs with an invalid check digit;
 #' - country codes not in ISO 3166-1 alpha-2;
 #' - species codes not in the ITRDB list, or species columns of `$trees` not
 #'   matching their code;
@@ -532,7 +561,8 @@ as_QWAmetadata <- function(x) {
 #'   [update_QWAmetadata()]);
 #' - issues in `$images`, see [check_QWAimages()].
 #'
-#' Also informs about missing optional columns and absent optional components.
+#' Also informs about missing optional columns, absent optional components and
+#' a licence `"other"` (to be sent with the submission).
 #'
 #' @param x A [QWAmetadata] object.
 #' @param strict If `TRUE`, abort on the first issue instead of warning.
@@ -553,6 +583,7 @@ check_QWAmetadata <- function(x, strict = FALSE) {
   ok <- c(ok,
     check_contact_person(x$authors, strict),
     check_author_nr(x$authors, strict),
+    check_orcids(x$authors, strict),
     check_country_codes(x, strict),
     check_species(x, strict)
   )
@@ -560,6 +591,12 @@ check_QWAmetadata <- function(x, strict = FALSE) {
     ok <- c(ok, report_issue(c(
       "!" = "{.field dataset}: {.field description} still contains {.val [ADD INFO ...]} placeholders of the template."
     ), strict))
+  }
+  # not an issue: the licence is agreed with TRIA
+  if (isTRUE(x$dataset$ds_license == "other")) {
+    cli::cli_inform(c(
+      "i" = "{.field dataset}: {.field ds_license} is {.val other}. Send the full licence text or a persistent URL with the submission."
+    ))
   }
 
   # hierarchy consistency checks against x$images

@@ -60,7 +60,9 @@ submitted zip, and that these files can all be correctly identified.
 
 The automatic inference of resource type and linked label leverages the
 suffix file name conventions used by ROXAS and ROXAS AI plus the original
-image file names. The results are checked for validity (e.g. if there were
+image file names. If an original image exists in several formats, only the
+highest-priority format is kept (as in \code{\link[=get_roxas_files]{get_roxas_files()}}) and the other
+copies are marked as junk. The results are checked for validity (e.g. if there were
 files for which the resource type or label could not be inferred), with
 warnings raised in case of issues. Two additional columns (\code{status}/\code{note})
 are generated during the validity check and describe how the resource would
