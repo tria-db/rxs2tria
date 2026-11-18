@@ -2,18 +2,21 @@
 % Please edit documentation in R/get_roxas_files.R
 \name{get_roxas_files}
 \alias{get_roxas_files}
-\title{Identify the ROXAS (AI) files in a directory}
+\title{Compile ROXAS (AI) files}
 \usage{
-get_roxas_files(path_in, roxas_version, exclude_dirs = NULL)
+get_roxas_files(path_in, roxas_version, exclude_dirs = NULL, recurse = TRUE)
 }
 \arguments{
-\item{path_in}{The path of the input directory.}
+\item{path_in}{A character vector of one or more paths.}
 
 \item{roxas_version}{Which software was used to create the files, either
 \code{"roxas"} or \code{"roxas_ai"}.}
 
 \item{exclude_dirs}{Optional character vector of subdirectory names that
 should not be searched for ROXAS (AI) files (e.g., \code{"unused_files"}).}
+
+\item{recurse}{If \code{TRUE} (default), subdirectories of \code{path_in} are also
+searched; if \code{FALSE}, only files directly in \code{path_in} are used.}
 }
 \value{
 A data frame with columns \code{prefix}, \code{fname_image}, \code{fname_settings},
@@ -21,20 +24,20 @@ A data frame with columns \code{prefix}, \code{fname_image}, \code{fname_setting
 file paths.
 }
 \description{
-Returns a data frame with the full paths of the four types of relevant
-ROXAS (AI) files (i.e., images, cell measurements, ring measurements, and
-ROXAS settings resp. ROXAS AI metadata files) found within the given
-directory.
-Recurses into any subdirectories except those explicitly excluded.
+Returns a data frame with the shared prefix and file paths of the four types
+of relevant ROXAS (AI) files (i.e., images, cell measurements, ring
+measurements, and ROXAS settings resp. ROXAS AI metadata files) found under
+the given path(s).
+By default, it recurses into any subdirectories except those explicitly
+excluded.
 The files are identified by matching on the standard naming suffixes produced
-by ROXAS resp. ROXAS AI, see the Details below.
+by ROXAS resp. ROXAS AI, see the Details below. The input path(s) should
+include either ROXAS or ROXAS AI files, not both.
 }
 \details{
 For ROXAS, the required files per image are:
 \itemize{
-\item The original image file (\verb{\{IMAGEID\}.tif}; also \code{.tiff}, \code{.jp2}, \code{.bmp},
-\code{.jpg}, \code{.jpeg}, \code{.pct} or \code{.pict}, in that order of preference if
-several exist).
+\item The original image file (e.g., \verb{\{IMAGEID\}.jpg}).
 \item The ROXAS settings file (\verb{\{IMAGEID\}_ROXAS_Settings.txt}).
 \item The cell measurements output (\verb{\{IMAGEID\}_Output_Cells.txt}).
 \item The ring measurements output (\verb{\{IMAGEID\}_Output_Rings.txt}).
@@ -42,17 +45,16 @@ several exist).
 
 For ROXAS AI, the required files per image are:
 \itemize{
-\item The original image file (\verb{\{IMAGEID\}.scan.jpg}; also \code{.jpeg}, \code{.png},
-\code{.tif}, \code{.tiff}, \code{.bmp} or \code{.jp2}, in that order of preference if
-several exist).
+\item The original image file (\verb{\{IMAGEID\}.scan.jpg}).
 \item The ROXAS AI metadata file (\verb{\{IMAGEID\}.metadata.json}).
 \item The cell measurements table (\verb{\{IMAGEID\}.cells_table.csv} or \code{.txt}).
 \item The ring measurements table (\verb{\{IMAGEID\}.rings_table.csv} or \code{.txt}).
 }
 
-Image file extensions are matched case-insensitively. Image files in
-lower-priority formats are ignored with a message. If an image has more than
-one settings, cells or rings file (e.g. from repeated analyses), all
-combinations are returned with a warning, and the outdated files need to be
-removed before continuing.
+Images without any corresponding ROXAS (AI) files are ignored, sets lacking
+only some of the files are returned with a warning.
+If several images with the same name exist, the order of preference is
+\code{.tif}, \code{.tiff}, \code{.jp2}, \code{.bmp}, \code{.jpg}, \code{.jpeg}, \code{.pct}, \code{.pict} for ROXAS,
+and \code{.jpg}, \code{.jpeg}, \code{.png}, \code{.tif}, \code{.tiff}, \code{.bmp} \code{.jp2} for ROXAS AI,
+with extensions matched case-insensitively.
 }

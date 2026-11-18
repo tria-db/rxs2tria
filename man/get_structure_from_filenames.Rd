@@ -41,6 +41,8 @@ The extracted site, species, tree, woodpiece, slide, image identifiers are
 joined by underscores to derive unique codes for each level of the data
 structure for the subsequent calculations
 (e.g. \verb{tree_label = \{site\}_\{species\}_\{tree\}}).
+Underscores within the extracted identifiers are removed, as underscores
+separate the hierarchical levels in the derived labels.
 
 Any custom labeling pattern may be used, provided that it allows to
 uniquely identify each image and is consistently applied across all files.
@@ -83,7 +85,7 @@ filenames <- c(
  "tree2-sl1_img1",
  "tree2-sl1_img2"
  )
- pattern <- "(?<tree>[[:alnum:]].+)-(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)"
+ pattern <- "(?<tree>[[:alnum:]]+)-(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)"
  get_structure_from_filenames(
    filenames, pattern,
    site_label = "SITEA", species_code = "LASI")

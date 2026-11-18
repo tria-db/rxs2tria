@@ -119,7 +119,7 @@ check_incomplete_innermost <- function(cells.innermost, res){
 #' @noRd
 # TODO: additional columns
 # TODO: what about circular samples?
-flag_incomplete_rings <- function(df_rings_log, df_cells_all, df_meta){
+flag_incomplete_rings <- function(df_rings_log, df_cells_all, df_meta) {
   # identify inner- and outermost year per image
   df_rings_log <- df_rings_log |>
     dplyr::group_by(image_label) |>
@@ -176,7 +176,7 @@ flag_duplicate_rings <- function(df_rings_log){
     dplyr::group_by(woodpiece_label, year) |>
     dplyr::mutate(
       duplicate_ring = dplyr::n() > 1,
-      duplicate_rank = dplyr::row_number(-cno), # rank by cell count descending
+      duplicate_rank = dplyr::row_number(-dplyr::coalesce(cno, 0L)), # rank by cell count descending (NA: no cells data)
       duplicate_rank = dplyr::if_else(duplicate_ring, # set rank to NA if not duplicate
                                       duplicate_rank, NA_integer_),
       duplicate_rank = duplicate_rank + # penalty for issues (NA: none, else the whole group is NA)

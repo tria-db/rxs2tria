@@ -19,7 +19,7 @@ Imports:
     collapse,
     data.table,
     dplR,
-    dplyr,
+    dplyr (>= 1.1.0),
     exifr,
     fs,
     glue,

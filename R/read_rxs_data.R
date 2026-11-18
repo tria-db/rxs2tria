@@ -126,7 +126,9 @@ collect_raw_outputs <- function(df_structure, roxas_version, ftype) {
     dplyr::select(dplyr::all_of(c(structure_cols,fname_col))) |> 
     dplyr::mutate(raw_data = purrr::map(
       .data[[fname_col]],
-      \(x) read_output_file(x, selcols, colname_variants, delim),
+      # missing files contribute no rows, reported below
+      \(x) if (is.na(x)) data.frame(year = integer(0)) else
+        read_output_file(x, selcols, colname_variants, delim),
       .progress = list(name = glue::glue("Reading {ftype} data files..."), clear = TRUE)
     )) |> 
     tidyr::unnest("raw_data") |> 
@@ -287,6 +289,17 @@ collect_raw_data <- function(df_meta, roxas_version = NULL) {
   df_rings_all <- collect_raw_outputs(df_meta, roxas_version, "rings")
   # these dfs have correct required columns and types per definition
   # except if there was an issue with one or more files -> warning message
+
+  # images without any measurements drop out of QWAdata
+  no_meas <- setdiff(df_meta$image_label,
+                     c(df_cells_all$image_label, df_rings_all$image_label))
+  if (length(no_meas) > 0) {
+    cli::cli_warn(c(
+      "!" = "{length(no_meas)} image{?s} without any cells or rings data, not included in {.cls QWAdata}:",
+      cli_truncated_list(no_meas),
+      "i" = "Check their {.field fname_cells} and {.field fname_rings} files, or remove these images from {.arg df_meta}."
+    ))
+  }
 
   # abort on missing or duplicate key values, then forcibly remove any error
   # codes and "negative" values that are actually outliers

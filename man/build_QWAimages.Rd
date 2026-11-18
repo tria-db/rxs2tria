@@ -9,10 +9,11 @@ build_QWAimages(df_structure, df_settings)
 \arguments{
 \item{df_structure}{Data frame with all input file names and data structure.}
 
-\item{df_settings}{Data frame with extracted ROXAS (AI) settings data. Any
-datetime columns must already be converted to \code{POSIXct} (manual conversion
-is required for \code{meas_created_at} in classic ROXAS, see the \code{workflow}
-vignette).}
+\item{df_settings}{Data frame with extracted ROXAS (AI) settings data from
+\code{\link[=collect_settings_data]{collect_settings_data()}}, matched to \code{df_structure} by \code{fname_settings}
+(or \code{fname_image} for images without a settings file). Any datetime columns
+must already be converted to \code{POSIXct} (manual conversion is required for
+\code{meas_created_at} in classic ROXAS, see the \code{workflow} vignette).}
 }
 \value{
 A \link{QWAimages} object with the joined image-level metadata.

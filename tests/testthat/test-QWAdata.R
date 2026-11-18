@@ -136,6 +136,25 @@ test_that("complete_rings labels images without rings rows from meta, check_QWAd
                "1 image without ring measurements", all = FALSE)
 })
 
+test_that("images without cells get cno NA in complete_rings, but no NA flags", {
+  cells <- data.frame(image_label = "WP1_SL1_IMG1", year = 2001L,
+                      xpix = 1:10, ypix = 1:10, raddistr = 1:10)
+  rings <- data.frame(woodpiece_label = "WP1", slide_label = "WP1_SL1",
+                      image_label = rep(c("WP1_SL1_IMG1", "WP1_SL1_IMG2"), each = 2),
+                      year = c(2001L, 2002L), mrw = c(500, NA))
+  meta <- data.frame(image_label = c("WP1_SL1_IMG1", "WP1_SL1_IMG2"), woodpiece_label = "WP1",
+                     slide_label = "WP1_SL1", spatial_resolution = 1)
+  r <- suppressMessages(complete_rings(new_QWAdata(cells, rings), meta))
+  expect_equal(r$cno, c(10L, 0L, NA, NA))
+
+  r <- suppressMessages(complete_flags(new_QWAdata(cells, r), meta))$rings
+  flag_cols <- c("incomplete_ring", "missing_ring", "duplicate_ring", "exclude_dupl", "exclude_issues")
+  expect_false(anyNA(r[flag_cols]))
+  expect_equal(r$missing_ring, c(FALSE, TRUE, FALSE, FALSE))
+  # duplicate 2001: the image with cells is selected
+  expect_equal(r$exclude_dupl[r$year == 2001], c(FALSE, TRUE))
+})
+
 test_that("check_QWAdata returns TRUE without issues", {
   expect_no_warning(res <- suppressMessages(check_QWAdata(x_ok)))
   expect_true(res)

@@ -20,14 +20,15 @@ cli_truncated_list <- function(x, max_show = 5, bullet = " ") {
 #' @noRd
 cli_truncated_groups <- function(
   groups, max_show_out = 3, max_show_in = 3,
-  bullet_out = "*", bullet_in = " ") {
+  bullet_out = "*", bullet_in = " ", quote = TRUE) {
   shown_out <- groups[seq_len(min(length(groups), max_show_out))]
   hidden_out <- groups[seq_len(length(groups))[-seq_len(length(shown_out))]]
   n_more_groups <- length(hidden_out)
   n_more_files <- sum(lengths(hidden_out))
   inner <- lapply(names(shown_out), function(id) {
     files <- shown_out[[id]]
-    header <- setNames(paste0("'", id, "' (n = ", length(files), ")"), bullet_out)
+    label <- if (quote) paste0("'", id, "'") else id
+    header <- setNames(paste0(label, " (n = ", length(files), ")"), bullet_out)
     c(header, cli_truncated_list(files, max_show = max_show_in, bullet = bullet_in))
   })
   c(

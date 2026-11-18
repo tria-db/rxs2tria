@@ -5,7 +5,8 @@
 #' This function takes the raw QWA data (cells and rings dataframes) and returns an
 #' extended version of the rings data frame, with additional rows for years that
 #' were only present in the cells data / missing altogether, and an additional 
-#' column for the number of cells per ring (cno, derived from cells data).
+#' column for the number of cells per ring (cno, derived from cells data; `NA`
+#' for images without cells data).
 #'
 #' @param QWA_data a list containing the cells and rings dataframes
 #' @param meta a [QWAimages] object or data frame with `image_label`,
@@ -43,7 +44,10 @@ complete_rings <- function(QWA_data, meta) {
       dplyr::mutate(woodpiece_label = dplyr::coalesce(.data$woodpiece_label, .data$woodpiece_label.meta),
                     slide_label = dplyr::coalesce(.data$slide_label, .data$slide_label.meta)) |>
       dplyr::select("woodpiece_label", "slide_label", "image_label", "year", "cno",
-                    dplyr::everything(), -dplyr::ends_with(".meta"))
+                    dplyr::everything(), -dplyr::ends_with(".meta")) |>
+      # images without cells data: cell count unknown
+      dplyr::mutate(cno = dplyr::if_else(
+        .data$image_label %in% QWA_data$cells$image_label, .data$cno, NA))
   } else {
     if ("cno" %in% names(df_rings)) {
       fill_logical <- c(list(cno = 0), fill_logical)
@@ -409,8 +413,9 @@ complete_measures <- function(QWA_data) {
     if (eww_needed) {
       df_rings <- df_rings |> 
         dplyr::left_join(df_ewlw, by = c("image_label", "year")) |> 
-        dplyr::mutate(eww = dplyr::if_else(.data$max_EW_sector >= 0,
-          .data$max_EW_sector*.data$mrw/100, 0)) |> 
+        dplyr::mutate(eww = dplyr::if_else(
+          dplyr::coalesce(.data$mrw == 0, FALSE), 0, # also for rings without cells
+          dplyr::if_else(.data$max_EW_sector >= 0, .data$max_EW_sector*.data$mrw/100, 0))) |>
         dplyr::select(!"max_EW_sector")
     }
   }
@@ -524,17 +529,8 @@ complete_flags <- function(x, meta, exclude_mode = NULL) {
     df_rings_log <- df_rings_log |>
       dplyr::mutate(missing_ring = !.data$incomplete_ring &                  # wedging ring: cannot assess for incomplete in image 
                                     dplyr::coalesce(.data$mrw < 10, FALSE) | # close to 0 mrw, or close to 0 cno if mrw is na
-                                    (.data$cno < 5 & is.na(.data$mrw)),      # a wide ring with no cells usually has other issues
+                                    (dplyr::coalesce(.data$cno < 5, FALSE) & is.na(.data$mrw)), # a wide ring with no cells usually has other issues
                     no_MRW_other = is.na(.data$mrw) & !(.data$outermost_ring | .data$innermost_ring)) # TODO: check if this ever occurs and for what reason
-    # for missing rings, we want area and width set to 0
-    missing_to_zero <- c("mrw","ra")
-    df_rings_log <- df_rings_log |>
-      dplyr::mutate(
-        dplyr::across(dplyr::any_of(missing_to_zero),
-          \(x) dplyr::if_else(.data$missing_ring & is.na(x) & .data$cno < 5, 0, x)),
-        dplyr::across(dplyr::any_of(c("eww","lww")), # if mrw is 0 -> eww and lww also 0
-         \(x) dplyr::if_else(is.na(x) & dplyr::coalesce(.data$mrw == 0, FALSE), 0, x))
-      )
   }
 
   if (any(c("duplicate_ring", "exclude_dupl") %in% flag_cols_missing)) {

@@ -16,17 +16,18 @@ collect_settings_data(
 \code{fname_image}, e.g. from \code{\link[=extract_data_structure]{extract_data_structure()}}. Provide this or
 \code{files_settings}/\code{files_images}, but not both.}
 
-\item{files_settings}{Vector of ROXAS settings file names.}
+\item{files_settings}{Vector of ROXAS settings file names (\code{NA} for
+missing settings files).}
 
 \item{files_images}{Vector of image file names in the same order as
-\code{files_settings}.}
+\code{files_settings} (\code{NA} for missing images files).}
 
 \item{roxas_version}{The version of ROXAS used to create the files, either
 \code{"roxas"} or \code{"roxas_ai"}. Auto-detected from the settings file names if
 not supplied.}
 }
 \value{
-A dataframe containing the extracted data.
+A data frame containing the extracted data.
 }
 \description{
 Collect the TRIA-relevant attributes from a collection of ROXAS (AI) settings
@@ -35,14 +36,17 @@ and image EXIF metadata.
 The settings and image file names can be supplied either as a data frame
 \code{df} with the columns \code{fname_settings} and \code{fname_image}, such as the output
 of \code{\link[=extract_data_structure]{extract_data_structure()}} or \code{\link[=get_roxas_files]{get_roxas_files()}}, or as the individual
-file path vectors \code{files_settings} and \code{files_images}. Exactly one of the two
-input styles must be used. When passed as vectors, \code{files_images} must be in
-the same order as \code{files_settings}.
+file path vectors \code{files_settings} and \code{files_images}. When passed as
+vectors, \code{files_images} must be in the same order as \code{files_settings}.
 
 For ROXAS files, image EXIF metadata are extracted from the image files and
 then joined to the settings data. For ROXAS AI files, the EXIF metadata are
 already embedded in the settings JSON files and read from there directly;
-the image files are only used to get the actual image file size.
+the image files are only used to get the image file size, and for images
+without a readable settings file.
+
+Missing (\code{NA}), unreadable or non-existing files leave the corresponding
+metadata empty, with a warning.
 
 If \code{roxas_version} is not supplied, it is auto-detected from the settings
 file names.
