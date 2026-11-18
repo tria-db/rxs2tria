@@ -20,14 +20,15 @@ cli_truncated_list <- function(x, max_show = 5, bullet = " ") {
 #' @noRd
 cli_truncated_groups <- function(
   groups, max_show_out = 3, max_show_in = 3,
-  bullet_out = "*", bullet_in = " ") {
+  bullet_out = "*", bullet_in = " ", quote = TRUE) {
   shown_out <- groups[seq_len(min(length(groups), max_show_out))]
   hidden_out <- groups[seq_len(length(groups))[-seq_len(length(shown_out))]]
   n_more_groups <- length(hidden_out)
   n_more_files <- sum(lengths(hidden_out))
   inner <- lapply(names(shown_out), function(id) {
     files <- shown_out[[id]]
-    header <- setNames(paste0("'", id, "' (n = ", length(files), ")"), bullet_out)
+    label <- if (quote) paste0("'", id, "'") else id
+    header <- setNames(paste0(label, " (n = ", length(files), ")"), bullet_out)
     c(header, cli_truncated_list(files, max_show = max_show_in, bullet = bullet_in))
   })
   c(
@@ -285,40 +286,42 @@ as_whole_integer <- function(x) {
 #' Helper to force a given df into alignment with a table schema:
 #' ensure it has required columns, remove extra columns unless `keep_extra`,
 #' force all columns to have the correct type
+#'
+#' Lossless type conversions and empty strings (set to `NA`) are not reported.
+#' Changes to the data warn: required columns added, extra columns dropped,
+#' new `NA`s or non-whole values in integer columns from type conversions.
+#' Requested changes inform: optional columns added (`add_opt`), extra columns
+#' kept (`keep_extra`).
 #' @param df  The data frame to be aligned
-#' @param tbl_props  Table properties read from schema (output of get_tbl_props()) 
+#' @param tbl_props  Table properties read from schema (output of get_tbl_props())
 #' @param schema  Schema name, only used for warning messages
 #' @param add_opt  Should missing optional columns be added as well, or only
 #'   required? Columns with `colType` `"qc_input"` (set in the flags app) are
 #'   never added.
-#' @param mute_info  If `TRUE`, suppress the messages on missing required
-#'   columns, dropped extra columns and `NA`s from type conversions
 #' @param ignore_colnames  Should the column names of df be ignored
 #'   in favor of position?
 #' @param keep_extra  Keep columns not in the schema (appended after the schema
 #'   columns, type unchanged) instead of removing them?
 #' @noRd
 align_to_schema <- function(df, tbl_props, schema = NULL, add_opt = FALSE,
-                            mute_info = FALSE, ignore_colnames = FALSE,
-                            keep_extra = FALSE
-                            ) {
+                            ignore_colnames = FALSE, keep_extra = FALSE) {
   # get target empty df to align data to
   target_structure <- create_empty_df(tbl_props, nrows = 0)
   target_cols <- names(target_structure)
 
   if (is.null(df)) {
-    cli::cli_warn(c("!" = "{.field {schema}} empty data frame created from schema"))
+    cli::cli_inform(c("i" = "{.field {schema}} empty data frame created from schema"))
     return(target_structure)
   }
 
   # replace empty strings with NA
-  df <- df |> 
+  df <- df |>
     dplyr::mutate(dplyr::across(dplyr::where(is.character), ~ dplyr::na_if(.,"")))
 
   aligned_data <- df
 
   # force target_cols as names for source_data if ignore_colnames is TRUE
-  if (ignore_colnames){
+  if (ignore_colnames) {
     names(aligned_data)[1:min(length(aligned_data),length(target_cols))] <- target_cols
   }
 
@@ -344,53 +347,40 @@ align_to_schema <- function(df, tbl_props, schema = NULL, add_opt = FALSE,
     aligned_data[extra_cols] <- source_data[extra_cols]
   }
 
-  # if not muted, collect messages on changes made
-  if (!mute_info) {
-    msg <- c()
-    
-    # missing required columns are a warning, optional ones added on request
-    # (add_opt) only an information
-    missing_cols <- setdiff(tbl_props$required, source_cols)
-    added_opt_cols <- setdiff(req_cols, c(source_cols, tbl_props$required))
+  # warn on changes to the data, inform on requested changes; missing required
+  # columns are a warning, optional ones added on request (add_opt) only an
+  # information
+  msg <- c()
+  missing_cols <- setdiff(tbl_props$required, source_cols)
+  added_opt_cols <- setdiff(req_cols, c(source_cols, tbl_props$required))
+  if (length(missing_cols) > 0) {
+    msg <- c(msg, "i" = "Missing required columns added:", " " = "{missing_cols}")
+  }
+  if (length(extra_cols) > 0 && !keep_extra) {
+    msg <- c(msg, "i" = "Extra columns ignored:", " " = "{extra_cols}")
+  }
+  # compare NA counts after conversion
+  na_counts_org <- vapply(df[common_cols], \(x) sum(is.na(x)), numeric(1))
+  na_counts_aligned <- vapply(aligned_data[common_cols], \(x) sum(is.na(x)), numeric(1))
+  NA_cols <- names(which(na_counts_aligned > na_counts_org))
+  if (length(NA_cols) > 0) {
+    msg <- c(msg, "i" = "Type converted columns caused new NAs:", " " = "{NA_cols}")
+  }
+  # integer columns with non-whole values stay numeric (as_whole_integer())
+  int_cols <- common_cols[vapply(target_structure[common_cols], is.integer, logical(1))]
+  non_whole_cols <- int_cols[!vapply(aligned_data[int_cols], is.integer, logical(1))]
+  if (length(non_whole_cols) > 0) {
+    msg <- c(msg, "i" = "Integer columns with non-whole values kept as numeric:", " " = "{non_whole_cols}")
+  }
 
-    if (length(missing_cols) > 0) {
-      msg <- c(msg,
-        "i" = "Missing required columns added:",
-        " " = "{missing_cols}"
-      )
-    }
-
-    if (length(extra_cols) > 0 && !keep_extra) {
-      msg <- c(msg,
-        "i" = "Extra columns ignored:", 
-        " " = "{extra_cols}"
-      )
-    }
-
-    if (!is.null(df)) {
-      # compare NA counts after conversion
-      na_counts_org <- vapply(df[common_cols], \(x) sum(is.na(x)), numeric(1))
-      na_counts_aligned <- vapply(aligned_data[common_cols], \(x) sum(is.na(x)), numeric(1))
-      if (any(na_counts_aligned > na_counts_org)){
-        NA_cols <- names(which(na_counts_aligned>na_counts_org))
-        msg <- c(msg,
-          "i" = "Type converted columns caused new NAs:", 
-          " " = "{NA_cols}"
-        )
-      }
-    }
-    
-    if (length(msg)>0) {
-      cli::cli_warn(c("!" = "{.field {schema}} data frame aligned to schema with {length(msg)%/%2} warning{?s}", msg))
-    } else {
-      cli::cli_inform(c("i" = "{.field {schema}} data frame aligned with schema"))
-    }
-    if (length(added_opt_cols) > 0) {
-      cli::cli_inform(c("i" = "{.field {schema}} optional columns added:", " " = "{added_opt_cols}"))
-    }
-    if (length(extra_cols) > 0 && keep_extra) {
-      cli::cli_inform(c("i" = "{.field {schema}} extra columns kept:", " " = "{extra_cols}"))
-    }
+  if (length(msg) > 0) {
+    cli::cli_warn(c("!" = "{.field {schema}} data frame aligned to schema with {length(msg)%/%2} warning{?s}", msg))
+  }
+  if (length(added_opt_cols) > 0) {
+    cli::cli_inform(c("i" = "{.field {schema}} optional columns added:", " " = "{added_opt_cols}"))
+  }
+  if (length(extra_cols) > 0 && keep_extra) {
+    cli::cli_inform(c("i" = "{.field {schema}} extra columns kept:", " " = "{extra_cols}"))
   }
 
   aligned_data
@@ -638,7 +628,7 @@ check_missing_opt <- function(df, tbl_props, schema = NULL, skip = NULL) {
   if (length(missing_opt_cols)>0) {
     cli::cli_inform(c(
       "i" = "{.field {schema}} missing optional columns:",
-      "i" = "{missing_opt_cols}"
+      " " = "{missing_opt_cols}"
     ))
   }
   invisible(TRUE)
@@ -673,52 +663,6 @@ check_unique_cols <- function(df, tbl_props, schema = NULL, strict = FALSE) {
     }
   }
   invisible(ok)
-}
-
-#' Report the optional schema columns with empty values (information only)
-#' @param df Data frame.
-#' @param tbl_props Output of `get_tbl_props()`.
-#' @param schema Schema name, only used for messages.
-#' @param skip Further columns expected to be empty in some rows. Required
-#'   columns and the app columns (`colType` `"meta_input"`, `"qc_input"`) are
-#'   always skipped.
-#' @noRd
-check_empty_cols <- function(df, tbl_props, schema = NULL, skip = NULL) {
-  input_cols <- tbl_props$properties |>
-    purrr::keep(\(x) isTRUE(x$colType %in% c("meta_input", "qc_input"))) |>
-    names()
-  cols <- setdiff(intersect(names(tbl_props$properties), names(df)),
-                  c(tbl_props$required, input_cols, skip))
-  n_empty <- vapply(df[cols], \(x) sum(is.na(x)), integer(1))
-  n_empty <- n_empty[n_empty > 0]
-  if (length(n_empty) > 0) {
-    cli::cli_inform(c(
-      "i" = "{.field {schema}} columns with empty values:",
-      cli_truncated_list(paste0("`", names(n_empty), "` (", n_empty,
-                                ifelse(n_empty == 1, " row)", " rows)")), max_show = Inf)
-    ))
-  }
-  invisible(TRUE)
-}
-
-#' Helper to check `spatial_resolution` is given for all images
-#' @param df Data frame with `image_label` and (optionally) `spatial_resolution`.
-#' @param strict If `TRUE`, abort instead of warning.
-#' @param consequence Optional message on the consequence of missing values.
-#' @return `TRUE` if given for all images, `FALSE` otherwise (invisibly).
-#' @noRd
-check_spatial_resolution <- function(df, strict = FALSE, consequence = NULL) {
-  res <- df[["spatial_resolution"]] %||% rep(NA_real_, nrow(df))
-  no_res <- df$image_label[is.na(res)]
-  if (length(no_res) > 0) {
-    return(report_issue(c(
-      "!" = "{.field spatial_resolution} missing for {length(no_res)} image{?s}:",
-      cli_truncated_list(no_res),
-      "i" = consequence,
-      "i" = "Check the ROXAS (AI) settings files of these images and set {.field spatial_resolution} in the {.cls QWAimages} object."
-    ), strict))
-  }
-  invisible(TRUE)
 }
 
 #' Helper to check that the images of a table are in `meta`

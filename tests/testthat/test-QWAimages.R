@@ -57,3 +57,18 @@ test_that("check_missing_opt reports missing optional columns except qc_input", 
   x$img_comment <- NULL
   expect_message(check_missing_opt(x, tbl_props, "roxas"), "img_comment")
 })
+
+test_that("check_processing_settings warns on missing values, columns and future years", {
+  df <- data.frame(image_label = c("IMG1", "IMG2"), spatial_resolution = c(1.5, NA),
+                   outmost_year = c(2000L, 2001L))
+  expect_true(check_processing_settings(df[1, ]))
+  expect_warning(res <- check_processing_settings(df), "spatial_resolution missing")
+  expect_false(res)
+
+  df$outmost_year[1] <- 3000L
+  w <- capture_warnings(check_processing_settings(df))
+  expect_match(w, "2 images", all = FALSE)
+  expect_match(w, "outmost_year in the future", all = FALSE)
+
+  expect_warning(check_processing_settings(df["image_label"]), "outmost_year missing")
+})

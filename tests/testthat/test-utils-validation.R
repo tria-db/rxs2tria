@@ -38,15 +38,6 @@ test_that("check_structure warns on a label in more than one parent", {
   expect_error(check_structure(multi, strict = TRUE), "S1_T1_WP1_SL1")
 })
 
-test_that("check_spatial_resolution warns on missing values and columns", {
-  df <- data.frame(image_label = c("IMG1", "IMG2"), spatial_resolution = c(1.5, NA))
-  expect_warning(res <- check_spatial_resolution(df, consequence = "Some consequence."),
-                 "Some consequence")
-  expect_false(res)
-  expect_true(check_spatial_resolution(df[1, ]))
-  expect_warning(check_spatial_resolution(df["image_label"]), "2 images")
-})
-
 test_that("align_to_schema drops extra columns unless keep_extra", {
   tbl_props <- schema_tbl_props("rings")
   rings <- data.frame(
@@ -57,10 +48,10 @@ test_that("align_to_schema drops extra columns unless keep_extra", {
   expect_warning(res <- align_to_schema(rings, tbl_props, "rings"), "my_eww")
   expect_false("my_eww" %in% names(res))
 
-  suppressMessages(expect_message( # suppress the "aligned with schema" info
+  expect_message(
     res <- align_to_schema(rings, tbl_props, "rings", keep_extra = TRUE),
     "extra columns kept"
-  ))
+  )
   expect_equal(names(res), c("woodpiece_label", "slide_label", "image_label", "year", "my_eww"))
   expect_identical(res$my_eww, c(1L, 2L))
   expect_identical(res$year, c(2000L, 2001L))
@@ -75,6 +66,21 @@ test_that("align_to_schema warns on NAs from type conversion", {
 
   expect_warning(res <- align_to_schema(rings, tbl_props, "rings"), "new NAs")
   expect_identical(res$year, c(2000L, NA))
+})
+
+test_that("align_to_schema is silent on lossless conversions, warns on non-whole integers", {
+  tbl_props <- schema_tbl_props("rings")
+  rings <- data.frame(
+    woodpiece_label = "WP1", slide_label = c("WP1_SL1", ""), image_label = "WP1_SL1_IMG1",
+    year = c(2000, 2001)
+  )
+  expect_no_condition(res <- align_to_schema(rings, tbl_props, "rings"))
+  expect_identical(res$year, c(2000L, 2001L))
+  expect_identical(res$slide_label, c("WP1_SL1", NA))
+
+  rings$year <- c(2000.5, 2001)
+  expect_warning(res <- align_to_schema(rings, tbl_props, "rings"), "non-whole")
+  expect_identical(res$year, c(2000.5, 2001))
 })
 
 test_that("integer columns are converted only if all values are whole numbers", {

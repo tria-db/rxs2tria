@@ -25,10 +25,8 @@ read_output_file <- function(filename, selcols, colname_variants, delim) {
       return(df_raw)
     },
     error = function(e) {
-      cli::cli_inform(c(
-        "x" = "Could not read file {.file {filename}}:",
-        " " = e$message
-      ))
+      cli::cli_warn(c("!" = "Could not read file {.file {filename}}:",
+                      " " = "{conditionMessage(e)}")) # interpolated, as it may contain braces
       return(data.frame(year = integer(0)))
     }
   )
@@ -40,6 +38,9 @@ read_output_file <- function(filename, selcols, colname_variants, delim) {
 #' Read and combine data from multiple cells/rings data files (i.e. the
 #' ROXAS output .txt or ROXAS AI table .csv files with the raw measurements).
 #' Used by [collect_raw_data()] to read each `QWAdata` component.
+#'
+#' Missing (`NA`) or empty files contribute no rows, unreadable files no rows
+#' with a warning. Images without data are reported by [collect_raw_data()].
 #'
 #' @param df_structure Data frame of image identifiers (`$image_label`; for
 #'   rings also `$woodpiece_label` and `$slide_label`) and corresponding data
@@ -78,9 +79,11 @@ collect_raw_outputs <- function(df_structure, roxas_version, ftype) {
       TB2 = 'CRI',
       LA = 'CA'
     )
-    checkmate::assert_subset(c('fname_cells', 'image_label'), names(df_structure))
+
     fname_col <- "fname_cells"
     structure_cols <- c("image_label")
+    checkmate::assert_names(names(df_structure),
+      must.include = c(fname_col, structure_cols))
   } else {
     # specify the columns we expect and require in a ROXAS rings output file
     # NOTE: it looks like we should have these columns for ROXAS versions
@@ -114,9 +117,10 @@ collect_raw_outputs <- function(df_structure, roxas_version, ftype) {
       DHM = 'DH2' # while DH2 is mean hydraulic diameter (Tyree & Zimmermann, 2002)
     )
 
-    checkmate::assert_subset(c('fname_rings', 'image_label'), names(df_structure))
     fname_col <- "fname_rings"
     structure_cols <- c("woodpiece_label", "slide_label", "image_label")
+    checkmate::assert_names(names(df_structure),
+      must.include = c(fname_col, structure_cols))    
   }
 
   # ROXAS AI files vary in delimiter (tab, semicolon, or comma); auto-detect
@@ -126,7 +130,9 @@ collect_raw_outputs <- function(df_structure, roxas_version, ftype) {
     dplyr::select(dplyr::all_of(c(structure_cols,fname_col))) |> 
     dplyr::mutate(raw_data = purrr::map(
       .data[[fname_col]],
-      \(x) read_output_file(x, selcols, colname_variants, delim),
+      # missing files contribute no rows
+      \(x) if (is.na(x)) data.frame(year = integer(0)) else
+        read_output_file(x, selcols, colname_variants, delim),
       .progress = list(name = glue::glue("Reading {ftype} data files..."), clear = TRUE)
     )) |> 
     tidyr::unnest("raw_data") |> 
@@ -137,17 +143,6 @@ collect_raw_outputs <- function(df_structure, roxas_version, ftype) {
     dplyr::bind_rows(
       vroom::vroom(I("\n"), col_names = selcols, col_types = c(.default = "d"), 
                    .name_repair = janitor::make_clean_names))
-
-  # check for any files that could not be read (contributed zero rows after unnest)
-  failed_labels <- setdiff(df_structure$image_label, df_raw_all$image_label)
-  if (length(failed_labels) > 0) {
-    cli::cli_warn(c(
-      "!" = "No {ftype} data for the following {length(failed_labels)} image_label{?s}:",
-      cli_truncated_list(failed_labels)
-    ))
-  } else {
-    cli::cli_alert_success("{nrow(df_structure)} {ftype} data files read successfully")
-  }
 
   df_raw_all |>
     dplyr::select(!{{fname_col}})
@@ -190,27 +185,28 @@ remove_outliers <- function(QWA_data, mute_info = FALSE) {
 
   info_msg <- c()
   warn_msg <- c()
+  # one line per table: "cells: col (n), col (n)", NULL if no counts
+  fmt_counts <- function(counts, what) {
+    if (nrow(counts) == 0) return(NULL)
+    c(" " = paste0(what, ": ", toString(glue::glue_data(counts, "{name} ({value})"))))
+  }
 
   if (!is.null(QWA_data$cells)) {
-    cell_outliers <- QWA_data$cells |> 
+    cell_outliers <- QWA_data$cells |>
       dplyr::select(dplyr::where(is.numeric), -"year") |>
       dplyr::summarise(dplyr::across(dplyr::everything(),
                                       ~sum(.x < 0, na.rm = TRUE))) |>
       tidyr::pivot_longer(dplyr::everything()) |>
-      dplyr::filter(value > 0) 
+      dplyr::filter(value > 0)
     if (!mute_info) {
-      info_msg <- c(info_msg, "Cell values replaced ---",
-        cell_outliers |> 
-          dplyr::filter(.data$name %in% outl_cols_cells) |>
-          glue::glue_data("{name}: {value}"))
+      info_msg <- c(info_msg, fmt_counts(
+        dplyr::filter(cell_outliers, .data$name %in% outl_cols_cells), "cells"))
     }
     cells_rm <- QWA_data$cells |>
       dplyr::mutate(dplyr::across(dplyr::all_of(outl_cols_cells),
                                   ~ dplyr::if_else(.x < 0, NA_real_, .x)))
-    warn_msg <- c(warn_msg, "Cells unexpected negatives ---",
-      cell_outliers |> 
-        dplyr::filter(! .data$name %in% outl_cols_cells) |>
-        glue::glue_data("{name}: {value}"))
+    warn_msg <- c(warn_msg, fmt_counts(
+      dplyr::filter(cell_outliers, !.data$name %in% outl_cols_cells), "cells"))
   } else {
     cells_rm <- NULL
   }
@@ -223,30 +219,26 @@ remove_outliers <- function(QWA_data, mute_info = FALSE) {
       tidyr::pivot_longer(dplyr::everything()) |>
       dplyr::filter(value > 0) 
     if (!mute_info) {
-      info_msg <- c(info_msg, "Ring values replaced ---",
-        rings_outliers |> 
-          dplyr::filter(.data$name %in% outl_cols_rings) |>
-          glue::glue_data("{name}: {value}"))
+      info_msg <- c(info_msg, fmt_counts(
+        dplyr::filter(rings_outliers, .data$name %in% outl_cols_rings), "rings"))
     }
     rings_rm <- QWA_data$rings |>
       dplyr::mutate(dplyr::across(dplyr::all_of(outl_cols_rings),
                                   ~ dplyr::if_else(.x < 0, NA_real_, .x)))
-    warn_msg <- c(warn_msg, "Rings unexpected negatives ---",
-      rings_outliers |> 
-        dplyr::filter(! .data$name %in% outl_cols_rings) |>
-        glue::glue_data("{name}: {value}"))
+    warn_msg <- c(warn_msg, fmt_counts(
+      dplyr::filter(rings_outliers, !.data$name %in% outl_cols_rings), "rings"))
   } else {
     rings_rm <- NULL
   }
 
-  if (length(info_msg)>2){ # only if we found anything to replace
+  if (length(info_msg) > 0) {
     cli::cli_inform(c(
-      "v" = "Outliers and error codes (negative values) replaced with {.code NA}",
+      "v" = "Outliers and error codes (negative values) replaced with {.code NA}:",
       info_msg
     ))
   }
 
-  if (length(warn_msg)>2) {
+  if (length(warn_msg) > 0) {
     cli::cli_warn(c(
       "!" = "Negative values found in unexpected columns:",
       warn_msg
@@ -285,17 +277,34 @@ collect_raw_data <- function(df_meta, roxas_version = NULL) {
 
   df_cells_all <- collect_raw_outputs(df_meta, roxas_version, "cells")
   df_rings_all <- collect_raw_outputs(df_meta, roxas_version, "rings")
-  # these dfs have correct required columns and types per definition
-  # except if there was an issue with one or more files -> warning message
+  # these dfs have all expected measurement columns, read as doubles; the
+  # types are aligned to the schemas at the end
+
+  # images with missing cells and/or rings data, reported together; images
+  # without any measurements drop out of QWAdata
+  no_cells <- !df_meta$image_label %in% df_cells_all$image_label
+  no_rings <- !df_meta$image_label %in% df_rings_all$image_label
+  issue <- dplyr::case_when(
+    no_cells & no_rings ~ "no cells or rings data (image **NOT** included in `QWAdata`)",
+    no_cells            ~ "no cells data",
+    no_rings            ~ "no rings data (ring rows generated from cells)")
+  has_issue <- !is.na(issue)
+  if (any(has_issue)) {
+    cli::cli_warn(c(
+      "!" = "{sum(has_issue)} image{?s} with missing data:",
+      cli_truncated_groups(split(df_meta$image_label[has_issue], issue[has_issue]),
+                           max_show_out = 3, quote = FALSE)
+    ))
+  }
 
   # abort on missing or duplicate key values, then forcibly remove any error
   # codes and "negative" values that are actually outliers
   QWA_data <- new_QWAdata(cells = df_cells_all, rings = df_rings_all) |>
-    validate_QWAdata(hint = "Check the ROXAS output files ({.field fname_cells}, {.field fname_rings}) of the affected images, or remove the images from {.arg df_meta}.") |>
+    validate_QWAdata(hint = "Check the ROXAS output files ({.field fname_cells}, {.field fname_rings}) of the affected images.") |>
     remove_outliers(mute_info = FALSE)
 
   # ensure we have full sequence of years in rings df (including missing)
-  df_rings_complete <- complete_rings(QWA_data, df_meta)
+  df_rings_complete <- complete_rings(QWA_data, df_meta, quiet = TRUE)
 
   # check for cwt estimates (expected/required for conifer data)
   # TODO: could already check in df_meta for info wrt angiosperm/conifer?
@@ -306,8 +315,11 @@ collect_raw_data <- function(df_meta, roxas_version = NULL) {
   check_ring_years(df_rings_complete)
   check_outmost_year(df_rings_complete, df_meta)
 
+  # align the types to the schemas (raw files are read as doubles)
+  x <- new_QWAdata(cells = align_data(QWA_data$cells, "cells"),
+                   rings = align_data(df_rings_complete, "rings"))
+
   cli::cli_alert_success("Extracted cells and rings data to {.var QWAdata} object")
-  
-  new_QWAdata(cells = QWA_data$cells, rings = df_rings_complete)
+  x
 }
 

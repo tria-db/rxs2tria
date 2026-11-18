@@ -80,13 +80,19 @@ test_that("check_QWAimages returns the pass state and aborts with strict", {
   expect_false(res)
 })
 
-test_that("check_QWAimages informs on empty values, except fname_* and EXIF columns", {
+test_that("check_QWAimages warns on images without settings or image file data", {
   imgs <- read_quiet(tria_file)$images
-  imgs$sw_version[1] <- NA
-  imgs$img_software <- NA_character_
-  msgs <- capture_messages(check_QWAimages(imgs, submission = FALSE))
-  expect_match(msgs, "sw_version` \\(1 row\\)", all = FALSE)
-  expect_no_match(paste(msgs, collapse = ""), "img_software|fname_")
+  rv <- attr(imgs, "roxas_version")
+  imgs[1, intersect(names(imgs), schema_cols(rv, "settings"))] <- NA
+  w <- capture_warnings(res <- suppressMessages(check_QWAimages(imgs, submission = FALSE)))
+  expect_match(w, "no settings file data", all = FALSE)
+  expect_false(res)
+
+  imgs[1, intersect(names(imgs), schema_cols(rv, "image_meta"))] <- NA
+  w <- capture_warnings(suppressMessages(check_QWAimages(imgs, submission = FALSE)))
+  expect_match(w, "no settings and image file data", all = FALSE)
+  expect_error(suppressMessages(check_QWAimages(imgs, submission = FALSE, strict = TRUE)),
+               "settings and/or image file data")
 })
 
 test_that("check_QWAmetadata warns on absent required components", {

@@ -94,7 +94,7 @@ sampling design and link images to the metadata tables in `QWAmetadata`:
 | `woodpiece_label` | Woodpiece identifier (includes tree) |
 | `slide_label` | Slide identifier (includes woodpiece) |
 | `image_label` | Image identifier (includes slide); used as the join key in `QWAdata` |
-| `species_code` | Species code |
+| `species_code` | Species code (if available) |
 
 **File paths** — used by `collect_raw_data()` and `update_QWAdata()` to
 locate the ROXAS output files:
@@ -106,34 +106,28 @@ locate the ROXAS output files:
 | `fname_rings` | Path to the rings output file |
 | `fname_settings` | Path to the settings / metadata file |
 
-File paths are part of submission files only; the `$images` of TRIA
-dataset files have no `fname_*` columns.
+File paths are only useful for you during the preparation of the submission;
+if still included in the QWAmetadata.json file we receive, they are automatcially
+dropped before a dataset is added to TRIA. `$images` of TRIA datasset files 
+thus have no `fname_*` columns.
 
 **Image metadata** — properties extracted from the image EXIF data or
-the ROXAS AI metadata file:
-
-| Column | Description |
-|---|---|
-| `img_created_at` | Image capture timestamp |
-| `img_width`, `img_height` | Image dimensions in pixels |
-| `spatial_resolution` | Pixels per µm; required for the incomplete-innermost-ring check in `complete_QWAdata()` |
-| `software` | Software that produced the data (`"roxas"` or `"roxas_ai"`); must match the `roxas_version` attribute |
+the ROXAS AI metadata file, e.g. `img_created_at`, `img_width`, `img_height`.
 
 **ROXAS settings** — parameters from the ROXAS settings or ROXAS AI
-metadata file (e.g. magnification, threshold values). The exact columns
-differ between `roxas_version` values.
+metadata file (e.g. when the analysis was run, filtering threshold values). 
+The exact columns differ between `roxas_version` values. 
+Two important values are the `spatial_resolution` (used to identify innermost
+incomplete rings by the arrangement of the cell positions), and `outmost_year`, 
+whih is the calendar year of the outermost complete ring in the image and used
+to validate the ring dating.
 
-**Dating** — `outmost_year` is the calendar year of the outermost
-complete ring in the image, used to validate that ring years do not
-exceed it.
-
-**App inputs** — `only_ew` and `img_comment` (`colType` `meta_input`,
-filled in the metadata app) and `comment_handled` (`colType` `qc_input`,
-set in the flags app).
+**App inputs** — `only_ew` and `img_comment` (filled in the metadata app) and 
+`comment_handled` (added in the flags app if working with image comments).
 
 Optional columns (those not always present in ROXAS output) are `NA`
 until populated. `complete_QWAimages()` adds all missing optional columns
-except `qc_input` columns (`comment_handled`), initialised to `NA`.
+(except `comment_handled`), initialised to `NA`.
 
 ---
 

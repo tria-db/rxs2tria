@@ -26,25 +26,27 @@ test_that("deprecated exclude_mode warns and still applies", {
     expect_warning(check_QWAdata(x, exclude_mode = "either"), "deprecated"))
 })
 
-test_that("complete_flags warns on missing spatial_resolution", {
+test_that("complete_flags informs on missing spatial_resolution", {
   rings <- dplyr::select(rings_flags, "woodpiece_label":"mrw")
   cells <- data.frame(image_label = "WP1_SL1_IMG1", year = 2001L,
                       xpix = 1:3, ypix = 1:3, raddistr = 1:3)
   meta <- data.frame(image_label = c("WP1_SL1_IMG1", "OTHER_IMG"), spatial_resolution = NA_real_)
   x <- new_QWAdata(cells = cells, rings = rings)
 
-  expect_warning(x <- suppressMessages(complete_flags(x, meta)), "innermost rings")
+  expect_no_warning(msgs <- capture_messages(x <- complete_flags(x, meta)))
+  expect_match(msgs, "spatial_resolution.*missing for 1 image", all = FALSE)
   expect_true(x$rings$incomplete_ring[1])
 })
 
-test_that("complete_flags warns on images not in meta", {
+test_that("complete_flags informs on images not in meta", {
   rings <- dplyr::select(rings_flags, "woodpiece_label":"mrw")
   cells <- data.frame(image_label = "WP1_SL1_IMG1", year = 2001L,
                       xpix = 1:3, ypix = 1:3, raddistr = 1:3)
   meta <- data.frame(image_label = "OTHER_IMG", spatial_resolution = 1)
   x <- new_QWAdata(cells = cells, rings = rings)
 
-  expect_warning(x <- suppressMessages(complete_flags(x, meta)), "not in .meta")
+  expect_no_warning(msgs <- capture_messages(x <- complete_flags(x, meta)))
+  expect_match(msgs, "1 image not found in .meta", all = FALSE)
   expect_true(x$rings$incomplete_ring[1])
 })
 
@@ -134,6 +136,25 @@ test_that("complete_rings labels images without rings rows from meta, check_QWAd
   x <- new_QWAdata(cells, r)
   expect_match(capture_warnings(suppressMessages(check_QWAdata(x))),
                "1 image without ring measurements", all = FALSE)
+})
+
+test_that("images without cells get cno NA in complete_rings, but no NA flags", {
+  cells <- data.frame(image_label = "WP1_SL1_IMG1", year = 2001L,
+                      xpix = 1:10, ypix = 1:10, raddistr = 1:10)
+  rings <- data.frame(woodpiece_label = "WP1", slide_label = "WP1_SL1",
+                      image_label = rep(c("WP1_SL1_IMG1", "WP1_SL1_IMG2"), each = 2),
+                      year = c(2001L, 2002L), mrw = c(500, NA))
+  meta <- data.frame(image_label = c("WP1_SL1_IMG1", "WP1_SL1_IMG2"), woodpiece_label = "WP1",
+                     slide_label = "WP1_SL1", spatial_resolution = 1)
+  r <- suppressMessages(complete_rings(new_QWAdata(cells, rings), meta))
+  expect_equal(r$cno, c(10L, 0L, NA, NA))
+
+  r <- suppressMessages(complete_flags(new_QWAdata(cells, r), meta))$rings
+  flag_cols <- c("incomplete_ring", "missing_ring", "duplicate_ring", "exclude_dupl", "exclude_issues")
+  expect_false(anyNA(r[flag_cols]))
+  expect_equal(r$missing_ring, c(FALSE, TRUE, FALSE, FALSE))
+  # duplicate 2001: the image with cells is selected
+  expect_equal(r$exclude_dupl[r$year == 2001], c(FALSE, TRUE))
 })
 
 test_that("check_QWAdata returns TRUE without issues", {

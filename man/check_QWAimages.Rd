@@ -27,14 +27,14 @@ not matching the \code{roxas_version} attribute). Warns (or, with
 \item values violating the JSON schema of the given stage;
 \item an unsound data structure: labels not starting with their parent label,
 or a label in more than one parent;
-\item \code{outmost_year} in the future;
-\item missing \code{spatial_resolution}.
+\item images without any settings or image file data (e.g. missing source
+files);
+\item missing \code{spatial_resolution} or \code{outmost_year}, or \code{outmost_year} in the
+future (the settings used in the data processing).
 }
 }
 \details{
-Also informs about missing optional columns and empty values, except for
-the source file names (\verb{fname_*}, only needed during processing) and the
-often incomplete EXIF data (\code{img_created_at}, \code{img_software}).
+Also informs about missing optional columns.
 }
 \seealso{
 \code{\link[=QWAimages]{QWAimages()}}, \code{\link[=check_QWAmetadata]{check_QWAmetadata()}}, \code{\link[=check_consistency]{check_consistency()}}

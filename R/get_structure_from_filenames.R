@@ -8,6 +8,8 @@
 #' joined by underscores to derive unique codes for each level of the data
 #' structure for the subsequent calculations
 #' (e.g. `tree_label = {site}_{species}_{tree}`).
+#' Underscores within the extracted identifiers are removed, as underscores
+#' separate the hierarchical levels in the derived labels.
 #'
 #' Any custom labeling pattern may be used, provided that it allows to
 #' uniquely identify each image and is consistently applied across all files.
@@ -61,7 +63,7 @@
 #'  "tree2-sl1_img1",
 #'  "tree2-sl1_img2"
 #'  )
-#'  pattern <- "(?<tree>[[:alnum:]].+)-(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)"
+#'  pattern <- "(?<tree>[[:alnum:]]+)-(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)"
 #'  get_structure_from_filenames(
 #'    filenames, pattern,
 #'    site_label = "SITEA", species_code = "LASI")
@@ -70,7 +72,8 @@ get_structure_from_filenames <- function(
     filenames,
     pattern,
     site_label = NULL, species_code = NULL) {
-  checkmate::assert_character(filenames, any.missing = FALSE, min.len = 1)
+  checkmate::assert_character(filenames, any.missing = FALSE, min.len = 1,
+    unique = TRUE)
   checkmate::assert_string(pattern)
   checkmate::assert_string(site_label, min.chars = 1, null.ok = TRUE)
   checkmate::assert_string(species_code, min.chars = 1, null.ok = TRUE)
@@ -105,25 +108,8 @@ get_structure_from_filenames <- function(
     ))
   }
 
-  duplicates <- fnames[duplicated(fnames)]
-  if (length(duplicates) > 0) {
-    dup_groups <- split(filenames[fnames %in% duplicates], fnames[fnames %in% duplicates])
-    cli::cli_abort(c(
-      "Extracted column {.var image_label} must have unique values.",
-      "x" = "The following files lead to duplicate image identifiers based on",
-      " " = "the structure {.code {lbl_structure}}:",
-      cli_truncated_groups(dup_groups)
-    ))
-  }
-
   # extract the matched pattern groups and collect info into df
   # add org_img_name as the base filename (no path, no extension)
-  # TODO: what if org_img_name needs part of path to be identifiable?
-  # potential fix: count nr of dir levels included in pattern, 
-  # but not robust to cross platform specifications?
-  # incl_supdirs <- stringr::str_count(pattern, "/") 
-  # org_img_names <- fs::path_ext_remove(
-  #   fs::path_select_components(filenames,1+incl_supdirs, "end"))
   df_structure <- stringr::str_match(fnames, pattern) |>
     as.data.frame() |> 
     dplyr::select(!"V1") |>
@@ -149,7 +135,15 @@ get_structure_from_filenames <- function(
     df_structure$species <- species_code
   }
 
-  # TODO: do not allow underscores as part of the individual identifiers
+  # underscores separate the levels in the derived labels, drop them within identifiers
+  id_cols <- c("site", "species", "tree", "woodpiece", "slide", "image")
+  if (any(stringr::str_detect(unlist(df_structure[id_cols]), "_"), na.rm = TRUE)) {
+    cli::cli_inform(c(
+      "!" = "Underscores within the extracted identifiers are removed."
+    ))
+    df_structure <- df_structure |>
+      dplyr::mutate(dplyr::across(dplyr::all_of(id_cols), \(x) stringr::str_remove_all(x, "_")))
+  }
 
   df_structure <- df_structure |>
     tidyr::unite('tree_label', "site":"tree",
@@ -163,6 +157,18 @@ get_structure_from_filenames <- function(
     dplyr::select("image_label", "slide_label", "woodpiece_label",
                   "tree_label", "species", "site", "org_img_name") |> # reorder columns
     dplyr::rename("species_code" = "species", "site_label" = "site")
+
+  img_lbls <- df_structure$image_label
+  duplicates <- img_lbls[duplicated(img_lbls)]
+  if (length(duplicates) > 0) {
+    dup_groups <- split(filenames[img_lbls %in% duplicates], img_lbls[img_lbls %in% duplicates])
+    cli::cli_abort(c(
+      "Extracted column {.var image_label} must have unique values.",
+      "x" = "The following files lead to duplicate image identifiers based on",
+      " " = "the structure {.code {lbl_structure}}:",
+      cli_truncated_groups(dup_groups)
+    ))
+  }
 
   uc <- df_structure |> dplyr::summarise(
     n_imgs = dplyr::n_distinct(.data$image_label),
@@ -193,9 +199,9 @@ extract_data_structure <- function(
     site_label = NULL, species_code = NULL) {
   checkmate::assert_data_frame(
     files, types = 'character')
-  checkmate::assert_subset(
-    c('prefix', 'fname_image','fname_settings','fname_cells','fname_rings'),
-    names(files))
+  checkmate::assert_names(names(files),
+    must.include = c('prefix', 'fname_image','fname_settings','fname_cells',
+      'fname_rings'))
 
   # we use only the prefix to extract the data structure (all files
   # should match, as checked in get_roxas_files)

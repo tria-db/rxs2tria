@@ -11,7 +11,8 @@ complete_flags(x, meta, exclude_mode = NULL)
 
 \item{meta}{a \link{QWAimages} object or data.frame providing image-level
 information on \code{spatial_resolution} (required for the incomplete
-innermost ring check) and \code{outmost_year}.}
+innermost ring check). Only used if \code{incomplete_ring} is not yet in
+\code{x$rings}, may be \code{NULL} otherwise.}
 
 \item{exclude_mode}{Deprecated. \code{"either"} initialises \code{exclude_issues}
 from incomplete or missing rings, \code{"incomplete_only"} from incomplete

@@ -5,21 +5,24 @@
 #' This function takes the raw QWA data (cells and rings dataframes) and returns an
 #' extended version of the rings data frame, with additional rows for years that
 #' were only present in the cells data / missing altogether, and an additional 
-#' column for the number of cells per ring (cno, derived from cells data).
+#' column for the number of cells per ring (cno, derived from cells data; `NA`
+#' for images without cells data).
 #'
 #' @param QWA_data a list containing the cells and rings dataframes
 #' @param meta a [QWAimages] object or data frame with `image_label`,
 #'   `woodpiece_label` and `slide_label`, labelling images without rings rows
+#' @param quiet If `TRUE`, images without rings rows are not reported
+#'   ([collect_raw_data()] reports them with the other missing data).
 #' @return an extended data frame of rings data
 #' @noRd
-complete_rings <- function(QWA_data, meta) {
+complete_rings <- function(QWA_data, meta, quiet = FALSE) {
   df_rings <- QWA_data$rings
   logical_cols <- names(df_rings)[sapply(df_rings, is.logical)]
   fill_logical <- setNames(rep(list(FALSE), length(logical_cols)), logical_cols)
 
   if (!is.null(QWA_data$cells)) {
     imgs_no_rings <- setdiff(QWA_data$cells$image_label, df_rings$image_label)
-    if (length(imgs_no_rings) > 0) {
+    if (!quiet && length(imgs_no_rings) > 0) {
       cli::cli_inform(c(
         "i" = "{length(imgs_no_rings)} image{?s} with cells but without rings rows, rings built from the cells (without ring measurements):",
         cli_truncated_list(imgs_no_rings)))
@@ -34,7 +37,7 @@ complete_rings <- function(QWA_data, meta) {
       dplyr::full_join(df_rings, by = c('image_label', 'year')) |>
       dplyr::arrange(.data$image_label, .data$year) |>
       dplyr::group_by(.data$image_label) |>
-      tidyr::complete(year = tidyr::full_seq(.data$year, 1),
+      tidyr::complete(year = tidyr::full_seq(.data$year, 1L),
                       fill = c(list(cno = 0), fill_logical)) |>
       tidyr::fill("woodpiece_label", "slide_label", .direction = 'downup') |>
       dplyr::ungroup() |>
@@ -43,7 +46,10 @@ complete_rings <- function(QWA_data, meta) {
       dplyr::mutate(woodpiece_label = dplyr::coalesce(.data$woodpiece_label, .data$woodpiece_label.meta),
                     slide_label = dplyr::coalesce(.data$slide_label, .data$slide_label.meta)) |>
       dplyr::select("woodpiece_label", "slide_label", "image_label", "year", "cno",
-                    dplyr::everything(), -dplyr::ends_with(".meta"))
+                    dplyr::everything(), -dplyr::ends_with(".meta")) |>
+      # images without cells data: cell count unknown
+      dplyr::mutate(cno = dplyr::if_else(
+        .data$image_label %in% QWA_data$cells$image_label, .data$cno, NA))
   } else {
     if ("cno" %in% names(df_rings)) {
       fill_logical <- c(list(cno = 0), fill_logical)
@@ -51,7 +57,7 @@ complete_rings <- function(QWA_data, meta) {
     df_rings |>
       dplyr::arrange(.data$image_label, .data$year) |>
       dplyr::group_by(.data$image_label) |>
-      tidyr::complete(year = tidyr::full_seq(.data$year, 1),
+      tidyr::complete(year = tidyr::full_seq(.data$year, 1L),
                       fill = fill_logical) |>
       tidyr::fill("woodpiece_label", "slide_label", .direction = 'downup') |>
       dplyr::ungroup() |>
@@ -151,15 +157,14 @@ check_outmost_year <- function(df_rings, df_meta, strict = FALSE) {
   unchecked <- unique(df$image_label[is.na(df$outmost_year)])
   if (length(unchecked) > 0) {
     cli::cli_inform(c(
-      "i" = "{.field outmost_year} missing for {length(unchecked)} image{?s}, ring years not checked against it:",
-      cli_truncated_list(unchecked)
+      "i" = "{.field outmost_year} missing for {length(unchecked)} image{?s}, their ring years are not checked against it."
     ))
   }
 
   after <- unique(df$image_label[which(df$last_year > df$outmost_year + 1)])
   if (length(after) > 0) {
     return(report_issue(c(
-      "!" = "Ring years after {.field outmost_year} (+ 1 for an incomplete ring) in {length(after)} image{?s}:",
+      "!" = "Ring years after {.field outmost_year}+1 in {length(after)} image{?s}:",
       cli_truncated_list(after),
       "i" = "Check the dating of these images or {.field outmost_year} in the {.cls QWAimages} object."
     ), strict))
@@ -205,7 +210,7 @@ check_cells_key <- function(df_cells, strict = FALSE) {
   if (any(dupl)) {
     imgs <- unique(df_cells$image_label[dupl])
     return(report_issue(c(
-      "!" = "{.field cells}: {sum(dupl)} row{?s} with duplicate {.field {key}} (the cells key in TRIA) in {length(imgs)} image{?s}:",
+      "!" = "{.field cells}: duplicate cells - {sum(dupl)} row{?s} with duplicate {.field {key}} in {length(imgs)} image{?s}:",
       cli_truncated_list(imgs)
     ), strict))
   }
@@ -245,21 +250,18 @@ check_cells_rings <- function(x, strict = FALSE) {
   }
 
   ok <- TRUE
-  hint_reread <- "Check their {.field {c('fname_cells', 'fname_rings')}} output files and re-read them with {.fn update_QWAdata}."
   only_cells <- setdiff(imgs_cells, imgs_rings)
   if (length(only_cells) > 0) {
     ok <- report_issue(c(
       "!" = "{length(only_cells)} image{?s} in {.field cells} but not in {.field rings}:",
-      cli_truncated_list(only_cells),
-      "i" = hint_reread
+      cli_truncated_list(only_cells)
     ), strict)
   }
   only_rings <- setdiff(imgs_rings, imgs_cells)
   if (length(only_rings) > 0) {
     ok <- report_issue(c(
       "!" = "{length(only_rings)} image{?s} in {.field rings} but not in {.field cells}:",
-      cli_truncated_list(only_rings),
-      "i" = hint_reread
+      cli_truncated_list(only_rings)
     ), strict)
   }
 
@@ -292,9 +294,8 @@ check_cells_rings <- function(x, strict = FALSE) {
       dplyr::filter(!.data$has_mrw)
     if (nrow(no_mrw) > 0) {
       ok <- report_issue(c(
-        "!" = "{.field rings}: {nrow(no_mrw)} image{?s} without ring measurements ({.field mrw}):",
-        cli_truncated_list(no_mrw$image_label),
-        "i" = hint_reread
+        "!" = "{.field rings}: {nrow(no_mrw)} image{?s} without ring measurements:",
+        cli_truncated_list(no_mrw$image_label)
       ), strict)
     }
   }
@@ -409,8 +410,9 @@ complete_measures <- function(QWA_data) {
     if (eww_needed) {
       df_rings <- df_rings |> 
         dplyr::left_join(df_ewlw, by = c("image_label", "year")) |> 
-        dplyr::mutate(eww = dplyr::if_else(.data$max_EW_sector >= 0,
-          .data$max_EW_sector*.data$mrw/100, 0)) |> 
+        dplyr::mutate(eww = dplyr::if_else(
+          dplyr::coalesce(.data$mrw == 0, FALSE), 0, # also for rings without cells
+          dplyr::if_else(.data$max_EW_sector >= 0, .data$max_EW_sector*.data$mrw/100, 0))) |>
         dplyr::select(!"max_EW_sector")
     }
   }
@@ -428,20 +430,14 @@ complete_measures <- function(QWA_data) {
     dplyr::select(-dplyr::any_of(ring_meas_all),
                   dplyr::any_of(ring_meas_all))
 
-  cell_meas_existing <- setdiff(cell_meas_all, cell_meas_missing)
-  ring_meas_existing <- setdiff(ring_meas_all, ring_meas_missing)
-
-  cli::cli_inform(c(
-    "v" = "Cell and ring measures completed",
-    "i" = if (length(cell_meas_missing) > 0) 
-            "Derived cell measures: {.field {cell_meas_missing}}", 
-    # "i" = if (length(cell_meas_existing) > 0)
-    #         "derived cell measures already present: {.field {cell_meas_existing}}",
-    "i" = if (length(ring_meas_missing) > 0) 
-            "Derived ring measures: {.field {ring_meas_missing}}"
-    # "i" = if (length(ring_meas_existing) > 0)
-    #         "derived ring measures already present: {.field {ring_meas_existing}}"
-  ))
+  if (length(cell_meas_missing)+length(ring_meas_missing) > 0) {
+    cli::cli_inform(c(
+      "i" = if (length(cell_meas_missing) > 0) 
+              "Derived cell measures: {.field {cell_meas_missing}}", 
+      "i" = if (length(ring_meas_missing) > 0) 
+              "Derived ring measures: {.field {ring_meas_missing}}"
+    ))
+  }
 
   new_QWAdata(cells = df_cells, rings = df_rings)
 }
@@ -490,16 +486,17 @@ complete_measures <- function(QWA_data) {
 #' @param x a `QWAdata` object containing the cells and rings dataframes
 #' @param meta a [QWAimages] object or data.frame providing image-level
 #'   information on `spatial_resolution` (required for the incomplete
-#'   innermost ring check) and `outmost_year`.
+#'   innermost ring check). Only used if `incomplete_ring` is not yet in
+#'   `x$rings`, may be `NULL` otherwise.
 #' @param exclude_mode Deprecated. `"either"` initialises `exclude_issues`
 #'   from incomplete or missing rings, `"incomplete_only"` from incomplete
 #'   rings only (now the default behaviour).
 #' @returns A `QWAdata` object with the validated data: cells unchanged, rings
 #'   with added flag columns.
 #' @export
-#'
 complete_flags <- function(x, meta, exclude_mode = NULL) {
   validate_QWAdata(x)
+  
   all_flag_cols <- c("incomplete_ring", "missing_ring", "duplicate_ring", "exclude_dupl", "exclude_issues")
   flag_cols_missing <- setdiff(all_flag_cols, names(x$rings))
   flag_cols_existing <- intersect(all_flag_cols, names(x$rings))
@@ -507,16 +504,21 @@ complete_flags <- function(x, meta, exclude_mode = NULL) {
   df_rings_log <- x$rings
 
   if ("incomplete_ring" %in% flag_cols_missing) {
-    consequence <- "Their innermost rings are flagged as incomplete."
-    check_images_in_meta(
-      unique(df_rings_log$image_label), meta, "rings",
-      consequence = consequence,
-      hint = "Pass the {.cls QWAimages} object the data were read with, or run {.fn update_QWAdata}."
-    )
-    check_spatial_resolution(
-      meta[meta$image_label %in% df_rings_log$image_label, ],
-      consequence = consequence
-    )
+    checkmate::assert_data_frame(meta)
+    checkmate::assert_names(names(meta),
+      must.include = c("image_label", "spatial_resolution"))
+    # no spatial_resolution (missing value or image not in meta): innermost
+    # ring always flagged as incomplete
+    imgs <- unique(df_rings_log$image_label)
+    no_res <- is.na(meta$spatial_resolution[match(imgs, meta$image_label)])
+    not_meta <- !imgs %in% meta$image_label
+    if (any(no_res)) {
+      cli::cli_inform(c(
+        "i" = "{.field spatial_resolution} missing for {sum(no_res)} image{?s}, their innermost rings are always flagged as incomplete.",
+        if (any(not_meta)) c(" " = "{sum(not_meta)} image{?s} not found in {.arg meta}, check your inputs.")
+      ))
+    }
+    # TODO: same logic for roxas ai innermost rings?
     df_rings_log <- flag_incomplete_rings(df_rings_log, x$cells, meta)
   }
 
@@ -524,21 +526,12 @@ complete_flags <- function(x, meta, exclude_mode = NULL) {
     df_rings_log <- df_rings_log |>
       dplyr::mutate(missing_ring = !.data$incomplete_ring &                  # wedging ring: cannot assess for incomplete in image 
                                     dplyr::coalesce(.data$mrw < 10, FALSE) | # close to 0 mrw, or close to 0 cno if mrw is na
-                                    (.data$cno < 5 & is.na(.data$mrw)),      # a wide ring with no cells usually has other issues
+                                    (dplyr::coalesce(.data$cno < 5, FALSE) & is.na(.data$mrw)), # a wide ring with no cells usually has other issues
                     no_MRW_other = is.na(.data$mrw) & !(.data$outermost_ring | .data$innermost_ring)) # TODO: check if this ever occurs and for what reason
-    # for missing rings, we want area and width set to 0
-    missing_to_zero <- c("mrw","ra")
-    df_rings_log <- df_rings_log |>
-      dplyr::mutate(
-        dplyr::across(dplyr::any_of(missing_to_zero),
-          \(x) dplyr::if_else(.data$missing_ring & is.na(x) & .data$cno < 5, 0, x)),
-        dplyr::across(dplyr::any_of(c("eww","lww")), # if mrw is 0 -> eww and lww also 0
-         \(x) dplyr::if_else(is.na(x) & dplyr::coalesce(.data$mrw == 0, FALSE), 0, x))
-      )
   }
 
   if (any(c("duplicate_ring", "exclude_dupl") %in% flag_cols_missing)) {
-    df_rings_log <- flag_duplicate_rings(df_rings_log) # replace with duplicate_sel?
+    df_rings_log <- flag_duplicate_rings(df_rings_log) 
   }
 
   mode <- resolve_exclude_mode(exclude_mode)
@@ -561,12 +554,11 @@ complete_flags <- function(x, meta, exclude_mode = NULL) {
         'incomplete_inner', 'incomplete_innerv2', 'incomplete_fct_check',
         'no_MRW_other')))
 
-  cli::cli_inform(c(
-    "v" = "Ring flag columns completed",
-    "i" = "Derived flag columns: {.field {flag_cols_missing}}"
-    # "i" = if (length(flag_cols_existing) > 0)
-    #         "Flag columns already present (not overwritten): {.field {flag_cols_existing}}"
-  ))
+  if (length(flag_cols_missing) > 0) {
+    cli::cli_inform(c(
+      "i" = "Derived flag columns: {.field {flag_cols_missing}}"
+    ))
+  }
 
   new_QWAdata(cells = x$cells, rings = df_rings_log)
 }
@@ -791,7 +783,8 @@ as_QWAdata <- function(x) {
 complete_QWAdata <- function(x, meta, exclude_mode = NULL) {
   validate_QWAdata(x)
   validate_QWAimages(meta)
-  checkmate::assert_subset(c("spatial_resolution", "outmost_year"), names(meta))
+  checkmate::assert_names(names(meta),
+    must.include = c("spatial_resolution", "outmost_year"))
 
   # align to schema (extra columns kept)
   if (!is.null(x$cells)) x$cells <- align_data(x$cells, "cells")
@@ -809,9 +802,7 @@ complete_QWAdata <- function(x, meta, exclude_mode = NULL) {
   # TODO: option to initialise complete set of flags incl the manual ones?
   x <- complete_flags(x, meta, exclude_mode = exclude_mode)
 
-  cli::cli_alert_success("Added derived measures and flags to `QWAdata` object")
   x
-
 }
 
 
@@ -1016,26 +1007,36 @@ read_QWAdata <- function(dir = NULL, file_cells = NULL, file_rings = NULL,
   rings <- NULL
   cells <- NULL
 
+  # one progress line, updated per phase, ending with the files found in dir
+  # (explicit files are known to the caller)
+  phase <- "rings"
+  msg_done <- if (use_dir) {
+    "{.cls QWAdata} read from {.file {fs::path_file(c(file_cells, file_rings))}}"
+  } else {
+    "{.cls QWAdata} read"
+  }
+  cli::cli_progress_step("Reading {.cls QWAdata}: {phase}", msg_done = msg_done)
+
   if (!is.null(file_rings)) {
-    cli::cli_inform(c(" " = "Reading rings data from {.file {file_rings}}..."))
     rings <- vroom::vroom(file_rings, show_col_types = FALSE)
     # back-compatibility: older files used dh_w / dh_m for what are now dhw / dhm
     legacy <- c(dhw = "dh_w", dhm = "dh_m") # new = old
     rings <- rings |>
       dplyr::rename(dplyr::any_of(legacy))
-    cli::cli_inform(c("v" = "{nrow(rings)} rings read from file"))
   }
 
+  phase <- "cells"
+  cli::cli_progress_update()
   if (!is.null(file_cells)) {
-    cli::cli_inform(c(" " = "Reading cells data from {.file {file_cells}}..."))
     cells <- vroom::vroom(file_cells, show_col_types = FALSE)
     # back-compatibility: older files used "EW" / "LW" for ew_lw
     if ("ew_lw" %in% names(cells)) {
       cells <- cells |>
         dplyr::mutate(ew_lw = tolower(.data$ew_lw))
     }
-    cli::cli_inform(c("v" = "{nrow(cells)} cells read from file"))
   }
 
+  phase <- "aligning and checking"
+  cli::cli_progress_update()
   QWAdata(cells = cells, rings = rings)
 }

@@ -63,6 +63,61 @@ resolve_roxas_version <- function(x, rv_param = NULL) {
   rv
 }
 
+#' Warn on missing or invalid values in the settings columns used in the data
+#' processing: `spatial_resolution` (incomplete innermost ring flag) and
+#' `outmost_year` (dating checks)
+#' @param x Data frame with `image_label` and (optionally) `spatial_resolution`
+#'   and `outmost_year`; absent columns count as missing.
+#' @param strict If `TRUE`, abort instead of warning.
+#' @return `TRUE` if no issue was found, `FALSE` otherwise (invisibly).
+#' @noRd
+check_processing_settings <- function(x, strict = FALSE) {
+  na_col <- rep(NA_real_, nrow(x))
+  res <- x[["spatial_resolution"]] %||% na_col
+  outmost <- x[["outmost_year"]] %||% na_col
+  current_year <- as.numeric(format(Sys.Date(), "%Y"))
+  groups <- list(
+    "spatial_resolution missing" = x$image_label[is.na(res)],
+    "outmost_year missing" = x$image_label[is.na(outmost)],
+    "outmost_year in the future" = x$image_label[which(outmost > current_year)]
+  )
+  groups <- groups[lengths(groups) > 0]
+  if (length(groups) > 0) {
+    return(report_issue(c(
+      "!" = "{length(unique(unlist(groups)))} image{?s} with missing or invalid settings used in the data processing:",
+      cli_truncated_groups(groups, max_show_out = 3, quote = FALSE)
+    ), strict))
+  }
+  invisible(TRUE)
+}
+
+#' Warn on images without any settings or image file data (all `colType`
+#' `"settings"` or `"image_meta"` columns empty), e.g. from missing or
+#' unreadable source files
+#' @noRd
+check_missing_files <- function(df, rv, strict = FALSE) {
+  all_empty <- function(col_type) {
+    cols <- intersect(names(df), schema_cols(rv, col_type))
+    if (length(cols) == 0) return(rep(FALSE, nrow(df)))
+    rowSums(!is.na(df[cols])) == 0
+  }
+  no_settings <- all_empty("settings")
+  no_img <- all_empty("image_meta")
+  issue <- dplyr::case_when(
+    no_settings & no_img ~ "no settings and image file data",
+    no_settings          ~ "no settings file data",
+    no_img               ~ "no image file data")
+  has_issue <- !is.na(issue)
+  if (any(has_issue)) {
+    return(report_issue(c(
+      "!" = "{sum(has_issue)} image{?s} without settings and/or image file data:",
+      cli_truncated_groups(split(df$image_label[has_issue], issue[has_issue]),
+                           max_show_out = 3, quote = FALSE)
+    ), strict))
+  }
+  invisible(TRUE)
+}
+
 # Internal S3 constructor ----
 #' @noRd
 new_QWAimages <- function(data, roxas_version) {
@@ -201,12 +256,12 @@ summary.QWAimages <- function(object, ...) {
 #' - values violating the JSON schema of the given stage;
 #' - an unsound data structure: labels not starting with their parent label,
 #'   or a label in more than one parent;
-#' - `outmost_year` in the future;
-#' - missing `spatial_resolution`.
+#' - images without any settings or image file data (e.g. missing source
+#'   files);
+#' - missing `spatial_resolution` or `outmost_year`, or `outmost_year` in the
+#'   future (the settings used in the data processing).
 #'
-#' Also informs about missing optional columns and empty values, except for
-#' the source file names (`fname_*`, only needed during processing) and the
-#' often incomplete EXIF data (`img_created_at`, `img_software`).
+#' Also informs about missing optional columns.
 #'
 #' @param x A [QWAimages] object.
 #' @param submission Check against the schema of submission files (`TRUE`)
@@ -229,28 +284,13 @@ check_QWAimages <- function(x, submission = TRUE, strict = FALSE) {
     # compliance with the schema of the stage
     check_schema(x, schema_obj, roxas_version, strict = strict, greedy = FALSE),
     check_structure(x, strict),
-    check_spatial_resolution(x, strict)
+    check_missing_files(x, roxas_version, strict),
+    check_processing_settings(x, strict)
   )
 
-  # outmost_year not in the future
-  if ("outmost_year" %in% names(x)) {
-    current_year <- as.numeric(format(Sys.Date(), "%Y"))
-    future <- x$image_label[which(x$outmost_year > current_year)]
-    if (length(future) > 0) {
-      ok <- c(ok, report_issue(c(
-        "!" = "{.field outmost_year} in the future for {length(future)} image{?s}:",
-        cli_truncated_list(future)
-      ), strict))
-    }
-  }
-
-  # information on missing optional columns and empty values; the source file
-  # names are only needed during processing, the image EXIF data is often
-  # incomplete
+  # information on missing optional columns
   fname_cols <- grep("^fname_", names(tbl_props$properties), value = TRUE)
   check_missing_opt(x, tbl_props, roxas_version, skip = fname_cols)
-  check_empty_cols(x, tbl_props, roxas_version,
-                   skip = c(fname_cols, "spatial_resolution", "img_created_at", "img_software"))
 
   if (all(ok)) {
     cli::cli_inform(c("v" = "{.cls QWAimages}: all checks passed."))
@@ -342,7 +382,5 @@ read_QWAimages <- function(file) {
       img_comment = 'comment'
     )))
 
-  aligned_data <- QWAimages(df)
-  cli::cli_inform(c("v" = "QWAimages read from {.file {file}}"))
-  aligned_data
+  QWAimages(df)
 }
