@@ -3,6 +3,9 @@
 * `write_QWAdata()` writes only the components given by `file_cells`/`file_rings`, mirroring `read_QWAdata()`; with `dir`, it writes the components present in `x`.
 * extended validation in `check_` functions: $authors ORCID duplicates and digit check, license "other" info, additional components, negatvie values in QWAdata
 * get_roxas_files() and compile_supplementary() now handle all ROXAS (AI)-supported image formats for the original images, and prioritize them in same order.
+* Fewer messages: lossless type conversions are no longer reported; `collect_raw_data()` reports images with missing cells or rings data in one warning.
+* `check_QWAimages()` warns on images without settings or image file data and on missing or invalid `spatial_resolution`/`outmost_year`, the settings used in the data processing.
+* New image schema `colType`s `settings` and `image_meta`.
 
 # rxs2tria 0.1.4
 

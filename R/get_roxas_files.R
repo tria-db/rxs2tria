@@ -171,7 +171,7 @@ get_roxas_files <- function(path_in, roxas_version,
       cli_truncated_groups(
         split(df_files$prefix[is_incomplete], missing_types[is_incomplete]),
         max_show_out = 5, quote = FALSE),
-      "i" = "Missing files lead to missing (meta-)data. Inspect the output and consider removing these files."
+      "i" = "Missing files lead to missing (meta-)data. Inspect the output and consider excluding affected rows."
     ))
   }
 

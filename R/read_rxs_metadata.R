@@ -218,7 +218,7 @@ build_QWAimages <- function(df_structure, df_settings) {
   tbl_props <- schema_tbl_props(rv)
 
   # align columns and types to schema (coerce with warnings)
-  df_rxsmeta <- align_to_schema(df_rxsmeta, tbl_props, rv, add_opt = FALSE, mute_info = FALSE)
+  df_rxsmeta <- align_to_schema(df_rxsmeta, tbl_props, rv, add_opt = FALSE)
 
   # validate against the schema, but warn only. user may want to fix
   # things manually in the metadata app

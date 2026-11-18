@@ -63,37 +63,30 @@ resolve_roxas_version <- function(x, rv_param = NULL) {
   rv
 }
 
-#' Helper to check `spatial_resolution` is given for all images
-#' @param df Data frame with `image_label` and (optionally) `spatial_resolution`.
+#' Warn on missing or invalid values in the settings columns used in the data
+#' processing: `spatial_resolution` (incomplete innermost ring flag) and
+#' `outmost_year` (dating checks)
+#' @param x Data frame with `image_label` and (optionally) `spatial_resolution`
+#'   and `outmost_year`; absent columns count as missing.
 #' @param strict If `TRUE`, abort instead of warning.
-#' @param consequence Optional message on the consequence of missing values.
-#' @return `TRUE` if given for all images, `FALSE` otherwise (invisibly).
+#' @return `TRUE` if no issue was found, `FALSE` otherwise (invisibly).
 #' @noRd
-check_spatial_resolution <- function(df, strict = FALSE, consequence = NULL) {
-  res <- df[["spatial_resolution"]] %||% rep(NA_real_, nrow(df))
-  no_res <- df$image_label[is.na(res)]
-  if (length(no_res) > 0) {
+check_processing_settings <- function(x, strict = FALSE) {
+  na_col <- rep(NA_real_, nrow(x))
+  res <- x[["spatial_resolution"]] %||% na_col
+  outmost <- x[["outmost_year"]] %||% na_col
+  current_year <- as.numeric(format(Sys.Date(), "%Y"))
+  groups <- list(
+    "spatial_resolution missing" = x$image_label[is.na(res)],
+    "outmost_year missing" = x$image_label[is.na(outmost)],
+    "outmost_year in the future" = x$image_label[which(outmost > current_year)]
+  )
+  groups <- groups[lengths(groups) > 0]
+  if (length(groups) > 0) {
     return(report_issue(c(
-      "!" = "{.field spatial_resolution} missing for {length(no_res)} image{?s}:",
-      cli_truncated_list(no_res),
-      "i" = consequence
+      "!" = "{length(unique(unlist(groups)))} image{?s} with missing or invalid settings used in the data processing:",
+      cli_truncated_groups(groups, max_show_out = 3, quote = FALSE)
     ), strict))
-  }
-  invisible(TRUE)
-}
-
-#' @noRd
-check_outmost_meta <- function(x, strict) {
-  # outmost_year not in the future
-  if ("outmost_year" %in% names(x)) {
-    current_year <- as.numeric(format(Sys.Date(), "%Y"))
-    future <- x$image_label[which(x$outmost_year > current_year)]
-    if (length(future) > 0) {
-      return(report_issue(c(
-        "!" = "{.field outmost_year} in the future for {length(future)} image{?s}:",
-        cli_truncated_list(future)
-      ), strict))
-    }
   }
   invisible(TRUE)
 }
@@ -263,9 +256,11 @@ summary.QWAimages <- function(object, ...) {
 #' - values violating the JSON schema of the given stage;
 #' - an unsound data structure: labels not starting with their parent label,
 #'   or a label in more than one parent;
-#' - `outmost_year` in the future;
-#' - missing `spatial_resolution`.
-#' - rows without any settings or image metadata (e.g. missing raw files)
+#' - images without any settings or image file data (e.g. missing source
+#'   files);
+#' - missing `spatial_resolution` or `outmost_year`, or `outmost_year` in the
+#'   future (the settings used in the data processing).
+#'
 #' Also informs about missing optional columns.
 #'
 #' @param x A [QWAimages] object.
@@ -290,8 +285,7 @@ check_QWAimages <- function(x, submission = TRUE, strict = FALSE) {
     check_schema(x, schema_obj, roxas_version, strict = strict, greedy = FALSE),
     check_structure(x, strict),
     check_missing_files(x, roxas_version, strict),
-    check_spatial_resolution(x, strict),
-    check_outmost_meta(x, strict)
+    check_processing_settings(x, strict)
   )
 
   # information on missing optional columns
@@ -388,7 +382,5 @@ read_QWAimages <- function(file) {
       img_comment = 'comment'
     )))
 
-  aligned_data <- QWAimages(df)
-  cli::cli_inform(c("v" = "QWAimages read from {.file {file}}"))
-  aligned_data
+  QWAimages(df)
 }

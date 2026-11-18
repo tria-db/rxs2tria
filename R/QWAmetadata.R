@@ -251,8 +251,7 @@ check_species <- function(x, strict = FALSE) {
 complete_tbl <- function(df, schema, img = NULL, summary_fn = NULL) {
   df <- align_to_schema(
     df, schema_tbl_props(schema), schema,
-    add_opt = TRUE, # !!!
-    mute_info = FALSE)
+    add_opt = TRUE) # !!!
 
   # for dataset, authors, funding: force at least one row
   if (nrow(df)==0 && schema %in% c("dataset","authors","funding")) {
@@ -739,7 +738,5 @@ read_QWAmetadata <- function(file) {
     raw$dataset$ds_title <- raw$dataset$ds_name
   }
 
-  aligned_data <- as_QWAmetadata(raw)
-  cli::cli_inform(c("v" = "QWAmetadata read from {.file {file}}"))
-  aligned_data
+  as_QWAmetadata(raw)
 }

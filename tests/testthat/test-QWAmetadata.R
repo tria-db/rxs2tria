@@ -85,7 +85,7 @@ test_that("check_QWAimages warns on images without settings or image file data",
   rv <- attr(imgs, "roxas_version")
   imgs[1, intersect(names(imgs), schema_cols(rv, "settings"))] <- NA
   w <- capture_warnings(res <- suppressMessages(check_QWAimages(imgs, submission = FALSE)))
-  expect_match(w, "no settings data", all = FALSE)
+  expect_match(w, "no settings file data", all = FALSE)
   expect_false(res)
 
   imgs[1, intersect(names(imgs), schema_cols(rv, "image_meta"))] <- NA
