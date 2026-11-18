@@ -24,6 +24,10 @@ Read and combine data from multiple cells/rings data files (i.e. the
 ROXAS output .txt or ROXAS AI table .csv files with the raw measurements).
 Used by \code{\link[=collect_raw_data]{collect_raw_data()}} to read each \code{QWAdata} component.
 }
+\details{
+Missing (\code{NA}) or empty files contribute no rows, unreadable files no rows
+with a warning. Images without data are reported by \code{\link[=collect_raw_data]{collect_raw_data()}}.
+}
 \seealso{
 \code{\link[=collect_raw_data]{collect_raw_data()}}
 }
