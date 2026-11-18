@@ -57,3 +57,12 @@ test_that("check_missing_opt reports missing optional columns except qc_input", 
   x$img_comment <- NULL
   expect_message(check_missing_opt(x, tbl_props, "roxas"), "img_comment")
 })
+
+test_that("check_spatial_resolution warns on missing values and columns", {
+  df <- data.frame(image_label = c("IMG1", "IMG2"), spatial_resolution = c(1.5, NA))
+  expect_warning(res <- check_spatial_resolution(df, consequence = "Some consequence."),
+                 "Some consequence")
+  expect_false(res)
+  expect_true(check_spatial_resolution(df[1, ]))
+  expect_warning(check_spatial_resolution(df["image_label"]), "2 images")
+})

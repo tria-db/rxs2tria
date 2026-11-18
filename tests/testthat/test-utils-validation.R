@@ -38,15 +38,6 @@ test_that("check_structure warns on a label in more than one parent", {
   expect_error(check_structure(multi, strict = TRUE), "S1_T1_WP1_SL1")
 })
 
-test_that("check_spatial_resolution warns on missing values and columns", {
-  df <- data.frame(image_label = c("IMG1", "IMG2"), spatial_resolution = c(1.5, NA))
-  expect_warning(res <- check_spatial_resolution(df, consequence = "Some consequence."),
-                 "Some consequence")
-  expect_false(res)
-  expect_true(check_spatial_resolution(df[1, ]))
-  expect_warning(check_spatial_resolution(df["image_label"]), "2 images")
-})
-
 test_that("align_to_schema drops extra columns unless keep_extra", {
   tbl_props <- schema_tbl_props("rings")
   rings <- data.frame(

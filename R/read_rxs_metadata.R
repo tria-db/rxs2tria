@@ -187,23 +187,23 @@ build_QWAimages <- function(df_structure, df_settings) {
   datetime_cols <- c("img_created_at", "meas_created_at")
   needs_conversion <- vapply(datetime_cols, function(col) {
     col %in% colnames(df_settings) &&
-      is.character(df_settings[[col]]) &&
+      !checkmate::test_posixct(df_settings[[col]]) &&
       !all(is.na(df_settings[[col]]))
   }, logical(1))
   if (any(needs_conversion)) {
     cli::cli_abort(c(
       "Datetime column{?s} {.field {datetime_cols[needs_conversion]}} in {.arg df_settings} must be converted to {.cls POSIXct} first.",
-      "i" = "Convert with {.fun lubridate::parse_date_time}, using the format(s) and timezone appropriate for your data, before calling {.fn build_QWAimages}.",
-      "i" = "See the {.emph workflow} vignette (Step 3) for an example."
+      "i" = "Convert e.g. with {.fun lubridate::parse_date_time} (UTC as local clock time), see the {.emph workflow} vignette (Step 3)."
     ))
   }
 
   # join by the settings file, or the image file for images without one
-  add_key <- \(df) dplyr::mutate(df, .key = dplyr::coalesce(.data$fname_settings, .data$fname_image))
   df_rxsmeta <- df_structure |>
-    add_key() |>
+    dplyr::mutate(.key = dplyr::coalesce(.data$fname_settings, .data$fname_image)) |> 
     dplyr::left_join(
-      df_settings |> add_key() |> dplyr::select(!c("fname_settings", "fname_image")),
+      df_settings |>
+        dplyr::mutate(.key = dplyr::coalesce(.data$fname_settings, .data$fname_image)) |>
+        dplyr::select(!c("fname_settings", "fname_image")),
       by = ".key", na_matches = "never") |>
     dplyr::select(!".key")
 
@@ -401,7 +401,7 @@ collect_image_info <- function(files_images, batch_size = 50) {
   batches <- split(files_images, ceiling(seq_along(files_images) / batch_size))
   # exiftool outputs numeric-looking values as numbers and omits absent tags:
   # unify the types per batch and ensure all columns exist (also if no files)
-  chr_tags <- c("FileType", "Software",
+  chr_tags <- c("SourceFile", "FileType", "Software",
                 "DateTimeOriginal", "DateCreated", # all potential date tags
                 "DateTimeDigitized", "CreateDate",
                 "Error") # to see if read failed
@@ -429,7 +429,7 @@ collect_image_info <- function(files_images, batch_size = 50) {
       res
   })
 
-  df_image_meta <- dplyr::bind_rows(template, results)
+  df_image_meta <- dplyr::bind_rows(template, results) 
 
   # files exiftool cannot read (e.g. empty, no permission) keep empty metadata
   is_err <- !is.na(df_image_meta$Error)
@@ -437,6 +437,7 @@ collect_image_info <- function(files_images, batch_size = 50) {
     \(f, err) cli::cli_warn(c("!" = "Could not read file {.file {f}}:",
                               " " = "{err}"))) # interpolated, as it may contain braces
   df_image_meta$Error <- NULL
+  df_image_meta$SourceFile <- NULL
 
   df_image_meta <- df_image_meta |>
     dplyr::mutate(

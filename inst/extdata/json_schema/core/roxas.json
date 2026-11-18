@@ -11,95 +11,111 @@
         "outmost_year": {
           "type": ["integer", "null"],
           "title": "Outmost year",
-          "description": "Calendar year of the outermost ring. SH: year in which the growth began"
+          "description": "Calendar year of the outermost ring. SH: year in which the growth began",
+          "colType": "settings"
         },
         "configuration_file": {
           "type": ["string", "null"],
           "title": "Configuration file",
-          "description": "ROXAS configuration filename"
+          "description": "ROXAS configuration filename",
+          "colType": "settings"
         },
         "origin_calibrated_x": {
           "type": ["integer", "null"],
           "title": "Calibration origin X",
-          "description": "X coordinate of the calibration origin [pixels]"
+          "description": "X coordinate of the calibration origin [pixels]",
+          "colType": "settings"
         },
         "origin_calibrated_y": {
           "type": ["integer", "null"],
           "title": "Calibration origin Y",
-          "description": "Y coordinate of the calibration origin [pixels]"
+          "description": "Y coordinate of the calibration origin [pixels]",
+          "colType": "settings"
         },
         "circ_lower_limit": {
           "type": ["integer", "null"],
           "minimum": 0,
           "maximum": 360,
           "title": "Lower limit circular sample",
-          "description": "Lower angular limit of circular sample sector [°]"
+          "description": "Lower angular limit of circular sample sector [°]",
+          "colType": "settings"
         },
         "circ_upper_limit": {
           "type": ["integer", "null"],
           "minimum": 0,
           "maximum": 360,
           "title": "Upper limit circular sample",
-          "description": "Upper angular limit of circular sample sector [°]"
+          "description": "Upper angular limit of circular sample sector [°]",
+          "colType": "settings"
         },
         "min_cell_area": {
           "type": ["integer", "null"],
           "minimum": 0,
           "title": "Min cell area",
-          "description": "Lower threshold for cell area [µm²]"
+          "description": "Lower threshold for cell area [µm²]",
+          "colType": "settings"
         },
         "max_cell_area": {
           "type": ["integer", "null"],
           "minimum": 0,
           "title": "Max cell area",
-          "description": "Upper threshold for cell area [µm²]"
+          "description": "Upper threshold for cell area [µm²]",
+          "colType": "settings"
         },
         "cluster_dbl_cwt_threshold": {
           "type": ["number", "null"],
           "minimum": 0,
           "title": "Double cwt threshold",
-          "description": "Threshold for detecting cell wall clusters [µm]"
+          "description": "Threshold for detecting cell wall clusters [µm]",
+          "colType": "settings"
         },
         "max_cwtrad_s": {
           "type": ["number", "null"],
           "minimum": 0,
           "title": "Max cwtrad of smallest tracheids",
-          "description": "Max radial cwt of smallest tracheids [µm]"
+          "description": "Max radial cwt of smallest tracheids [µm]",
+          "colType": "settings"
         },
         "max_cwtrad_l": {
           "type": ["number", "null"],
           "minimum": 0,
           "title": "Max cwtrad of largest tracheids",
-          "description": "Max radial cwt of largest tracheids [µm]"
+          "description": "Max radial cwt of largest tracheids [µm]",
+          "colType": "settings"
         },
         "relwidth_cwt_integration": {
           "type": ["number", "null"],
           "minimum": 0,
           "title": "Rel width of cwt integration",
-          "description": "Relative width along cell wall for cwt estimation"
+          "description": "Relative width along cell wall for cwt estimation",
+          "colType": "settings"
         },
         "opposite_cwt_ratio_limit": {
           "type": ["number", "null"],
           "minimum": 0,
           "title": "Max ratio of opposing cwt",
-          "description": "Max ratio of the cwt of opposing walls"
+          "description": "Max ratio of the cwt of opposing walls",
+          "colType": "settings"
         },
         "max_cwttan_s": {
           "type": ["number", "null"],
           "minimum": 0,
           "title": "Max cwttan of smallest tracheids",
-          "description": "Max tangential cwt of smallest tracheids [µm]"
+          "description": "Max tangential cwt of smallest tracheids [µm]",
+          "colType": "settings"
         },
         "max_cwttan_l": {
           "type": ["number", "null"],
           "minimum": 0,
           "title": "Max cwttan of largest tracheids",
-          "description": "Max tangential cwt of largest tracheids [µm]"
+          "description": "Max tangential cwt of largest tracheids [µm]",
+          "colType": "settings"
         },
         "rw_reference_file": {
           "type": ["string", "null"],
           "title": "RW reference file",
-          "description": "Filename of the ring width reference file"
+          "description": "Filename of the ring width reference file",
+          "colType": "settings"
         }
       },
       "required": []

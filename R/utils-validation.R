@@ -313,13 +313,17 @@ align_to_schema <- function(df, tbl_props, schema = NULL, add_opt = FALSE,
   }
 
   # replace empty strings with NA
-  df <- df |> 
-    dplyr::mutate(dplyr::across(dplyr::where(is.character), ~ dplyr::na_if(.,"")))
+  has_empty_str <- any(vapply(df, 
+    \(x) is.character(x) && any(x == "", na.rm = TRUE), logical(1)))
+  if (has_empty_str) {
+    df <- df |> 
+      dplyr::mutate(dplyr::across(dplyr::where(is.character), ~ dplyr::na_if(.,"")))
+  }
 
   aligned_data <- df
 
   # force target_cols as names for source_data if ignore_colnames is TRUE
-  if (ignore_colnames){
+  if (ignore_colnames) {
     names(aligned_data)[1:min(length(aligned_data),length(target_cols))] <- target_cols
   }
 
@@ -333,8 +337,11 @@ align_to_schema <- function(df, tbl_props, schema = NULL, add_opt = FALSE,
   extra_cols <- setdiff(source_cols, target_cols)
 
   # enforce the correct class for all columns in df
+  converted_cols <- c()
   for (col in common_cols) {
+    old_class <- class(aligned_data[[col]])
     aligned_data[[col]] <- convert_column(aligned_data[[col]], class(target_structure[[col]]))
+    if (!identical(class(aligned_data[[col]]), old_class)) converted_cols <- c(converted_cols, col)
   }
   source_data <- aligned_data
 
@@ -383,7 +390,7 @@ align_to_schema <- function(df, tbl_props, schema = NULL, add_opt = FALSE,
     
     if (length(msg)>0) {
       cli::cli_warn(c("!" = "{.field {schema}} data frame aligned to schema with {length(msg)%/%2} warning{?s}", msg))
-    } else {
+    } else if (length(converted_cols) > 0 || has_empty_str) {
       cli::cli_inform(c("i" = "{.field {schema}} data frame aligned with schema"))
     }
     if (length(added_opt_cols) > 0) {
@@ -639,7 +646,7 @@ check_missing_opt <- function(df, tbl_props, schema = NULL, skip = NULL) {
   if (length(missing_opt_cols)>0) {
     cli::cli_inform(c(
       "i" = "{.field {schema}} missing optional columns:",
-      "i" = "{missing_opt_cols}"
+      " " = "{missing_opt_cols}"
     ))
   }
   invisible(TRUE)
@@ -674,52 +681,6 @@ check_unique_cols <- function(df, tbl_props, schema = NULL, strict = FALSE) {
     }
   }
   invisible(ok)
-}
-
-#' Report the optional schema columns with empty values (information only)
-#' @param df Data frame.
-#' @param tbl_props Output of `get_tbl_props()`.
-#' @param schema Schema name, only used for messages.
-#' @param skip Further columns expected to be empty in some rows. Required
-#'   columns and the app columns (`colType` `"meta_input"`, `"qc_input"`) are
-#'   always skipped.
-#' @noRd
-check_empty_cols <- function(df, tbl_props, schema = NULL, skip = NULL) {
-  input_cols <- tbl_props$properties |>
-    purrr::keep(\(x) isTRUE(x$colType %in% c("meta_input", "qc_input"))) |>
-    names()
-  cols <- setdiff(intersect(names(tbl_props$properties), names(df)),
-                  c(tbl_props$required, input_cols, skip))
-  n_empty <- vapply(df[cols], \(x) sum(is.na(x)), integer(1))
-  n_empty <- n_empty[n_empty > 0]
-  if (length(n_empty) > 0) {
-    cli::cli_inform(c(
-      "i" = "{.field {schema}} columns with empty values:",
-      cli_truncated_list(paste0("`", names(n_empty), "` (", n_empty,
-                                ifelse(n_empty == 1, " row)", " rows)")), max_show = Inf)
-    ))
-  }
-  invisible(TRUE)
-}
-
-#' Helper to check `spatial_resolution` is given for all images
-#' @param df Data frame with `image_label` and (optionally) `spatial_resolution`.
-#' @param strict If `TRUE`, abort instead of warning.
-#' @param consequence Optional message on the consequence of missing values.
-#' @return `TRUE` if given for all images, `FALSE` otherwise (invisibly).
-#' @noRd
-check_spatial_resolution <- function(df, strict = FALSE, consequence = NULL) {
-  res <- df[["spatial_resolution"]] %||% rep(NA_real_, nrow(df))
-  no_res <- df$image_label[is.na(res)]
-  if (length(no_res) > 0) {
-    return(report_issue(c(
-      "!" = "{.field spatial_resolution} missing for {length(no_res)} image{?s}:",
-      cli_truncated_list(no_res),
-      "i" = consequence,
-      "i" = "Check the ROXAS (AI) settings files of these images and set {.field spatial_resolution} in the {.cls QWAimages} object."
-    ), strict))
-  }
-  invisible(TRUE)
 }
 
 #' Helper to check that the images of a table are in `meta`

@@ -63,6 +63,68 @@ resolve_roxas_version <- function(x, rv_param = NULL) {
   rv
 }
 
+#' Helper to check `spatial_resolution` is given for all images
+#' @param df Data frame with `image_label` and (optionally) `spatial_resolution`.
+#' @param strict If `TRUE`, abort instead of warning.
+#' @param consequence Optional message on the consequence of missing values.
+#' @return `TRUE` if given for all images, `FALSE` otherwise (invisibly).
+#' @noRd
+check_spatial_resolution <- function(df, strict = FALSE, consequence = NULL) {
+  res <- df[["spatial_resolution"]] %||% rep(NA_real_, nrow(df))
+  no_res <- df$image_label[is.na(res)]
+  if (length(no_res) > 0) {
+    return(report_issue(c(
+      "!" = "{.field spatial_resolution} missing for {length(no_res)} image{?s}:",
+      cli_truncated_list(no_res),
+      "i" = consequence
+    ), strict))
+  }
+  invisible(TRUE)
+}
+
+#' @noRd
+check_outmost_meta <- function(x, strict) {
+  # outmost_year not in the future
+  if ("outmost_year" %in% names(x)) {
+    current_year <- as.numeric(format(Sys.Date(), "%Y"))
+    future <- x$image_label[which(x$outmost_year > current_year)]
+    if (length(future) > 0) {
+      return(report_issue(c(
+        "!" = "{.field outmost_year} in the future for {length(future)} image{?s}:",
+        cli_truncated_list(future)
+      ), strict))
+    }
+  }
+  invisible(TRUE)
+}
+
+#' Warn on images without any settings or image file data (all `colType`
+#' `"settings"` or `"image_meta"` columns empty), e.g. from missing or
+#' unreadable source files
+#' @noRd
+check_missing_files <- function(df, rv, strict = FALSE) {
+  all_empty <- function(col_type) {
+    cols <- intersect(names(df), schema_cols(rv, col_type))
+    if (length(cols) == 0) return(rep(FALSE, nrow(df)))
+    rowSums(!is.na(df[cols])) == 0
+  }
+  no_settings <- all_empty("settings")
+  no_img <- all_empty("image_meta")
+  issue <- dplyr::case_when(
+    no_settings & no_img ~ "no settings and image file data",
+    no_settings          ~ "no settings file data",
+    no_img               ~ "no image file data")
+  has_issue <- !is.na(issue)
+  if (any(has_issue)) {
+    return(report_issue(c(
+      "!" = "{sum(has_issue)} image{?s} without settings and/or image file data:",
+      cli_truncated_groups(split(df$image_label[has_issue], issue[has_issue]),
+                           max_show_out = 3, quote = FALSE)
+    ), strict))
+  }
+  invisible(TRUE)
+}
+
 # Internal S3 constructor ----
 #' @noRd
 new_QWAimages <- function(data, roxas_version) {
@@ -203,10 +265,8 @@ summary.QWAimages <- function(object, ...) {
 #'   or a label in more than one parent;
 #' - `outmost_year` in the future;
 #' - missing `spatial_resolution`.
-#'
-#' Also informs about missing optional columns and empty values, except for
-#' the source file names (`fname_*`, only needed during processing) and the
-#' often incomplete EXIF data (`img_created_at`, `img_software`).
+#' - rows without any settings or image metadata (e.g. missing raw files)
+#' Also informs about missing optional columns.
 #'
 #' @param x A [QWAimages] object.
 #' @param submission Check against the schema of submission files (`TRUE`)
@@ -229,28 +289,14 @@ check_QWAimages <- function(x, submission = TRUE, strict = FALSE) {
     # compliance with the schema of the stage
     check_schema(x, schema_obj, roxas_version, strict = strict, greedy = FALSE),
     check_structure(x, strict),
-    check_spatial_resolution(x, strict)
+    check_missing_files(x, roxas_version, strict),
+    check_spatial_resolution(x, strict),
+    check_outmost_meta(x, strict)
   )
 
-  # outmost_year not in the future
-  if ("outmost_year" %in% names(x)) {
-    current_year <- as.numeric(format(Sys.Date(), "%Y"))
-    future <- x$image_label[which(x$outmost_year > current_year)]
-    if (length(future) > 0) {
-      ok <- c(ok, report_issue(c(
-        "!" = "{.field outmost_year} in the future for {length(future)} image{?s}:",
-        cli_truncated_list(future)
-      ), strict))
-    }
-  }
-
-  # information on missing optional columns and empty values; the source file
-  # names are only needed during processing, the image EXIF data is often
-  # incomplete
+  # information on missing optional columns
   fname_cols <- grep("^fname_", names(tbl_props$properties), value = TRUE)
   check_missing_opt(x, tbl_props, roxas_version, skip = fname_cols)
-  check_empty_cols(x, tbl_props, roxas_version,
-                   skip = c(fname_cols, "spatial_resolution", "img_created_at", "img_software"))
 
   if (all(ok)) {
     cli::cli_inform(c("v" = "{.cls QWAimages}: all checks passed."))

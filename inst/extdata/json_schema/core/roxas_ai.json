@@ -11,70 +11,82 @@
         "outmost_year": {
           "type": ["integer", "null"],
           "title": "Outmost year",
-          "description": "Calendar year of the outermost complete ring. SH: year in which the growth began"
+          "description": "Calendar year of the outermost complete ring. SH: year in which the growth began",
+          "colType": "settings"
         },
         "rings_segmentation_model": {
           "type": ["string", "null"],
           "title": "Rings model",
-          "description": "Rings segmentation model"
+          "description": "Rings segmentation model",
+          "colType": "settings"
         },
         "rings_segmentation_datetime": {
           "type": ["string","null"],
           "format": "date-time",
           "title": "Rings created",
-          "description": "Timestamp of the rings segmentation"
+          "description": "Timestamp of the rings segmentation",
+          "colType": "settings"
         },
         "cells_segmentation_model": {
           "type": ["string", "null"],
           "title": "Cells model",
-          "description": "Cells segmentation model"
+          "description": "Cells segmentation model",
+          "colType": "settings"
         },
         "cells_segmentation_datetime": {
           "type": ["string","null"],
           "format": "date-time",
           "title": "Cells created",
-          "description": "Timestamp of the cells segmentation"
+          "description": "Timestamp of the cells segmentation",
+          "colType": "settings"
         },
         "cluster_dbl_cwt_threshold": {
           "type": ["number", "null"],
           "minimum": 0,
           "title": "Double cwt threshold",
-          "description": "Threshold for detecting cell wall clusters [µm]"
+          "description": "Threshold for detecting cell wall clusters [µm]",
+          "colType": "settings"
         },
         "relwidth_cwt_integration": {
           "type": ["number", "null"],
           "minimum": 0,
           "title": "Rel width of cwt integration",
-          "description": "Relative width along cell wall for cwt estimation"
+          "description": "Relative width along cell wall for cwt estimation",
+          "colType": "settings"
         },
         "lower_limit_cwt_iqr_multiplier": {
           "type": ["number", "null"],
           "minimum": 0,
           "title": "Lower cwt IQR multiplier",
-          "description": "Lower IQR multiplier to identify cwt outliers"
+          "description": "Lower IQR multiplier to identify cwt outliers",
+          "colType": "settings"
         },
         "upper_limit_cwt_iqr_multiplier": {
           "type": ["number", "null"],
           "minimum": 0,
           "title": "Upper cwt IQR multiplier",
-          "description": "Upper IQR multiplier to identify cwt outliers"
+          "description": "Upper IQR multiplier to identify cwt outliers",
+          "colType": "settings"
         },
         "opposite_cwt_ratio_limit": {
           "type": ["number", "null"],
           "minimum": 0,
           "title": "Max ratio of opposing cwt",
-          "description": "Max ratio of the cwt of opposing walls"
+          "description": "Max ratio of the cwt of opposing walls",
+          "colType": "settings"
         },
         "adjacent_cwt_ratio_limit": {
           "type": ["number", "null"],
           "minimum": 0,
           "title": "Max ratio of adjacent cwt",
-          "description": "Max ratio of the cwt of adjacent walls"
+          "description": "Max ratio of the cwt of adjacent walls",
+          "colType": "settings"
         },
         "reference_series": {
           "type": ["string", "null"],
           "title": "RW reference series",
-          "description": "Label of the ring width series used as dating reference"
+          "description": "Label of the ring width series used as dating reference",
+          "colType": "settings"
         }
       },
       "required": []

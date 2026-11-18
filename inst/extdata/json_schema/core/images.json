@@ -61,71 +61,83 @@
       "type": ["number", "null"],
       "minimum": 0,
       "title": "Spatial resolution",
-      "description": "Spatial resolution [pixels/µm]"
+      "description": "Spatial resolution [pixels/µm]",
+      "colType": "settings"
     },
     "meas_geometry": {
       "type": ["string", "null"],
       "enum": ["", "linear", "circular"],
       "title": "Geometry",
-      "description": "Measured sample geometry (linear/circular)"
+      "description": "Measured sample geometry (linear/circular)",
+      "colType": "settings"
     },
     "org_img_name": {
       "type": "string",
       "minLength": 1,
+      "readOnly": true,
       "title": "Original name",
       "description": "Original image filename"
     },
     "img_filetype": {
       "type": ["string", "null"],
       "title": "Filetype",
-      "description": "Image filetype"
+      "description": "Image filetype",
+      "colType": "image_meta"
     },
     "img_size": {
       "type": ["integer", "null"],
       "minimum": 0,
       "title": "Size",
-      "description": "Image file size [bytes]"
+      "description": "Image file size [bytes]",
+      "colType": "image_meta"
     },
     "img_width": {
       "type": ["integer", "null"],
       "minimum": 0,
       "title": "Width",
-      "description": "Image width [pixels]"
+      "description": "Image width [pixels]",
+      "colType": "image_meta"
     },
     "img_height": {
       "type": ["integer", "null"],
       "minimum": 0,
       "title": "Height",
-      "description": "Image height [pixels]"
+      "description": "Image height [pixels]",
+      "colType": "image_meta"
     },
     "img_created_at": {
       "type": ["string","null"],
       "format": "date-time",
       "title": "Image created",
-      "description": "Image creation date and time"
+      "description": "Image creation date and time",
+      "colType": "image_meta"
     },
     "img_software": {
       "type": ["string", "null"],
       "title": "Scanner software",
-      "description": "Software used to scan the image"
+      "description": "Software used to scan the image",
+      "colType": "image_meta"
     },
     "software": {
       "type": "string",
       "minLength": 1,
       "enum": ["roxas", "roxas_ai"],
+      "readOnly": true,
       "title": "QWA software",
       "description": "QWA software used to analyse the image"
     },
     "sw_version": {
       "type": ["string", "null"],
       "title": "SW version",
-      "description": "QWA software version used"
+      "description": "QWA software version used",
+      "colType": "settings"
     },
     "meas_created_at": {
       "type": ["string", "null"],
       "format": "date-time",
       "title": "Measurements created",
-      "description": "Timestamp of the QWA analysis"
+      "description": "Timestamp of the QWA analysis",
+      "colType": "settings"
     },
     "img_comment": {
       "type": ["string", "null"],
