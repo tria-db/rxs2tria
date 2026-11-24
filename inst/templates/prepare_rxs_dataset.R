@@ -24,15 +24,15 @@ files <- get_roxas_files(path_in, roxas_version)
 # with alphanumeric components and one woodpiece per tree (no separate woodpiece
 # identifier). If your naming includes a woodpiece identifier, you can add it
 # (e.g. by including "(?<woodpiece>[[:alnum:]]+)" between the tree and slide groups).
-# If all images are from the same site and/or species, you can also drop the site/species
-# group(s) from the pattern and supply them as the site_label/species_code
-# arguments instead.
 # See ?extract_data_structure for more information.
 
 pattern <- "(?<site>[[:alnum:]]+)_(?<species>[[:alnum:]]+)_(?<tree>[[:alnum:]]+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)"
 df_structure <- extract_data_structure(files, pattern)
 
-# e.g. if all images are from site "ABC" and species "LADE":
+# If all images are from the same site and/or species, you can supply them as 
+# the site_label/species_code arguments instead. 
+# E.g. if all images are from site "ABC" and species "LADE":
+
 # pattern <- "(?<tree>[[:alnum:]]+)_(?<slide>[[:alnum:]]+)_(?<image>[[:alnum:]]+)"
 # df_structure <- extract_data_structure(
 #   files, pattern, site_label = "ABC", species_code = "LADE")
@@ -43,13 +43,16 @@ df_structure <- extract_data_structure(files, pattern)
 # ------------------------------------------------------------------------------
 # Step 3: Collect metadata from ROXAS files into QWAimages object
 # ------------------------------------------------------------------------------
-# The ROXAS version is auto-detected from the settings file names, and the
-# image files in df_structure$fname_image are read for their EXIF metadata
-# (ROXAS) or their actual file size (ROXAS AI).
+# Read and extract the relevant info from the settings/metadata files 
+# (df_structure$fname_settings) and the EXIF metadata of the image files 
+# (df_structure$fname_image).
 df_settings <- collect_settings_data(df_structure)
 
-# for ROXAS only (ROXAS AI has standardised timestamps, so already converted)
-# timestamps are kept as local clock time (stored as UTC, the default)
+# For ROXAS only, make sure that the "Date created" timestamp from the ROXAS
+# settings is converted correctly to POSIXct. Note that we use the convention
+# of local clock time stored as UTC (so no need to set a timezone).
+# (ROXAS AI meas_created_at and img_created_at are standardised timestamps,
+# converted automatically).
 settings_date_orders <- c("%d.%m.%Y %H:%M:%S", "%d/%m/%Y %H:%M") # adjust to your locale
 if (roxas_version == "roxas") {
   meas_created_at_converted <- lubridate::parse_date_time(
@@ -77,7 +80,7 @@ rm(df_structure, df_settings)
 # derived above. The output is a full QWAmetadata object, which can be exported
 # to a .json file. It is also possible to re-load a (partially completed)
 # QWAmetadata object in the app and continue editing.
-# If run locally, the app can access objects such as `rxs_images` from the
+# Since it's run locally, the app can access objects such as `rxs_images` from the
 # current environment, in addition to loading input data from .csv or .json files.
 launch_metadata_app()
 
@@ -94,16 +97,16 @@ launch_metadata_app()
 # could occur. Checks if the dating is valid and if CWT analysis was performed.
 
 QWA_data <- collect_raw_data(rxs_images)
-# or if loading full metadata from json after the Shiny app export:
+# or if continuing from QWAmetadata object (generated via the metadata Shiny app):
 # QWA_data <- collect_raw_data(QWA_meta$images)
 
 # Add additional cell and ring measures, and ring quality flags
 # for duplicate rings (overlapping years from separate images), radially
-# incomplete rings (at image borders) and missing/wedging rings.
-# exclude_issues is initialised from the incomplete rings; to also exclude
-# missing rings, set it afterwards:
+# incomplete rings (at image borders) and missing/wedging rings (complete rings
+# with mrw < 10, or mrw = NA and < 5 cells). exclude_dupl is initialised to 
+# TRUE for overlapping rings with non-maximum cell count, exclude_issues is
+# initialised from the incomplete rings.
 QWA_data <- complete_QWAdata(QWA_data, rxs_images)
-# QWA_data$rings$exclude_issues <- QWA_data$rings$incomplete_ring | QWA_data$rings$missing_ring
 
 
 # ------------------------------------------------------------------------------
@@ -121,7 +124,7 @@ write_QWAdata(QWA_data, dir = path_out, dataset_name = dataset_name)
 
 # ------------------------------------------------------------------------------
 # At this stage, you have the minimal components required for a TRIA submission,
-# i.e. a QWAmetadata .json file (from the Shiny app), and QWAcells and
+# i.e. a QWAmetadata .json file (from the metadata Shiny app), and QWAcells and
 # QWArings .csv files with the preprocessed measurements data.
 # The following optional steps can be completed to provide more in-depth
 # quality assessment and discrete features information of the annual rings (Step 6),
@@ -129,6 +132,7 @@ write_QWAdata(QWA_data, dir = path_out, dataset_name = dataset_name)
 # image files, un-cropped images of slides, .rwl files of the reference series, ...)
 # that you want to include with your submission (Step 7).
 # ------------------------------------------------------------------------------
+
 
 # ------------------------------------------------------------------------------
 # Step 6a: Compute radial profiles
@@ -157,6 +161,7 @@ prf_sector <- calculate_sector_profiles(QWA_data,
 # write_QWAprofile(prf_sector, "path/to/output_data/example_dataset_QWAprofile_sector5.csv.gz")
 # prf_sector <- read_QWAprofile("path/to/output_data/example_dataset_QWAprofile_sector5.csv.gz")
 
+
 # ------------------------------------------------------------------------------
 # Step 6b: Assess data quality of annual rings
 # ------------------------------------------------------------------------------
@@ -168,10 +173,9 @@ prf_sector <- calculate_sector_profiles(QWA_data,
 # can then interactively select a specific annual ring and set the corresponding
 # data quality flags.
 # The input for the app (loaded from files or from the current R environment) are
-# the rings component of a QWAdata object, and optionally: a sector QWAprofile
-# derived from cell measurements, and a QWAimages object (used only to provide
-# image-level comments if available and to allow you to open the image files under
-# $fname_image from within the app).
+# the rings component of a QWAdata object, and optionally: a derived sector 
+# QWAprofile, and a QWAimages object (to open the (annotated) image files under
+# via $fname_image from within the app, and to show any $img_comment provided).
 # The output (saved to file or fed back to the current R session) is the
 # QWAdata$rings component with additional columns for the flags, `comment` and
 # `affected_tissue`. If image-level comments were reviewed, the app also saves
@@ -189,58 +193,31 @@ launch_flags_app()
 # df_meas <- extract_ring_measures(QWA_data$rings)
 
 # ------------------------------------------------------------------------------
-# Step 6c: Iteratively updating images
+# Step 6c: Update and combine data
 # ------------------------------------------------------------------------------
+# See https://tria-db.github.io/rxs2tria/articles/update-combine.html
 # If the data processing steps above reveal issues in the raw data, it is
-# possible to update the data for a subset of images only, without having to
-# start fresh. update_QWAdata() synchronises QWA_data with rxs_images: new
-# images are added, images no longer in rxs_images are removed, and images in
-# `imgs_to_reread` are read again. Duplicate-ring flags are recalculated for
-# all affected woodpiece-years. Added and re-read images are new data: inspect
-# their flags again (Step 6b) or re-apply any custom exclude_issues rule.
+# possible to update the (meta-)data for a subset of images only, without having 
+# to start fresh.
 
-# a) Re-analysed images
-# First, rerun the analyses with the QWA software, and replace the output files
-# in `path_in` with the new files.
-# Second, update the ROXAS settings / ROXAS AI metadata information in the
-# QWAimages object by re-reading the updated files for the chosen images.
+# Rerun the analyses with the QWA software, and replace the output files
+# in `path_in` with the new files. Update the ROXAS settings / ROXAS AI metadata
+# information with 
 rxs_images <- update_QWAimages(rxs_images,
   imgs_to_reread = c("IMAGELABEL1", "IMAGELABEL2"),
   settings_date_orders = settings_date_orders) # same as defined in Step 3
+
 # If a QWAmetadata object exists, update it as well (keeps the values entered
-# in the metadata app):
-# QWA_meta <- update_QWAmetadata(QWA_meta, rxs_images)
+# in the metadata app), using update_QWAmetadata().
 
-# Third, update the QWAdata object. For the `imgs_to_reread`, the raw cells
-# and rings data files are read again, any derived measures are recalculated,
-# and the automatic flags (missing, incomplete, duplicate rings plus
-# exclude_issues and exclude_dupl) are reset. Per default, any manual edits
-# (e.g. in the flags Shiny app) for these images are discarded; set
-# `reset_manual_flags = FALSE` to keep them only if the re-analysis was minor
-# and the dating was not affected.
-QWA_data <- update_QWAdata(QWA_data, meta = rxs_images,
-  imgs_to_reread = c("IMAGELABEL1", "IMAGELABEL2"))
-# Also review `only_ew` and `img_comment` of these images in the metadata app.
+# update_QWAdata() then synchronises an exiting QWA_data with the new 
+# rxs_images: new images are added, images no longer in rxs_images are removed, 
+# and data for images in `imgs_to_reread` are read again. Duplicate-ring flags 
+# are recalculated for all affected woodpiece-years. 
+# Note: Added and re-read images are new data, so inspect their flags again 
+# (Step 6b) or re-apply any custom exclude_issues rule.
 
-# b) Added or removed images
-# To add images, either rerun Steps 1-3 on the updated `path_in` (any
-# `only_ew` and `img_comment` values from the metadata app are then missing,
-# but update_QWAmetadata() below carries them over), or run Steps 1-3
-# on a separate folder with only the new images and combine the results (same
-# ROXAS version, distinct image labels):
-# rxs_images <- combine_QWAimages(rxs_images, rxs_images_new)
-# To remove images, filter them from rxs_images:
-# rxs_images <- rxs_images |>
-#   dplyr::filter(!image_label %in% c("IMAGELABEL1", "IMAGELABEL2"))
-# Then update the QWAdata object:
-# QWA_data <- update_QWAdata(QWA_data, meta = rxs_images)
-# If a QWAmetadata object exists, update it as well (replaces the images,
-# adds/removes rows and updates counts in the sites, trees, woodpieces and
-# slides tables, keeps existing metadata and fills missing `only_ew` and
-# `img_comment` values). Complete any added rows in the metadata app.
-# QWA_meta <- update_QWAmetadata(QWA_meta, rxs_images)
-
-# c) Combining datasets
+# b) Combining datasets
 # Two datasets prepared separately (same ROXAS version, distinct image labels)
 # can be combined; for shared entries (e.g. sites, authors) the first object
 # takes precedence:
@@ -248,12 +225,11 @@ QWA_data <- update_QWAdata(QWA_data, meta = rxs_images,
 # QWA_data <- combine_QWAdata(QWA_data_1, QWA_data_2)
 # QWA_meta <- combine_QWAmetadata(QWA_meta_1, QWA_meta_2)
 
-# After any of these updates, save the data again:
-# write_QWAdata(QWA_data, dir = path_out, dataset_name = dataset_name, overwrite = TRUE)
 
 # ------------------------------------------------------------------------------
 # Step 7: Compile supplementary files (optional)
 # ------------------------------------------------------------------------------
+# See https://tria-db.github.io/rxs2tria/articles/supplementary.html
 # A TRIA submission must comprise at least the QWAmetadata .json and the
 # QWAdata cells and rings .csv files. If you would like to provide additional
 # (supplementary) files with your submission - e.g. original / annotated images,
@@ -263,9 +239,9 @@ QWA_data <- update_QWAdata(QWA_data, meta = rxs_images,
 # returns a table with one row per file, its inferred type, hierarchy level,
 # and a readiness status ("ok", "review", or "ignore"). The console reports
 # whether the supplementary files are ready to submit, or which files still
-# need attention. See vignette("supplementary") for details.
+# need attention. 
 
-suppl_res <- compile_supplementary("path/to/supplementary_files", rxs_images = rxs_images)
+suppl_res <- compile_supplementary(path_in, rxs_images = rxs_images)
 # or rxs_images = QWA_meta$images
 
 suppl_res # review status "review" rows, make edits where needed, then (re-)compile

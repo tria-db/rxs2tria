@@ -141,12 +141,13 @@ load_data_env <- function(name_prf, name_rings, name_rxsmeta,
 
   rings_cols <- split(names(specs$rings_data$req_cols),
                       specs$rings_data$req_cols)
+  # missing required columns are reported in validate_input_dfs()
   rings_data_in <- rings_data_in |>
     tibble::as_tibble() |>
     dplyr::mutate(
-      dplyr::across(dplyr::all_of(rings_cols[['c']]), as.character),
-      dplyr::across(dplyr::all_of(rings_cols[['i']]), as.integer),
-      dplyr::across(dplyr::all_of(rings_cols[['l']]), as.logical)
+      dplyr::across(dplyr::any_of(rings_cols[['c']]), as.character),
+      dplyr::across(dplyr::any_of(rings_cols[['i']]), as.integer),
+      dplyr::across(dplyr::any_of(rings_cols[['l']]), as.logical)
     )
 
   if (is.na(name_rxsmeta) || name_rxsmeta == "") {
@@ -218,8 +219,13 @@ load_data_csv <- function(path_prf, path_rings, path_rxsmeta,
                     dplyr::where(is.numeric) & !dplyr::ends_with("_N"))
   }
 
+  # types for the required columns present; missing ones are reported in
+  # validate_input_dfs()
+  rings_header <- names(vroom::vroom(path_rings, n_max = 0, show_col_types = FALSE))
+  rings_types <- specs$rings_data$req_cols
   rings_data_in <- vroom::vroom(path_rings,
-                                col_types = specs$rings_data$req_cols, guess_max = 1000)
+                                col_types = rings_types[names(rings_types) %in% rings_header],
+                                guess_max = 1000)
 
   if (is.null(path_rxsmeta) || is.na(path_rxsmeta) || path_rxsmeta == "") {
     rxsmeta_data_in <- NULL
@@ -283,6 +289,15 @@ load_data_csv <- function(path_prf, path_rings, path_rxsmeta,
 # check input dfs and throw error if not all checks passed
 validate_input_dfs <- function(prf_data_in, rings_data_in,
                                specs = input_specs){
+  missing_cols <- setdiff(names(specs$rings_data$req_cols), names(rings_data_in))
+  if (length(missing_cols) > 0) {
+    hint <- if (any(missing_cols %in% auto_flags)) {
+      " Run rxs2tria::complete_QWAdata() on the full data (cells and rings) to set the automatic ring flags."
+    }
+    stop("Missing required column(s) in the rings data: ", toString(missing_cols),
+         ".", hint, call. = FALSE)
+  }
+
   # automatic ring flags (rxs2tria::complete_QWAdata()) must be set for all rings
   flag_cols <- intersect(names(specs$rings_data$req_cols)[specs$rings_data$req_cols == "l"],
                          names(rings_data_in))
@@ -425,43 +440,18 @@ arrange_rings <- function(df) {
     dplyr::select(-".min_year_wp", -".min_year_img")
 }
 
-# prepare edited flags data frame for output
-prepare_rings_out <- function(df_edited, rings_data = NULL){
-  # the character cols
-  df_char <- df_edited |> dplyr::select(
-    affected_tissue, comment)
-  # the optional flag colums
-  df_flags_opt <- df_edited |> dplyr::select(
-    dplyr::any_of(setdiff(disqual_issues, c('incomplete_ring','missing_ring'))),
-    dplyr::any_of(c(unname(technical_issues),
-                    unname(other_issues),
-                    unname(discrete_features))))
-  # the rest of the columns
-  df <- df_edited[setdiff(names(df_edited),
-                          c("affected_tissue", "comment", names(df_flags_opt)))]
-  # char: remove completely empty columns
-  df_char <- df_char |> janitor::remove_empty(which = "cols", cutoff = 1)
-  # opt: remove completely empty / all FALSE cols
-  df_flags_opt <- df_flags_opt |>
-    janitor::remove_empty(which = "cols", cutoff = 1) |>
-    dplyr::select(dplyr::where(~any(.)))
-
-  # combine and restore original column order
-  df <- df |> dplyr::bind_cols(df_char, df_flags_opt)
-  df <- df |> dplyr::select(dplyr::any_of(names(df_edited)))
-
-  if (!is.null(rings_data)) {
-    id_cols <- c("woodpiece_label", "slide_label", "image_label", "year")
-    df_same <- df |> dplyr::select(dplyr::any_of(names(rings_data)))
-    df_new <- df |> dplyr::select(
-      dplyr::all_of(id_cols),
-      dplyr::all_of(setdiff(names(df), names(rings_data))))
-    df <- rings_data |>
-      dplyr::rows_update(df_same, by = id_cols) |>
-      dplyr::left_join(df_new, by = id_cols)
-  }
-
-  df
+# prepare edited flags data frame for output: the input rings data (rows,
+# order, columns not in the editor) updated with the edits, plus the flag
+# columns not in the input; empty flag columns are dropped on writing to file
+prepare_rings_out <- function(df_edited, rings_data){
+  id_cols <- c("woodpiece_label", "slide_label", "image_label", "year")
+  df_same <- df_edited |> dplyr::select(dplyr::any_of(names(rings_data)))
+  df_new <- df_edited |> dplyr::select(
+    dplyr::all_of(id_cols),
+    dplyr::all_of(setdiff(names(df_edited), names(rings_data))))
+  rings_data |>
+    dplyr::rows_update(df_same, by = id_cols) |>
+    dplyr::left_join(df_new, by = id_cols)
 }
 
 # OUTPUTS 
@@ -572,8 +562,10 @@ save_ring_edits <- function(df, df_in, settings, rxsmeta = NULL, handled = NULL)
     }
     if ("file" %in% settings$save_to) {
       filepath <- fs::path_abs(settings$filepath, start = launch_wd)
-      checkmate::assert_path_for_output(filepath, overwrite = TRUE)
-      vroom::vroom_write(df_out, filepath, delim = ",", na = "")
+      rxs2tria::write_QWAdata(rxs2tria::QWAdata(rings = df_out),
+                              file_rings = filepath,
+                              compress = fs::path_ext(filepath) == "gz",
+                              overwrite = TRUE)
       shiny::showNotification(
         paste0("Saved to file: ", filepath),
         type = "message"

@@ -139,6 +139,9 @@ other_issues <- c(
 all_flags <- unname(c(discrete_features, disqual_issues,
                       technical_issues, other_issues))
 
+# automatic ring flags, set by rxs2tria::complete_QWAdata()
+auto_flags <- rxs2tria:::schema_cols("rings", "flag")
+
 input_specs <- list(
   prf_data = list(
     req_cols = c(image_label = "c", year = "i", sector_n = "i")
@@ -147,8 +150,7 @@ input_specs <- list(
   ),
   rings_data = list(
     req_cols = c(woodpiece_label = "c", slide_label = "c", image_label = "c",
-                 year = "i", incomplete_ring = "l", missing_ring = "l",
-                 duplicate_ring = "l", exclude_dupl = "l", exclude_issues = "l"),
+                 year = "i", setNames(rep("l", length(auto_flags)), auto_flags)),
     opt_cols = c(
       # any of the quality flag columns (e.g. if data was previously edited in app)
       setNames(rep("l", length(all_flags)), all_flags),
@@ -159,7 +161,7 @@ input_specs <- list(
     req_cols = c(image_label = "c"),
     opt_cols = c(woodpiece_label = "c",
                  species_code = "c", site_label = "c", img_comment = "c", comment_handled = "l",
-                 fname_image = "c", fname_annotated = "c", fname_annotated_twin = "c")
+                 fname_image = "c")
   )
 )
 

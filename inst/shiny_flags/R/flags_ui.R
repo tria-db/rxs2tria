@@ -17,13 +17,15 @@ flags_ui <- function(id) {
       # inputs to filter/subset input data ----
       shiny::strong("Subset data:"),
       shinyjs::hidden( # start hidden
-        shiny::selectInput(
-          ns("filt_species"), "Choose species",
-          choices = NULL, multiple = FALSE, selectize = TRUE
+        shiny::selectizeInput(
+          ns("filt_species"), "Filter species",
+          choices = NULL, multiple = TRUE,
+          options = list(placeholder = "All species")
         ),
-        shiny::selectInput(
+        shiny::selectizeInput(
           ns("filt_site"), "Filter site(s)",
-          choices = NULL, multiple = TRUE, selectize = TRUE
+          choices = NULL, multiple = TRUE,
+          options = list(placeholder = "All sites")
         )
       ),
       shiny::selectInput(

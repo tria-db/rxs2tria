@@ -26,7 +26,7 @@ test_that("write_QWAmetadata drops all-empty optional meta_input fields only", {
   raw <- write_read_raw(x)
 
   expect_false(any(c("aff_department", "aff_street", "aff_plz") %in% names(raw$authors[[1]])))
-  expect_false(any(c("embargoed_until", "acknowledgements") %in% names(raw$dataset[[1]])))
+  expect_false("acknowledgements" %in% names(raw$dataset[[1]]))
   expect_true("description" %in% names(raw$dataset[[1]]))
   expect_true("n_trees" %in% names(raw$sites[[1]])) # derived
 
@@ -35,20 +35,12 @@ test_that("write_QWAmetadata drops all-empty optional meta_input fields only", {
   expect_true("acknowledgements" %in% names(raw$dataset[[1]]))
 })
 
-test_that("write_QWAmetadata keeps empty conditionally required fields where they apply", {
-  # public: license kept if empty, embargo date dropped
+test_that("write_QWAmetadata keeps empty conditionally required fields", {
   x <- meta_example
   x$dataset$ds_license <- NA_character_
   x$dataset$embargoed_until <- NA_character_
   ds <- write_read_raw(x)$dataset[[1]]
-  expect_true("ds_license" %in% names(ds))
-  expect_false("embargoed_until" %in% names(ds))
-
-  # restricted: embargo date kept if empty, license dropped
-  x$dataset$ds_access <- "restricted"
-  ds <- write_read_raw(x)$dataset[[1]]
-  expect_true("embargoed_until" %in% names(ds))
-  expect_false("ds_license" %in% names(ds))
+  expect_true(all(c("ds_license", "embargoed_until") %in% names(ds)))
 })
 
 test_that("written QWAmetadata reads back with the same values", {

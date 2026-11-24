@@ -7,7 +7,7 @@
 #'
 #' @param x,y [QWAimages] objects
 #' @returns A combined [QWAimages] object
-#' @seealso [combine_QWAdata()], [combine_QWAmetadata()]
+#' @seealso [combine_QWAdata()], [combine_QWAmetadata()], `vignette("update-combine")`
 #' @export
 combine_QWAimages <- function(x, y) {
   validate_QWAimages(x)
@@ -38,7 +38,7 @@ combine_QWAimages <- function(x, y) {
 #'
 #' @param x,y [QWAdata] objects
 #' @returns A combined [QWAdata] object
-#' @seealso [combine_QWAimages()], [combine_QWAmetadata()]
+#' @seealso [combine_QWAimages()], [combine_QWAmetadata()], `vignette("update-combine")`
 #' @export
 combine_QWAdata <- function(x, y) {
   validate_QWAdata(x)
@@ -113,7 +113,8 @@ bind_by_key <- function(df_x, df_y, key = NULL) {
 #'
 #' @param x,y [QWAmetadata] objects
 #' @returns A combined [QWAmetadata] object
-#' @seealso [combine_QWAimages()], [combine_QWAdata()], [update_QWAmetadata()]
+#' @seealso [combine_QWAimages()], [combine_QWAdata()], [update_QWAmetadata()],
+#'   `vignette("update-combine")`
 #' @export
 combine_QWAmetadata <- function(x, y) {
   validate_QWAmetadata(x)

@@ -691,9 +691,9 @@ check_images_in_meta <- function(images, meta, what, strict = FALSE,
 #'
 #' Converts empty strings to `NA`. With `drop_empty`, drops the optional
 #' columns set in the apps (`colType` `"meta_input"` or `"qc_input"`) that are
-#' entirely `NA` (or `NA`/`FALSE` for logical columns). A column that is required only under a schema condition
-#' (e.g. `embargoed_until` for restricted datasets) is kept if the schema
-#' validation reports it as missing without it.
+#' entirely `NA` (or `NA`/`FALSE` for logical columns). Columns required only
+#' under a schema condition (e.g. `embargoed_until` for restricted datasets)
+#' are always kept.
 #' @param df Data frame, or `NULL`.
 #' @param schema Schema name, see `schema_rel_path()`.
 #' @param drop_empty Drop all-empty optional app columns?
@@ -719,22 +719,10 @@ prepare_write <- function(df, schema, drop_empty = TRUE, submission = TRUE) {
   # FALSE is the default of logical app columns (flags app), so counts as empty
   is_empty <- \(x) all(is.na(x) | (is.logical(x) & x %in% FALSE))
   empty_cols <- names(df)[vapply(df, is_empty, logical(1))]
-  drop_cols <- setdiff(intersect(empty_cols, input_cols), tbl_props$required)
-
-  # keep conditionally required columns the validation asks for
-  cond_cols <- intersect(drop_cols, tbl_props$cond_required)
-  if (length(cond_cols) > 0) {
-    schema_path <- system.file(schema_rel_path(schema, submission), package = "rxs2tria")
-    schema_obj <- jsonvalidate::json_schema$new(schema_path, engine = "ajv")
-    result <- schema_obj$validate(
-      jsonlite::toJSON(df[setdiff(names(df), drop_cols)], na = "null", POSIXt = "ISO8601"),
-      verbose = TRUE, greedy = TRUE
-    )
-    errors <- attr(result, "errors")
-    missing_props <- if (is.null(errors)) character(0) else
-      errors$params$missingProperty[errors$keyword == "required"]
-    drop_cols <- setdiff(drop_cols, missing_props)
-  }
+  drop_cols <- setdiff(
+    intersect(empty_cols, input_cols),
+    c(tbl_props$required, tbl_props$cond_required)
+  )
 
   df[setdiff(names(df), drop_cols)]
 }

@@ -12,6 +12,7 @@
 #'   ROXAS classic. Required for ROXAS classic, ignored for ROXAS AI.
 #'   Timestamps are kept as local clock time (stored as UTC).
 #' @returns An updated [QWAimages] object
+#' @seealso [update_QWAdata()], [update_QWAmetadata()], `vignette("update-combine")`
 #' @export
 update_QWAimages <- function(meta, imgs_to_reread,
                              settings_date_orders = NULL) {
@@ -70,6 +71,7 @@ update_QWAimages <- function(meta, imgs_to_reread,
 #'   the columns set in the flags app (`colType` `"qc_input"`) are kept, and so is `exclude_issues`
 #'   where it differs from the value derived from the old automatic flags.
 #' @returns An updated [QWAdata] object
+#' @seealso [update_QWAimages()], [update_QWAmetadata()], `vignette("update-combine")`
 #' @export
 update_QWAdata <- function(x, meta, imgs_to_reread = NULL,
                            exclude_mode = NULL,
@@ -214,7 +216,8 @@ update_QWAdata <- function(x, meta, imgs_to_reread = NULL,
 #' @param images a [QWAimages] object; the complete set of images of the
 #'   updated dataset
 #' @returns An updated [QWAmetadata] object
-#' @seealso [update_QWAimages()], [update_QWAdata()], [check_QWAmetadata()]
+#' @seealso [update_QWAimages()], [update_QWAdata()], [check_QWAmetadata()],
+#'   `vignette("update-combine")`
 #' @export
 update_QWAmetadata <- function(x, images) {
   validate_QWAmetadata(x)

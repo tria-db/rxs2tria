@@ -54,3 +54,6 @@ rule for \code{exclude_issues}. Only if a re-analysis was minor and did not
 change the dating, use \code{reset_manual_flags = FALSE} to keep the previous
 manual flags.
 }
+\seealso{
+\code{\link[=update_QWAimages]{update_QWAimages()}}, \code{\link[=update_QWAmetadata]{update_QWAmetadata()}}, \code{vignette("update-combine")}
+}

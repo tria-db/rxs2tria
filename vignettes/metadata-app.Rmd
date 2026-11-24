@@ -164,7 +164,11 @@ this app covers Step 3b, run after building the `QWAimages` object in
 Step 3 and before (or alongside) processing the measurement data in
 Steps 4-5. The resulting `.json` file is, together with the two
 `QWAdata` `.csv` files, one of the three files required for every TRIA
-submission (`vignette("submission")`).
+submission (`vignette("submission")`). From here on, use `QWA_meta$images`
+rather than the original `QWAimages` object, as it contains the values
+entered in the app (e.g. `only_ew`, `img_comment`). To review the image
+comments in the flags app, load this `.json` as its images input (see
+`vignette("flags-app")`).
 
 Because partially completed submissions can be saved and reopened at
 any time, you do not need to finish in one sitting -- export what you

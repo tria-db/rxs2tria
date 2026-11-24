@@ -307,7 +307,6 @@ collect_raw_data <- function(df_meta, roxas_version = NULL) {
   df_rings_complete <- complete_rings(QWA_data, df_meta, quiet = TRUE)
 
   # check for cwt estimates (expected/required for conifer data)
-  # TODO: could already check in df_meta for info wrt angiosperm/conifer?
   check_cwt(QWA_data$cells)
   check_cells_key(QWA_data$cells)
 
@@ -315,7 +314,7 @@ collect_raw_data <- function(df_meta, roxas_version = NULL) {
   check_ring_years(df_rings_complete)
   check_outmost_year(df_rings_complete, df_meta)
 
-  # align the types to the schemas (raw files are read as doubles)
+  # align the types to the schemas (raw files and remove_outliers can create doubles)
   x <- new_QWAdata(cells = align_data(QWA_data$cells, "cells"),
                    rings = align_data(df_rings_complete, "rings"))
 

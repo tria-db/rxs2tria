@@ -253,9 +253,22 @@ QWA_data$rings <- read_QWAdata(
 write_QWAdata(QWA_data, dir = path_out, dataset_name = dataset_name)
 ```
 
+Image comments (`img_comment`) are entered in the metadata app, so to
+review them in the Comments tab, load the `QWAmetadata` `.json` exported
+from the metadata app as the images input. The saved images table is
+then the `$images` component of that `QWAmetadata` object with the
+`comment_handled` column added. Put it back into the `QWAmetadata` object:
+
+```{r merge-back-images}
+imgs_flags <- vroom::vroom("path/to/output_data/example_dataset_edited_QWAimages.csv")
+QWA_meta$images <- QWAimages(imgs_flags)
+
+write_QWAmetadata(QWA_meta, "path/to/output_data/example_dataset_QWAmetadata.json")
+```
+
 If reviewing the data in the app reveals that one or more images need to
 be re-analysed in ROXAS/ROXAS AI, use `update_QWAimages()` and
-`update_QWAdata()` (Step 6c) to splice in the new results rather than
+`update_QWAdata()` (see `vignette("update-combine")`) to splice in the new results rather than
 reprocessing the whole dataset -- by default this resets any manual
 flags for the re-read images, since they may no longer apply to the
 re-analysed data. Manual duplicate selections are also replaced for all

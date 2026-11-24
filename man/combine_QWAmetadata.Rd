@@ -33,5 +33,6 @@ different values), and their counts are updated with
 Submission files only; TRIA dataset files are not edited.
 }
 \seealso{
-\code{\link[=combine_QWAimages]{combine_QWAimages()}}, \code{\link[=combine_QWAdata]{combine_QWAdata()}}, \code{\link[=update_QWAmetadata]{update_QWAmetadata()}}
+\code{\link[=combine_QWAimages]{combine_QWAimages()}}, \code{\link[=combine_QWAdata]{combine_QWAdata()}}, \code{\link[=update_QWAmetadata]{update_QWAmetadata()}},
+\code{vignette("update-combine")}
 }

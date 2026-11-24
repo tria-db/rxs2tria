@@ -81,7 +81,9 @@ exactly once, there may not be a specific woodpiece identifier, and it
 can be left out of the pattern.
 
 Adapt the pattern to match your naming convention using named regex groups.
-Supported group names: site, species, tree, woodpiece, slide, image.
+Supported group names: site, species, tree, woodpiece, slide, image. If not 
+all levels are used, always keep the hightest possible hierarchical 
+level in the pattern.
 Example below assumes the common convention
   `{site}_{species}_{tree}_{slide}_{image}`
 with alphanumeric components and one woodpiece per tree (no separate woodpiece
@@ -327,6 +329,11 @@ launch_flags_app()
 # write_QWAdata(QWA_data, dir = path_out, dataset_name = dataset_name, overwrite = TRUE)
 ```
 
+To review the image comments entered in the metadata app, load the
+`QWAmetadata` `.json` as the images input, and put the saved images
+(with `comment_handled`) back into `QWA_meta$images` (see
+`vignette("flags-app")`).
+
 `extract_ring_measures()` returns the ring measurements without the
 excluded rings, as input for further analyses:
 
@@ -338,111 +345,12 @@ See `vignette("flags-app")` for a full walkthrough of the app.
 
 ---
 
-## Update images (Step 6c)
+## Update and combine data (Step 6c)
 
-`update_QWAdata()` synchronises a `QWAdata` object with a `QWAimages`
-object: images new in `rxs_images` are read and added, images no longer
-in `rxs_images` are removed, and images listed in `imgs_to_reread` are
-read again from their raw data files. This avoids reprocessing the
-entire dataset. Duplicate-ring flags are recalculated for all
-woodpiece-years affected by these changes. Added and re-read images are
-new data: inspect their flags again (Step 6b) or re-apply any custom
-rule for `exclude_issues`.
-
-### Re-analysed images
-
-If data processing reveals issues in the raw data and you re-analyse
-one or more images with ROXAS or ROXAS AI:
-
-1. Replace the output files in `path_in` with the newly generated files.
-2. Re-read the settings/metadata for those images in the `QWAimages`
-   object (no need to repeat Steps 1 and 2):
-
-```{r, eval = FALSE}
-rxs_images <- update_QWAimages(rxs_images,
-  imgs_to_reread = c("IMAGELABEL1", "IMAGELABEL2"),
-  settings_date_orders = settings_date_orders) # same as defined in Step 3
-# if a QWAmetadata object exists, update it as well (keeps the values
-# entered in the metadata app):
-# QWA_meta <- update_QWAmetadata(QWA_meta, rxs_images)
-```
-
-3. Update the `QWAdata` object. For the re-read images, derived measures
-   and automatic flags are recalculated. By default, any manual edits
-   made in the flags app for these images are also reset. Set
-   `reset_manual_flags = FALSE` to keep them only if the re-analysis was
-   minor and the dating was not affected:
-
-```{r, eval = FALSE}
-QWA_data <- update_QWAdata(QWA_data, meta = rxs_images,
-  imgs_to_reread = c("IMAGELABEL1", "IMAGELABEL2"))
-```
-
-4. Review `only_ew` and `img_comment` of the re-analysed images in the
-   metadata app, e.g. a comment noting that the image needs re-analysis.
-
-### Added or removed images
-
-To add images, there are two options:
-
-- Rerun Steps 1--3 on the updated `path_in` to rebuild `rxs_images`.
-  Any `only_ew` and `img_comment` values entered in the metadata app
-  are then missing from `rxs_images` (`update_QWAmetadata()` below
-  fills them in).
-- Run Steps 1--3 on a separate folder containing only the new images to
-  obtain `rxs_images_new`, and combine it with the existing object. This
-  keeps existing values. Both objects must have the same ROXAS version
-  and distinct image labels:
-
-```{r, eval = FALSE}
-rxs_images <- combine_QWAimages(rxs_images, rxs_images_new)
-```
-
-To remove images, filter them from `rxs_images`:
-
-```{r, eval = FALSE}
-rxs_images <- rxs_images |>
-  dplyr::filter(!image_label %in% c("IMAGELABEL1", "IMAGELABEL2"))
-```
-
-Then update the `QWAdata` object:
-
-```{r, eval = FALSE}
-QWA_data <- update_QWAdata(QWA_data, meta = rxs_images)
-```
-
-If a `QWAmetadata` object exists, update it as well. This replaces its
-images and adds or removes the corresponding rows (and updates the
-counts) in the sites, trees, woodpieces and slides tables, keeping the
-existing metadata. Any `only_ew` and `img_comment` values missing or
-`NA` in `rxs_images` are filled from `QWA_meta$images`, so this also
-recovers them after a rebuild. Complete any added rows in the metadata
-app.
-
-```{r, eval = FALSE}
-QWA_meta <- update_QWAmetadata(QWA_meta, rxs_images)
-```
-
-### Combining datasets
-
-Two datasets prepared separately, e.g. from different input folders, can
-be combined with `combine_QWAimages()`, `combine_QWAdata()` and
-`combine_QWAmetadata()`. Both must have the same ROXAS version and
-distinct image labels. Where both contain the same entry (e.g. a shared
-site or author), the first object takes precedence. Duplicate-ring flags
-are recalculated for woodpiece-years with rings from both datasets.
-
-```{r, eval = FALSE}
-rxs_images <- combine_QWAimages(rxs_images_1, rxs_images_2)
-QWA_data <- combine_QWAdata(QWA_data_1, QWA_data_2)
-QWA_meta <- combine_QWAmetadata(QWA_meta_1, QWA_meta_2)
-```
-
-After any of these updates, save the data again:
-
-```{r, eval = FALSE}
-write_QWAdata(QWA_data, dir = path_out, dataset_name = dataset_name, overwrite = TRUE)
-```
+If the steps above reveal issues in the raw data, you can re-analyse
+images, add or remove images, or combine datasets prepared separately
+(e.g. one site at a time) without repeating the completed steps. See
+`vignette("update-combine")`.
 
 ---
 

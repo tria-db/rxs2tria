@@ -27,6 +27,21 @@ validated zip of supplementary files) ready on disk.
 
 ---
 
+## Final files from the apps
+
+| Submitted file | Comes from |
+|---|---|
+| `QWAmetadata.json` | Metadata app export (`vignette("metadata-app")`); if image comments were reviewed in the flags app, with its saved images put back into `$images` (`vignette("flags-app")`) |
+| `QWArings.csv(.gz)` | `write_QWAdata()`, after putting the rings saved by the flags app back into `QWA_data$rings` (`vignette("flags-app")`) |
+| `QWAcells.csv(.gz)` | `write_QWAdata()` |
+
+After the metadata app, continue with `QWA_meta$images` rather than the
+original `QWAimages` object: it contains the values entered in the app
+(e.g. `only_ew`, `img_comment`). Check the final files before submitting
+(Step 8 of `vignette("workflow")`).
+
+---
+
 ## What to submit
 
 A submission consists of:

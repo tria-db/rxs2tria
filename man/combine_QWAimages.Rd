@@ -19,5 +19,5 @@ distinct \code{image_label} values. The result is aligned and validated by
 \code{\link[=QWAimages]{QWAimages()}}.
 }
 \seealso{
-\code{\link[=combine_QWAdata]{combine_QWAdata()}}, \code{\link[=combine_QWAmetadata]{combine_QWAmetadata()}}
+\code{\link[=combine_QWAdata]{combine_QWAdata()}}, \code{\link[=combine_QWAmetadata]{combine_QWAmetadata()}}, \code{vignette("update-combine")}
 }

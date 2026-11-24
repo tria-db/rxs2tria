@@ -24,5 +24,5 @@ recalculated for woodpiece-years with rings from both objects, replacing any
 manual duplicate selection there. All other flags are kept.
 }
 \seealso{
-\code{\link[=combine_QWAimages]{combine_QWAimages()}}, \code{\link[=combine_QWAmetadata]{combine_QWAmetadata()}}
+\code{\link[=combine_QWAimages]{combine_QWAimages()}}, \code{\link[=combine_QWAmetadata]{combine_QWAmetadata()}}, \code{vignette("update-combine")}
 }

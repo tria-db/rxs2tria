@@ -24,7 +24,7 @@ write_QWAmetadata(
 \item{drop_empty}{If \code{TRUE} (default), optional fields filled in the Shiny
 apps (\code{colType} \code{"meta_input"} or \code{"qc_input"}) that are empty in all rows
 of a component are not written. Fields required under a condition (e.g.
-\code{embargoed_until} for restricted datasets) are kept where it applies.}
+\code{embargoed_until} for restricted datasets) are always kept.}
 }
 \value{
 The output file path, invisibly.

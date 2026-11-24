@@ -39,5 +39,6 @@ it with \code{\link[=build_QWAimages]{build_QWAimages()}}.
 Submission files only; TRIA dataset files are not edited.
 }
 \seealso{
-\code{\link[=update_QWAimages]{update_QWAimages()}}, \code{\link[=update_QWAdata]{update_QWAdata()}}, \code{\link[=check_QWAmetadata]{check_QWAmetadata()}}
+\code{\link[=update_QWAimages]{update_QWAimages()}}, \code{\link[=update_QWAdata]{update_QWAdata()}}, \code{\link[=check_QWAmetadata]{check_QWAmetadata()}},
+\code{vignette("update-combine")}
 }

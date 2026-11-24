@@ -22,6 +22,24 @@ knitr::opts_chunk$set(
 library(rxs2tria)
 ```
 
+```{r schema-table, include = FALSE, eval = TRUE}
+# column table of a QWAdata component, from its JSON schema
+col_groups <- c(key = "Identifier", measure = "Measurement", derived = "Derived",
+                estimate = "Estimate", flag = "Automatic flag", qc_input = "Flags app")
+schema_table <- function(schema) {
+  props <- rxs2tria:::schema_tbl_props(schema)$properties
+  field <- function(name) vapply(props, \(x) if (is.null(x[[name]])) "" else x[[name]], "")
+  tbl <- data.frame(
+    Column = paste0("`", names(props), "`"),
+    Name = field("title"),
+    Unit = field("unit"),
+    Description = field("description"),
+    Group = unname(col_groups[field("colType")])
+  )
+  knitr::kable(tbl, row.names = FALSE)
+}
+```
+
 ## Overview
 
 A `QWAdata` object is a named list with two components:
@@ -97,17 +115,24 @@ One row per cell. Columns fall into three groups:
 pixel coordinates `xpix` / `ypix`.
 
 **Raw measurements**: cell dimensions and wall thickness directly from
-ROXAS — lumen dimensions (`drad`, `dtan`), radial distribution
-(`rraddistr`), lumen area (`la`), cell wall areas (`cwa`), and cell wall
-thicknesses (`cwtrad`, `cwttan`, `cwtall`, `rtsr`).
+ROXAS, e.g. lumen area (`la`), lumen diameters (`drad`, `dtan`) and cell
+wall thicknesses (`cwtrad`, `cwttan`).
 
-**Derived measures** (`colType` `derived`, added by `complete_QWAdata()`):
-`tca`, `rwd2`, `dcwt`, `cwtall_adj`, `cdrad`, `cdtan`, `cdratio`,
-`sector100`.
+**Derived measures** (`colType` `derived`, added by `complete_QWAdata()`),
+e.g. total cell area (`tca`) and cell diameters (`cdrad`, `cdtan`).
 
 **Estimate** (added by `complete_QWAdata()`): `ew_lw` (earlywood /
 latewood classification based on Mork's index; depends on method
 choices, so always kept).
+
+<details>
+<summary>All `$cells` columns</summary>
+
+```{r cells-columns, eval = TRUE, echo = FALSE}
+schema_table("cells")
+```
+
+</details>
 
 ### `$rings`
 
@@ -126,6 +151,15 @@ described in the next section.
 **Quality-control inputs** (`colType` `qc_input`): further ring flags,
 `affected_tissue` and `comment`, set in the flags app (see
 `vignette("flags-app")`). They are never added by `complete_QWAdata()`.
+
+<details>
+<summary>All `$rings` columns</summary>
+
+```{r rings-columns, eval = TRUE, echo = FALSE}
+schema_table("rings")
+```
+
+</details>
 
 ---
 

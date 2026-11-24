@@ -226,12 +226,12 @@ build_QWAimages <- function(df_structure, df_settings) {
 
   # TODO: check outmost_year is valid?
 
+  x <- new_QWAimages(df_rxsmeta, roxas_version = rv)
+  validate_QWAimages(x)
+
   cli::cli_alert_success(
     "Extracted available {rv_msg(rv)} metadata to {.var QWAimages} object."
   )
-
-  x <- new_QWAimages(df_rxsmeta, roxas_version = rv)
-  validate_QWAimages(x)
   x
 }
 

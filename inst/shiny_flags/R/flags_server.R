@@ -111,9 +111,9 @@ flags_server <- function(id, main_session, comments_out) {
             #                         "prf_data.csv", package = "rxs2tria")
             path_rings <- system.file("extdata", "TRIA_example_QWArings.csv.gz",
                                       package = "rxs2tria")
-            # path_rxsmeta <- system.file("extdata", "example_input",
-            #                             "rxsmeta_data.csv", package = "rxs2tria")
-            load_data_csv(path_prf = NULL, path_rings, path_rxsmeta = NULL)
+            path_rxsmeta <- system.file("extdata", "TRIA_example_QWAmetadata.json",
+                                        package = "rxs2tria")
+            load_data_csv(path_prf = NULL, path_rings, path_rxsmeta)
           }
         )
         
@@ -275,14 +275,15 @@ flags_server <- function(id, main_session, comments_out) {
                            input_data$rxsmeta_data,
                            ignoreInit = TRUE)
 
-    # update filter wp input based on sel site and species
+    # update filter wp input based on sel site and species (empty filter: all)
     shiny::observe({
-      shiny::req(input_data$rxsmeta_data, input$filt_site)
+      shiny::req(input_data$rxsmeta_data)
       wp_choices <- input_data$rxsmeta_data |>
-        dplyr::filter(
-          image_label %in% input_data$rings_data$image_label,
-          site_label %in% input$filt_site,
-        )
+        dplyr::filter(image_label %in% input_data$rings_data$image_label)
+      if (shiny::isTruthy(input$filt_site)) {
+        wp_choices <- wp_choices |>
+          dplyr::filter(site_label %in% input$filt_site)
+      }
       if (shiny::isTruthy(input$filt_species)) {
         wp_choices <- wp_choices |>
           dplyr::filter(species_code %in% input$filt_species)
@@ -296,7 +297,29 @@ flags_server <- function(id, main_session, comments_out) {
         selected = wp_choices
       )
     }) |> shiny::bindEvent(input$filt_site, input$filt_species,
-                           ignoreInit = TRUE)
+                           ignoreInit = TRUE, ignoreNULL = FALSE)
+
+    # species and site filters show all choices; if the selection in one leaves
+    # no data with the other, the other is reset to all its choices with data
+    shiny::observe({
+      shiny::req(input_data$rxsmeta_data, input$filt_species, input$filt_site)
+      df <- input_data$rxsmeta_data |>
+        dplyr::filter(image_label %in% input_data$rings_data$image_label,
+                      species_code %in% input$filt_species)
+      if (!any(df$site_label %in% input$filt_site)) {
+        shiny::updateSelectInput(session, "filt_site", selected = unique(df$site_label))
+      }
+    }) |> shiny::bindEvent(input$filt_species, ignoreInit = TRUE)
+
+    shiny::observe({
+      shiny::req(input_data$rxsmeta_data, input$filt_site, input$filt_species)
+      df <- input_data$rxsmeta_data |>
+        dplyr::filter(image_label %in% input_data$rings_data$image_label,
+                      site_label %in% input$filt_site)
+      if (!any(df$species_code %in% input$filt_species)) {
+        shiny::updateSelectInput(session, "filt_species", selected = unique(df$species_code))
+      }
+    }) |> shiny::bindEvent(input$filt_site, ignoreInit = TRUE)
 
     # enable/disable sector selection based on selected parameter
     shiny::observe({
@@ -396,14 +419,15 @@ flags_server <- function(id, main_session, comments_out) {
 
     # reactive df_selwp for trace of selected woodpiece
     # (includes also exclude_dupl years for plotting markers not on curve)
+    # wait until sel_woodpiece follows a change of filt_wp (one flush later)
     df_selwp <- shiny::reactive({
-      shiny::req(df_crn(), sel_woodpiece())
+      shiny::req(df_crn(), sel_woodpiece(), sel_woodpiece() %in% input$filt_wp)
       dplyr::filter(df_crn(), woodpiece_label == sel_woodpiece())
     })
 
     # reactive df_otherwps for traces of all other woodpieces
     df_otherwps <- shiny::reactive({
-      shiny::req(df_crn(), sel_woodpiece())
+      shiny::req(df_crn(), sel_woodpiece(), sel_woodpiece() %in% input$filt_wp)
       df_crn() |>
         dplyr::filter(woodpiece_label != sel_woodpiece(), !exclude_dupl)
     })
@@ -1131,16 +1155,20 @@ flags_server <- function(id, main_session, comments_out) {
 
       safe_block({
         rxsmeta <- input_data$rxsmeta_data
-        if (is.null(rxsmeta) || !"fname_image" %in% names(rxsmeta)) {
-          stop("Provide `QWAimages` data with valid `$fname_image` filepaths to open images.")
+        fname_cols <- intersect(c("fname_image", "fname_settings", "fname_cells", "fname_rings"),
+                                names(rxsmeta))
+        if (is.null(rxsmeta) || length(fname_cols) == 0) {
+          stop("Provide `QWAimages` data with `$fname_image` (or other `$fname_*`) filepaths to open images.")
         }
         # exactly one row per image_label is ensured at input validation
         img_meta <- rxsmeta |> dplyr::filter(image_label == sel_img)
-        if (is.na(img_meta$fname_image)) {
-          stop("No image filepath available in `$fname_image`.")
+        # folder of the ROXAS files; the original image may be missing
+        any_path <- stats::na.omit(unlist(img_meta[fname_cols]))[1]
+        if (is.na(any_path)) {
+          stop("No filepaths available in `$", paste(fname_cols, collapse = "`, `$"), "`.")
         }
-        image_path <- img_meta$fname_image
-        base_path <- dirname(image_path)
+        image_path <- img_meta$fname_image %||% NA_character_
+        base_path <- dirname(any_path)
 
         # check for annotated images in same folder, any image extension
         name_esc <- stringr::str_escape(img_meta$org_img_name)
@@ -1158,6 +1186,9 @@ flags_server <- function(id, main_session, comments_out) {
 
         # Prefer annotated > twin > image file
         file_to_open <- c(annotated_image, annotated_twin, image_path)[1]
+        if (is.na(file_to_open)) {
+          stop("No original or annotated image found in: ", base_path)
+        }
         # annotated files are found on disk, but image_path from the metadata may be outdated
         if (!file.exists(file_to_open)) {
           stop("Image file not found (moved or renamed?): ", file_to_open)

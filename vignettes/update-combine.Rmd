@@ -1,0 +1,156 @@
+---
+title: "Update and combine data"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Update and combine data}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+```{r setup}
+library(rxs2tria)
+```
+
+Preparing a dataset is often iterative: data processing reveals issues
+in the raw data, images are re-analysed in ROXAS or ROXAS AI, images are
+added or removed, or the dataset is built up in parts (e.g. one site
+at a time) and combined for submission. The `update_*()` and
+`combine_*()` functions handle these cases without repeating the
+completed steps of the `vignette("workflow")`.
+
+| Situation | Functions |
+|---|---|
+| Images re-analysed, output files replaced | `update_QWAimages()`, `update_QWAdata()`, `update_QWAmetadata()` |
+| Images added to or removed from the dataset | `combine_QWAimages()` or a filter, then `update_QWAdata()`, `update_QWAmetadata()` |
+| Datasets prepared separately, e.g. per site | `combine_QWAimages()`, `combine_QWAdata()`, `combine_QWAmetadata()` |
+
+The `QWAimages` object defines the images of the dataset: update it
+first, then the `QWAdata` and `QWAmetadata` objects to match it.
+
+The objects below follow the names of the workflow: `rxs_images`
+(`QWAimages`), `QWA_data` (`QWAdata`) and `QWA_meta` (`QWAmetadata`).
+
+## Re-analysed images
+
+If data processing reveals issues in the raw data and you re-analyse
+one or more images with ROXAS or ROXAS AI:
+
+1. Replace the output files in `path_in` with the newly generated files.
+2. Re-read the settings/metadata for those images in the `QWAimages`
+   object (no need to repeat Steps 1 and 2 of the workflow):
+
+```{r}
+rxs_images <- update_QWAimages(rxs_images,
+  imgs_to_reread = c("IMAGELABEL1", "IMAGELABEL2"),
+  settings_date_orders = settings_date_orders) # as in Step 3 (ROXAS only)
+# if a QWAmetadata object exists, update it as well (keeps the values
+# entered in the metadata app):
+# QWA_meta <- update_QWAmetadata(QWA_meta, rxs_images)
+```
+
+3. Update the `QWAdata` object. For the re-read images, the raw cells
+   and rings files are read again, and derived measures and automatic
+   flags are recalculated. By default, any manual edits made in the
+   flags app for these images are also reset. Set
+   `reset_manual_flags = FALSE` to keep them only if the re-analysis was
+   minor and the dating was not affected:
+
+```{r}
+QWA_data <- update_QWAdata(QWA_data, meta = rxs_images,
+  imgs_to_reread = c("IMAGELABEL1", "IMAGELABEL2"))
+```
+
+4. Review `only_ew` and `img_comment` of the re-analysed images in the
+   metadata app, e.g. a comment noting that the image needs re-analysis.
+
+`update_QWAdata()` recalculates the duplicate-ring flags for all
+woodpiece-years with a re-read image, as overlaps may change. The
+re-read images are new data: inspect their flags again in the flags app
+or re-apply any custom rule for `exclude_issues`.
+
+## Added or removed images
+
+To add images, there are two options:
+
+- Rerun Steps 1--3 of the workflow on the updated `path_in` to rebuild
+  `rxs_images`. Any `only_ew` and `img_comment` values entered in the
+  metadata app are then missing from `rxs_images`
+  (`update_QWAmetadata()` below fills them in).
+- Run Steps 1--3 on a separate folder containing only the new images to
+  obtain `rxs_images_new`, and combine it with the existing object. This
+  keeps existing values. Both objects must have the same ROXAS version
+  and distinct image labels:
+
+```{r}
+rxs_images <- combine_QWAimages(rxs_images, rxs_images_new)
+```
+
+To remove images, filter them from `rxs_images`:
+
+```{r}
+rxs_images <- rxs_images |>
+  dplyr::filter(!image_label %in% c("IMAGELABEL1", "IMAGELABEL2"))
+```
+
+Then update the `QWAdata` object. Images new in `rxs_images` are read
+and added, images no longer in `rxs_images` are removed, and the
+duplicate-ring flags are recalculated for all affected woodpiece-years:
+
+```{r}
+QWA_data <- update_QWAdata(QWA_data, meta = rxs_images)
+```
+
+If a `QWAmetadata` object exists, update it as well. This replaces its
+images and adds or removes the corresponding rows (and updates the
+counts) in the sites, trees, woodpieces and slides tables, keeping the
+existing metadata. Any `only_ew` and `img_comment` values missing or
+`NA` in `rxs_images` are filled from `QWA_meta$images`, so this also
+recovers them after a rebuild. Complete any added rows in the metadata
+app.
+
+```{r}
+QWA_meta <- update_QWAmetadata(QWA_meta, rxs_images)
+```
+
+## Combining datasets
+
+Two datasets prepared separately, e.g. from different input folders, can
+be combined with `combine_QWAimages()`, `combine_QWAdata()` and
+`combine_QWAmetadata()`. Both must have the same ROXAS version and
+distinct image labels. Where both contain the same entry (e.g. a shared
+site or author), the first object takes precedence. Duplicate-ring flags
+are recalculated for woodpiece-years with rings from both datasets.
+
+```{r}
+rxs_images <- combine_QWAimages(rxs_images_1, rxs_images_2)
+QWA_data <- combine_QWAdata(QWA_data_1, QWA_data_2)
+QWA_meta <- combine_QWAmetadata(QWA_meta_1, QWA_meta_2)
+```
+
+For example, to build up a dataset one site at a time, run Steps 1--5
+of the workflow for each site's folder and combine the `QWAimages` and
+`QWAdata` objects. If the metadata app was not used yet, enter the
+metadata once for the combined `rxs_images`, so the dataset and author
+information is entered only once. Metadata already entered per site is
+combined with `combine_QWAmetadata()`.
+
+## Save the updated data
+
+After any of these updates, save the data again:
+
+```{r}
+write_QWAimages(rxs_images, "path/to/output_data/example_dataset_QWAimages.csv.gz")
+write_QWAdata(QWA_data, dir = path_out, dataset_name = dataset_name, overwrite = TRUE)
+write_QWAmetadata(QWA_meta, "path/to/output_data/example_dataset_QWAmetadata.json")
+```

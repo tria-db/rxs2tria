@@ -2,6 +2,7 @@ url: https://tria-db.github.io/rxs2tria/
 template:
   bootstrap: 5
   bootswatch: darkly
+  theme: a11y-dark
 reference:
 - title: "Read raw ROXAS (AI) metadata"
   desc: "Functions for extracting metadata from the raw ROXAS (AI) output files."
@@ -93,6 +94,7 @@ articles:
   navbar: ~
   contents:
   - workflow
+  - update-combine
   - supplementary
   - submission
   - metadata-app

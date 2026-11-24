@@ -25,3 +25,6 @@ Re-reads the settings/metadata files for the given images and replaces the
 corresponding rows in the existing \link{QWAimages} object. Useful when source
 files have changed after initial import.
 }
+\seealso{
+\code{\link[=update_QWAdata]{update_QWAdata()}}, \code{\link[=update_QWAmetadata]{update_QWAmetadata()}}, \code{vignette("update-combine")}
+}

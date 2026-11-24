@@ -671,7 +671,7 @@ complete_QWAmetadata <- function(x) {
 #' @param drop_empty If `TRUE` (default), optional fields filled in the Shiny
 #'   apps (`colType` `"meta_input"` or `"qc_input"`) that are empty in all rows
 #'   of a component are not written. Fields required under a condition (e.g.
-#'   `embargoed_until` for restricted datasets) are kept where it applies.
+#'   `embargoed_until` for restricted datasets) are always kept.
 #' @returns The output file path, invisibly.
 #' @seealso [read_QWAmetadata()]
 #' @export
