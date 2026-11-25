@@ -34,11 +34,12 @@ flags_server <- function(id, main_session, comments_out) {
     shift_image <- shiny::reactiveVal(NULL)
 
     # reactive containers for table settings and data
+    # default: automatic flags plus a few common issues and features
     sel_hot_cols <- shiny::reactiveVal(list(
-      disqual = disqual_issues,
-      techn = technical_issues,
-      other = other_issues,
-      discrete = discrete_features
+      disqual = disqual_issues[disqual_issues %in% c(auto_flags, "compression_wood")],
+      techn = technical_issues[technical_issues %in% c("cracks", "out_of_focus")],
+      other = other_issues[0],
+      discrete = discrete_features[discrete_features %in% c("blue_ring", "frost_ring")]
     ))
     excl_flags <- shiny::reactiveVal(NULL)
     current_hot_image <- shiny::reactiveVal(NULL)
@@ -591,8 +592,15 @@ flags_server <- function(id, main_session, comments_out) {
     # PLOT REACTIVITY ----------------------------------------------------------
     ## plot clicks -------------------------------------------------------------
     # capture click events on crn or cov plots, identify clicked trace and role
+    
+    # TRUE once plot data exist; unlike df_selwp(), it does not change with
+    # filters, so data changes do not replay the last click in plot_click()
+    plot_ready <- shiny::reactiveVal(FALSE)
+    shiny::observe(plot_ready(TRUE)) |>
+      shiny::bindEvent(df_selwp(), once = TRUE)
+
     plot_click <- shiny::reactive({
-      shiny::req(df_selwp())
+      shiny::req(plot_ready())
       event <- plotly::event_data(
         "plotly_click", source = "crn_plot", priority = "event"
       )
@@ -1398,6 +1406,8 @@ flags_server <- function(id, main_session, comments_out) {
 
     # # DEBUG OUTPUT -------------------------------------------------------------
     # output$debug <- shiny::renderPrint({
+    #   str(plot_click()[c("curveNumber", "x", "y", "wp_label")])
+    # })
     #   #sel_marker()
     #   #sel_subplots()
     #   #flags_out()
@@ -1419,5 +1429,5 @@ flags_server <- function(id, main_session, comments_out) {
       images_edited = images_edited
     )
 
-  })
+    })
 }

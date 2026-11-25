@@ -554,7 +554,9 @@ save_ring_edits <- function(df, df_in, settings, rxsmeta = NULL, handled = NULL)
     launch_wd <- shiny::getShinyOption("launch_wd", default = getwd())
     df_out <- prepare_rings_out(df, df_in)
     if ("env" %in% settings$save_to) {
-      assign(settings$varname, df_out, envir = .GlobalEnv)
+      # drop empty flag columns, as write_QWAdata() does for the file
+      assign(settings$varname, rxs2tria:::prepare_write(df_out, "rings"),
+             envir = .GlobalEnv)
       shiny::showNotification(
         paste0("Saved to environment variable: ", settings$varname),
         type = "message"
