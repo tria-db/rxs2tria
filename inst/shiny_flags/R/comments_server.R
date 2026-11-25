@@ -16,7 +16,7 @@ comments_server <- function(id, main_session, flags_out) {
         shiny::tagList(
           "Comments",
           shiny::tags$span(
-            class = "badge bg-success text-dark ms-1",
+            class = "badge rounded-pill badge-done ms-1",
             n_unhandled
           )
         )
@@ -24,7 +24,7 @@ comments_server <- function(id, main_session, flags_out) {
         shiny::tagList(
           "Comments",
           shiny::tags$span(
-            class = "badge bg-warning text-dark ms-1",
+            class = "badge rounded-pill bg-info text-dark ms-1",
             n_unhandled
           )
         )
@@ -54,7 +54,7 @@ comments_server <- function(id, main_session, flags_out) {
             cell = function(value, row_index) {
               row <- df[row_index, ]
               shiny::tags$button(
-                class = "btn btn-sm btn-outline-primary",
+                class = "btn btn-sm btn-outline-secondary",
                 onclick = sprintf(
                   "Shiny.setInputValue('comments-goto_img', {woodpiece: '%s', image: '%s', nonce: Math.random()})",
                   row$woodpiece_label, row$image_label
@@ -76,7 +76,7 @@ comments_server <- function(id, main_session, flags_out) {
     })
 
     shiny::observe({
-      bslib::nav_select("tabs", selected = "Quality check series", session = main_session)
+      bslib::nav_select("tabs", selected = "flags", session = main_session)
     }) |> shiny::bindEvent(input$goto_img)
 
     output$debug <- shiny::renderPrint({

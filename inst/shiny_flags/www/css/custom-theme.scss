@@ -1,106 +1,171 @@
+/* colour roles: aliases of the palette ramps defined in R/00_utils-global.R */
+$surface-mist: $prim-col-grad-3;  // sidebar, card headers
+$surface-deep: $prim-col-grad-1;  // headers on mist panels
+$action:       $secondary;        // berry: calls to action, checks, switches
+$action-deep:  $sec-col-grad-1;
+$signal:       $info;             // amber: open comments badge only
+// $data-slate (flags table header) and $data-invalid (invalid cells) are set
+// in R/00_utils-global.R
+
+/* focus: 2px ring with a 2px gap, coloured by the control's family.
+   Bootstrap components (inputs, selects, selectize, sliders) get the teal
+   ring from the focus variables set in R/00_utils-global.R. */
+$ring-structure: $primary;
+$ring-action:    $action;
+$ring-on-dark:   white;
+
+@mixin focus-ring($colour) {
+  outline: 0;
+  box-shadow: 0 0 0 2px $light, 0 0 0 4px $colour;
+}
+/* inset variant for controls that fill their container edge to edge */
+@mixin focus-ring-inset($colour) {
+  outline: 0;
+  box-shadow: inset 0 0 0 2px $colour;
+}
+
+/* default for links and anything else focusable */
+:focus-visible {
+  outline: 2px solid $ring-structure;
+  outline-offset: 2px;
+}
+
 /* buttons */
+/* pill shape + a little more presence */
+.btn {
+  border-radius: 50rem;
+  padding: 0.45rem 1.15rem;
+  font-weight: 500;
+  /* ring in each button variant's own colour */
+  --bs-btn-focus-box-shadow: 0 0 0 2px #{$light}, 0 0 0 4px rgb(var(--bs-btn-focus-shadow-rgb));
+}
+/* outline buttons invert to a solid fill on hover */
+@each $name, $colour in ("primary": $primary, "secondary": $secondary) {
+  .btn-outline-#{$name}:hover {
+    background-color: $colour;
+    border-color: $colour;
+    color: white;
+  }
+}
 .btn-secondary {
   color: white;
 }
-.btn-info {
-  background-color: $info;
-}
-/* TODO: make it so that its greyed out for example?*/
+/* fileInput browse button as a berry outline button; the input itself is
+   hidden, so the ring follows its keyboard focus */
 .btn-file {
-  background-color: $info !important;
-  border-color: $info !important;
-  color: white !important;
+  background-color: transparent !important;
+  border-color: $action !important;
+  color: $action !important;
+  &:hover {
+    background-color: $action !important;
+    color: white !important;
+  }
+  &:has(input:focus-visible) {
+    @include focus-ring($ring-action);
+  }
 }
 
 /* sidebar */
 .sidebar {
-  background-color: $prim-col-grad-4 !important;
-  color: #212529 !important;
+  background-color: $surface-mist !important;
+  color: $dark !important;
+}
+/* sidebar title and content spacing; the tab-pane prefix outranks bslib's
+   sidebar rules, which load after the theme */
+.tab-pane .bslib-sidebar-layout {
+  .sidebar-title {
+    margin-bottom: 0;
+    padding-bottom: 10px;
+  }
+  > .sidebar > .sidebar-content {
+    padding-top: 1rem;
+  }
 }
 
-/* navbar:
-primary bg color, white font, white on hover, white active underline */
-.bslib-navs-card-title {
-  background-color: $primary;
-  color: white;
-  font-size: 12pt;
+/* flags tab: sidebar layout flush against page edges, no gap below navbar */
+.tab-content > .tab-pane[data-value="flags"] {
+  margin-top: 0 !important;
 }
-.nav-link {
-  font-size: 10pt;
-  color: $prim-col-grad-3;
-  --bs-nav-link-hover-color: white;
-  --bs-nav-underline-link-active-color: white;
+.tab-pane[data-value="flags"] .bslib-sidebar-layout {
+  margin-left: calc(-1 * var(--bs-gutter-x, 1.5rem) / 2);
+  margin-right: calc(-1 * var(--bs-gutter-x, 1.5rem) / 2);
+  margin-bottom: 0 !important;
+  border: none !important;
 }
 
-/* accoridon */
-.accordion-button:not(.collapsed) {
-  background-color: $prim-col-grad-1 !important;
-  color: white !important;
+/* navbar: brand and tab font */
+.navbar-brand {
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
-.accordion-button {
-  background-color: $prim-col-grad-4;
+/* navbar tabs: the underline indicator is drawn by bslib
+   (navbar_options(underline = TRUE)). Bootstrap also gives nav-links a
+   border-radius, which curls the underline ends. Flatten it; the selector
+   matches Bootstrap's own `.navbar .navbar-nav .nav-link` specificity so this
+   override wins. */
+.navbar .navbar-nav {
+  .nav-link,
+  :where(ul.nav.navbar-nav > li) > a,
+  .nav-tabs > li > a,
+  .nav-pills > li > a {
+    font-size: 0.85rem;
+    border-radius: 0;
+  }
+  .nav-link:focus-visible {
+    @include focus-ring-inset($ring-on-dark);
+  }
 }
-/* custom tertiary color according (used for search tools) */
-.accordion-tert .accordion-button:not(.collapsed) {
-  background-color: $tert-col-grad-2 !important;
-  color: white !important;
-}
-.accordion-tert .accordion-button {
-  background-color: $tert-col-grad-4;
-}
-.accordion-tert .accordion-item {
-  background-color: $tert-col-grad-5 !important;
+.navbar-brand:focus-visible {
+  outline-color: $ring-on-dark;
 }
 
-/* custom class for a code style output*/
-.code-output {
-  display:block;
-  padding:9.5px;
-  margin:0 0 10px;
-  margin-top:10px;
-  line-height:20px;
-  word-break:break-all;
-  word-wrap:break-word;
-  white-space:pre-wrap;
-  border:1px solid rgba(0,0,0,0.15);
-  border-radius:4px;
-  font-family:monospace;
-  background-color:$prim-col-grad-5 !important;
+/* reactable output */
+.reactable {
+  /* sortable header cells, expanders, pagination: reactable removes the
+     outline, so draw an inset ring (neighbouring cells would cover a gap) */
+  [tabindex]:focus-visible,
+  button:focus-visible {
+    outline: 0 !important;
+    box-shadow: inset 0 0 0 2px $ring-structure !important;
+  }
 }
 
 /* cards */
 .card {
   border-width: 0;
 }
-/* custom note stlye card */
-.card-note .card-header{
-  padding: 8px;
+/* workbench card: plot, flags table, comments */
+.card-workbench {
+  --bs-card-bg: white;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  > .card-header {
+    background-color: $surface-mist;
+  }
 }
-.card-note .card-body{
-  padding: 8px;
-}
-/* custom tertiary color card */
-.card-tert .card-body{
-  background-color: $tert-col-grad-5 !important;
-}
-.card-tert .card-header{
-  background-color: $tert-col-grad-2 !important;
+
+/* flags table (handsontable); the widget CSS loads after the theme, so these
+   rules rely on !important or a more specific selector */
+.handsontable th {
+  background-color: $data-slate !important;
   color: white !important;
 }
-
-
-/* custom input cards (nested) */
-.card .clean-card .card-body{
-  background-color: $tert-col-grad-4 !important;
+/* tbody outranks handsontable's own `.handsontable td.htInvalid !important` */
+.handsontable tbody td.htInvalid {
+  background-color: $data-invalid !important;
 }
-.card .clean-card-sec .card-body{
-  background-color: $sec-col-grad-4 !important;
+input.htCheckboxRendererInput[type='checkbox'] {
+  accent-color: red !important;
+}
+/* grey checkboxes in the first column after the row names (duplicate_ring) */
+.htCore tbody tr td:nth-child(2) input.htCheckboxRendererInput[type='checkbox'] {
+  accent-color: grey !important;
 }
 
-
-/* shinyTree resp. jstree */
-.jstree-proton .jstree-clicked {
-  background: $prim-col-grad-1 !important;
+/* comments tab badge once all comments are handled (open: bg-info, amber) */
+.badge-done {
+  background-color: $surface-mist;
+  color: $primary;
 }
 
 /* height of the filter wps input box */
@@ -109,70 +174,68 @@ primary bg color, white font, white on hover, white active underline */
   overflow-y: auto;
 }
 
-/* datatable */
-.dataTables_wrapper .dataTable td {
-  padding: 2px 2px !important;
-}
-.dataTables_wrapper .dataTables_paginate .paginate_button {
-  padding: 2px 2px !important;  /* Adjust padding to make buttons smaller */
-}
-/* style for input DT similar to hot*/
-.inputDT thead th {
-    background-color: $sec-col-grad-5 !important;
-  }
-.inputDT tbody td {
-  background-color: white;
-}
-
-/* list spacing */
-ol.custom-indent {
-  padding-left: 15px;
-  padding-bottom: 0px;
-  margin-top: 0px;
-  margin-bottom: 0px;
-}
-.custom-indent .li {
-  margin-bottom: 0px;
-}
-
 /* custom hr with little padding */
 .hr-slim {
   margin: 0.1rem 0;
 }
 
-
-
-
-
 /* shiny inputs */
-/* borders of selected input fields */
-.form-control:focus {
-  border-color: $secondary !important;
-  box-shadow: 0 0 0 .25rem $sec-col-grad-4;
-}
 .form-control, .selectize-input, .form-control-shiny {
   background-color: white !important;
 }
-.shiny-input-container .radio input:not(:checked)  {
-  border-color: $secondary !important;
-  background-color: white !important;
+/* the ring sits on the selectize wrapper, not its inner input */
+.selectize-input input:focus-visible {
+  outline: none;
 }
-.shiny-input-container .radio input:checked  {
-  border-color: $secondary !important;
-  background-color: $secondary !important;
+/* checkboxes, radio buttons and switches in the berry action colour;
+   ring on keyboard focus only */
+.shiny-input-container .checkbox input,
+.shiny-input-container .radio input,
+.form-check-input {
+  border-color: $action !important;
+  &:not(:checked) {
+    background-color: white !important;
+  }
+  &:checked {
+    background-color: $action !important;
+  }
+  &:focus {
+    box-shadow: none !important;
+  }
+  &:focus-visible {
+    outline: 0;
+    box-shadow: 0 0 0 2px $light, 0 0 0 4px $ring-action !important;
+  }
 }
-.shiny-input-container .checkbox input:not(:checked)  {
-  border-color: $secondary !important;
-  background-color: white !important;
-}
-.shiny-input-container .checkbox input:checked  {
-  border-color: $secondary !important;
-  background-color: $secondary !important;
+.form-switch .form-check-input:not(:checked) {
+  --bs-form-switch-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23EA99AA'/%3e%3c/svg%3e");
 }
 
 /* footer */
+/* page is at least viewport height and the tab content grows to fill it,
+   so the footer sits at the bottom on short pages and after the content on
+   long pages */
+body.bslib-page-navbar {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+body.bslib-page-navbar > .container-fluid {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+body.bslib-page-navbar > .container-fluid > .tab-content {
+  flex: 1 0 auto;
+}
 .wsl-footer {
-  width: 100%;
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  right: 50%;
+  margin-left: -50vw;
+  margin-right: -50vw;
   background: $primary;
   color: white;
   padding: 10px 30px;
@@ -180,11 +243,16 @@ ol.custom-indent {
   flex-direction: row;
   align-items: center;
   justify-content: center;
-}
-
-
-/* secondary button */
-.btn-tert {
-  background-color: $tert-col-grad-1 !important;
-  border-color: $tert-col-grad-1 !important;
+  img {
+    vertical-align: middle;
+    margin-right: 5px;
+  }
+  a {
+    color: white;
+    margin-left: 5px;
+    text-decoration: none;
+    &:focus-visible {
+      outline-color: $ring-on-dark;
+    }
+  }
 }

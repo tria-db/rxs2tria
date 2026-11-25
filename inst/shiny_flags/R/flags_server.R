@@ -592,7 +592,7 @@ flags_server <- function(id, main_session, comments_out) {
     # PLOT REACTIVITY ----------------------------------------------------------
     ## plot clicks -------------------------------------------------------------
     # capture click events on crn or cov plots, identify clicked trace and role
-    
+
     # TRUE once plot data exist; unlike df_selwp(), it does not change with
     # filters, so data changes do not replay the last click in plot_click()
     plot_ready <- shiny::reactiveVal(FALSE)
@@ -1141,7 +1141,9 @@ flags_server <- function(id, main_session, comments_out) {
 
         prev_wp <- sel_woodpiece()
         if (prev_wp != clicked_img$woodpiece) {
-          # causes plot rerender
+          # causes plot rerender via sel_woodpiece() > df_selwp();
+          # set it first so the sel_wp_trace observer skips its reset
+          sel_woodpiece(clicked_img$woodpiece)
           shiny::updateSelectInput(session, "sel_wp_trace", selected = clicked_img$woodpiece)
         } else {
           p <- plotly::plotlyProxy("main_plot", session)
@@ -1429,5 +1431,5 @@ flags_server <- function(id, main_session, comments_out) {
       images_edited = images_edited
     )
 
-    })
+  })
 }

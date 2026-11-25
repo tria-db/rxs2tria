@@ -10,6 +10,9 @@
 .claude/*
 .context/*
 CLAUDE.md
+/DESIGN.md
+/PRODUCT.md
+.impeccable/
 docs
 inst/doc
 out/*

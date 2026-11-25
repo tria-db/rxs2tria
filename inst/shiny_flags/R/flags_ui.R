@@ -5,12 +5,14 @@ flags_ui <- function(id) {
 
     # SIDEBAR  -----------------------------------------------------------------
     sidebar = bslib::sidebar(
+      title = "Data & settings",
 
       # button to load input data ----
       shiny::actionButton(
         ns("open_input_modal"),
         "Load input data",
-        icon = shiny::icon("upload")
+        icon = shiny::icon("upload"),
+        class = "btn-secondary"
       ),
       shiny::hr(class = "hr-slim"),
 
@@ -86,14 +88,14 @@ flags_ui <- function(id) {
       # TODO: update plot on changes in show_excl?
       shiny::actionButton(
         ns("apply_changes"), "Update excluded in plot",
-        icon = shiny::icon("arrows-rotate"), class = "btn-tert"
+        icon = shiny::icon("arrows-rotate"), class = "btn-outline-secondary"
       ),
       shiny::hr(class = "hr-slim"),
 
       # button to export rwl ----
       shiny::actionButton(ns("export_rwl_btn"), "Export rwl",
         icon = shiny::icon("file-export"),
-        class = "btn-tert", width = "100%"),
+        class = "btn-outline-secondary", width = "100%"),
 
       shiny::hr(class = "hr-slim"),
 
@@ -101,11 +103,11 @@ flags_ui <- function(id) {
       shiny::tags$div(
         style = "display: flex; flex-direction: column;  gap: 4px;",
         shiny::actionButton(ns("save_btn"), "Save ring flags", icon = shiny::icon("save"),
-                    class = "btn-tert", width = "100%"),
+                    class = "btn-secondary", width = "100%"),
         shiny::tags$div(
           style = "display: flex; align-items: center; gap: 4px;",
           shiny::actionLink(ns("save_settings_btn"), NULL, shiny::icon("gear")),
-          shiny::tags$span("Save settings", style = "font-size: 0.8em; ")
+          shiny::tags$span("Save settings", class = "small")
         )
         # TODO: what about saving if app crashes?
         # shiny::actionButton(
@@ -124,9 +126,9 @@ flags_ui <- function(id) {
     # main plot card
     bslib::card(
       fill = FALSE,
+      class = "card-workbench",
       bslib::card_header(
         class = "d-flex justify-content-between align-items-center p-1",
-        style = "background-color: #CCE0E0", # "#CCE0E0" is prim_col_grad[4]
         shiny::div(
           style = "display: flex; align-items: center; gap: 8px;",
           shiny::strong("Selected woodpiece:"),
@@ -150,9 +152,10 @@ flags_ui <- function(id) {
     # hot card to edit ring flags of selected image/year
     bslib::card(
       fill = FALSE,
+      class = "card-workbench",
       bslib::card_header(
         class = "d-flex justify-content-between align-items-center p-1",
-        style = "background-color: #CCE0E0; position: relative;",
+        style = "position: relative;",
         shiny::div(
           style = "display: flex; align-items: center; gap: 8px;",
           shiny::strong("Selected image:"),
@@ -180,12 +183,12 @@ flags_ui <- function(id) {
             shiny::actionLink(ns("next_img"), NULL, icon = shiny::icon("angles-right")),
             "Go to next image"
           ),
-          shiny::tags$span(style = "color: #aaa;", "|"),
+          shiny::tags$span(class = "text-secondary", "|"),
           bslib::tooltip(
             shiny::actionLink(ns("show_image"), NULL, icon = shiny::icon("image")),
             "Open image file"
           ),
-          shiny::tags$span(style = "color: #aaa;", "|"),
+          shiny::tags$span(class = "text-secondary", "|"),
           bslib::tooltip(
             shiny::actionLink(ns("tbl_settings"), NULL, icon = shiny::icon("gear")),
             "Select table columns"

@@ -15,6 +15,9 @@
 ^CLAUDE\.md$
 ^\.claude$
 ^\.context$
+^DESIGN\.md$
+^PRODUCT\.md$
+^\.impeccable$
 ^\.vscode$
 ^\.RDataTmp$
 ^logs_MN\.R$

@@ -21,7 +21,7 @@ hot_settings_modal <- function(ns, sel_cols){
     easyClose = TRUE,
     footer = shiny::tagList(
       shiny::modalButton("Cancel"),
-      shiny::actionButton(ns("confirm_cols"), "Proceed")
+      shiny::actionButton(ns("confirm_cols"), "Proceed", class = "btn-secondary")
     )
   )
 }

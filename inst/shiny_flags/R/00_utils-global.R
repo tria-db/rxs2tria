@@ -2,13 +2,20 @@
 options(shiny.maxRequestSize = 100 * 1024^2)  # Set limit to 500 MB
 
 # COLORS ------------------
-# define color range
-prim_col <- "#006268"
-sec_col <- "#69004F"
-tert_col <- "#00206E"
-prim_col_grad <- c("#338585", "#66A3A3", "#99C2C2", "#CCE0E0", "#E6F0F0", "#F2F7F7")
-sec_col_grad <- c("#853270", "#A36794", "#C299B8", "#E0CCDB", "#F0E6ED", "#F7F2F6")
-tert_col_grad <- c("#324a85", "#6778a3", "#99a5c2", "#ccd2e0", "#e6e9f0", "#f2f4f7")
+# chrome palette, shared with TRIAhub (see DESIGN.md)
+prim_col <- "#006168"
+sec_col <- "#C42847"
+tert_col <- "#EE8434"
+dark_col <- "#000022"
+light_col <- "#f0f2f2"
+prim_col_grad <- c("#00393D", "#1c9f87", "#ebf7f7")
+sec_col_grad <- c("#55111F", "#EA99AA", "#FCEEF1")
+tert_col_grad <- c("#391B05", "#F4AD7B", "#F9DCC8")
+
+focus_ring <- sprintf("0 0 0 2px %s, 0 0 0 4px %s", light_col, prim_col)
+
+# data colours for plots and the flags table; never taken from the chrome ramps
+data_slate_grad <- c("#324a85", "#99a5c2", "#ccd2e0", "#e6e9f0")
 
 # create palette for plots
 #base_palette <- RColorBrewer::brewer.pal(8, "Dark2")
@@ -38,18 +45,21 @@ extend_palette <- function(palette, n, contrasting = TRUE) {
   full_palette
 }
 
-sample_depth_color <- tert_col
+sample_depth_color <- data_slate_grad[1]
 coverage_colorscale <- list(c(0, "#FED976"), c(1, prim_col))
+marker_in_plot_color <- "#e60000"
+marker_not_in_plot_color <- "#ff0099"
 
-default_bg_color <- tert_col_grad[4]
-hot_color_dupl <- prim_col_grad[3]
-hot_color_excl <- tert_col_grad[3]
-hot_color_iss1 <- tert_col_grad[4]
-hot_color_iss2 <- tert_col_grad[5]
+hot_header_color <- data_slate_grad[1]
+default_bg_color <- data_slate_grad[3]
+hot_color_dupl <- "#99C2C2"
+hot_color_excl <- data_slate_grad[2]
+hot_color_iss1 <- data_slate_grad[3]
+hot_color_iss2 <- data_slate_grad[4]
 
 sel_row_color <- "#ed4c4c"
-chosen_dupl_color <- prim_col_grad[2]
-warn_inv_color <- 'pink'
+chosen_dupl_color <- "#66A3A3"
+warn_inv_color <- "#FFC0CB"
 
 # BSLIB THEME ------------------
 # helper function to create the theme
@@ -72,12 +82,22 @@ create_theme <- function(
     primary   = prim_col,
     secondary = sec_col,
     info      = tert_col,
+    dark      = dark_col,
+    light     = light_col,
     font_scale = 0.8,
-    preset = "zephyr"
+    preset = "shiny"
   ) |>
   bslib::bs_add_variables(
-    "body-bg"         = prim_col_grad[5],
-    "focus-ring-color" = sec_col_grad[4]
+    "body-bg"          = light_col,
+    "body-color"       = dark_col,
+    # focus: 2px ring with a 2px gap, inherited by inputs, selects,
+    # selectize and sliders
+    "focus-ring-color"             = prim_col,
+    "focus-ring-box-shadow"        = focus_ring,
+    "form-select-focus-box-shadow" = focus_ring,
+    "input-focus-border-color"     = prim_col_grad[2],
+    "data-slate"                   = hot_header_color,
+    "data-invalid"                 = warn_inv_color
   ) |>
   add_gradient_vars("prim-col-grad", prim_col_grad) |>
   add_gradient_vars("sec-col-grad", sec_col_grad) |>

@@ -32,7 +32,7 @@ plot_settings_modal <- function(ns, current_selection) {
     easyClose = TRUE,
     footer = shiny::tagList(
       shiny::modalButton("Cancel"),
-      shiny::actionButton(ns("confirm_plots"), "Proceed")
+      shiny::actionButton(ns("confirm_plots"), "Proceed", class = "btn-secondary")
     )
   )
 }
@@ -269,7 +269,7 @@ update_marker_info <- function(marker, df_data, sel_param){
   df_excl <- df_data |> # TODO: or rings_data_edited? update color if edited?
     dplyr::filter(image_label == ycov_val, year == year_val)
   not_in_plot <- df_excl$exclude_dupl || df_excl$exclude_issues || is.na(ywp_val)
-  marker_col <- ifelse(not_in_plot, "#ff0099", "#e60000")
+  marker_col <- ifelse(not_in_plot, marker_not_in_plot_color, marker_in_plot_color)
 
   return(
     list(
@@ -290,7 +290,7 @@ switch_selwp_modal <- function(ns, new_wp) {
                 Do you want to switch to editing this woodpiece?"),
     footer = shiny::tagList(
       shiny::modalButton("Cancel"),
-      shiny::actionButton(ns("confirm_wp"), "Proceed")
+      shiny::actionButton(ns("confirm_wp"), "Proceed", class = "btn-secondary")
     )
   )
 }
@@ -329,7 +329,7 @@ resolve_click_marker <- function(click_data, df_data, sel_param) {
   df_excl <- df_data |> # TODO: or rings_data_edited? update color if edited?
     dplyr::filter(image_label == ycov_val, year == year_val)
   not_in_plot <- df_excl$exclude_dupl || df_excl$exclude_issues || is.na(ywp_val)
-  marker_col <- ifelse(not_in_plot, "#ff0099", "#e60000")
+  marker_col <- ifelse(not_in_plot, marker_not_in_plot_color, marker_in_plot_color)
 
   return(
     list(
@@ -506,7 +506,7 @@ resolve_shift_marker <- function(sel_wp, current_year, shift_dir, df_data, sel_p
   df_excl <- df_data |> dplyr::filter(
     image_label == ycov_val, year == year_val)
   not_in_plot <- df_excl$exclude_dupl || df_excl$exclude_issues || is.na(ywp_val)
-  marker_col <- ifelse(not_in_plot, "#ff0099", "#e60000")
+  marker_col <- ifelse(not_in_plot, marker_not_in_plot_color, marker_in_plot_color)
 
   return(
     list(
@@ -528,7 +528,7 @@ resolve_row_marker <- function(sel_wp, sel_img, new_year, df_data, sel_param) {
   df_excl <- df_data |> dplyr::filter(
     image_label == sel_img, year == new_year)
   not_in_plot <- df_excl$exclude_dupl || df_excl$exclude_issues || is.na(ywp_val)
-  marker_col <- ifelse(not_in_plot, "#ff0099", "#e60000")
+  marker_col <- ifelse(not_in_plot, marker_not_in_plot_color, marker_in_plot_color)
 
   return(
     list(

@@ -16,7 +16,7 @@ input_source_modal <- function(ns){
     ),
     footer = shiny::tagList(
       shiny::modalButton("Cancel"),
-      shiny::actionButton(ns("confirm_input"), "Proceed")
+      shiny::actionButton(ns("confirm_input"), "Proceed", class = "btn-secondary")
     )
   )
 }
@@ -29,7 +29,7 @@ input_warning_modal <- function(ns) {
      including any unsaved edits. Are you sure you want to proceed?",
     footer = shiny::tagList(
       shiny::modalButton("Cancel"),
-      shiny::actionButton(ns("confirm_overwrite"), "Proceed")
+      shiny::actionButton(ns("confirm_overwrite"), "Proceed", class = "btn-secondary")
     )
   )
 }
@@ -493,7 +493,7 @@ save_modal <- function(ns, settings, have_comments) {
 
     footer = shiny::tagList(
       shiny::modalButton("Cancel"),
-      shiny::actionButton(ns("save_confirm"), "Confirm and save")
+      shiny::actionButton(ns("save_confirm"), "Confirm and save", class = "btn-secondary")
     )
   )
 }
@@ -541,7 +541,7 @@ export_rwl_modal <- function(ns, default_scaling, default_fname) {
     wd_hint,
     footer = shiny::tagList(
       shiny::modalButton("Cancel"), # TODO: download button?
-      shiny::actionButton(ns("export_rwl_confirm"), "Confirm and export")
+      shiny::actionButton(ns("export_rwl_confirm"), "Confirm and export", class = "btn-secondary")
     )
   )
 }
