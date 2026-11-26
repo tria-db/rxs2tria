@@ -183,6 +183,8 @@ flags_ui <- function(id) {
           ),
           bench_button(ns("show_image"), "image", "Open the image file",
                        label = "Open image"),
+          bench_button(ns("img_settings"), "gear",
+                       "Image settings: auto-open, preferred image"),
           bench_button(ns("tbl_settings"), "table-columns",
                        "Select which flag columns are shown", label = "Columns"),
           bslib::popover(

@@ -159,8 +159,56 @@ other_issues <- c(
   "Other issues" = "other_disqual"
 )
 
+# flag column groups in the columns modal
+flag_col_groups <- list(
+  sel_cols_issues = list(label = "Compromising issues",
+                         choices = c(disqual_issues, technical_issues, other_issues)),
+  sel_cols_features = list(label = "Discrete features", choices = discrete_features)
+)
+
 all_flags <- unname(c(discrete_features, disqual_issues,
                       technical_issues, other_issues))
+
+# image files to open: labels, types per roxas version (fallback order),
+# filename patterns after org_img_name (cf. resource_types.csv);
+# "original" is $fname_image
+image_types <- c(
+  annotated = "Annotated", annotated_twin = "Annotated twin",
+  annotated_cells = "Annotated cells", original = "Original"
+)
+image_types_rv <- list(
+  roxas = c("annotated", "annotated_twin", "annotated_cells", "original"),
+  roxas_ai = c("annotated", "original")
+)
+image_type_patterns <- c(
+  annotated = "_annotated\\.(jpe?g|png)$",
+  annotated_twin = "_annotated_twin\\.jpe?g$",
+  annotated_cells = "_annotated_cells\\.jpe?g$"
+)
+
+# first existing image file of the given types, in order;
+# returns list(file, type) or NULL
+find_image_file <- function(base_path, org_img_name, image_path, types) {
+  name_esc <- stringr::str_escape(org_img_name)
+  for (type in types) {
+    file <- if (type == "original") {
+      image_path[!is.na(image_path) & file.exists(image_path)]
+    } else {
+      list.files(base_path, full.names = TRUE, ignore.case = TRUE,
+                 pattern = paste0("^", name_esc, image_type_patterns[[type]]))
+    }
+    if (length(file) > 0) return(list(file = file[1], type = type))
+  }
+  NULL
+}
+
+# number of rings flagged TRUE per flag column; columns not in df count as 0
+count_flagged <- function(df, flags = all_flags) {
+  present <- intersect(flags, names(df))
+  n <- stats::setNames(integer(length(flags)), flags)
+  n[present] <- vapply(df[present], \(x) sum(x, na.rm = TRUE), integer(1))
+  n
+}
 
 # automatic ring flags, set by rxs2tria::complete_QWAdata()
 auto_flags <- rxs2tria:::schema_cols("rings", "flag")

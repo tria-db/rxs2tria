@@ -1,28 +1,60 @@
-hot_settings_modal <- function(ns, sel_cols){
+hot_settings_modal <- function(ns, sel_cols, n_flagged){
+  sel <- unlist(sel_cols, use.names = FALSE)
   shiny::modalDialog(
-    title = "Table settings",
-    shiny::checkboxInput(ns("auto_open_image"), "Try to auto-open images", value = FALSE),
-    shiny::strong("Show / hide optional columns:"),
-    shiny::checkboxGroupInput(
-      ns("sel_cols_issues"),
-      label = "Compromising issues",
-      choices = c(
-        disqual_issues,
-        technical_issues,
-        other_issues
-      ), selected = c(sel_cols$disqual, sel_cols$techn, sel_cols$other)
-    ),
-    shiny::checkboxGroupInput(
-      ns("sel_cols_features"),
-      label = "Discrete features",
-      choices = discrete_features,
-      selected = sel_cols$discrete
-    ),
+    title = "Table columns",
+    purrr::imap(flag_col_groups, \(g, id) cb_group_toggle(
+      ns, id, g$label, g$choices, intersect(sel, g$choices), n_flagged
+    )),
     easyClose = TRUE,
     footer = shiny::tagList(
       shiny::modalButton("Cancel"),
-      shiny::actionButton(ns("confirm_cols"), "Proceed", class = "btn-secondary")
+      shiny::actionButton(ns("confirm_cols"), "Apply", class = "btn-secondary")
     )
+  )
+}
+
+img_settings_modal <- function(ns, settings, types) {
+  shiny::modalDialog(
+    title = "Image settings",
+    shiny::checkboxInput(ns("auto_open_image"),
+                         "Auto-open the image when the selected image changes",
+                         value = settings$auto_open),
+    shiny::radioButtons(
+      ns("img_pref"), "Preferred image",
+      choiceNames = unname(image_types[types]), choiceValues = types,
+      selected = if (settings$pref %in% types) settings$pref else types[1]
+    ),
+    shiny::helpText("If it is not found, the next one in this list is opened."),
+    easyClose = TRUE,
+    footer = shiny::tagList(
+      shiny::modalButton("Cancel"),
+      shiny::actionButton(ns("confirm_img_settings"), "Apply", class = "btn-secondary")
+    )
+  )
+}
+
+# checkbox group with a bold title and "Select all · none" links below it;
+# choices with flagged rings (n_flagged, see count_flagged()) show the count
+cb_group_toggle <- function(ns, id, label, choices, selected, n_flagged) {
+  choice_names <- purrr::map2(names(choices), n_flagged[unname(choices)], \(nm, n) {
+    if (n == 0) return(nm)
+    shiny::tagList(nm, " ", shiny::tags$small(
+      class = "text-muted fst-italic",
+      paste0("(", n, if (n == 1) " ring" else " rings", " flagged)")
+    ))
+  })
+  shiny::checkboxGroupInput(
+    ns(id),
+    label = shiny::tagList(
+      shiny::strong(label), shiny::br(),
+      shiny::tags$small(
+        "Select ",
+        shiny::actionLink(ns(paste0(id, "_all")), "all"), " · ",
+        shiny::actionLink(ns(paste0(id, "_none")), "none")
+      )
+    ),
+    choiceNames = choice_names, choiceValues = unname(choices),
+    selected = selected
   )
 }
 

@@ -44,6 +44,9 @@ flags_server <- function(id, main_session, comments_out) {
     excl_flags <- shiny::reactiveVal(NULL)
     current_hot_image <- shiny::reactiveVal(NULL)
 
+    # reactive container for image settings (cf. img_settings_modal)
+    img_settings <- shiny::reactiveValues(auto_open = FALSE, pref = "annotated")
+
     # reactive containers for saving edited rings data
     save_settings <- shiny::reactiveValues(
       not_set = TRUE,
@@ -124,6 +127,10 @@ flags_server <- function(id, main_session, comments_out) {
         input_data$prf_data <- res$prf_data
         input_data$rings_data <- res$rings_data
         input_data$rxsmeta_data <- res$rxsmeta_data
+        # new data: clear the selection and zoom of the previous data
+        sel_marker(NULL)
+        sel_image(NULL)
+        crn_x_axes(NULL)
         shiny::removeModal()
       },
       err_title = glue::glue("Error loading data from {input$load_type}"),
@@ -406,7 +413,9 @@ flags_server <- function(id, main_session, comments_out) {
 
     # reactive df_crn as basis for chronology traces
     df_crn <- shiny::reactive({
-      shiny::req(rings_data_org(), input$filt_wp, input$sel_param)
+      # wait until sel_param follows new input data (one flush later)
+      shiny::req(rings_data_org(), input$filt_wp, input$sel_param,
+                 input$sel_param %in% c(names(rings_data_org()), names(input_data$prf_data)))
 
       df <- build_chronology_df(
         rings_data = rings_data_org(),
@@ -923,7 +932,7 @@ flags_server <- function(id, main_session, comments_out) {
     # UI: show modal when clicking on table settings
     shiny::observe({
       shiny::showModal(
-        hot_settings_modal(ns, sel_hot_cols())
+        hot_settings_modal(ns, sel_hot_cols(), count_flagged(rings_data_edited()))
       )
     }) |> shiny::bindEvent(input$tbl_settings)
 
@@ -939,6 +948,16 @@ flags_server <- function(id, main_session, comments_out) {
         )
       )
     }) |> shiny::bindEvent(input$confirm_cols)
+
+    # "Select all · none" links per column group in the modal
+    purrr::iwalk(flag_col_groups, \(g, id) {
+      shiny::observe({
+        shiny::updateCheckboxGroupInput(session, id, selected = g$choices)
+      }) |> shiny::bindEvent(input[[paste0(id, "_all")]])
+      shiny::observe({
+        shiny::updateCheckboxGroupInput(session, id, selected = character(0))
+      }) |> shiny::bindEvent(input[[paste0(id, "_none")]])
+    })
 
     # prepare reactive as basis for hot
     df_rings_hot <- shiny::reactive({
@@ -1173,6 +1192,23 @@ flags_server <- function(id, main_session, comments_out) {
 
 
     # OPEN IMAGES --------------------------------------------------------------
+    # image types for the roxas version of the images data; all if unknown
+    img_types <- shiny::reactive({
+      rxsmeta <- input_data$rxsmeta_data
+      rv <- attr(rxsmeta, "roxas_version") %||% rxs2tria:::infer_rv_from_data(rxsmeta)
+      if (is.null(rv)) names(image_types) else image_types_rv[[rv]]
+    })
+
+    shiny::observe({
+      shiny::showModal(img_settings_modal(ns, img_settings, img_types()))
+    }) |> shiny::bindEvent(input$img_settings)
+
+    shiny::observe({
+      shiny::removeModal()
+      img_settings$auto_open <- input$auto_open_image
+      img_settings$pref <- input$img_pref
+    }) |> shiny::bindEvent(input$confirm_img_settings)
+
     # when button is clicked
     shiny::observe({
       if (!shiny::isTruthy(sel_image())) {
@@ -1198,30 +1234,19 @@ flags_server <- function(id, main_session, comments_out) {
         image_path <- img_meta$fname_image %||% NA_character_
         base_path <- dirname(any_path)
 
-        # check for annotated images in same folder, any image extension
-        name_esc <- stringr::str_escape(img_meta$org_img_name)
-        img_ext <- "\\.(jpe?g|png|tiff?|bmp)$"
-        annotated_image <- list.files(
-          base_path,
-          pattern = paste0("^", name_esc, "_annotated", img_ext),
-          full.names = TRUE, ignore.case = TRUE
-        )
-        annotated_twin <- list.files(
-          base_path,
-          pattern = paste0("^", name_esc, "_annotated_twin", img_ext),
-          full.names = TRUE, ignore.case = TRUE
-        )
-
-        # Prefer annotated > twin > image file
-        file_to_open <- c(annotated_image, annotated_twin, image_path)[1]
-        if (is.na(file_to_open)) {
-          stop("No original or annotated image found in: ", base_path)
+        # preferred image type first, then the others in fallback order
+        types <- c(img_settings$pref, setdiff(img_types(), img_settings$pref))
+        found <- find_image_file(base_path, img_meta$org_img_name, image_path, types)
+        if (is.null(found)) {
+          stop("No image file found in: ", base_path,
+               if (!is.na(image_path)) paste0(" (original moved or renamed? ", image_path, ")"))
         }
-        # annotated files are found on disk, but image_path from the metadata may be outdated
-        if (!file.exists(file_to_open)) {
-          stop("Image file not found (moved or renamed?): ", file_to_open)
+        if (found$type != img_settings$pref) {
+          shiny::showNotification(glue::glue(
+            "No {image_types[[img_settings$pref]]} image found, opened {image_types[[found$type]]}."
+          ), type = "message")
         }
-        browseURL(file_to_open)
+        browseURL(found$file)
       },
         err_title = glue::glue("Error opening image {sel_img}"),
         err_message = "",
@@ -1232,7 +1257,7 @@ flags_server <- function(id, main_session, comments_out) {
 
     # auto open if sel_image changes if option is TRUE
     shiny::observe({
-      shiny::req(input$auto_open_image)
+      shiny::req(img_settings$auto_open)
       cat(glue::glue(".   auto open image {sel_image()}"), "\n")
       # trigger image open button when sel_image changes
       shinyjs::click("show_image")
