@@ -187,14 +187,27 @@ every flagged image was actually looked at during the cleaning process.
 
 ## Saving your work
 
-Click **Save ring flags** (or configure the destination first via the
-gear icon next to it) to write your edits to a local CSV file and/or an
-R environment variable. If a Comments tab was shown, its "handled"
-status (`comment_handled`) is saved with the images table to a CSV file
-and/or an R environment variable, so you (or a colleague) can resume
-exactly where you left off. Empty values are written as empty fields.
+Click **Save ring flags** to write your edits to a local CSV file. The
+first save asks for the file path, later saves write to the same file;
+**Save as…** changes it. If a Comments tab was shown, its "handled"
+status (`comment_handled`) is saved with the images table to a second
+CSV file, so you (or a colleague) can resume exactly where you left off.
+Empty values are written as empty fields. A dot on the save button marks
+unsaved changes.
 
-*(screenshot: save settings modal)*
+*(screenshot: save as modal)*
+
+Click **Close app** (or close the browser tab) to stop the app and
+return the edited data to R, as a list with `rings` and `images`
+(`NULL` without image comments):
+
+```{r close, eval = FALSE}
+flags_out <- launch_flags_app()
+QWA_data$rings <- flags_out$rings
+```
+
+With unsaved changes, **Close app** offers to save first. The saved
+file keeps your edits if the app or the R session stops otherwise.
 
 ---
 

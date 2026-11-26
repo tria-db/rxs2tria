@@ -50,6 +50,21 @@ $ring-on-dark:   white;
 .btn-secondary {
   color: white;
 }
+/* unsaved changes: dot at the right end of the (pill) save button */
+.btn.has-unsaved {
+  position: relative;
+  &::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: 14px;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: white;
+  }
+}
 /* fileInput browse button as a berry outline button; the input itself is
    hidden, so the ring follows its keyboard focus */
 .btn-file {

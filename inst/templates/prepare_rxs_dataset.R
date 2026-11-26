@@ -176,16 +176,16 @@ prf_sector <- calculate_sector_profiles(QWA_data,
 # the rings component of a QWAdata object, and optionally: a derived sector 
 # QWAprofile, and a QWAimages object (to open the (annotated) image files under
 # via $fname_image from within the app, and to show any $img_comment provided).
-# The output (saved to file or fed back to the current R session) is the
-# QWAdata$rings component with additional columns for the flags, `comment` and
-# `affected_tissue`. If image-level comments were reviewed, the app also saves
-# the image metadata with the `comment_handled` column.
-launch_flags_app()
+# The output (saved to file, and returned to the R session when the app is
+# closed) is the QWAdata$rings component with additional columns for the flags,
+# `comment` and `affected_tissue`. If image-level comments were reviewed, the
+# app also saves and returns the image metadata with the `comment_handled` column.
+flags_out <- launch_flags_app()
 
-# To read in and update the edited rings data from file or a data frame in the env:
+# To update the rings data with the returned edits, or read them from file:
+# QWA_data$rings <- flags_out$rings
 # QWA_data$rings <- read_QWAdata(
 #   file_rings = "path/to/output_data/example_dataset_edited_QWArings.csv")$rings
-# QWA_data$rings <- df_rings_edited
 # Save the edits to files:
 # write_QWAdata(QWA_data, dir = path_out, dataset_name = dataset_name, overwrite = TRUE)
 

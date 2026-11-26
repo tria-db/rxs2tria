@@ -14,24 +14,22 @@ flags_ui <- function(id) {
         icon = shiny::icon("upload"),
         class = "btn-secondary"
       ),
-      shiny::hr(class = "hr-slim"),
 
       # inputs to filter/subset input data ----
-      shiny::strong("Subset data:"),
       shinyjs::hidden( # start hidden
         shiny::selectizeInput(
-          ns("filt_species"), "Filter species",
+          ns("filt_species"), "Select species",
           choices = NULL, multiple = TRUE,
           options = list(placeholder = "All species")
         ),
         shiny::selectizeInput(
-          ns("filt_site"), "Filter site(s)",
+          ns("filt_site"), "Select site(s)",
           choices = NULL, multiple = TRUE,
           options = list(placeholder = "All sites")
         )
       ),
       shiny::selectInput(
-        ns("filt_wp"), "Filter woodpiece(s)",
+        ns("filt_wp"), "Subset woodpiece(s)",
         choices = NULL, multiple = TRUE, selectize = TRUE
       ),
       shiny::hr(class = "hr-slim"),
@@ -102,20 +100,21 @@ flags_ui <- function(id) {
       # button to save and/or download edited data ----
       shiny::tags$div(
         style = "display: flex; flex-direction: column;  gap: 4px;",
-        shiny::actionButton(ns("save_btn"), "Save ring flags", icon = shiny::icon("save"),
-                    class = "btn-secondary", width = "100%"),
-        shiny::tags$div(
-          style = "display: flex; align-items: center; gap: 4px;",
-          shiny::actionLink(ns("save_settings_btn"), NULL, shiny::icon("gear")),
-          shiny::tags$span("Save settings", class = "small")
-        )
-        # TODO: what about saving if app crashes?
-        # shiny::actionButton(
-        #   ns("close_app"), "Close app",
-        #   icon = shiny::icon("xmark"), class = "btn-danger"
-        # ),
+        bslib::tooltip(
+          shiny::actionButton(ns("save_btn"), "Save ring flags", icon = shiny::icon("save"),
+                      class = "btn-secondary", width = "100%"),
+          "No changes",
+          id = ns("save_btn_tt")
+        ),
+        shiny::actionLink(ns("save_as_btn"), "Save as…", class = "small",
+                          style = "align-self: flex-start;")
+      ),
 
-     )
+      shiny::hr(class = "hr-slim"),
+
+      # button to close the app and return the edited data to R ----
+      shiny::actionButton(ns("close_btn"), "Close app", icon = shiny::icon("xmark"),
+                          class = "btn-outline-secondary", width = "100%")
       
       
 

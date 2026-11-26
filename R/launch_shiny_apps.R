@@ -22,6 +22,14 @@ launch_metadata_app <- function(server_run = FALSE) {
 
 #' Launch the ring flags Shiny app
 #'
+#' The app returns the edited data when it is closed with "Close app" or by
+#' closing the browser tab. Saving to file in the app keeps the edits if the
+#' app or the R session stops otherwise.
+#'
+#' @returns Invisibly, a list with `rings`, the rings data with the ring flags
+#'   as saved to file, and `images`, the `QWAimages` with the `comment_handled`
+#'   column if image comments were reviewed, otherwise `NULL`; `NULL` if no
+#'   data was loaded.
 #' @export
 launch_flags_app <- function() {
   rlang::check_installed(
@@ -35,5 +43,5 @@ launch_flags_app <- function() {
     cli::cli_abort("Could not find the Shiny app directory. Try reinstalling the package.")
   }
   shiny::shinyOptions(launch_wd = getwd())
-  shiny::runApp(app_dir)
+  invisible(shiny::runApp(app_dir))
 }

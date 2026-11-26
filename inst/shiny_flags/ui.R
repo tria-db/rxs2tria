@@ -29,7 +29,9 @@ ui <- bslib::page_navbar(
       # for the key bindings (left/right arrows, enter key)
       shiny::tags$script(src = "js/keybindings.js"),
       # for the resizable plot container
-      shiny::tags$script(src = "js/plot_resize.js")
+      shiny::tags$script(src = "js/plot_resize.js"),
+      # for the unsaved changes indicator
+      shiny::tags$script(src = "js/unsaved.js")
     )
   ),
 

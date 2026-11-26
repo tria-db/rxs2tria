@@ -316,16 +316,16 @@ environment):
 The output is the `QWAdata$rings` data frame with additional columns
 for the flags, `comment` and `affected_tissue`. If image-level comments
 were reviewed, the app also saves the image metadata with the
-`comment_handled` column. The rings can be saved to file and read back to
-update the `QWAdata` object:
+`comment_handled` column. The edits are saved to file and returned to R
+when the app is closed, to update the `QWAdata` object:
 
 ```{r, eval = FALSE}
-launch_flags_app()
+flags_out <- launch_flags_app()
 
-# To update QWA_data$rings with the edited output:
+# To update QWA_data$rings with the returned edits, or read them from file:
+# QWA_data$rings <- flags_out$rings
 # QWA_data$rings <- read_QWAdata(
 #   file_rings = "path/to/output_data/example_dataset_edited_QWArings.csv")$rings
-# QWA_data$rings <- df_rings_edited  # or directly from a data frame in the env
 # write_QWAdata(QWA_data, dir = path_out, dataset_name = dataset_name, overwrite = TRUE)
 ```
 

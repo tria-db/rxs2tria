@@ -5,6 +5,7 @@
 * get_roxas_files() and compile_supplementary() now handle all ROXAS (AI)-supported image formats for the original images.
 * Fewer messages: lossless type conversions are no longer reported. `collect_raw_data()` reports images with missing cells or rings data in one warning. `check_QWAimages()` warns on images without settings or image file data and on missing or invalid `spatial_resolution`/`outmost_year`, the settings used in the data processing.
 * Flags app: clearing the last flag or comment in a column is now saved, and the rings file is written with `write_QWAdata()`; rings without the automatic flags stop with a hint to run `complete_QWAdata()`; species and site filters are multi-select, adjust to each other, and empty means all; the annotated image opens when the original image is missing.
+* `launch_flags_app()` returns the edited data on close ("Close app" or closing the tab); the app saves to file only (no more R environment variables), with Save / Save as and an unsaved changes indicator.
 * Docs: new article `vignette("update-combine")` for updating and combining data; `vignette("submission")` lists where each submitted file comes from; `vignette("QWAdata")` lists all cells and rings columns from the schemas; dark code blocks on the website.
 
 # rxs2tria 0.1.4

@@ -455,7 +455,7 @@ prepare_rings_out <- function(df_edited, rings_data){
 }
 
 # OUTPUTS 
-# create modal with save settings inputs 
+# create modal with save file paths ("Save as")
 save_modal <- function(ns, settings, have_comments) {
   launch_wd <- shiny::getShinyOption("launch_wd", default = getwd())
   wd_hint <- shiny::tags$span(
@@ -463,39 +463,67 @@ save_modal <- function(ns, settings, have_comments) {
     style = "font-size: 0.8em; margin-top: -12px; margin-bottom: 16px; display: block;"
   )
   shiny::modalDialog(
-    title = "Save Settings",
-    shiny::checkboxGroupInput(
-      ns("modal_save_to"), "Save edited rings data to:",
-      choices = c("a local CSV file" = "file", "a variable in the current R environment" = "env"),
-      selected = ifelse(is.null(settings$save_to),"file",settings$save_to)
-    ),
+    title = "Save as",
     shiny::textInput(ns("modal_filepath"), "Rings file path",
       placeholder = "e.g., out/QWArings_edited.csv", value = settings$filepath),
     wd_hint,
-    shiny::textInput(ns("modal_varname"), "Rings data.frame variable name",
-      placeholder = "e.g., df_rings_edited", value = settings$varname),
-    
+    shiny::uiOutput(ns("modal_filepath_note")),
+
     if (have_comments) {
       shiny::tagList(
         shiny::tags$hr(),
-        shiny::checkboxGroupInput(
-          ns("modal_saveimg_to"), "Save edited images metadata (i.e. handled comments progress) to:",
-          choices = c("a local CSV file" = "file", "a variable in the current R environment" = "env"),
-          selected = ifelse(is.null(settings$save_imgs_to),"file",settings$save_imgs_to)
-        ),
-        shiny::textInput(ns("modal_filepath_imgs"), "Images file path",
+        shiny::textInput(ns("modal_filepath_imgs"),
+          "Images file path (handled comments progress)",
           placeholder = "e.g., out/QWAimages_progress.csv", value = settings$filepath_rxsmeta),
         wd_hint,
-        shiny::textInput(ns("modal_varname_imgs"), "Images data.frame variable name",
-          placeholder = "e.g., rxs_images or df_imgs_progress", value = settings$varname_rxsmeta)
+        shiny::uiOutput(ns("modal_filepath_imgs_note"))
       )
     },
 
     footer = shiny::tagList(
       shiny::modalButton("Cancel"),
-      shiny::actionButton(ns("save_confirm"), "Confirm and save", class = "btn-secondary")
+      shiny::actionButton(ns("save_confirm"), "Save", class = "btn-secondary")
     )
   )
+}
+
+# create modal to confirm closing the app with unsaved changes
+close_modal <- function(ns) {
+  shiny::modalDialog(
+    title = "Close app",
+    "There are unsaved changes. The edited data is returned to R either way,
+     but only saving writes it to file.",
+    footer = shiny::tagList(
+      shiny::modalButton("Cancel"),
+      shiny::actionButton(ns("close_nosave"), "Close without saving", class = "btn-outline-secondary"),
+      shiny::actionButton(ns("close_save"), "Save and close", class = "btn-secondary")
+    )
+  )
+}
+
+# note below a save path input if the file already exists or is the same as
+# the other save path (other_path)
+path_exists_note <- function(path, other_path = NULL) {
+  shiny::req(shiny::isTruthy(path))
+  launch_wd <- shiny::getShinyOption("launch_wd", default = getwd())
+  note <- if (is_same_path(path, other_path)) {
+    "Same as the rings file path, choose a different file."
+  } else if (fs::file_exists(fs::path_abs(path, start = launch_wd))) {
+    "File exists and will be replaced."
+  }
+  if (is.null(note)) return(NULL)
+  shiny::tags$span(
+    note,
+    class = "small",
+    style = "margin-top: -8px; margin-bottom: 16px; display: block;"
+  )
+}
+
+# whether two save paths resolve to the same file
+is_same_path <- function(path, other_path) {
+  if (!shiny::isTruthy(path) || !shiny::isTruthy(other_path)) return(FALSE)
+  launch_wd <- shiny::getShinyOption("launch_wd", default = getwd())
+  fs::path_abs(path, start = launch_wd) == fs::path_abs(other_path, start = launch_wd)
 }
 
 # create modal to confirm/adjust an rwl export, prepopulated with the
@@ -546,65 +574,61 @@ export_rwl_modal <- function(ns, default_scaling, default_fname) {
   )
 }
 
-# helper function to safely write edited rings data to env / file
-# rxsmeta: rxsmeta_data data frame (or NULL); handled: named logical vector from
-# handled_comments reactiveVal (or NULL)
-save_ring_edits <- function(df, df_in, settings, rxsmeta = NULL, handled = NULL) {
+# edited data for saving to file and returning on close: the rings (cf.
+# prepare_rings_out()) and, if comments were handled, the rxsmeta data with
+# the updated comment_handled column (else NULL)
+# rxsmeta: rxsmeta_data data frame (or NULL); handled: images_edited() data
+# frame with image_label and comment_handled (or NULL)
+prepare_flags_out <- function(df, df_in, rxsmeta = NULL, handled = NULL) {
+  df_rxsmeta_out <- NULL
+  if (!is.null(rxsmeta) && !is.null(handled)) {
+    # rxsmeta has comments otherwise handled would not exist. but might need to initialize comment_handled
+    df_rxsmeta_out <- rxsmeta
+    if (!"comment_handled" %in% names(df_rxsmeta_out)) {
+      df_rxsmeta_out$comment_handled <- NA
+    }
+    df_rxsmeta_out <- df_rxsmeta_out |>
+      dplyr::rows_update(handled[c("image_label","comment_handled")], by = "image_label")
+  }
+  list(rings = prepare_rings_out(df, df_in), images = df_rxsmeta_out)
+}
+
+# edited data returned to R on close (cf. launch_flags_app()): empty flag
+# columns dropped as write_QWAdata() does for the file, QWAimages class
+# restored (dropped by as_tibble() on load)
+prepare_flags_return <- function(out) {
+  out$rings <- rxs2tria:::prepare_write(out$rings, "rings")
+  rv <- attr(out$images, "roxas_version")
+  if (!is.null(rv)) out$images <- rxs2tria:::new_QWAimages(out$images, rv)
+  out
+}
+
+# helper function to safely write edited data to file
+# out: prepare_flags_out() result
+# returns TRUE on success, NULL on error
+save_ring_edits <- function(out, settings) {
   safe_block({
     launch_wd <- shiny::getShinyOption("launch_wd", default = getwd())
-    df_out <- prepare_rings_out(df, df_in)
-    if ("env" %in% settings$save_to) {
-      # drop empty flag columns, as write_QWAdata() does for the file
-      assign(settings$varname, rxs2tria:::prepare_write(df_out, "rings"),
-             envir = .GlobalEnv)
-      shiny::showNotification(
-        paste0("Saved to environment variable: ", settings$varname),
-        type = "message"
-      )
-    }
-    if ("file" %in% settings$save_to) {
-      filepath <- fs::path_abs(settings$filepath, start = launch_wd)
-      rxs2tria::write_QWAdata(rxs2tria::QWAdata(rings = df_out),
-                              file_rings = filepath,
-                              compress = fs::path_ext(filepath) == "gz",
-                              overwrite = TRUE)
-      shiny::showNotification(
-        paste0("Saved to file: ", filepath),
-        type = "message"
-      )
-    }
+    filepath <- fs::path_abs(settings$filepath, start = launch_wd)
+    rxs2tria::write_QWAdata(rxs2tria::QWAdata(rings = out$rings),
+                            file_rings = filepath,
+                            compress = fs::path_ext(filepath) == "gz",
+                            overwrite = TRUE)
+    shiny::showNotification(
+      paste0("Saved to file: ", filepath),
+      type = "message"
+    )
     # save rxsmeta with updated comments_handled column
-    if (!is.null(rxsmeta) && !is.null(handled)) {
-      # rxsmeta has comments otherwise hanlded would not exist. but might need to initizalize comment_handled
-      df_rxsmeta_out <- rxsmeta
-      if (!"comment_handled" %in% names(df_rxsmeta_out)) {
-        df_rxsmeta_out$comment_handled <- NA
-      }
-      df_rxsmeta_out <- df_rxsmeta_out |> 
-        dplyr::rows_update(handled[c("image_label","comment_handled")], by = "image_label")
-
-      if ("env" %in% settings$save_imgs_to) {
-        # restore QWAimages class (dropped by as_tibble() on load)
-        rv <- attr(df_rxsmeta_out, "roxas_version")
-        if (!is.null(rv)) df_rxsmeta_out <- rxs2tria:::new_QWAimages(df_rxsmeta_out, rv)
-        assign(settings$varname_rxsmeta, df_rxsmeta_out, envir = .GlobalEnv)
-        shiny::showNotification(
-          paste0("Saved to environment variable: ", settings$varname_rxsmeta),
-          type = "message"
-        )
-      }
-        
-      if ("file" %in% settings$save_imgs_to) {
-        filepath_rxsmeta <- fs::path_abs(settings$filepath_rxsmeta, start = launch_wd)
-        checkmate::assert_path_for_output(filepath_rxsmeta, overwrite = TRUE)
-        vroom::vroom_write(df_rxsmeta_out, filepath_rxsmeta, delim = ",", na = "")
-        shiny::showNotification(
-          paste0("Image metadata saved to: ", filepath_rxsmeta),
-          type = "message"
-        )
-      }
-
+    if (!is.null(out$images)) {
+      filepath_rxsmeta <- fs::path_abs(settings$filepath_rxsmeta, start = launch_wd)
+      checkmate::assert_path_for_output(filepath_rxsmeta, overwrite = TRUE)
+      vroom::vroom_write(out$images, filepath_rxsmeta, delim = ",", na = "")
+      shiny::showNotification(
+        paste0("Image metadata saved to: ", filepath_rxsmeta),
+        type = "message"
+      )
     }
+    TRUE
   },
   err_title = "Error saving data",
   err_message = "",

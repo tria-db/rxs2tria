@@ -50,13 +50,14 @@ flags_server <- function(id, main_session, comments_out) {
     # reactive containers for saving edited rings data
     save_settings <- shiny::reactiveValues(
       not_set = TRUE,
-      save_to = NULL,
       filepath = NULL,
-      varname = NULL,
-      save_imgs_to = NULL,
-      filepath_rxsmeta = NULL,
-      varname_rxsmeta = NULL,
+      filepath_rxsmeta = NULL
     )
+    # user edits since load or last save, and time and file of the last save
+    unsaved <- shiny::reactiveVal(FALSE)
+    last_saved <- shiny::reactiveVal(NULL)
+    # close the app after the save as modal (cf. "Save and close")
+    close_after_save <- shiny::reactiveVal(FALSE)
 
     # reactive container holding the rwl built for the export modal (frozen
     # at the moment the export button is clicked)
@@ -65,12 +66,8 @@ flags_server <- function(id, main_session, comments_out) {
     # LOAD INPUT DATA ----------------------------------------------------------
     # open input modal when button open_input_modal is clicked
     shiny::observe({
-      # warn before overwriting existing data
-      no_existing_inputs <- all(
-        is.null(input_data$prf_data),
-        is.null(input_data$rings_data),
-        is.null(input_data$rxsmeta_data))
-      if (!no_existing_inputs) {
+      # warn before discarding unsaved edits
+      if (unsaved()) {
         shiny::showModal(input_warning_modal(ns))
       } else {
         shiny::showModal(input_source_modal(ns))
@@ -154,9 +151,20 @@ flags_server <- function(id, main_session, comments_out) {
       rings_data_org(df_rings)
     }) |> shiny::bindEvent(input_data$rings_data)
 
-    # initialize editable copy of rings_data_org
+    # initialize editable copy of rings_data_org, nothing unsaved yet; the
+    # first save of new data asks for the paths again
     shiny::observe({
       rings_data_edited(rings_data_org())
+      unsaved(FALSE)
+      last_saved(NULL)
+      save_settings$not_set <- TRUE
+
+      # also show the flag columns with values in the loaded data
+      flagged <- names(which(count_flagged(rings_data_org()) > 0))
+      sel <- sel_hot_cols()
+      groups <- list(disqual = disqual_issues, techn = technical_issues,
+                     other = other_issues, discrete = discrete_features)
+      sel_hot_cols(purrr::imap(groups, \(cols, g) cols[cols %in% c(sel[[g]], flagged)]))
     }) |> shiny::bindEvent(rings_data_org())
 
     # if there are comments to handle, initialize images_edited with input rxsmeta data
@@ -920,12 +928,16 @@ flags_server <- function(id, main_session, comments_out) {
     })
 
     # update images_edited()$comment_handled when user clicks the checkbox
+    # (also fires when the checkbox is rerendered for another image, so only
+    # on a changed value)
     shiny::observe({
       shiny::req(images_edited(), sel_image())
       df <- images_edited()
       img <- sel_image()
+      shiny::req(!identical(df$comment_handled[df$image_label == img], input$comment_handled))
       df[df$image_label == img,"comment_handled"] <- input$comment_handled
       images_edited(df)
+      unsaved(TRUE)
     }) |> shiny::bindEvent(input$comment_handled, ignoreInit = TRUE, ignoreNULL = TRUE)
 
 
@@ -1101,6 +1113,11 @@ flags_server <- function(id, main_session, comments_out) {
         dplyr::mutate(dplyr::across(dplyr::any_of(logical_col_names), as.logical))
     })
 
+    # user edits (edit, paste, autofill) send their changes, loading data does not
+    shiny::observe({
+      if (!is.null(input$img_flags$changes$changes)) unsaved(TRUE)
+    }) |> shiny::bindEvent(input$img_flags)
+
     # update rings_data_edited with the edited flags from the hot
     shiny::observe({
       sel_img <- sel_image()
@@ -1265,61 +1282,129 @@ flags_server <- function(id, main_session, comments_out) {
 
 
     # SAVING DATA -----------------------------------------------------------
-    # open save settings modal when gear icon clicked
+    # open save as modal when "Save as" link clicked
     shiny::observe({
       shiny::req(input_data$rings_data)
+      close_after_save(FALSE)
       have_comments <- shiny::isTruthy(images_edited())
       shiny::showModal(save_modal(ns, save_settings, have_comments))
-    }) |> shiny::bindEvent(input$save_settings_btn)
+    }) |> shiny::bindEvent(input$save_as_btn)
 
-    # open save settings modal when save button is clicked for the first time
+    # open save as modal when save button is clicked for the first time
     # i.e. save_settings$not_set is still TRUE
     shiny::observe({
       shiny::req(save_settings$not_set, input_data$rings_data)
+      close_after_save(FALSE)
       have_comments <- shiny::isTruthy(images_edited())
       shiny::showModal(save_modal(ns, save_settings, have_comments))
     }) |> shiny::bindEvent(input$save_btn)
 
-    # conditional logics for the modal UI
+    # save as modal: note on existing files, save only with all paths given
+    output$modal_filepath_note <- shiny::renderUI(path_exists_note(input$modal_filepath))
+    output$modal_filepath_imgs_note <- shiny::renderUI(
+      path_exists_note(input$modal_filepath_imgs, other_path = input$modal_filepath))
+
     shiny::observe({
-      is_file <- "file" %in% input$modal_save_to
-      shinyjs::toggleState("modal_filepath", condition = is_file)
-      shinyjs::toggleState("modal_varname", condition = "env" %in% input$modal_save_to)
+      have_comments <- shiny::isTruthy(images_edited())
       shinyjs::toggleState("save_confirm", condition =
-        (is_file && shiny::isTruthy(input$modal_filepath)) ||
-          (("env" %in% input$modal_save_to) && shiny::isTruthy(input$modal_varname))
+        shiny::isTruthy(input$modal_filepath) &&
+          (!have_comments || (shiny::isTruthy(input$modal_filepath_imgs) &&
+             !is_same_path(input$modal_filepath_imgs, input$modal_filepath)))
       )
-    }) |> shiny::bindEvent(input$modal_save_to,
-                           input$modal_filepath,
-                           input$modal_varname, ignoreNULL = FALSE)
-    
-    # on confirm save in modal, update settings and save data
+    }) |> shiny::bindEvent(input$modal_filepath,
+                           input$modal_filepath_imgs, ignoreNULL = FALSE)
+
+    # edited data for saving and returning on close (cf. prepare_flags_out())
+    flags_data_out <- function() {
+      prepare_flags_out(rings_data_edited(),
+                        input_data$rings_data |> init_char_columns(),
+                        rxsmeta = input_data$rxsmeta_data,
+                        handled = images_edited())
+    }
+
+    # save data to the paths in save_settings, TRUE on success
+    save_edits <- function() {
+      saved <- save_ring_edits(flags_data_out(), save_settings)
+      if (isTRUE(saved)) {
+        unsaved(FALSE)
+        last_saved(list(time = Sys.time(), file = fs::path_file(save_settings$filepath)))
+      }
+      isTRUE(saved)
+    }
+
+    # on confirm save in modal, update paths and save data; later clicks on
+    # the save button write to the same paths once a save succeeded
     shiny::observe({
-      save_settings$not_set <- FALSE
-      save_settings$save_to <- input$modal_save_to
       save_settings$filepath <- input$modal_filepath
-      save_settings$varname <- input$modal_varname
-      save_settings$save_imgs_to <- input$modal_saveimg_to
       save_settings$filepath_rxsmeta <- input$modal_filepath_imgs
-      save_settings$varname_rxsmeta <- input$modal_varname_imgs
       shiny::removeModal()
       shiny::req(rings_data_edited())
-      df_edited <- rings_data_edited()
-      df_org <- input_data$rings_data |> init_char_columns()
-      save_ring_edits(df_edited, df_org, save_settings,
-                      rxsmeta = input_data$rxsmeta_data,
-                      handled = images_edited())
+      save_settings$not_set <- !save_edits()
+      if (!save_settings$not_set && close_after_save()) close_app()
     }) |> shiny::bindEvent(input$save_confirm)
 
     shiny::observe({
       settings_set <- !save_settings$not_set
       shiny::req(settings_set, rings_data_edited())
-      df_edited <- rings_data_edited()
-      df_org <- input_data$rings_data |> init_char_columns()
-      save_ring_edits(df_edited, df_org, save_settings,
-                      rxsmeta = input_data$rxsmeta_data,
-                      handled = images_edited())
+      save_edits()
     }) |> shiny::bindEvent(input$save_btn)
+
+    # unsaved indicator: dot on the save button, title prefix and leave-page
+    # guard (www/js/unsaved.js), save state in the save button tooltip
+    shiny::observe({
+      session$sendCustomMessage("unsaved", list(id = ns("save_btn"), unsaved = unsaved()))
+      tooltip <- if (unsaved()) {
+        "Unsaved changes"
+      } else if (!is.null(last_saved())) {
+        glue::glue("Saved {format(last_saved()$time, '%H:%M')} → {last_saved()$file}")
+      } else {
+        "No changes"
+      }
+      bslib::update_tooltip("save_btn_tt", tooltip)
+    })
+
+    # CLOSING THE APP ----------------------------------------------------------
+    # edited data returned to R on close (cf. launch_flags_app()), NULL
+    # without data
+    flags_result <- function() {
+      if (is.null(rings_data_edited())) return(NULL)
+      prepare_flags_return(flags_data_out())
+    }
+
+    # stop the app, returning the edited data to R (no leave-page guard after)
+    close_app <- function() {
+      session$sendCustomMessage("unsaved", list(id = ns("save_btn"), unsaved = FALSE))
+      shiny::showModal(shiny::modalDialog(
+        title = "App closed",
+        "The edited data was returned to R. You can close this tab.",
+        footer = NULL
+      ))
+      shiny::stopApp(flags_result())
+    }
+
+    # close directly, or ask to save first if there are unsaved changes
+    shiny::observe({
+      if (unsaved()) shiny::showModal(close_modal(ns)) else close_app()
+    }) |> shiny::bindEvent(input$close_btn)
+
+    shiny::observe(close_app()) |> shiny::bindEvent(input$close_nosave)
+
+    # save and close; without paths yet, the save as modal closes after saving
+    shiny::observe({
+      shiny::removeModal()
+      if (save_settings$not_set) {
+        close_after_save(TRUE)
+        have_comments <- shiny::isTruthy(images_edited())
+        shiny::showModal(save_modal(ns, save_settings, have_comments))
+      } else if (save_edits()) {
+        close_app()
+      }
+    }) |> shiny::bindEvent(input$close_save)
+
+    # closing the tab (or reloading the page) also ends the app
+    session$onSessionEnded(function() {
+      shiny::stopApp(shiny::isolate(flags_result()))
+    })
 
     # EXPORT RWL ---------------------------------------------------------------
     # build the rwl for the current selection (incl. live edits and

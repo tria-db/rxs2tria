@@ -6,6 +6,14 @@
 \usage{
 launch_flags_app()
 }
+\value{
+Invisibly, a list with \code{rings}, the rings data with the ring flags
+as saved to file, and \code{images}, the \code{QWAimages} with the \code{comment_handled}
+column if image comments were reviewed, otherwise \code{NULL}; \code{NULL} if no
+data was loaded.
+}
 \description{
-Launch the ring flags Shiny app
+The app returns the edited data when it is closed with "Close app" or by
+closing the browser tab. Saving to file in the app keeps the edits if the
+app or the R session stops otherwise.
 }
