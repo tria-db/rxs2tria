@@ -27,7 +27,9 @@ ui <- bslib::page_navbar(
       shiny::tags$script(src = "https://unpkg.com/@popperjs/core@2"),
       shiny::tags$script(src = "https://unpkg.com/tippy.js@6"),
       # for the key bindings (left/right arrows, enter key)
-      shiny::tags$script(src = "js/keybindings.js")
+      shiny::tags$script(src = "js/keybindings.js"),
+      # for the resizable plot container
+      shiny::tags$script(src = "js/plot_resize.js")
     )
   ),
 

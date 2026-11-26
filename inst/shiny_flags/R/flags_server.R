@@ -375,12 +375,18 @@ flags_server <- function(id, main_session, comments_out) {
       shiny::removeModal()
     }) |> shiny::bindEvent(input$confirm_plots)
 
-    # variable height for the plot depending on shown subplots
+    # variable height for the plot depending on shown subplots; the container
+    # can be resized by dragging (www/js/plot_resize.js), and a dragged height
+    # (input$plot_height) is kept on rerender
     output$main_plot_ui <- shiny::renderUI({
       shiny::req(df_selwp())
-      height <- compute_plot_height(sel_subplots())
+      default_height <- compute_plot_height(sel_subplots())
+      height <- shiny::isolate(input$plot_height) %||% default_height
       shiny::div(
-        style = paste0("height: ", height),
+        class = "plot-resizable",
+        style = paste0("height: ", height, "px"),
+        `data-default-height` = default_height,
+        `data-input-id` = ns("plot_height"),
         plotly::plotlyOutput(ns("main_plot"), height = "100%")
       )
     })
@@ -877,6 +883,9 @@ flags_server <- function(id, main_session, comments_out) {
     js_selrow <- readLines("www/js/selrow_to_input.js") |>
       paste(collapse = "\n")
 
+    js_layout <- readLines("www/js/hot_layout.js") |>
+      paste(collapse = "\n")
+
      # add selected row tracking to hot
     
     # UI: hot card header title with dynamic selected image
@@ -967,13 +976,12 @@ flags_server <- function(id, main_session, comments_out) {
       ro_ids_excldupl <- which(!df_rings$duplicate_ring) - 1
       warn_col_ids <- which(names(df_rings) %in% disqual_issues) - 1
 
-      hot_height <- min(nrow(df_rings) * 23L + 26L, 400L) + 5L
-
+      # no height: the table grows to show all rows, the page scrolls;
+      # column widths and header rotation are set in www/js/hot_layout.js
       hot <- rhandsontable::rhandsontable(
         df_rings,
         stretchH = "all",
-        contextMenu = FALSE,
-        height = hot_height
+        contextMenu = FALSE
       ) |> # style the mandatory columns
       rhandsontable::hot_col(
         "duplicate_ring",
@@ -993,6 +1001,9 @@ flags_server <- function(id, main_session, comments_out) {
       rhandsontable::hot_col(
         "affected_tissue",
         type = "dropdown", source = c("", "all", "ew", "lw"),
+        # native select the size of the cell (the dropdown editor's list
+        # took the width of the whole row); type dropdown keeps the validator
+        editor = "select", selectOptions = c("", "all", "ew", "lw"),
         renderer = renderer_dd(hot_color_excl)
       ) |>
       rhandsontable::hot_col(
@@ -1020,14 +1031,21 @@ flags_server <- function(id, main_session, comments_out) {
       }
 
       hot |>
-        rhandsontable::hot_cols(colWidths = 25) |>
         # add esc key functionality to table
         htmlwidgets::onRender(js_escape) |>
         # keep track of user selected row in table
         htmlwidgets::onRender(js_selrow,
                               data = list(
                                 selrow_idx = selring_idx,
-                                input_id = ns("sel_hot_row")))
+                                input_id = ns("sel_hot_row"))) |>
+        # column widths and horizontal or rotated headers depending on the
+        # available width (px; text_share of the table width for comment)
+        htmlwidgets::onRender(js_layout,
+                              data = list(
+                                text_col = "comment",
+                                text_share = 0.25, text_min = 200, text_max = 400,
+                                fixed_widths = list(affected_tissue = 80),
+                                min_width = 28))
 
     }) |> shiny::bindEvent(df_rings_hot(), ignoreNULL = TRUE)
 

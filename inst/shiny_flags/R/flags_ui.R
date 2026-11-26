@@ -128,15 +128,17 @@ flags_ui <- function(id) {
       fill = FALSE,
       class = "card-workbench",
       bslib::card_header(
-        class = "d-flex justify-content-between align-items-center p-1",
+        class = "d-flex justify-content-between align-items-center",
         shiny::div(
-          style = "display: flex; align-items: center; gap: 8px;",
+          class = "bench-title",
           shiny::strong("Selected woodpiece:"),
           shiny::uiOutput(ns("selwp")), # reactive output to contain selwp input
         ),
-        shiny::actionLink(
-          ns("plot_settings"), "",
-          icon = shiny::icon("gear"))
+        shiny::div(
+          class = "bench-controls",
+          bench_button(ns("plot_settings"), "layer-group",
+                       "Show or hide subplots", label = "Subplots")
+        )
       ),
       bslib::card_body(
         class = "p-0",
@@ -154,67 +156,61 @@ flags_ui <- function(id) {
       fill = FALSE,
       class = "card-workbench",
       bslib::card_header(
-        class = "d-flex justify-content-between align-items-center p-1",
-        style = "position: relative;",
+        class = "d-flex justify-content-between align-items-center position-relative",
         shiny::div(
-          style = "display: flex; align-items: center; gap: 8px;",
+          class = "bench-title",
           shiny::strong("Selected image:"),
           shiny::uiOutput(ns("selimg"))
         ),
         shiny::div(
-          style = "position: absolute; left: 50%; transform: translateX(-50%); max-width: 40%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;",
+          class = "bench-comment",
           shiny::uiOutput(ns("selcomment"))
         ),
         shiny::div(
-          style = "display: flex; align-items: center; gap: 10px;",
-          bslib::tooltip(
-            shiny::actionLink(ns("prev_img"), NULL, icon = shiny::icon("angles-left")),
-            "Go to earlier image"
+          class = "bench-controls",
+          # buttons mirror the arrow keys: up/down rings, left/right images
+          shiny::div(
+            class = "bench-group",
+            shiny::span(class = "bench-label", "Ring"),
+            bench_button(ns("prev_ring"), "chevron-up", "Earlier ring (arrow up)"),
+            bench_button(ns("next_ring"), "chevron-down", "Next ring (arrow down)")
           ),
-          bslib::tooltip(
-            shiny::actionLink(ns("prev_ring"), NULL, icon = shiny::icon("angle-left")),
-            "Go to earlier ring"
+          shiny::div(
+            class = "bench-group",
+            shiny::span(class = "bench-label", "Image"),
+            bench_button(ns("prev_img"), "chevron-left", "Earlier image (arrow left)"),
+            bench_button(ns("next_img"), "chevron-right", "Next image (arrow right)")
           ),
-          bslib::tooltip(
-            shiny::actionLink(ns("next_ring"), NULL, icon = shiny::icon("angle-right")),
-            "Go to next ring"
-          ),
-          bslib::tooltip(
-            shiny::actionLink(ns("next_img"), NULL, icon = shiny::icon("angles-right")),
-            "Go to next image"
-          ),
-          shiny::tags$span(class = "text-secondary", "|"),
-          bslib::tooltip(
-            shiny::actionLink(ns("show_image"), NULL, icon = shiny::icon("image")),
-            "Open image file"
-          ),
-          shiny::tags$span(class = "text-secondary", "|"),
-          bslib::tooltip(
-            shiny::actionLink(ns("tbl_settings"), NULL, icon = shiny::icon("gear")),
-            "Select table columns"
+          bench_button(ns("show_image"), "image", "Open the image file",
+                       label = "Open image"),
+          bench_button(ns("tbl_settings"), "table-columns",
+                       "Select which flag columns are shown", label = "Columns"),
+          bslib::popover(
+            shiny::actionButton(ns("tbl_help"), "Help",
+                                icon = shiny::icon("circle-question"),
+                                class = "btn-sm btn-bench"),
+            title = "Help: table columns and buttons",
+            placement = "bottom",
+            options = list(customClass = "popover-help"),
+            shiny::tags$ul(
+              class = "ps-3 mb-0",
+              shiny::tags$li(shiny::strong("duplicate_ring:"), " ring also appears in an overlapping image (read-only)."),
+              shiny::tags$li(shiny::strong("exclude_dupl:"), " for duplicate rings, which copy is not used. Only one copy per ring is kept;
+                             unticking here uses the ring from this image and excludes it in the other image."),
+              shiny::tags$li(shiny::strong("exclude_issues:"), " exclude the ring from the analysis because of quality issues
+                             (e.g. incomplete_ring, cracks, decay, ...). Specify the ", shiny::strong("affected_tissue"),
+                             " (all, ew or lw) and tick the relevant issue columns to document the reason."),
+              shiny::tags$li(shiny::strong("Ring"), " ", shiny::icon("chevron-up"), shiny::icon("chevron-down"),
+                             " and ", shiny::strong("Image"), " ", shiny::icon("chevron-left"), shiny::icon("chevron-right"),
+                             " go to the earlier/next ring or image, as do the arrow keys (up/down for rings, left/right for images;
+                             press Esc first to leave the table, Enter to select the ring in the table).")
+            )
           )
         )
       ),
       bslib::card_body(
         class = "p-0",
         fillable = FALSE,
-        shiny::tags$details(
-          class = "small px-2 pt-1",
-          shiny::tags$summary("Help: table columns and buttons"),
-          shiny::tags$ul(
-            shiny::tags$li(shiny::strong("duplicate_ring:"), " ring also appears in an overlapping image (read-only)."),
-            shiny::tags$li(shiny::strong("exclude_dupl:"), " for duplicate rings, which copy is not used. Only one copy per ring is kept;
-                           unticking here uses the ring from this image and excludes it in the other image."),
-            shiny::tags$li(shiny::strong("exclude_issues:"), " exclude the ring from the analysis because of quality issues
-                           (e.g. incomplete_ring, cracks, decay, ...). Specify the ", shiny::strong("affected_tissue"),
-                           " (all, ew or lw) and tick the relevant issue columns to document the reason."),
-            shiny::tags$li(shiny::icon("angles-left"), shiny::icon("angle-left"), shiny::icon("angle-right"), shiny::icon("angles-right"),
-                           " go to the earlier/next image or ring (or use the arrow keys: left/right for images, up/down for rings;
-                           press Esc first to leave the table, Enter to select the ring in the table); ",
-                           shiny::icon("image"), " open the image file; ",
-                           shiny::icon("gear"), " select which flag columns are shown.")
-          )
-        ),
         rhandsontable::rHandsontableOutput(ns("img_flags"))
       ),
       bslib::card_footer(

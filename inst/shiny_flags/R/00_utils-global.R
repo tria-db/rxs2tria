@@ -85,6 +85,9 @@ create_theme <- function(
     dark      = dark_col,
     light     = light_col,
     font_scale = 0.8,
+    # the shiny preset fixes button and input text at 15px, unscaled;
+    # match the body text (font-size-base, 0.8rem with font_scale = 0.8)
+    "input-btn-font-size" = "0.8rem",
     preset = "shiny"
   ) |>
   bslib::bs_add_variables(
@@ -196,6 +199,22 @@ label_with_tt <- function(label_text, tooltip_text,
       title = tooltip_title,
       tooltip_text
     )
+  )
+}
+
+# small button for the workbench card headers (see .btn-bench in
+# custom-theme.scss), icon-only unless a label is given; the tooltip also
+# serves as accessible name
+bench_button <- function(id, icon, tooltip, label = NULL) {
+  bslib::tooltip(
+    shiny::actionButton(
+      id, label,
+      icon = shiny::icon(icon),
+      class = "btn-sm btn-bench",
+      `aria-label` = tooltip
+    ),
+    tooltip,
+    placement = "bottom" # not beside, where it would cover the next button
   )
 }
 

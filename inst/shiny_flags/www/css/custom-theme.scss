@@ -93,6 +93,21 @@ $ring-on-dark:   white;
   border: none !important;
 }
 
+/* flags tab: plot and table cards flush with the sidebar and each other,
+   square, like open accordion panels; bottom whitespace kept */
+.tab-pane[data-value="flags"] .bslib-sidebar-layout > .main {
+  padding-top: 0;
+  padding-left: 0;
+  padding-right: 0;
+  gap: 0;
+  > .card-workbench {
+    --bs-card-border-radius: 0;
+    --bs-card-inner-border-radius: 0;
+    margin-bottom: 0;
+    box-shadow: none;
+  }
+}
+
 /* navbar: brand and tab font */
 .navbar-brand {
   font-size: 1.2rem;
@@ -135,13 +150,63 @@ $ring-on-dark:   white;
 .card {
   border-width: 0;
 }
-/* workbench card: plot, flags table, comments */
+/* workbench card: plot, flags table, comments; dark header so the panes
+   stand apart from the mist sidebar */
 .card-workbench {
   --bs-card-bg: white;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
   > .card-header {
-    background-color: $surface-mist;
+    background-color: $surface-deep;
+    color: white;
+    padding: 0.35rem 0.6rem;
+    a:focus-visible {
+      outline-color: $ring-on-dark;
+    }
   }
+}
+/* header layout: title and value left, comment centred, controls right */
+.bench-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.bench-comment {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 40%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.bench-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.bench-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+.bench-label {
+  font-size: $font-size-sm;
+  margin-right: 0.15rem;
+}
+/* light outline buttons on the dark header; .btn raises the specificity
+   above the shiny preset's berry outline for .btn-default */
+.btn.btn-bench {
+  --bs-btn-bg: transparent;
+  --bs-btn-color: white;
+  --bs-btn-border-color: rgba(255, 255, 255, 0.45);
+  --bs-btn-hover-bg: rgba(255, 255, 255, 0.15);
+  --bs-btn-hover-color: white;
+  --bs-btn-hover-border-color: white;
+  --bs-btn-active-bg: rgba(255, 255, 255, 0.25);
+  --bs-btn-active-color: white;
+  --bs-btn-active-border-color: white;
+  --bs-btn-focus-box-shadow: 0 0 0 2px #{$surface-deep}, 0 0 0 4px white;
+  padding: 0.15rem 0.55rem;
 }
 
 /* flags table (handsontable); the widget CSS loads after the theme, so these
@@ -149,6 +214,20 @@ $ring-on-dark:   white;
 .handsontable th {
   background-color: $data-slate !important;
   color: white !important;
+}
+/* flags table: column headers rotated to read bottom to top when the names
+   do not fit side by side (class and header height set in
+   www/js/hot_layout.js) */
+#flags-img_flags.hot-rotated .handsontable thead th {
+  vertical-align: bottom;
+  .relative {
+    padding: 4px 0;
+  }
+  .colHeader {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    white-space: nowrap;
+  }
 }
 /* tbody outranks handsontable's own `.handsontable td.htInvalid !important` */
 .handsontable tbody td.htInvalid {
@@ -160,6 +239,19 @@ input.htCheckboxRendererInput[type='checkbox'] {
 /* grey checkboxes in the first column after the row names (duplicate_ring) */
 .htCore tbody tr td:nth-child(2) input.htCheckboxRendererInput[type='checkbox'] {
   accent-color: grey !important;
+}
+
+/* plot container: height can be dragged at its bottom-right corner */
+.plot-resizable {
+  resize: vertical;
+  overflow: hidden;
+  min-height: 250px;
+}
+
+/* help popover in the flags table card header: wider than the default */
+.popover-help {
+  --bs-popover-max-width: 420px;
+  --bs-popover-font-size: #{$font-size-sm};
 }
 
 /* comments tab badge once all comments are handled (open: bg-info, amber) */

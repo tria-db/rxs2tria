@@ -4,7 +4,7 @@ comments_ui <- function(id) {
   bslib::card(
     class = "card-workbench",
     bslib::card_header(
-      class = "d-flex justify-content-between align-items-center p-1",
+      class = "d-flex justify-content-between align-items-center",
       shiny::strong("Overview of comments"),
       shiny::checkboxInput(ns("show_all"), label = "incl. handled comments", value = FALSE)
     ),

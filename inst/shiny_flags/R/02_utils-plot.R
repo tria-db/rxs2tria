@@ -1,12 +1,13 @@
 
+# default plot container heights in px
 subplot_heights <- list(
-  "none"     = "350px",
-  "sd"       = "400px",
-  "cov"      = "550px",
-  "cov+sd"   = "600px"
+  "none"     = 350L,
+  "sd"       = 400L,
+  "cov"      = 550L,
+  "cov+sd"   = 600L
 )
 
-# compute the plot container height based on sel subplots as css string
+# compute the default plot container height (px) based on sel subplots
 compute_plot_height <- function(active_subplots) {
   key <- if (length(active_subplots) == 0) {
     "none"
@@ -85,7 +86,9 @@ fit_detrend_curve <- function(df, method = "Spline", nyrs = 32) {
   df <- df |>
     # ignore unselected duplicates and excluded rings for fit
     dplyr::filter(!exclude_dupl, !exclude_issues)
-  if (nrow(df) == 0) return(tibble::tibble(year = integer(), det_curve = numeric()))
+  if (nrow(df) == 0 || all(is.na(df$vals))) {
+    return(tibble::tibble(year = integer(), det_curve = numeric()))
+  }
 
   df |>
     # ensure we have no gaps in the years, e.g. between images/slides
@@ -171,13 +174,19 @@ build_crn_plot <- function(df_other, df_selwp, sel_wp, palette) {
       opacity = 1,
       name = paste0("<b>", sel_wp, "</b>"),
       showlegend = TRUE,
+      legendrank = 1, # first in the legend, before the other woodpieces
       meta = list(role = "selwp", wp_label = sel_wp)
     ) |>
     plotly::layout(
+      # vertical legend right of the plot; scrolls when there are more
+      # woodpieces than fit, instead of shrinking the plot
+      # no double click to isolate a trace (hid the wrong trace with the
+      # selected woodpiece ranked first); single click still toggles one
       legend = list(
-        orientation = "h",
-        xanchor = "center", x = 0.5,
-        yanchor = "bottom", y = 1.1
+        orientation = "v",
+        xanchor = "left", x = 1.02,
+        yanchor = "top", y = 1,
+        itemdoubleclick = FALSE
       )
     )
 }
@@ -681,7 +690,9 @@ calculate_correlation <- function(df_sel, df_all, x_axes, sel_mean) {
   df_all <- df_all |> 
     dplyr::filter(year >= x_min, year <= x_max, !exclude_dupl) 
   df_mean <- calc_mean_vals(df_all, sel_mean) # TODO: or only others?
-  df_corr <- dplyr::inner_join(df_sel, df_mean, by = "year")
+  # only years with values in both series
+  df_corr <- dplyr::inner_join(df_sel, df_mean, by = "year") |>
+    dplyr::filter(!is.na(vals.x), !is.na(vals.y))
 
   if (nrow(df_corr) < 5) {
     msg <- "Not enough overlapping years to compute correlation."
@@ -690,8 +701,7 @@ calculate_correlation <- function(df_sel, df_all, x_axes, sel_mean) {
     r <- cor(
       df_corr$vals.x,
       df_corr$vals.y,
-      method = "pearson",
-      use = "complete.obs"
+      method = "pearson"
     )
     n <- nrow(df_corr)
     msg <- glue::glue("Pearson correlation of {sel_wp} with {sel_mean} ({n} overlapping years): <strong>{round(r,3)}</strong>")
